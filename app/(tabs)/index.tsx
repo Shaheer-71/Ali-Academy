@@ -5,21 +5,17 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  Users, 
-  ClipboardCheck, 
-  BookOpen, 
-  NotebookPen, 
-  BarChart3,
-  Calendar,
-  Bell
-} from 'lucide-react-native';
+import { Users, ClipboardCheck, BookOpen, NotebookPen, ChartBar as BarChart3, Calendar, Bell, Sparkles, TrendingUp } from 'lucide-react-native';
+import TopSection from '@/components/TopSection';
 
 export default function HomeScreen() {
   const { profile } = useAuth();
+  const router = useRouter();
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -31,104 +27,175 @@ export default function HomeScreen() {
   const getRoleBasedQuickActions = () => {
     if (profile?.role === 'teacher') {
       return [
-        { title: 'Mark Attendance', icon: ClipboardCheck, color: '#b6d509' },
-        { title: 'Upload Lecture', icon: BookOpen, color: '#274d71' },
-        { title: 'Assign Diary', icon: NotebookPen, color: '#EF4444' },
-        { title: 'Manage Students', icon: Users, color: '#8B5CF6' },
+        {
+          title: 'Mark Attendance',
+          icon: ClipboardCheck,
+          color: '#b6d509',
+          onPress: () => router.push('/(tabs)/attendance')
+        },
+        {
+          title: 'Upload Lecture',
+          icon: BookOpen,
+          color: '#274d71',
+          onPress: () => router.push('/(tabs)/lectures')
+        },
+        {
+          title: 'Assign Diary',
+          icon: NotebookPen,
+          color: '#EF4444',
+          onPress: () => router.push('/(tabs)/diary')
+        },
+        {
+          title: 'Manage Students',
+          icon: Users,
+          color: '#8B5CF6',
+          onPress: () => router.push('/(tabs)/students')
+        },
       ];
     }
-    
+
     return [
-      { title: 'View Attendance', icon: Calendar, color: '#b6d509' },
-      { title: 'Latest Lectures', icon: BookOpen, color: '#274d71' },
-      { title: 'Homework', icon: NotebookPen, color: '#EF4444' },
-      { title: 'Progress', icon: BarChart3, color: '#8B5CF6' },
+      {
+        title: 'View Attendance',
+        icon: Calendar,
+        color: '#b6d509',
+        onPress: () => Alert.alert('Coming Soon', 'Attendance view will be available soon')
+      },
+      {
+        title: 'Latest Lectures',
+        icon: BookOpen,
+        color: '#274d71',
+        onPress: () => router.push('/(tabs)/lectures')
+      },
+      {
+        title: 'Homework',
+        icon: NotebookPen,
+        color: '#EF4444',
+        onPress: () => router.push('/(tabs)/diary')
+      },
+      {
+        title: 'Progress',
+        icon: BarChart3,
+        color: '#8B5CF6',
+        onPress: () => Alert.alert('Coming Soon', 'Progress tracking will be available soon')
+      },
     ];
   };
 
   const quickActions = getRoleBasedQuickActions();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>{getGreeting()}</Text>
-            <Text style={styles.username}>{profile?.full_name}</Text>
-            <Text style={styles.role}>{profile?.role?.toUpperCase()}</Text>
-          </View>
-          <TouchableOpacity style={styles.notificationButton}>
-            <Bell size={24} color="#274d71" />
-          </TouchableOpacity>
-        </View>
+    <>
+      <TopSection />
+      <SafeAreaView style={styles.container} edges={[ 'left', 'right']}>
+        <View style={{ flex: 1 }}>
 
-        {/* Quick Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statsCard}>
-            <Text style={styles.statsNumber}>15</Text>
-            <Text style={styles.statsLabel}>
-              {profile?.role === 'teacher' ? 'Total Students' : 'Days Present'}
-            </Text>
-          </View>
-          <View style={styles.statsCard}>
-            <Text style={styles.statsNumber}>3</Text>
-            <Text style={styles.statsLabel}>
-              {profile?.role === 'teacher' ? 'Classes' : 'Pending Tasks'}
-            </Text>
-          </View>
-          <View style={styles.statsCard}>
-            <Text style={styles.statsNumber}>8</Text>
-            <Text style={styles.statsLabel}>
-              {profile?.role === 'teacher' ? 'Lectures' : 'Lectures'}
-            </Text>
-          </View>
-        </View>
+          <ScrollView
+            contentContainerStyle={{
+              paddingBottom: 50,
+            }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
 
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionsGrid}>
-            {quickActions.map((action, index) => (
-              <TouchableOpacity key={index} style={styles.actionCard}>
-                <View style={[styles.actionIcon, { backgroundColor: `${action.color}20` }]}>
-                  <action.icon size={24} color={action.color} />
+            <View style={styles.headerContainer}>
+              {/* Header */}
+              <View style={styles.header}>
+                <View>
+                  <Text style={styles.greeting}>{getGreeting()}</Text>
+                  <Text style={styles.username}>{profile?.full_name}</Text>
+                  <Text style={styles.role}>{profile?.role?.toUpperCase()}</Text>
                 </View>
-                <Text style={styles.actionTitle}>{action.title}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+                <TouchableOpacity style={styles.notificationButton}>
+                  <Bell size={24} color="#274d71" />
+                </TouchableOpacity>
+              </View>
 
-        {/* Recent Activity */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          <View style={styles.activityCard}>
-            <View style={styles.activityItem}>
-              <View style={styles.activityDot} />
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Attendance Marked</Text>
-                <Text style={styles.activityTime}>Class A - 2 hours ago</Text>
+              {/* Quick Stats */}
+              <View style={styles.statsContainer}>
+                <View style={styles.statsCard}>
+                  <Text style={styles.statsNumber}>15</Text>
+                  <Text style={styles.statsLabel}>
+                    {profile?.role === 'teacher' ? 'Students' : 'Days Present'}
+                  </Text>
+                </View>
+                <View style={styles.statsCard}>
+                  <Text style={styles.statsNumber}>3</Text>
+                  <Text style={styles.statsLabel}>
+                    {profile?.role === 'teacher' ? 'Classes' : 'Pending Tasks'}
+                  </Text>
+                </View>
+                <View style={styles.statsCard}>
+                  <Text style={styles.statsNumber}>8</Text>
+                  <Text style={styles.statsLabel}>
+                    {profile?.role === 'teacher' ? 'Lectures' : 'Lectures'}
+                  </Text>
+                </View>
               </View>
             </View>
-            <View style={styles.activityItem}>
-              <View style={styles.activityDot} />
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>New Lecture Uploaded</Text>
-                <Text style={styles.activityTime}>Mathematics - 5 hours ago</Text>
+
+            {/* Quick Actions */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Quick Actions</Text>
+                <View style={styles.sectionIcon}>
+                  <Sparkles size={16} color="#b6d509" />
+                </View>
+              </View>
+              <View style={styles.actionsGrid}>
+                {quickActions.map((action, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.actionCard}
+                    onPress={action.onPress}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.actionIcon, { backgroundColor: `${action.color}20` }]}>
+                      <action.icon size={24} color={action.color} />
+                    </View>
+                    <Text style={styles.actionTitle}>{action.title}</Text>
+                    <View style={[styles.actionIndicator, { backgroundColor: action.color }]} />
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
-            <View style={styles.activityItem}>
-              <View style={styles.activityDot} />
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Homework Assigned</Text>
-                <Text style={styles.activityTime}>Physics - Yesterday</Text>
+
+            {/* Recent Activity */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent Activity</Text>
+                <View style={styles.sectionIcon}>
+                  <TrendingUp size={16} color="#274d71" />
+                </View>
+              </View>
+              <View style={styles.activityCard}>
+                <View style={styles.activityItem}>
+                  <View style={[styles.activityDot, styles.activityDotSuccess]} />
+                  <View style={styles.activityContent}>
+                    <Text style={styles.activityTitle}>Attendance Marked</Text>
+                    <Text style={styles.activityTime}>Class A - 2 hours ago</Text>
+                  </View>
+                </View>
+                <View style={styles.activityItem}>
+                  <View style={[styles.activityDot, styles.activityDotInfo]} />
+                  <View style={styles.activityContent}>
+                    <Text style={styles.activityTitle}>New Lecture Uploaded</Text>
+                    <Text style={styles.activityTime}>Mathematics - 5 hours ago</Text>
+                  </View>
+                </View>
+                <View style={styles.activityItem}>
+                  <View style={[styles.activityDot, styles.activityDotWarning]} />
+                  <View style={styles.activityContent}>
+                    <Text style={styles.activityTitle}>Homework Assigned</Text>
+                    <Text style={styles.activityTime}>Physics - Yesterday</Text>
+                  </View>
+                </View>
               </View>
             </View>
-          </View>
+          </ScrollView>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -136,17 +203,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+    // borderWidth : 1,
+    paddingTop : -10
   },
-  scrollView: {
-    flex: 1,
+  headerContainer: {
+    borderWidth: 2,
+    marginHorizontal: 24,
+    paddingTop: 8,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderColor: '#E5E7EB'
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 24,
+    // paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 12,
+    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
   },
   greeting: {
     fontSize: 16,
@@ -182,15 +258,16 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 24,
-    marginBottom: 32,
+    // paddingHorizontal: 24,
+    marginBottom: 16,
     gap: 12,
   },
   statsCard: {
     flex: 1,
     backgroundColor: '#F9FAFB',
     borderRadius: 16,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -211,11 +288,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 32,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 20,
     fontFamily: 'Inter-SemiBold',
     color: '#111827',
-    marginBottom: 16,
+  },
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   actionsGrid: {
     flexDirection: 'row',

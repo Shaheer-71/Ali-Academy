@@ -13,15 +13,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { sendWhatsAppMessage, formatAttendanceMessage } from '@/lib/whatsapp';
-import { 
-  Calendar, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Calendar,
+  Clock,
+  CheckCircle,
+  XCircle,
   AlertCircle,
   Users,
   MessageCircle
 } from 'lucide-react-native';
+import TopSection from '@/components/TopSection';
 
 interface Student {
   id: string;
@@ -107,7 +108,7 @@ export default function AttendanceScreen() {
         .eq('date', selectedDate);
 
       if (error) throw error;
-      
+
       const attendanceMap: Record<string, AttendanceRecord> = {};
       data?.forEach((record) => {
         attendanceMap[record.student_id] = {
@@ -117,7 +118,7 @@ export default function AttendanceScreen() {
           late_minutes: record.late_minutes || undefined,
         };
       });
-      
+
       setAttendance(attendanceMap);
     } catch (error) {
       console.error('Error fetching attendance:', error);
@@ -128,10 +129,10 @@ export default function AttendanceScreen() {
     try {
       const classStartTime = new Date(`${selectedDate}T16:00:00`); // 4:00 PM
       const cutoffTime = new Date(`${selectedDate}T16:15:00`); // 4:15 PM
-      
+
       let finalStatus = status;
       let lateMinutes: number | undefined;
-      let finalArrivalTime = arrivalTime || new Date().toLocaleTimeString('en-US', { 
+      let finalArrivalTime = arrivalTime || new Date().toLocaleTimeString('en-US', {
         hour12: false,
         hour: '2-digit',
         minute: '2-digit'
@@ -140,7 +141,7 @@ export default function AttendanceScreen() {
       if (status === 'present' && arrivalTime) {
         const [hours, minutes] = arrivalTime.split(':').map(Number);
         const arrivalDateTime = new Date(`${selectedDate}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`);
-        
+
         if (arrivalDateTime > cutoffTime) {
           finalStatus = 'late';
           lateMinutes = Math.ceil((arrivalDateTime.getTime() - classStartTime.getTime()) / (1000 * 60));
@@ -198,7 +199,7 @@ export default function AttendanceScreen() {
 
   const handleCustomTimeSubmit = () => {
     if (!customTime || !selectedStudent) return;
-    
+
     markAttendance(selectedStudent, 'present', customTime);
     setTimeModalVisible(false);
     setCustomTime('');
@@ -243,148 +244,150 @@ export default function AttendanceScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Attendance</Text>
-        <View style={styles.dateContainer}>
-          <Calendar size={20} color="#274d71" />
-          <Text style={styles.dateText}>{selectedDate}</Text>
+    <>
+      <TopSection />
+      <SafeAreaView style={styles.container} edges={[ 'left', 'right']}>
+        {/* Header */}
+        {/* <View style={styles.header}>
+          <View style={styles.dateContainer}>
+            <Calendar size={20} color="#274d71" />
+            <Text style={styles.dateText}>{selectedDate}</Text>
+          </View>
+        </View> */}
+
+        {/* Class Selection */}
+        <View style={styles.classSelection}>
+          <Text style={styles.sectionLabel}>Select Class</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.classButtons}>
+              {classes.map((classItem) => (
+                <TouchableOpacity
+                  key={classItem.id}
+                  style={[
+                    styles.classButton,
+                    selectedClass === classItem.id && styles.classButtonSelected,
+                  ]}
+                  onPress={() => setSelectedClass(classItem.id)}
+                >
+                  <Text style={[
+                    styles.classButtonText,
+                    selectedClass === classItem.id && styles.classButtonTextSelected,
+                  ]}>
+                    {classItem.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
         </View>
-      </View>
 
-      {/* Class Selection */}
-      <View style={styles.classSelection}>
-        <Text style={styles.sectionLabel}>Select Class</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.classButtons}>
-            {classes.map((classItem) => (
-              <TouchableOpacity
-                key={classItem.id}
-                style={[
-                  styles.classButton,
-                  selectedClass === classItem.id && styles.classButtonSelected,
-                ]}
-                onPress={() => setSelectedClass(classItem.id)}
-              >
-                <Text style={[
-                  styles.classButtonText,
-                  selectedClass === classItem.id && styles.classButtonTextSelected,
-                ]}>
-                  {classItem.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
-      </View>
-
-      {/* Students List */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {students.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Users size={48} color="#9CA3AF" />
-            <Text style={styles.emptyText}>No students in this class</Text>
-          </View>
-        ) : (
-          students.map((student) => {
-            const record = attendance[student.id];
-            return (
-              <View key={student.id} style={styles.studentCard}>
-                <View style={styles.studentHeader}>
-                  <View style={styles.studentInfo}>
-                    <Text style={styles.studentName}>{student.full_name}</Text>
-                    <Text style={styles.rollNumber}>Roll: {student.roll_number}</Text>
+        {/* Students List */}
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
+          {students.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Users size={48} color="#9CA3AF" />
+              <Text style={styles.emptyText}>No students in this class</Text>
+            </View>
+          ) : (
+            students.map((student) => {
+              const record = attendance[student.id];
+              return (
+                <View key={student.id} style={styles.studentCard}>
+                  <View style={styles.studentHeader}>
+                    <View style={styles.studentInfo}>
+                      <Text style={styles.studentName}>{student.full_name}</Text>
+                      <Text style={styles.rollNumber}>Roll: {student.roll_number}</Text>
+                    </View>
+                    <View style={styles.statusIndicator}>
+                      {getStatusIcon(record?.status)}
+                      {record && (
+                        <Text style={[styles.statusText, { color: getStatusColor(record.status) }]}>
+                          {record.status.toUpperCase()}
+                        </Text>
+                      )}
+                    </View>
                   </View>
-                  <View style={styles.statusIndicator}>
-                    {getStatusIcon(record?.status)}
-                    {record && (
-                      <Text style={[styles.statusText, { color: getStatusColor(record.status) }]}>
-                        {record.status.toUpperCase()}
+
+                  {record?.arrival_time && (
+                    <View style={styles.timeInfo}>
+                      <Clock size={16} color="#6B7280" />
+                      <Text style={styles.timeText}>
+                        Arrived at {record.arrival_time}
+                        {record.late_minutes && ` (${record.late_minutes} min late)`}
                       </Text>
-                    )}
+                    </View>
+                  )}
+
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.presentButton]}
+                      onPress={() => markAttendance(student.id, 'present')}
+                    >
+                      <CheckCircle size={16} color="#ffffff" />
+                      <Text style={styles.actionButtonText}>Present</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.customTimeButton]}
+                      onPress={() => {
+                        setSelectedStudent(student.id);
+                        setTimeModalVisible(true);
+                      }}
+                    >
+                      <Clock size={16} color="#ffffff" />
+                      <Text style={styles.actionButtonText}>Custom Time</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.absentButton]}
+                      onPress={() => markAttendance(student.id, 'absent')}
+                    >
+                      <XCircle size={16} color="#ffffff" />
+                      <Text style={styles.actionButtonText}>Absent</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
+              );
+            })
+          )}
+        </ScrollView>
 
-                {record?.arrival_time && (
-                  <View style={styles.timeInfo}>
-                    <Clock size={16} color="#6B7280" />
-                    <Text style={styles.timeText}>
-                      Arrived at {record.arrival_time}
-                      {record.late_minutes && ` (${record.late_minutes} min late)`}
-                    </Text>
-                  </View>
-                )}
-
-                <View style={styles.actionButtons}>
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.presentButton]}
-                    onPress={() => markAttendance(student.id, 'present')}
-                  >
-                    <CheckCircle size={16} color="#ffffff" />
-                    <Text style={styles.actionButtonText}>Present</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.customTimeButton]}
-                    onPress={() => {
-                      setSelectedStudent(student.id);
-                      setTimeModalVisible(true);
-                    }}
-                  >
-                    <Clock size={16} color="#ffffff" />
-                    <Text style={styles.actionButtonText}>Custom Time</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.absentButton]}
-                    onPress={() => markAttendance(student.id, 'absent')}
-                  >
-                    <XCircle size={16} color="#ffffff" />
-                    <Text style={styles.actionButtonText}>Absent</Text>
-                  </TouchableOpacity>
-                </View>
+        {/* Custom Time Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={timeModalVisible}
+          onRequestClose={() => setTimeModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.timeModalContent}>
+              <Text style={styles.modalTitle}>Enter Arrival Time</Text>
+              <TextInput
+                style={styles.timeInput}
+                value={customTime}
+                onChangeText={setCustomTime}
+                placeholder="HH:MM (24-hour format)"
+                placeholderTextColor="#9CA3AF"
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setTimeModalVisible(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.confirmButton}
+                  onPress={handleCustomTimeSubmit}
+                >
+                  <Text style={styles.confirmButtonText}>Mark Present</Text>
+                </TouchableOpacity>
               </View>
-            );
-          })
-        )}
-      </ScrollView>
-
-      {/* Custom Time Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={timeModalVisible}
-        onRequestClose={() => setTimeModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.timeModalContent}>
-            <Text style={styles.modalTitle}>Enter Arrival Time</Text>
-            <TextInput
-              style={styles.timeInput}
-              value={customTime}
-              onChangeText={setCustomTime}
-              placeholder="HH:MM (24-hour format)"
-              placeholderTextColor="#9CA3AF"
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setTimeModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.confirmButton}
-                onPress={handleCustomTimeSubmit}
-              >
-                <Text style={styles.confirmButtonText}>Mark Present</Text>
-              </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -416,8 +419,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 16,
     paddingBottom: 20,
+    borderWidth : 1
   },
   title: {
     fontSize: 28,

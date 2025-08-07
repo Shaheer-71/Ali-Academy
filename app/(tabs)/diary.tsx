@@ -15,17 +15,19 @@ import { supabase } from '@/lib/supabase';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { sendWhatsAppMessage, formatDiaryMessage } from '@/lib/whatsapp';
 import * as DocumentPicker from 'expo-document-picker';
-import { 
-  Plus, 
-  NotebookPen, 
+import {
+  Plus,
+  NotebookPen,
   Calendar,
   Clock,
   Users,
   User,
   FileText,
   X,
-  Upload
+  Upload,
+  Search
 } from 'lucide-react-native';
+import TopSection from '@/components/TopSection';
 
 interface DiaryAssignment {
   id: string;
@@ -48,6 +50,7 @@ export default function DiaryScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form states
   const [newAssignment, setNewAssignment] = useState({
@@ -263,275 +266,288 @@ export default function DiaryScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Diary & Homework</Text>
-        {profile?.role === 'teacher' && (
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setModalVisible(true)}
-          >
-            <Plus size={20} color="#ffffff" />
-          </TouchableOpacity>
-        )}
-      </View>
+    <>
+      <TopSection />
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
 
-      {/* Assignments List */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading assignments...</Text>
+
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Search size={20} color="#9CA3AF" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search students..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#9CA3AF"
+            />
           </View>
-        ) : assignments.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <NotebookPen size={48} color="#9CA3AF" />
-            <Text style={styles.emptyText}>No assignments yet</Text>
-            <Text style={styles.emptySubtext}>
-              {profile?.role === 'teacher' 
-                ? 'Create your first assignment to get started' 
-                : 'Check back later for new assignments'}
-            </Text>
-          </View>
-        ) : (
-          assignments.map((assignment) => {
-            const overdue = isOverdue(assignment.due_date);
-            return (
-              <View key={assignment.id} style={[
-                styles.assignmentCard,
-                overdue && styles.overdueCard
-              ]}>
-                <View style={styles.assignmentHeader}>
-                  <View style={styles.iconContainer}>
-                    <NotebookPen size={20} color="#274d71" />
-                  </View>
-                  <View style={styles.assignmentInfo}>
-                    <Text style={styles.assignmentTitle}>{assignment.title}</Text>
-                    <View style={styles.assignmentDetails}>
-                      <View style={styles.detailItem}>
-                        <Calendar size={14} color="#6B7280" />
-                        <Text style={[
-                          styles.detailText,
-                          overdue && styles.overdueText
-                        ]}>
-                          Due: {formatDate(assignment.due_date)}
-                        </Text>
+          {profile?.role === 'teacher' && (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setModalVisible(true)}
+            >
+              <Plus size={20} color="#ffffff" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Assignments List */}
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading assignments...</Text>
+            </View>
+          ) : assignments.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <NotebookPen size={48} color="#9CA3AF" />
+              <Text style={styles.emptyText}>No assignments yet</Text>
+              <Text style={styles.emptySubtext}>
+                {profile?.role === 'teacher'
+                  ? 'Create your first assignment to get started'
+                  : 'Check back later for new assignments'}
+              </Text>
+            </View>
+          ) : (
+            assignments.map((assignment) => {
+              const overdue = isOverdue(assignment.due_date);
+              return (
+                <View key={assignment.id} style={[
+                  styles.assignmentCard,
+                  overdue && styles.overdueCard
+                ]}>
+                  <View style={styles.assignmentHeader}>
+                    <View style={styles.iconContainer}>
+                      <NotebookPen size={20} color="#274d71" />
+                    </View>
+                    <View style={styles.assignmentInfo}>
+                      <Text style={styles.assignmentTitle}>{assignment.title}</Text>
+                      <View style={styles.assignmentDetails}>
+                        <View style={styles.detailItem}>
+                          <Calendar size={14} color="#6B7280" />
+                          <Text style={[
+                            styles.detailText,
+                            overdue && styles.overdueText
+                          ]}>
+                            Due: {formatDate(assignment.due_date)}
+                          </Text>
+                        </View>
+                        {assignment.class_id ? (
+                          <View style={styles.detailItem}>
+                            <Users size={14} color="#6B7280" />
+                            <Text style={styles.detailText}>{assignment.classes?.name}</Text>
+                          </View>
+                        ) : (
+                          <View style={styles.detailItem}>
+                            <User size={14} color="#6B7280" />
+                            <Text style={styles.detailText}>{assignment.students?.full_name}</Text>
+                          </View>
+                        )}
                       </View>
-                      {assignment.class_id ? (
-                        <View style={styles.detailItem}>
-                          <Users size={14} color="#6B7280" />
-                          <Text style={styles.detailText}>{assignment.classes?.name}</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.detailItem}>
-                          <User size={14} color="#6B7280" />
-                          <Text style={styles.detailText}>{assignment.students?.full_name}</Text>
-                        </View>
-                      )}
                     </View>
                   </View>
-                </View>
 
-                <Text style={styles.assignmentDescription}>
-                  {assignment.description}
-                </Text>
+                  <Text style={styles.assignmentDescription}>
+                    {assignment.description}
+                  </Text>
 
-                {assignment.file_url && (
-                  <TouchableOpacity style={styles.attachmentButton}>
-                    <FileText size={16} color="#274d71" />
-                    <Text style={styles.attachmentText}>View Attachment</Text>
-                  </TouchableOpacity>
-                )}
-
-                {overdue && (
-                  <View style={styles.overdueLabel}>
-                    <Clock size={12} color="#EF4444" />
-                    <Text style={styles.overdueLabelText}>OVERDUE</Text>
-                  </View>
-                )}
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
-
-      {/* Create Assignment Modal */}
-      {profile?.role === 'teacher' && (
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Create Assignment</Text>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <X size={24} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView style={styles.modalScrollView}>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Assignment Title</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={newAssignment.title}
-                    onChangeText={(text) => setNewAssignment({...newAssignment, title: text})}
-                    placeholder="Enter assignment title"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Description</Text>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    value={newAssignment.description}
-                    onChangeText={(text) => setNewAssignment({...newAssignment, description: text})}
-                    placeholder="Enter assignment description"
-                    placeholderTextColor="#9CA3AF"
-                    multiline
-                    numberOfLines={4}
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Due Date</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={newAssignment.due_date}
-                    onChangeText={(text) => setNewAssignment({...newAssignment, due_date: text})}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Assign To</Text>
-                  <View style={styles.assignToButtons}>
-                    <TouchableOpacity
-                      style={[
-                        styles.assignToButton,
-                        newAssignment.assignTo === 'class' && styles.assignToButtonSelected,
-                      ]}
-                      onPress={() => setNewAssignment({...newAssignment, assignTo: 'class', student_id: ''})}
-                    >
-                      <Users size={16} color={newAssignment.assignTo === 'class' ? '#ffffff' : '#374151'} />
-                      <Text style={[
-                        styles.assignToButtonText,
-                        newAssignment.assignTo === 'class' && styles.assignToButtonTextSelected,
-                      ]}>
-                        Entire Class
-                      </Text>
+                  {assignment.file_url && (
+                    <TouchableOpacity style={styles.attachmentButton}>
+                      <FileText size={16} color="#274d71" />
+                      <Text style={styles.attachmentText}>View Attachment</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.assignToButton,
-                        newAssignment.assignTo === 'student' && styles.assignToButtonSelected,
-                      ]}
-                      onPress={() => setNewAssignment({...newAssignment, assignTo: 'student', class_id: ''})}
-                    >
-                      <User size={16} color={newAssignment.assignTo === 'student' ? '#ffffff' : '#374151'} />
-                      <Text style={[
-                        styles.assignToButtonText,
-                        newAssignment.assignTo === 'student' && styles.assignToButtonTextSelected,
-                      ]}>
-                        Individual Student
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
+                  )}
+
+                  {overdue && (
+                    <View style={styles.overdueLabel}>
+                      <Clock size={12} color="#EF4444" />
+                      <Text style={styles.overdueLabelText}>OVERDUE</Text>
+                    </View>
+                  )}
                 </View>
+              );
+            })
+          )}
+        </ScrollView>
 
-                {newAssignment.assignTo === 'class' && (
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Select Class</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      <View style={styles.options}>
-                        {classes.map((classItem) => (
-                          <TouchableOpacity
-                            key={classItem.id}
-                            style={[
-                              styles.option,
-                              newAssignment.class_id === classItem.id && styles.optionSelected,
-                            ]}
-                            onPress={() => {
-                              setNewAssignment({...newAssignment, class_id: classItem.id});
-                              fetchStudents(classItem.id);
-                            }}
-                          >
-                            <Text style={[
-                              styles.optionText,
-                              newAssignment.class_id === classItem.id && styles.optionTextSelected,
-                            ]}>
-                              {classItem.name}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </ScrollView>
-                  </View>
-                )}
-
-                {newAssignment.assignTo === 'student' && (
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Select Student</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      <View style={styles.options}>
-                        {students.map((student) => (
-                          <TouchableOpacity
-                            key={student.id}
-                            style={[
-                              styles.option,
-                              newAssignment.student_id === student.id && styles.optionSelected,
-                            ]}
-                            onPress={() => setNewAssignment({...newAssignment, student_id: student.id})}
-                          >
-                            <Text style={[
-                              styles.optionText,
-                              newAssignment.student_id === student.id && styles.optionTextSelected,
-                            ]}>
-                              {student.full_name}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </ScrollView>
-                  </View>
-                )}
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Attachment (Optional)</Text>
+        {/* Create Assignment Modal */}
+        {profile?.role === 'teacher' && (
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Create Assignment</Text>
                   <TouchableOpacity
-                    style={styles.filePickerButton}
-                    onPress={pickDocument}
+                    style={styles.closeButton}
+                    onPress={() => setModalVisible(false)}
                   >
-                    <Upload size={20} color="#274d71" />
-                    <Text style={styles.filePickerText}>
-                      {newAssignment.file ? newAssignment.file.name : 'Select file (PDF, Image)'}
+                    <X size={24} color="#6B7280" />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={styles.modalScrollView}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Assignment Title</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={newAssignment.title}
+                      onChangeText={(text) => setNewAssignment({ ...newAssignment, title: text })}
+                      placeholder="Enter assignment title"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Description</Text>
+                    <TextInput
+                      style={[styles.input, styles.textArea]}
+                      value={newAssignment.description}
+                      onChangeText={(text) => setNewAssignment({ ...newAssignment, description: text })}
+                      placeholder="Enter assignment description"
+                      placeholderTextColor="#9CA3AF"
+                      multiline
+                      numberOfLines={4}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Due Date</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={newAssignment.due_date}
+                      onChangeText={(text) => setNewAssignment({ ...newAssignment, due_date: text })}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Assign To</Text>
+                    <View style={styles.assignToButtons}>
+                      <TouchableOpacity
+                        style={[
+                          styles.assignToButton,
+                          newAssignment.assignTo === 'class' && styles.assignToButtonSelected,
+                        ]}
+                        onPress={() => setNewAssignment({ ...newAssignment, assignTo: 'class', student_id: '' })}
+                      >
+                        <Users size={16} color={newAssignment.assignTo === 'class' ? '#ffffff' : '#374151'} />
+                        <Text style={[
+                          styles.assignToButtonText,
+                          newAssignment.assignTo === 'class' && styles.assignToButtonTextSelected,
+                        ]}>
+                          Entire Class
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.assignToButton,
+                          newAssignment.assignTo === 'student' && styles.assignToButtonSelected,
+                        ]}
+                        onPress={() => setNewAssignment({ ...newAssignment, assignTo: 'student', class_id: '' })}
+                      >
+                        <User size={16} color={newAssignment.assignTo === 'student' ? '#ffffff' : '#374151'} />
+                        <Text style={[
+                          styles.assignToButtonText,
+                          newAssignment.assignTo === 'student' && styles.assignToButtonTextSelected,
+                        ]}>
+                          Individual Student
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {newAssignment.assignTo === 'class' && (
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Select Class</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <View style={styles.options}>
+                          {classes.map((classItem) => (
+                            <TouchableOpacity
+                              key={classItem.id}
+                              style={[
+                                styles.option,
+                                newAssignment.class_id === classItem.id && styles.optionSelected,
+                              ]}
+                              onPress={() => {
+                                setNewAssignment({ ...newAssignment, class_id: classItem.id });
+                                fetchStudents(classItem.id);
+                              }}
+                            >
+                              <Text style={[
+                                styles.optionText,
+                                newAssignment.class_id === classItem.id && styles.optionTextSelected,
+                              ]}>
+                                {classItem.name}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  {newAssignment.assignTo === 'student' && (
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Select Student</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <View style={styles.options}>
+                          {students.map((student) => (
+                            <TouchableOpacity
+                              key={student.id}
+                              style={[
+                                styles.option,
+                                newAssignment.student_id === student.id && styles.optionSelected,
+                              ]}
+                              onPress={() => setNewAssignment({ ...newAssignment, student_id: student.id })}
+                            >
+                              <Text style={[
+                                styles.optionText,
+                                newAssignment.student_id === student.id && styles.optionTextSelected,
+                              ]}>
+                                {student.full_name}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Attachment (Optional)</Text>
+                    <TouchableOpacity
+                      style={styles.filePickerButton}
+                      onPress={pickDocument}
+                    >
+                      <Upload size={20} color="#274d71" />
+                      <Text style={styles.filePickerText}>
+                        {newAssignment.file ? newAssignment.file.name : 'Select file (PDF, Image)'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.submitButton, uploading && styles.submitButtonDisabled]}
+                    onPress={handleCreateAssignment}
+                    disabled={uploading}
+                  >
+                    <Text style={styles.submitButtonText}>
+                      {uploading ? 'Creating...' : 'Create Assignment'}
                     </Text>
                   </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.submitButton, uploading && styles.submitButtonDisabled]}
-                  onPress={handleCreateAssignment}
-                  disabled={uploading}
-                >
-                  <Text style={styles.submitButtonText}>
-                    {uploading ? 'Creating...' : 'Create Assignment'}
-                  </Text>
-                </TouchableOpacity>
-              </ScrollView>
+                </ScrollView>
+              </View>
             </View>
-          </View>
-        </Modal>
-      )}
-    </SafeAreaView>
+          </Modal>
+        )}
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -554,12 +570,13 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   addButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     backgroundColor: '#274d71',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft : 5
   },
   scrollView: {
     flex: 1,
@@ -832,5 +849,32 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
+  },
+  searchContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 20,
+    flexDirection: "row",
+    justifyContent: 'center',
+    alignContent: 'center',
+    alignItems: "center"
+
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    flex: 1
+  },
+  searchInput: {
+    flex: 1,
+    height: 48,
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#111827',
+    marginLeft: 12,
   },
 });

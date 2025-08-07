@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, LogOut, Bell, Shield, CircleHelp as HelpCircle, Info, ChevronRight, Mail, Phone } from 'lucide-react-native';
+import TopSection from '@/components/TopSection';
 
 export default function SettingsScreen() {
   const { profile, signOut } = useAuth();
@@ -53,94 +54,95 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
-        </View>
+    <>
+      <TopSection/>
+        <SafeAreaView style={styles.container}  edges={['left', 'right']}>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
 
-        {/* Profile Section */}
-        <View style={styles.section}>
-          <View style={styles.profileCard}>
-            <View style={styles.profileAvatar}>
-              <Text style={styles.profileInitial}>
-                {profile?.full_name?.charAt(0)?.toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{profile?.full_name}</Text>
-              <View style={styles.profileDetails}>
-                <View style={styles.profileDetail}>
-                  <Mail size={14} color="#6B7280" />
-                  <Text style={styles.profileDetailText}>{profile?.email}</Text>
-                </View>
-                {profile?.contact_number && (
+
+          {/* Profile Section */}
+          <View style={styles.section}>
+            <View style={styles.profileCard}>
+              <View style={styles.profileAvatar}>
+                <Text style={styles.profileInitial}>
+                  {profile?.full_name?.charAt(0)?.toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>{profile?.full_name}</Text>
+                <View style={styles.profileDetails}>
                   <View style={styles.profileDetail}>
-                    <Phone size={14} color="#6B7280" />
-                    <Text style={styles.profileDetailText}>{profile.contact_number}</Text>
+                    <Mail size={14} color="#6B7280" />
+                    <Text style={styles.profileDetailText}>{profile?.email}</Text>
                   </View>
-                )}
-              </View>
-              <View style={styles.roleContainer}>
-                <Text style={styles.roleText}>{profile?.role?.toUpperCase()}</Text>
+                  {profile?.contact_number && (
+                    <View style={styles.profileDetail}>
+                      <Phone size={14} color="#6B7280" />
+                      <Text style={styles.profileDetailText}>{profile.contact_number}</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.roleContainer}>
+                  <Text style={styles.roleText}>{profile?.role?.toUpperCase()}</Text>
+                </View>
               </View>
             </View>
           </View>
-        </View>
 
-        {/* Settings Options */}
-        <View style={styles.section}>
-          {settingsOptions.map((option, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.settingItem}
-              onPress={option.onPress}
-            >
-              <View style={styles.settingIcon}>
-                <option.icon size={20} color="#274d71" />
+          {/* Settings Options */}
+          <View style={styles.section}>
+            {settingsOptions.map((option, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.settingItem}
+                onPress={option.onPress}
+              >
+                <View style={styles.settingIcon}>
+                  <option.icon size={20} color="#274d71" />
+                </View>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>{option.title}</Text>
+                  <Text style={styles.settingSubtitle}>{option.subtitle}</Text>
+                </View>
+                <ChevronRight size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* App Information */}
+          <View style={styles.section}>
+            <View style={styles.appInfoCard}>
+              <Text style={styles.appInfoTitle}>Academy Management System</Text>
+              <Text style={styles.appInfoDescription}>
+                A comprehensive solution for managing academy operations including attendance,
+                lectures, assignments, and parent communication.
+              </Text>
+              <View style={styles.appInfoDetails}>
+                <Text style={styles.appInfoDetail}>• Real-time WhatsApp notifications</Text>
+                <Text style={styles.appInfoDetail}>• Secure file storage and sharing</Text>
+                <Text style={styles.appInfoDetail}>• Role-based access control</Text>
+                <Text style={styles.appInfoDetail}>• Comprehensive attendance tracking</Text>
               </View>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>{option.title}</Text>
-                <Text style={styles.settingSubtitle}>{option.subtitle}</Text>
-              </View>
-              <ChevronRight size={20} color="#9CA3AF" />
+            </View>
+          </View>
+
+          {/* Sign Out Button */}
+          <View style={styles.section}>
+            <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+              <LogOut size={20} color="#EF4444" />
+              <Text style={styles.signOutText}>Sign Out</Text>
             </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* App Information */}
-        <View style={styles.section}>
-          <View style={styles.appInfoCard}>
-            <Text style={styles.appInfoTitle}>Academy Management System</Text>
-            <Text style={styles.appInfoDescription}>
-              A comprehensive solution for managing academy operations including attendance, 
-              lectures, assignments, and parent communication.
-            </Text>
-            <View style={styles.appInfoDetails}>
-              <Text style={styles.appInfoDetail}>• Real-time WhatsApp notifications</Text>
-              <Text style={styles.appInfoDetail}>• Secure file storage and sharing</Text>
-              <Text style={styles.appInfoDetail}>• Role-based access control</Text>
-              <Text style={styles.appInfoDetail}>• Comprehensive attendance tracking</Text>
-            </View>
           </View>
-        </View>
 
-        {/* Sign Out Button */}
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-            <LogOut size={20} color="#EF4444" />
-            <Text style={styles.signOutText}>Sign Out</Text>
-          </TouchableOpacity>
-        </View>
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Ali Academy App v1.0.0</Text>
+            <Text style={styles.footerSubtext}>Powered By QHASH TECH SOLUTIONS</Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Academy Management App v1.0.0</Text>
-          <Text style={styles.footerSubtext}>Made with ❤️ for education</Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
   );
 }
 

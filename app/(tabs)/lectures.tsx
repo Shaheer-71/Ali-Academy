@@ -16,16 +16,18 @@ import { supabase } from '@/lib/supabase';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { sendWhatsAppMessage, formatLectureMessage } from '@/lib/whatsapp';
 import * as DocumentPicker from 'expo-document-picker';
-import { 
-  Plus, 
-  BookOpen, 
-  Download, 
+import {
+  Plus,
+  BookOpen,
+  Download,
   Calendar,
   FileText,
   Video,
   X,
-  Upload
+  Upload,
+  Search
 } from 'lucide-react-native';
+import TopSection from '@/components/TopSection';
 
 interface Lecture {
   id: string;
@@ -46,6 +48,7 @@ export default function LecturesScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
   // Form states
   const [newLecture, setNewLecture] = useState({
@@ -156,10 +159,10 @@ export default function LecturesScreen() {
         .eq('class_id', newLecture.class_id);
 
       const className = classes.find(c => c.id === newLecture.class_id)?.name;
-      
+
       if (students && className) {
         const message = formatLectureMessage(newLecture.title, className);
-        
+
         for (const student of students) {
           if (student.parent_contact) {
             await sendWhatsAppMessage({
@@ -195,170 +198,188 @@ export default function LecturesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Lectures</Text>
-        {profile?.role === 'teacher' && (
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setModalVisible(true)}
-          >
-            <Plus size={20} color="#ffffff" />
-          </TouchableOpacity>
-        )}
-      </View>
+    <>
+      <TopSection />
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        {/* Header */}
+        {/* <View style={styles.header}>
+          <Text style={styles.title}>Lectures</Text>
+          
+        </View> */}
 
-      {/* Lectures List */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading lectures...</Text>
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Search size={20} color="#9CA3AF" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search students..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#9CA3AF"
+            />
           </View>
-        ) : lectures.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <BookOpen size={48} color="#9CA3AF" />
-            <Text style={styles.emptyText}>No lectures available</Text>
-            <Text style={styles.emptySubtext}>
-              {profile?.role === 'teacher' 
-                ? 'Upload your first lecture to get started' 
-                : 'Check back later for new lectures'}
-            </Text>
-          </View>
-        ) : (
-          lectures.map((lecture) => (
-            <View key={lecture.id} style={styles.lectureCard}>
-              <View style={styles.lectureHeader}>
-                <View style={styles.fileIconContainer}>
-                  {getFileIcon(lecture.file_type)}
-                </View>
-                <View style={styles.lectureInfo}>
-                  <Text style={styles.lectureTitle}>{lecture.title}</Text>
-                  <View style={styles.lectureDetails}>
-                    <View style={styles.detailItem}>
-                      <BookOpen size={14} color="#6B7280" />
-                      <Text style={styles.detailText}>{lecture.classes?.name}</Text>
-                    </View>
-                    <View style={styles.detailItem}>
-                      <Calendar size={14} color="#6B7280" />
-                      <Text style={styles.detailText}>
-                        {new Date(lecture.created_at).toLocaleDateString()}
-                      </Text>
-                    </View>
-                  </View>
-                  {lecture.description && (
-                    <Text style={styles.lectureDescription}>{lecture.description}</Text>
-                  )}
-                </View>
-              </View>
-              
-              <TouchableOpacity style={styles.downloadButton}>
-                <Download size={16} color="#274d71" />
-                <Text style={styles.downloadButtonText}>Download</Text>
-              </TouchableOpacity>
+          {profile?.role === 'teacher' && (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setModalVisible(true)}
+            >
+              <Plus size={20} color="#ffffff" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+
+        {/* Lectures List */}
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading lectures...</Text>
             </View>
-          ))
-        )}
-      </ScrollView>
+          ) : lectures.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <BookOpen size={48} color="#9CA3AF" />
+              <Text style={styles.emptyText}>No lectures available</Text>
+              <Text style={styles.emptySubtext}>
+                {profile?.role === 'teacher'
+                  ? 'Upload your first lecture to get started'
+                  : 'Check back later for new lectures'}
+              </Text>
+            </View>
+          ) : (
+            lectures.map((lecture) => (
+              <View key={lecture.id} style={styles.lectureCard}>
+                <View style={styles.lectureHeader}>
+                  <View style={styles.fileIconContainer}>
+                    {getFileIcon(lecture.file_type)}
+                  </View>
+                  <View style={styles.lectureInfo}>
+                    <Text style={styles.lectureTitle}>{lecture.title}</Text>
+                    <View style={styles.lectureDetails}>
+                      <View style={styles.detailItem}>
+                        <BookOpen size={14} color="#6B7280" />
+                        <Text style={styles.detailText}>{lecture.classes?.name}</Text>
+                      </View>
+                      <View style={styles.detailItem}>
+                        <Calendar size={14} color="#6B7280" />
+                        <Text style={styles.detailText}>
+                          {new Date(lecture.created_at).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                    {lecture.description && (
+                      <Text style={styles.lectureDescription}>{lecture.description}</Text>
+                    )}
+                  </View>
+                </View>
 
-      {/* Upload Lecture Modal */}
-      {profile?.role === 'teacher' && (
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Upload Lecture</Text>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <X size={24} color="#6B7280" />
+                <TouchableOpacity style={styles.downloadButton}>
+                  <Download size={16} color="#274d71" />
+                  <Text style={styles.downloadButtonText}>Download</Text>
                 </TouchableOpacity>
               </View>
+            ))
+          )}
+        </ScrollView>
 
-              <ScrollView style={styles.modalScrollView}>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Lecture Title</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={newLecture.title}
-                    onChangeText={(text) => setNewLecture({...newLecture, title: text})}
-                    placeholder="Enter lecture title"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Description (Optional)</Text>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    value={newLecture.description}
-                    onChangeText={(text) => setNewLecture({...newLecture, description: text})}
-                    placeholder="Enter lecture description"
-                    placeholderTextColor="#9CA3AF"
-                    multiline
-                    numberOfLines={3}
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Class</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={styles.classOptions}>
-                      {classes.map((classItem) => (
-                        <TouchableOpacity
-                          key={classItem.id}
-                          style={[
-                            styles.classOption,
-                            newLecture.class_id === classItem.id && styles.classOptionSelected,
-                          ]}
-                          onPress={() => setNewLecture({...newLecture, class_id: classItem.id})}
-                        >
-                          <Text style={[
-                            styles.classOptionText,
-                            newLecture.class_id === classItem.id && styles.classOptionTextSelected,
-                          ]}>
-                            {classItem.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </ScrollView>
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>File</Text>
+        {/* Upload Lecture Modal */}
+        {profile?.role === 'teacher' && (
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Upload Lecture</Text>
                   <TouchableOpacity
-                    style={styles.filePickerButton}
-                    onPress={pickDocument}
+                    style={styles.closeButton}
+                    onPress={() => setModalVisible(false)}
                   >
-                    <Upload size={20} color="#274d71" />
-                    <Text style={styles.filePickerText}>
-                      {newLecture.file ? newLecture.file.name : 'Select file (PDF, Video, Image)'}
-                    </Text>
+                    <X size={24} color="#6B7280" />
                   </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity
-                  style={[styles.submitButton, uploading && styles.submitButtonDisabled]}
-                  onPress={handleUploadLecture}
-                  disabled={uploading}
-                >
-                  <Text style={styles.submitButtonText}>
-                    {uploading ? 'Uploading...' : 'Upload Lecture'}
-                  </Text>
-                </TouchableOpacity>
-              </ScrollView>
+                <ScrollView style={styles.modalScrollView}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Lecture Title</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={newLecture.title}
+                      onChangeText={(text) => setNewLecture({ ...newLecture, title: text })}
+                      placeholder="Enter lecture title"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Description (Optional)</Text>
+                    <TextInput
+                      style={[styles.input, styles.textArea]}
+                      value={newLecture.description}
+                      onChangeText={(text) => setNewLecture({ ...newLecture, description: text })}
+                      placeholder="Enter lecture description"
+                      placeholderTextColor="#9CA3AF"
+                      multiline
+                      numberOfLines={3}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Class</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View style={styles.classOptions}>
+                        {classes.map((classItem) => (
+                          <TouchableOpacity
+                            key={classItem.id}
+                            style={[
+                              styles.classOption,
+                              newLecture.class_id === classItem.id && styles.classOptionSelected,
+                            ]}
+                            onPress={() => setNewLecture({ ...newLecture, class_id: classItem.id })}
+                          >
+                            <Text style={[
+                              styles.classOptionText,
+                              newLecture.class_id === classItem.id && styles.classOptionTextSelected,
+                            ]}>
+                              {classItem.name}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </ScrollView>
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>File</Text>
+                    <TouchableOpacity
+                      style={styles.filePickerButton}
+                      onPress={pickDocument}
+                    >
+                      <Upload size={20} color="#274d71" />
+                      <Text style={styles.filePickerText}>
+                        {newLecture.file ? newLecture.file.name : 'Select file (PDF, Video, Image)'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.submitButton, uploading && styles.submitButtonDisabled]}
+                    onPress={handleUploadLecture}
+                    disabled={uploading}
+                  >
+                    <Text style={styles.submitButtonText}>
+                      {uploading ? 'Uploading...' : 'Upload Lecture'}
+                    </Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
             </View>
-          </View>
-        </Modal>
-      )}
-    </SafeAreaView>
+          </Modal>
+        )}
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -381,12 +402,13 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   addButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     backgroundColor: '#274d71',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft : 5
   },
   scrollView: {
     flex: 1,
@@ -609,5 +631,32 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
+  },
+  searchContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 20,
+    flexDirection : "row",
+    justifyContent : 'center',
+    alignContent : 'center',
+    alignItems : "center"
+
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    flex :1
+  },
+  searchInput: {
+    flex: 1,
+    height: 48,
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#111827',
+    marginLeft: 12,
   },
 });

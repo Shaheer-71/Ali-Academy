@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, Search, Users, Phone, Hash, BookOpen, X } from 'lucide-react-native';
+import TopSection from '@/components/TopSection';
 
 interface Student {
   id: string;
@@ -35,7 +36,7 @@ export default function StudentsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
-  
+
   // Form states
   const [newStudent, setNewStudent] = useState({
     full_name: '',
@@ -118,178 +119,186 @@ export default function StudentsScreen() {
 
   if (profile?.role !== 'teacher') {
     return (
+
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Access Denied</Text>
           <Text style={styles.errorSubtext}>This section is only available for teachers.</Text>
         </View>
       </SafeAreaView>
+
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Students</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setModalVisible(true)}
+    <>
+      <TopSection />
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        {/* Header */}
+
+
+        {/* Search */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Search size={20} color="#9CA3AF" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search students..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setModalVisible(true)}
+          >
+            <Plus size={20} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Students List */}
+        <ScrollView style={styles.scrollView}
+          contentContainerStyle={{
+            paddingBottom: 50,
+          }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading students...</Text>
+            </View>
+          ) : filteredStudents.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Users size={48} color="#9CA3AF" />
+              <Text style={styles.emptyText}>No students found</Text>
+              <Text style={styles.emptySubtext}>
+                {searchQuery ? 'Try adjusting your search' : 'Add your first student to get started'}
+              </Text>
+            </View>
+          ) : (
+            filteredStudents.map((student) => (
+              <View key={student.id} style={styles.studentCard}>
+                <View style={styles.studentHeader}>
+                  <View style={styles.studentAvatar}>
+                    <Text style={styles.studentInitial}>
+                      {student.full_name.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.studentInfo}>
+                    <Text style={styles.studentName}>{student.full_name}</Text>
+                    <View style={styles.studentDetails}>
+                      <View style={styles.detailItem}>
+                        <Hash size={14} color="#6B7280" />
+                        <Text style={styles.detailText}>{student.roll_number}</Text>
+                      </View>
+                      <View style={styles.detailItem}>
+                        <BookOpen size={14} color="#6B7280" />
+                        <Text style={styles.detailText}>{student.classes?.name}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.contactInfo}>
+                  <Phone size={16} color="#6B7280" />
+                  <Text style={styles.contactText}>{student.parent_contact}</Text>
+                </View>
+              </View>
+            ))
+          )}
+        </ScrollView>
+
+        {/* Add Student Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
         >
-          <Plus size={20} color="#ffffff" />
-        </TouchableOpacity>
-      </View>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Add New Student</Text>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <X size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
 
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <Search size={20} color="#9CA3AF" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search students..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#9CA3AF"
-          />
-        </View>
-      </View>
-
-      {/* Students List */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading students...</Text>
-          </View>
-        ) : filteredStudents.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Users size={48} color="#9CA3AF" />
-            <Text style={styles.emptyText}>No students found</Text>
-            <Text style={styles.emptySubtext}>
-              {searchQuery ? 'Try adjusting your search' : 'Add your first student to get started'}
-            </Text>
-          </View>
-        ) : (
-          filteredStudents.map((student) => (
-            <View key={student.id} style={styles.studentCard}>
-              <View style={styles.studentHeader}>
-                <View style={styles.studentAvatar}>
-                  <Text style={styles.studentInitial}>
-                    {student.full_name.charAt(0).toUpperCase()}
-                  </Text>
+              <ScrollView style={styles.modalScrollView}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Student Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={newStudent.full_name}
+                    onChangeText={(text) => setNewStudent({ ...newStudent, full_name: text })}
+                    placeholder="Enter student name"
+                    placeholderTextColor="#9CA3AF"
+                  />
                 </View>
-                <View style={styles.studentInfo}>
-                  <Text style={styles.studentName}>{student.full_name}</Text>
-                  <View style={styles.studentDetails}>
-                    <View style={styles.detailItem}>
-                      <Hash size={14} color="#6B7280" />
-                      <Text style={styles.detailText}>{student.roll_number}</Text>
-                    </View>
-                    <View style={styles.detailItem}>
-                      <BookOpen size={14} color="#6B7280" />
-                      <Text style={styles.detailText}>{student.classes?.name}</Text>
-                    </View>
-                  </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Roll Number</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={newStudent.roll_number}
+                    onChangeText={(text) => setNewStudent({ ...newStudent, roll_number: text })}
+                    placeholder="Enter roll number"
+                    placeholderTextColor="#9CA3AF"
+                  />
                 </View>
-              </View>
-              <View style={styles.contactInfo}>
-                <Phone size={16} color="#6B7280" />
-                <Text style={styles.contactText}>{student.parent_contact}</Text>
-              </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Parent Contact</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={newStudent.parent_contact}
+                    onChangeText={(text) => setNewStudent({ ...newStudent, parent_contact: text })}
+                    placeholder="Enter parent contact number"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Class</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={styles.classOptions}>
+                      {classes.map((classItem) => (
+                        <TouchableOpacity
+                          key={classItem.id}
+                          style={[
+                            styles.classOption,
+                            newStudent.class_id === classItem.id && styles.classOptionSelected,
+                          ]}
+                          onPress={() => setNewStudent({ ...newStudent, class_id: classItem.id })}
+                        >
+                          <Text style={[
+                            styles.classOptionText,
+                            newStudent.class_id === classItem.id && styles.classOptionTextSelected,
+                          ]}>
+                            {classItem.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.submitButton}
+                  onPress={handleAddStudent}
+                >
+                  <Text style={styles.submitButtonText}>Add Student</Text>
+                </TouchableOpacity>
+              </ScrollView>
             </View>
-          ))
-        )}
-      </ScrollView>
-
-      {/* Add Student Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New Student</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <X size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalScrollView}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Student Name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={newStudent.full_name}
-                  onChangeText={(text) => setNewStudent({...newStudent, full_name: text})}
-                  placeholder="Enter student name"
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Roll Number</Text>
-                <TextInput
-                  style={styles.input}
-                  value={newStudent.roll_number}
-                  onChangeText={(text) => setNewStudent({...newStudent, roll_number: text})}
-                  placeholder="Enter roll number"
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Parent Contact</Text>
-                <TextInput
-                  style={styles.input}
-                  value={newStudent.parent_contact}
-                  onChangeText={(text) => setNewStudent({...newStudent, parent_contact: text})}
-                  placeholder="Enter parent contact number"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="phone-pad"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Class</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={styles.classOptions}>
-                    {classes.map((classItem) => (
-                      <TouchableOpacity
-                        key={classItem.id}
-                        style={[
-                          styles.classOption,
-                          newStudent.class_id === classItem.id && styles.classOptionSelected,
-                        ]}
-                        onPress={() => setNewStudent({...newStudent, class_id: classItem.id})}
-                      >
-                        <Text style={[
-                          styles.classOptionText,
-                          newStudent.class_id === classItem.id && styles.classOptionTextSelected,
-                        ]}>
-                          {classItem.name}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
-              </View>
-
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={handleAddStudent}
-              >
-                <Text style={styles.submitButtonText}>Add Student</Text>
-              </TouchableOpacity>
-            </ScrollView>
           </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -330,16 +339,22 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   addButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     backgroundColor: '#274d71',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft : 5
   },
   searchContainer: {
     paddingHorizontal: 24,
     marginBottom: 20,
+    flexDirection : "row",
+    justifyContent : 'center',
+    alignContent : 'center',
+    alignItems : "center"
+
   },
   searchInputContainer: {
     flexDirection: 'row',
@@ -349,6 +364,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    flex :1
   },
   searchInput: {
     flex: 1,
