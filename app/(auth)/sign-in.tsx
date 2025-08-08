@@ -90,7 +90,7 @@ export default function SignInScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.footer}>
+          {/* <View style={styles.footer}>
             <Text style={styles.footerText}>
               Demo Accounts:
             </Text>
@@ -100,7 +100,7 @@ export default function SignInScreen() {
             <Text style={styles.demoText}>
               Parent: parent@academy.com / password123
             </Text>
-          </View>
+          </View> */}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

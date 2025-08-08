@@ -10,11 +10,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Users, ClipboardCheck, BookOpen, NotebookPen, ChartBar as BarChart3, Calendar, Bell, Sparkles, TrendingUp } from 'lucide-react-native';
-import TopSection from '@/components/TopSection';
+import TopSection from '@/components/TopSections';
 
 export default function HomeScreen() {
   const { profile } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
 
   const getGreeting = () => {
@@ -85,9 +87,9 @@ export default function HomeScreen() {
   const quickActions = getRoleBasedQuickActions();
 
   return (
-    <>
-      <TopSection />
-      <SafeAreaView style={styles.container} edges={[ 'left', 'right']}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <TopSection showNotifications={true} />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[ 'left', 'right']}>
         <View style={{ flex: 1 }}>
 
           <ScrollView
@@ -98,36 +100,33 @@ export default function HomeScreen() {
             keyboardShouldPersistTaps="handled"
           >
 
-            <View style={styles.headerContainer}>
+            <View style={[styles.headerContainer, { backgroundColor: colors.cardBackground }]}>
               {/* Header */}
-              <View style={styles.header}>
+              <View style={[styles.header, { backgroundColor: colors.cardBackground }]}>
                 <View>
-                  <Text style={styles.greeting}>{getGreeting()}</Text>
-                  <Text style={styles.username}>{profile?.full_name}</Text>
-                  <Text style={styles.role}>{profile?.role?.toUpperCase()}</Text>
+                  <Text style={[styles.greeting, { color: colors.textSecondary }]}>{getGreeting()}</Text>
+                  <Text style={[styles.username, { color: colors.text }]}>{profile?.full_name}</Text>
+                  <Text style={[styles.role, { backgroundColor: colors.primary }]}>{profile?.role?.toUpperCase()}</Text>
                 </View>
-                <TouchableOpacity style={styles.notificationButton}>
-                  <Bell size={24} color="#274d71" />
-                </TouchableOpacity>
               </View>
 
               {/* Quick Stats */}
-              <View style={styles.statsContainer}>
-                <View style={styles.statsCard}>
-                  <Text style={styles.statsNumber}>15</Text>
-                  <Text style={styles.statsLabel}>
+              <View style={[styles.statsContainer, { backgroundColor: colors.cardBackground }]}>
+                <View style={[styles.statsCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Text style={[styles.statsNumber, { color: colors.primary }]}>15</Text>
+                  <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
                     {profile?.role === 'teacher' ? 'Students' : 'Days Present'}
                   </Text>
                 </View>
-                <View style={styles.statsCard}>
-                  <Text style={styles.statsNumber}>3</Text>
-                  <Text style={styles.statsLabel}>
+                <View style={[styles.statsCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Text style={[styles.statsNumber, { color: colors.primary }]}>3</Text>
+                  <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
                     {profile?.role === 'teacher' ? 'Classes' : 'Pending Tasks'}
                   </Text>
                 </View>
-                <View style={styles.statsCard}>
-                  <Text style={styles.statsNumber}>8</Text>
-                  <Text style={styles.statsLabel}>
+                <View style={[styles.statsCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Text style={[styles.statsNumber, { color: colors.primary }]}>8</Text>
+                  <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
                     {profile?.role === 'teacher' ? 'Lectures' : 'Lectures'}
                   </Text>
                 </View>
@@ -136,58 +135,61 @@ export default function HomeScreen() {
 
             {/* Quick Actions */}
             <View style={styles.section}>
+
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Quick Actions</Text>
-                <View style={styles.sectionIcon}>
-                  <Sparkles size={16} color="#b6d509" />
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
+                <View style={[styles.sectionIcon, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <Sparkles size={16} color={colors.secondary} />
                 </View>
               </View>
+
               <View style={styles.actionsGrid}>
                 {quickActions.map((action, index) => (
                   <TouchableOpacity
                     key={index}
-                    style={styles.actionCard}
+                    style={[styles.actionCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
                     onPress={action.onPress}
                     activeOpacity={0.7}
                   >
                     <View style={[styles.actionIcon, { backgroundColor: `${action.color}20` }]}>
                       <action.icon size={24} color={action.color} />
                     </View>
-                    <Text style={styles.actionTitle}>{action.title}</Text>
+                    <Text style={[styles.actionTitle, { color: colors.text }]}>{action.title}</Text>
                     <View style={[styles.actionIndicator, { backgroundColor: action.color }]} />
                   </TouchableOpacity>
                 ))}
               </View>
+
             </View>
 
             {/* Recent Activity */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Recent Activity</Text>
-                <View style={styles.sectionIcon}>
-                  <TrendingUp size={16} color="#274d71" />
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Activity</Text>
+                <View style={[styles.sectionIcon, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <TrendingUp size={16} color={colors.primary} />
                 </View>
               </View>
-              <View style={styles.activityCard}>
+              <View style={[styles.activityCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <View style={styles.activityItem}>
                   <View style={[styles.activityDot, styles.activityDotSuccess]} />
                   <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>Attendance Marked</Text>
-                    <Text style={styles.activityTime}>Class A - 2 hours ago</Text>
+                    <Text style={[styles.activityTitle, { color: colors.text }]}>Attendance Marked</Text>
+                    <Text style={[styles.activityTime, { color: colors.textSecondary }]}>Class A - 2 hours ago</Text>
                   </View>
                 </View>
                 <View style={styles.activityItem}>
                   <View style={[styles.activityDot, styles.activityDotInfo]} />
                   <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>New Lecture Uploaded</Text>
-                    <Text style={styles.activityTime}>Mathematics - 5 hours ago</Text>
+                    <Text style={[styles.activityTitle, { color: colors.text }]}>New Lecture Uploaded</Text>
+                    <Text style={[styles.activityTime, { color: colors.textSecondary }]}>Mathematics - 5 hours ago</Text>
                   </View>
                 </View>
                 <View style={styles.activityItem}>
                   <View style={[styles.activityDot, styles.activityDotWarning]} />
                   <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>Homework Assigned</Text>
-                    <Text style={styles.activityTime}>Physics - Yesterday</Text>
+                    <Text style={[styles.activityTitle, { color: colors.text }]}>Homework Assigned</Text>
+                    <Text style={[styles.activityTime, { color: colors.textSecondary }]}>Physics - Yesterday</Text>
                   </View>
                 </View>
               </View>
@@ -195,93 +197,70 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
       </SafeAreaView>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    // borderWidth : 1,
-    paddingTop : -10
+    paddingTop: -10
   },
   headerContainer: {
-    borderWidth: 2,
     marginHorizontal: 24,
     paddingTop: 8,
     marginBottom: 12,
     paddingHorizontal: 12,
     borderRadius: 16,
-    borderColor: '#E5E7EB'
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    // paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 12,
-    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
   },
   greeting: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
   },
   username: {
     fontSize: 24,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
     marginTop: 4,
   },
   role: {
     fontSize: 12,
     fontFamily: 'Inter-Medium',
     color: '#b6d509',
-    backgroundColor: '#274d71',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
     marginTop: 8,
     alignSelf: 'flex-start',
   },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
   statsContainer: {
     flexDirection: 'row',
-    // paddingHorizontal: 24,
     marginBottom: 16,
     gap: 12,
+    borderRadius: 12,
+    padding: 12,
   },
   statsCard: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingVertical: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   statsNumber: {
     fontSize: 28,
     fontFamily: 'Inter-SemiBold',
-    color: '#274d71',
     marginBottom: 4,
   },
   statsLabel: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     textAlign: 'center',
   },
   section: {
@@ -297,17 +276,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
   },
   sectionIcon: {
     width: 32,
     height: 32,
-    backgroundColor: '#f8fafc',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   actionsGrid: {
     flexDirection: 'row',
@@ -316,12 +292,10 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     width: '47%',
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -339,15 +313,22 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#374151',
     textAlign: 'center',
   },
+  actionIndicator: {
+    position: 'absolute',
+    bottom: -0.5,
+    left: 0,
+    right: 0,
+    height: 8,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    // padding : "10%"
+  },
   activityCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -373,12 +354,19 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#111827',
     marginBottom: 2,
   },
   activityTime: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
+  },
+  activityDotSuccess: {
+    backgroundColor: '#10B981',
+  },
+  activityDotInfo: {
+    backgroundColor: '#3B82F6',
+  },
+  activityDotWarning: {
+    backgroundColor: '#F59E0B',
   },
 });

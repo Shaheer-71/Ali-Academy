@@ -9,11 +9,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { User, LogOut, Bell, Shield, CircleHelp as HelpCircle, Info, ChevronRight, Mail, Phone } from 'lucide-react-native';
-import TopSection from '@/components/TopSection';
+import TopSection from '@/components/TopSections';
 
 export default function SettingsScreen() {
   const { profile, signOut } = useAuth();
+  const { colors } = useTheme();
 
   const handleSignOut = () => {
     Alert.alert(
@@ -27,12 +29,6 @@ export default function SettingsScreen() {
   };
 
   const settingsOptions = [
-    {
-      title: 'Notifications',
-      subtitle: 'Manage your notification preferences',
-      icon: Bell,
-      onPress: () => Alert.alert('Coming Soon', 'Notification settings will be available soon'),
-    },
     {
       title: 'Privacy & Security',
       subtitle: 'Manage your privacy settings',
@@ -54,35 +50,35 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <>
-      <TopSection/>
-        <SafeAreaView style={styles.container}  edges={['left', 'right']}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <TopSection />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
 
 
           {/* Profile Section */}
           <View style={styles.section}>
-            <View style={styles.profileCard}>
-              <View style={styles.profileAvatar}>
+            <View style={[styles.profileCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View style={[styles.profileAvatar, { backgroundColor: colors.primary }]}>
                 <Text style={styles.profileInitial}>
                   {profile?.full_name?.charAt(0)?.toUpperCase()}
                 </Text>
               </View>
               <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>{profile?.full_name}</Text>
+                <Text style={[styles.profileName, { color: colors.text }]}>{profile?.full_name}</Text>
                 <View style={styles.profileDetails}>
                   <View style={styles.profileDetail}>
-                    <Mail size={14} color="#6B7280" />
-                    <Text style={styles.profileDetailText}>{profile?.email}</Text>
+                    <Mail size={14} color={colors.textSecondary} />
+                    <Text style={[styles.profileDetailText, { color: colors.textSecondary }]}>{profile?.email}</Text>
                   </View>
                   {profile?.contact_number && (
                     <View style={styles.profileDetail}>
-                      <Phone size={14} color="#6B7280" />
-                      <Text style={styles.profileDetailText}>{profile.contact_number}</Text>
+                      <Phone size={14} color={colors.textSecondary} />
+                      <Text style={[styles.profileDetailText, { color: colors.textSecondary }]}>{profile.contact_number}</Text>
                     </View>
                   )}
                 </View>
-                <View style={styles.roleContainer}>
+                <View style={[styles.roleContainer, { backgroundColor: colors.primary }]}>
                   <Text style={styles.roleText}>{profile?.role?.toUpperCase()}</Text>
                 </View>
               </View>
@@ -94,41 +90,41 @@ export default function SettingsScreen() {
             {settingsOptions.map((option, index) => (
               <TouchableOpacity
                 key={index}
-                style={styles.settingItem}
+                style={[styles.settingItem, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
                 onPress={option.onPress}
               >
-                <View style={styles.settingIcon}>
-                  <option.icon size={20} color="#274d71" />
+                <View style={[styles.settingIcon, { backgroundColor: colors.primary }]}>
+                  <option.icon size={20} color={colors.text} />
                 </View>
                 <View style={styles.settingInfo}>
-                  <Text style={styles.settingTitle}>{option.title}</Text>
-                  <Text style={styles.settingSubtitle}>{option.subtitle}</Text>
+                  <Text style={[styles.settingTitle, { color: colors.text }]}>{option.title}</Text>
+                  <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>{option.subtitle}</Text>
                 </View>
-                <ChevronRight size={20} color="#9CA3AF" />
+                <ChevronRight size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             ))}
           </View>
 
           {/* App Information */}
           <View style={styles.section}>
-            <View style={styles.appInfoCard}>
-              <Text style={styles.appInfoTitle}>Academy Management System</Text>
-              <Text style={styles.appInfoDescription}>
+            <View style={[styles.appInfoCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <Text style={[styles.appInfoTitle, { color: colors.primary }]}>Academy Management System</Text>
+              <Text style={[styles.appInfoDescription, { color: colors.text }]}>
                 A comprehensive solution for managing academy operations including attendance,
                 lectures, assignments, and parent communication.
               </Text>
               <View style={styles.appInfoDetails}>
-                <Text style={styles.appInfoDetail}>• Real-time WhatsApp notifications</Text>
-                <Text style={styles.appInfoDetail}>• Secure file storage and sharing</Text>
-                <Text style={styles.appInfoDetail}>• Role-based access control</Text>
-                <Text style={styles.appInfoDetail}>• Comprehensive attendance tracking</Text>
+                <Text style={[styles.appInfoDetail, { color: colors.textSecondary }]}>• Real-time WhatsApp notifications</Text>
+                <Text style={[styles.appInfoDetail, { color: colors.textSecondary }]}>• Secure file storage and sharing</Text>
+                <Text style={[styles.appInfoDetail, { color: colors.textSecondary }]}>• Role-based access control</Text>
+                <Text style={[styles.appInfoDetail, { color: colors.textSecondary }]}>• Comprehensive attendance tracking</Text>
               </View>
             </View>
           </View>
 
           {/* Sign Out Button */}
           <View style={styles.section}>
-            <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+            <TouchableOpacity style={[styles.signOutButton, { backgroundColor: colors.cardBackground, borderColor: colors.error }]} onPress={handleSignOut}>
               <LogOut size={20} color="#EF4444" />
               <Text style={styles.signOutText}>Sign Out</Text>
             </TouchableOpacity>
@@ -136,12 +132,12 @@ export default function SettingsScreen() {
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Ali Academy App v1.0.0</Text>
-            <Text style={styles.footerSubtext}>Powered By QHASH TECH SOLUTIONS</Text>
+            <Text style={[styles.footerText, { color: colors.textSecondary }]}>Ali Academy App v1.0.0</Text>
+            <Text style={[styles.footerSubtext, { color: colors.textSecondary }]}>Powered By QHASH TECH SOLUTIONS</Text>
           </View>
         </ScrollView>
       </SafeAreaView>
-    </>
+    </View>
 
   );
 }
@@ -149,7 +145,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    paddingBottom : 20
   },
   scrollView: {
     flex: 1,
@@ -162,18 +158,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
   },
   section: {
     paddingHorizontal: 24,
     marginBottom: 24,
   },
   profileCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -183,7 +176,6 @@ const styles = StyleSheet.create({
   profileAvatar: {
     width: 64,
     height: 64,
-    backgroundColor: '#274d71',
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -201,7 +193,6 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 20,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
     marginBottom: 8,
   },
   profileDetails: {
@@ -216,11 +207,9 @@ const styles = StyleSheet.create({
   profileDetailText: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     marginLeft: 6,
   },
   roleContainer: {
-    backgroundColor: '#274d71',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 6,
@@ -233,12 +222,10 @@ const styles = StyleSheet.create({
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -248,7 +235,6 @@ const styles = StyleSheet.create({
   settingIcon: {
     width: 40,
     height: 40,
-    backgroundColor: '#F9FAFB',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -260,31 +246,25 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
     marginBottom: 2,
   },
   settingSubtitle: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
   },
   appInfoCard: {
-    backgroundColor: '#F9FAFB',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   appInfoTitle: {
     fontSize: 18,
     fontFamily: 'Inter-SemiBold',
-    color: '#274d71',
     marginBottom: 8,
   },
   appInfoDescription: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#374151',
     lineHeight: 20,
     marginBottom: 16,
   },
@@ -294,15 +274,12 @@ const styles = StyleSheet.create({
   appInfoDetail: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
   },
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: '#FECACA',
     borderRadius: 12,
     padding: 16,
     gap: 8,
@@ -320,12 +297,10 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#9CA3AF',
     marginBottom: 4,
   },
   footerSubtext: {
     fontSize: 10,
     fontFamily: 'Inter-Regular',
-    color: '#D1D5DB',
   },
 });

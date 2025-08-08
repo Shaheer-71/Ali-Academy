@@ -11,11 +11,23 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
-import { Plus, Search, Users, Phone, Hash, BookOpen, X } from 'lucide-react-native';
-import TopSection from '@/components/TopSection';
+import {
+  Plus,
+  Search,
+  Users,
+  Phone,
+  Hash,
+  BookOpen,
+  X,
+  CreditCard as Edit,
+  Trash2
+} from 'lucide-react-native';
+import TopSection from '@/components/TopSections';
 
-interface Student {
+  
+interface Student  {
   id: string;
   full_name: string;
   roll_number: string;
@@ -31,6 +43,7 @@ interface Class {
 
 export default function StudentsScreen() {
   const { profile } = useAuth();
+  const { colors } = useTheme();
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -119,38 +132,37 @@ export default function StudentsScreen() {
 
   if (profile?.role !== 'teacher') {
     return (
-
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Access Denied</Text>
-          <Text style={styles.errorSubtext}>This section is only available for teachers.</Text>
-        </View>
-      </SafeAreaView>
-
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorText, { color: colors.text }]}>Access Denied</Text>
+            <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>This section is only available for teachers.</Text>
+          </View>
+        </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TopSection />
-      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
         {/* Header */}
-
 
         {/* Search */}
         <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
-            <Search size={20} color="#9CA3AF" />
+          <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Search size={20} color={colors.textSecondary} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: colors.text }]}
               placeholder="Search students..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
           <TouchableOpacity
-            style={styles.addButton}
+            style={[styles.addButton, { backgroundColor: colors.primary }]}
             onPress={() => setModalVisible(true)}
           >
             <Plus size={20} color="#ffffff" />
@@ -166,42 +178,42 @@ export default function StudentsScreen() {
           showsVerticalScrollIndicator={false}>
           {loading ? (
             <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading students...</Text>
+              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading students...</Text>
             </View>
           ) : filteredStudents.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Users size={48} color="#9CA3AF" />
-              <Text style={styles.emptyText}>No students found</Text>
-              <Text style={styles.emptySubtext}>
+              <Users size={48} color={colors.textSecondary} />
+              <Text style={[styles.emptyText, { color: colors.text }]}>No students found</Text>
+              <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
                 {searchQuery ? 'Try adjusting your search' : 'Add your first student to get started'}
               </Text>
             </View>
           ) : (
             filteredStudents.map((student) => (
-              <View key={student.id} style={styles.studentCard}>
+              <View key={student.id} style={[styles.studentCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <View style={styles.studentHeader}>
-                  <View style={styles.studentAvatar}>
+                  <View style={[styles.studentAvatar, { backgroundColor: colors.primary }]}>
                     <Text style={styles.studentInitial}>
                       {student.full_name.charAt(0).toUpperCase()}
                     </Text>
                   </View>
                   <View style={styles.studentInfo}>
-                    <Text style={styles.studentName}>{student.full_name}</Text>
+                    <Text style={[styles.studentName, { color: colors.text }]}>{student.full_name}</Text>
                     <View style={styles.studentDetails}>
                       <View style={styles.detailItem}>
-                        <Hash size={14} color="#6B7280" />
-                        <Text style={styles.detailText}>{student.roll_number}</Text>
+                        <Hash size={14} color={colors.textSecondary} />
+                        <Text style={[styles.detailText, { color: colors.textSecondary }]}>{student.roll_number}</Text>
                       </View>
                       <View style={styles.detailItem}>
-                        <BookOpen size={14} color="#6B7280" />
-                        <Text style={styles.detailText}>{student.classes?.name}</Text>
+                        <BookOpen size={14} color={colors.textSecondary} />
+                        <Text style={[styles.detailText, { color: colors.textSecondary }]}>{student.classes?.name}</Text>
                       </View>
                     </View>
                   </View>
                 </View>
-                <View style={styles.contactInfo}>
-                  <Phone size={16} color="#6B7280" />
-                  <Text style={styles.contactText}>{student.parent_contact}</Text>
+                <View style={[styles.contactInfo, { borderTopColor: colors.border }]}>
+                  <Phone size={16} color={colors.textSecondary} />
+                  <Text style={[styles.contactText, { color: colors.text }]}>{student.parent_contact}</Text>
                 </View>
               </View>
             ))
@@ -210,60 +222,60 @@ export default function StudentsScreen() {
 
         {/* Add Student Modal */}
         <Modal
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           visible={modalVisible}
           onRequestClose={() => setModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add New Student</Text>
+            <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Add New Student</Text>
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={() => setModalVisible(false)}
                 >
-                  <X size={24} color="#6B7280" />
+                  <X size={24} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
               <ScrollView style={styles.modalScrollView}>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Student Name</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>Student Name</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                     value={newStudent.full_name}
                     onChangeText={(text) => setNewStudent({ ...newStudent, full_name: text })}
                     placeholder="Enter student name"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={colors.textSecondary}
                   />
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Roll Number</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>Roll Number</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                     value={newStudent.roll_number}
                     onChangeText={(text) => setNewStudent({ ...newStudent, roll_number: text })}
                     placeholder="Enter roll number"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={colors.textSecondary}
                   />
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Parent Contact</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>Parent Contact</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                     value={newStudent.parent_contact}
                     onChangeText={(text) => setNewStudent({ ...newStudent, parent_contact: text })}
                     placeholder="Enter parent contact number"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={colors.textSecondary}
                     keyboardType="phone-pad"
                   />
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Class</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>Class</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <View style={styles.classOptions}>
                       {classes.map((classItem) => (
@@ -271,13 +283,15 @@ export default function StudentsScreen() {
                           key={classItem.id}
                           style={[
                             styles.classOption,
-                            newStudent.class_id === classItem.id && styles.classOptionSelected,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                            newStudent.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                           ]}
                           onPress={() => setNewStudent({ ...newStudent, class_id: classItem.id })}
                         >
                           <Text style={[
                             styles.classOptionText,
-                            newStudent.class_id === classItem.id && styles.classOptionTextSelected,
+                            { color: colors.text },
+                            newStudent.class_id === classItem.id && { color: '#ffffff' },
                           ]}>
                             {classItem.name}
                           </Text>
@@ -288,7 +302,7 @@ export default function StudentsScreen() {
                 </View>
 
                 <TouchableOpacity
-                  style={styles.submitButton}
+                  style={[styles.submitButton, { backgroundColor: colors.primary }]}
                   onPress={handleAddStudent}
                 >
                   <Text style={styles.submitButtonText}>Add Student</Text>
@@ -298,14 +312,13 @@ export default function StudentsScreen() {
           </View>
         </Modal>
       </SafeAreaView>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
   },
   errorContainer: {
     flex: 1,
@@ -316,13 +329,11 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 24,
     fontFamily: 'Inter-SemiBold',
-    color: '#374151',
     marginBottom: 8,
   },
   errorSubtext: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     textAlign: 'center',
   },
   header: {
@@ -336,12 +347,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
   },
   addButton: {
     width: 48,
     height: 48,
-    backgroundColor: '#274d71',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -354,16 +363,13 @@ const styles = StyleSheet.create({
     justifyContent : 'center',
     alignContent : 'center',
     alignItems : "center"
-
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
     borderRadius: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     flex :1
   },
   searchInput: {
@@ -371,7 +377,6 @@ const styles = StyleSheet.create({
     height: 48,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#111827',
     marginLeft: 12,
   },
   scrollView: {
@@ -386,7 +391,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -396,23 +400,19 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontFamily: 'Inter-SemiBold',
-    color: '#374151',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     textAlign: 'center',
   },
   studentCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -427,7 +427,6 @@ const styles = StyleSheet.create({
   studentAvatar: {
     width: 48,
     height: 48,
-    backgroundColor: '#274d71',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -444,7 +443,6 @@ const styles = StyleSheet.create({
   studentName: {
     fontSize: 18,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
     marginBottom: 4,
   },
   studentDetails: {
@@ -458,7 +456,6 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     marginLeft: 4,
   },
   contactInfo: {
@@ -466,12 +463,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
   },
   contactText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#374151',
     marginLeft: 8,
   },
   modalOverlay: {
@@ -480,7 +475,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',
@@ -493,12 +487,10 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   modalTitle: {
     fontSize: 20,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
   },
   closeButton: {
     width: 32,
@@ -508,7 +500,7 @@ const styles = StyleSheet.create({
   },
   modalScrollView: {
     paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingVertical: 24,
   },
   inputGroup: {
     marginBottom: 20,
@@ -516,19 +508,15 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#374151',
     marginBottom: 8,
   },
   input: {
     height: 50,
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#111827',
   },
   classOptions: {
     flexDirection: 'row',
@@ -537,26 +525,15 @@ const styles = StyleSheet.create({
   classOption: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 8,
-  },
-  classOptionSelected: {
-    backgroundColor: '#274d71',
-    borderColor: '#274d71',
   },
   classOptionText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#374151',
-  },
-  classOptionTextSelected: {
-    color: '#ffffff',
   },
   submitButton: {
     height: 50,
-    backgroundColor: '#274d71',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',

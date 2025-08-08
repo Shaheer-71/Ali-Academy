@@ -1,19 +1,13 @@
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Redirect } from 'expo-router';
-import {
-  Home,
-  Users,
-  ClipboardCheck,
-  BookOpen,
-  NotebookPen,
-  BarChart3,
-  Settings
-} from 'lucide-react-native';
+import { House as Home, Users, ClipboardCheck, BookOpen, NotebookPen , NotepadText} from 'lucide-react-native';
 
 export default function TabLayout() {
   const { user, profile, loading } = useAuth();
+  const { colors } = useTheme();
 
   if (loading) {
     return null;
@@ -33,14 +27,14 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#274d71',
-          tabBarInactiveTintColor: '#9CA3AF',
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textSecondary,
           tabBarStyle: {
-            backgroundColor: '#ffffff',
+            backgroundColor: colors.background,
             borderTopWidth: 1,
             // borderTopLeftRadius: 20,
             // borderTopRightRadius: 20,
-            borderTopColor: '#E5E7EB',
+            borderTopColor: colors.border,
             paddingTop: 4,
             // paddingBottom: 8,
             position: 'absolute',
@@ -103,35 +97,11 @@ export default function TabLayout() {
 
         {/* Diary - Available to all roles */}
         <Tabs.Screen
-          name="diary"
+          name="dairy"
           options={{
             title: 'Diary',
             tabBarIcon: ({ size, color }) => (
-              <NotebookPen size={size} color={color} />
-            ),
-          }}
-        />
-
-        {/* Dashboard - Only for Parents/Students */}
-        {/* {!!isTeacher && (
-          <Tabs.Screen
-            name="dashboard"
-            options={{
-              title: 'Dashboard',
-              tabBarIcon: ({ size, color }) => (
-                <BarChart3 size={size} color={color} />
-              ),
-            }}
-          />
-        )} */}
-
-        {/* Settings - Available to all roles */}
-        <Tabs.Screen
-          name="settings"
-          options={{
-            title: 'Settings',
-            tabBarIcon: ({ size, color }) => (
-              <Settings size={size} color={color} />
+              <NotepadText size={size} color={color} />
             ),
           }}
         />

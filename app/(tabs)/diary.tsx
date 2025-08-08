@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { sendWhatsAppMessage, formatDiaryMessage } from '@/lib/whatsapp';
@@ -27,7 +28,7 @@ import {
   Upload,
   Search
 } from 'lucide-react-native';
-import TopSection from '@/components/TopSection';
+import TopSection from '@/components/TopSections';
 
 interface DiaryAssignment {
   id: string;
@@ -44,6 +45,7 @@ interface DiaryAssignment {
 
 export default function DiaryScreen() {
   const { profile } = useAuth();
+  const { colors } = useTheme();
   const [assignments, setAssignments] = useState<DiaryAssignment[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
@@ -266,25 +268,25 @@ export default function DiaryScreen() {
   };
 
   return (
-    <>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TopSection />
-      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
 
 
         <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
-            <Search size={20} color="#9CA3AF" />
+          <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Search size={20} color={colors.textSecondary} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: colors.text }]}
               placeholder="Search students..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
           {profile?.role === 'teacher' && (
             <TouchableOpacity
-              style={styles.addButton}
+              style={[styles.addButton, { backgroundColor: colors.primary }]}
               onPress={() => setModalVisible(true)}
             >
               <Plus size={20} color="#ffffff" />
@@ -296,13 +298,13 @@ export default function DiaryScreen() {
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
           {loading ? (
             <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading assignments...</Text>
+              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading assignments...</Text>
             </View>
           ) : assignments.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <NotebookPen size={48} color="#9CA3AF" />
-              <Text style={styles.emptyText}>No assignments yet</Text>
-              <Text style={styles.emptySubtext}>
+              <NotebookPen size={48} color="#fff" />
+              <Text style={[styles.emptyText, { color: colors.text }]}>No assignments yet</Text>
+              <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
                 {profile?.role === 'teacher'
                   ? 'Create your first assignment to get started'
                   : 'Check back later for new assignments'}
@@ -314,19 +316,21 @@ export default function DiaryScreen() {
               return (
                 <View key={assignment.id} style={[
                   styles.assignmentCard,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
                   overdue && styles.overdueCard
                 ]}>
                   <View style={styles.assignmentHeader}>
-                    <View style={styles.iconContainer}>
-                      <NotebookPen size={20} color="#274d71" />
+                    <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
+                      <NotebookPen size={20} color="#fff" />
                     </View>
                     <View style={styles.assignmentInfo}>
-                      <Text style={styles.assignmentTitle}>{assignment.title}</Text>
+                      <Text style={[styles.assignmentTitle, { color: colors.text }]}>{assignment.title}</Text>
                       <View style={styles.assignmentDetails}>
                         <View style={styles.detailItem}>
-                          <Calendar size={14} color="#6B7280" />
+                          <Calendar size={14} color={colors.textSecondary} />
                           <Text style={[
                             styles.detailText,
+                            { color: colors.textSecondary },
                             overdue && styles.overdueText
                           ]}>
                             Due: {formatDate(assignment.due_date)}
@@ -334,27 +338,27 @@ export default function DiaryScreen() {
                         </View>
                         {assignment.class_id ? (
                           <View style={styles.detailItem}>
-                            <Users size={14} color="#6B7280" />
-                            <Text style={styles.detailText}>{assignment.classes?.name}</Text>
+                            <Users size={14} color={colors.textSecondary} />
+                            <Text style={[styles.detailText, { color: colors.textSecondary }]}>{assignment.classes?.name}</Text>
                           </View>
                         ) : (
                           <View style={styles.detailItem}>
-                            <User size={14} color="#6B7280" />
-                            <Text style={styles.detailText}>{assignment.students?.full_name}</Text>
+                            <User size={14} color={colors.textSecondary} />
+                            <Text style={[styles.detailText, { color: colors.textSecondary }]}>{assignment.students?.full_name}</Text>
                           </View>
                         )}
                       </View>
                     </View>
                   </View>
 
-                  <Text style={styles.assignmentDescription}>
+                  <Text style={[styles.assignmentDescription, { color: colors.text }]}>
                     {assignment.description}
                   </Text>
 
                   {assignment.file_url && (
-                    <TouchableOpacity style={styles.attachmentButton}>
-                      <FileText size={16} color="#274d71" />
-                      <Text style={styles.attachmentText}>View Attachment</Text>
+                    <TouchableOpacity style={[styles.attachmentButton, { backgroundColor: colors.background }]}>
+                      <FileText size={16} color={colors.primary} />
+                      <Text style={[styles.attachmentText, { color: colors.primary }]}>View Attachment</Text>
                     </TouchableOpacity>
                   )}
 
@@ -373,73 +377,75 @@ export default function DiaryScreen() {
         {/* Create Assignment Modal */}
         {profile?.role === 'teacher' && (
           <Modal
-            animationType="slide"
+            animationType="fade"
             transparent={true}
             visible={modalVisible}
             onRequestClose={() => setModalVisible(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Create Assignment</Text>
+              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>Create Assignment</Text>
                   <TouchableOpacity
                     style={styles.closeButton}
                     onPress={() => setModalVisible(false)}
                   >
-                    <X size={24} color="#6B7280" />
+                    <X size={24} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
                 <ScrollView style={styles.modalScrollView}>
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Assignment Title</Text>
+                    <Text style={[styles.label, { color: colors.text }]}>Assignment Title</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                       value={newAssignment.title}
                       onChangeText={(text) => setNewAssignment({ ...newAssignment, title: text })}
                       placeholder="Enter assignment title"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={colors.textSecondary}
                     />
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Description</Text>
+                    <Text style={[styles.label, { color: colors.text }]}>Description</Text>
                     <TextInput
-                      style={[styles.input, styles.textArea]}
+                      style={[styles.input, styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                       value={newAssignment.description}
                       onChangeText={(text) => setNewAssignment({ ...newAssignment, description: text })}
                       placeholder="Enter assignment description"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={colors.textSecondary}
                       multiline
                       numberOfLines={4}
                     />
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Due Date</Text>
+                    <Text style={[styles.label, { color: colors.text }]}>Due Date</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                       value={newAssignment.due_date}
                       onChangeText={(text) => setNewAssignment({ ...newAssignment, due_date: text })}
                       placeholder="YYYY-MM-DD"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={colors.textSecondary}
                     />
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Assign To</Text>
+                    <Text style={[styles.label, { color: colors.text }]}>Assign To</Text>
                     <View style={styles.assignToButtons}>
                       <TouchableOpacity
                         style={[
                           styles.assignToButton,
-                          newAssignment.assignTo === 'class' && styles.assignToButtonSelected,
+                          { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                          newAssignment.assignTo === 'class' && { backgroundColor: colors.primary, borderColor: colors.primary },
                         ]}
                         onPress={() => setNewAssignment({ ...newAssignment, assignTo: 'class', student_id: '' })}
                       >
-                        <Users size={16} color={newAssignment.assignTo === 'class' ? '#ffffff' : '#374151'} />
+                        <Users size={16} color={newAssignment.assignTo === 'class' ? '#ffffff' : colors.text} />
                         <Text style={[
                           styles.assignToButtonText,
-                          newAssignment.assignTo === 'class' && styles.assignToButtonTextSelected,
+                          { color: colors.text },
+                          newAssignment.assignTo === 'class' && { color: '#ffffff' },
                         ]}>
                           Entire Class
                         </Text>
@@ -447,14 +453,16 @@ export default function DiaryScreen() {
                       <TouchableOpacity
                         style={[
                           styles.assignToButton,
-                          newAssignment.assignTo === 'student' && styles.assignToButtonSelected,
+                          { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                          newAssignment.assignTo === 'student' && { backgroundColor: colors.primary, borderColor: colors.primary },
                         ]}
                         onPress={() => setNewAssignment({ ...newAssignment, assignTo: 'student', class_id: '' })}
                       >
-                        <User size={16} color={newAssignment.assignTo === 'student' ? '#ffffff' : '#374151'} />
+                        <User size={16} color={newAssignment.assignTo === 'student' ? '#ffffff' : colors.text} />
                         <Text style={[
                           styles.assignToButtonText,
-                          newAssignment.assignTo === 'student' && styles.assignToButtonTextSelected,
+                          { color: colors.text },
+                          newAssignment.assignTo === 'student' && { color: '#ffffff' },
                         ]}>
                           Individual Student
                         </Text>
@@ -464,7 +472,7 @@ export default function DiaryScreen() {
 
                   {newAssignment.assignTo === 'class' && (
                     <View style={styles.inputGroup}>
-                      <Text style={styles.label}>Select Class</Text>
+                      <Text style={[styles.label, { color: colors.text }]}>Select Class</Text>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         <View style={styles.options}>
                           {classes.map((classItem) => (
@@ -472,7 +480,8 @@ export default function DiaryScreen() {
                               key={classItem.id}
                               style={[
                                 styles.option,
-                                newAssignment.class_id === classItem.id && styles.optionSelected,
+                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                newAssignment.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                               ]}
                               onPress={() => {
                                 setNewAssignment({ ...newAssignment, class_id: classItem.id });
@@ -481,7 +490,8 @@ export default function DiaryScreen() {
                             >
                               <Text style={[
                                 styles.optionText,
-                                newAssignment.class_id === classItem.id && styles.optionTextSelected,
+                                { color: colors.text },
+                                newAssignment.class_id === classItem.id && { color: '#ffffff' },
                               ]}>
                                 {classItem.name}
                               </Text>
@@ -494,7 +504,7 @@ export default function DiaryScreen() {
 
                   {newAssignment.assignTo === 'student' && (
                     <View style={styles.inputGroup}>
-                      <Text style={styles.label}>Select Student</Text>
+                      <Text style={[styles.label, { color: colors.text }]}>Select Student</Text>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         <View style={styles.options}>
                           {students.map((student) => (
@@ -502,13 +512,15 @@ export default function DiaryScreen() {
                               key={student.id}
                               style={[
                                 styles.option,
-                                newAssignment.student_id === student.id && styles.optionSelected,
+                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                newAssignment.student_id === student.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                               ]}
                               onPress={() => setNewAssignment({ ...newAssignment, student_id: student.id })}
                             >
                               <Text style={[
                                 styles.optionText,
-                                newAssignment.student_id === student.id && styles.optionTextSelected,
+                                { color: colors.text },
+                                newAssignment.student_id === student.id && { color: '#ffffff' },
                               ]}>
                                 {student.full_name}
                               </Text>
@@ -520,20 +532,20 @@ export default function DiaryScreen() {
                   )}
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Attachment (Optional)</Text>
+                    <Text style={[styles.label, { color: colors.text }]}>Attachment (Optional)</Text>
                     <TouchableOpacity
-                      style={styles.filePickerButton}
+                      style={[styles.filePickerButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
                       onPress={pickDocument}
                     >
-                      <Upload size={20} color="#274d71" />
-                      <Text style={styles.filePickerText}>
+                      <Upload size={20} color={colors.primary} />
+                      <Text style={[styles.filePickerText, { color: colors.text }]}>
                         {newAssignment.file ? newAssignment.file.name : 'Select file (PDF, Image)'}
                       </Text>
                     </TouchableOpacity>
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.submitButton, uploading && styles.submitButtonDisabled]}
+                    style={[styles.submitButton, { backgroundColor: colors.primary }, uploading && styles.submitButtonDisabled]}
                     onPress={handleCreateAssignment}
                     disabled={uploading}
                   >
@@ -547,14 +559,13 @@ export default function DiaryScreen() {
           </Modal>
         )}
       </SafeAreaView>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -567,12 +578,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
   },
   addButton: {
     width: 48,
     height: 48,
-    backgroundColor: '#274d71',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -590,7 +599,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -600,18 +608,15 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontFamily: 'Inter-SemiBold',
-    color: '#374151',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     textAlign: 'center',
   },
   assignmentCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
     marginBottom: 12,
@@ -634,7 +639,6 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 40,
     height: 40,
-    backgroundColor: '#F3F4F6',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -646,7 +650,6 @@ const styles = StyleSheet.create({
   assignmentTitle: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
     marginBottom: 6,
   },
   assignmentDetails: {
@@ -660,7 +663,6 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     marginLeft: 4,
   },
   overdueText: {
@@ -670,14 +672,12 @@ const styles = StyleSheet.create({
   assignmentDescription: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#374151',
     lineHeight: 20,
     marginBottom: 12,
   },
   attachmentButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
@@ -688,7 +688,6 @@ const styles = StyleSheet.create({
   attachmentText: {
     fontSize: 12,
     fontFamily: 'Inter-Medium',
-    color: '#274d71',
   },
   overdueLabel: {
     flexDirection: 'row',
@@ -711,10 +710,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '85%',
+
   },
   modalHeader: {
     flexDirection: 'row',
@@ -724,12 +723,10 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   modalTitle: {
     fontSize: 20,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
   },
   closeButton: {
     width: 32,
@@ -739,7 +736,9 @@ const styles = StyleSheet.create({
   },
   modalScrollView: {
     paddingHorizontal: 24,
-    paddingBottom: 24,
+    marginBottom: 50,
+    paddingTop: 20
+
   },
   inputGroup: {
     marginBottom: 20,
@@ -747,19 +746,15 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#374151',
     marginBottom: 8,
   },
   input: {
     height: 50,
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#111827',
   },
   textArea: {
     height: 100,
@@ -776,23 +771,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 8,
     gap: 6,
-  },
-  assignToButtonSelected: {
-    backgroundColor: '#274d71',
-    borderColor: '#274d71',
   },
   assignToButtonText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#374151',
-  },
-  assignToButtonTextSelected: {
-    color: '#ffffff',
   },
   options: {
     flexDirection: 'row',
@@ -801,42 +786,28 @@ const styles = StyleSheet.create({
   option: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 8,
-  },
-  optionSelected: {
-    backgroundColor: '#274d71',
-    borderColor: '#274d71',
   },
   optionText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#374151',
-  },
-  optionTextSelected: {
-    color: '#ffffff',
   },
   filePickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     height: 50,
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     gap: 8,
   },
   filePickerText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#374151',
   },
   submitButton: {
     height: 50,
-    backgroundColor: '#274d71',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -862,11 +833,9 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
     borderRadius: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     flex: 1
   },
   searchInput: {
@@ -874,7 +843,6 @@ const styles = StyleSheet.create({
     height: 48,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#111827',
     marginLeft: 12,
   },
 });

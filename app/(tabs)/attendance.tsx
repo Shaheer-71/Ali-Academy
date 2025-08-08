@@ -22,7 +22,8 @@ import {
   Users,
   MessageCircle
 } from 'lucide-react-native';
-import TopSection from '@/components/TopSection';
+import TopSection from '@/components/TopSections';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Student {
   id: string;
@@ -42,6 +43,7 @@ interface AttendanceRecord {
 
 export default function AttendanceScreen() {
   const { profile } = useAuth();
+  const { colors } = useTheme(); // Removed isDark since we're using colors object like in students screen
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [classes, setClasses] = useState<any[]>([]);
@@ -215,7 +217,7 @@ export default function AttendanceScreen() {
       case 'absent':
         return <XCircle size={20} color="#EF4444" />;
       default:
-        return <Clock size={20} color="#9CA3AF" />;
+        return <Clock size={20} color={colors.textSecondary} />;
     }
   };
 
@@ -228,36 +230,30 @@ export default function AttendanceScreen() {
       case 'absent':
         return '#EF4444';
       default:
-        return '#9CA3AF';
+        return colors.textSecondary;
     }
   };
 
   if (profile?.role !== 'teacher') {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Access Denied</Text>
-          <Text style={styles.errorSubtext}>This section is only available for teachers.</Text>
-        </View>
-      </SafeAreaView>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorText, { color: colors.text }]}>Access Denied</Text>
+            <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>This section is only available for teachers.</Text>
+          </View>
+        </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TopSection />
-      <SafeAreaView style={styles.container} edges={[ 'left', 'right']}>
-        {/* Header */}
-        {/* <View style={styles.header}>
-          <View style={styles.dateContainer}>
-            <Calendar size={20} color="#274d71" />
-            <Text style={styles.dateText}>{selectedDate}</Text>
-          </View>
-        </View> */}
-
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
         {/* Class Selection */}
         <View style={styles.classSelection}>
-          <Text style={styles.sectionLabel}>Select Class</Text>
+          <Text style={[styles.sectionLabel, { color: colors.text }]}>Select Class</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.classButtons}>
               {classes.map((classItem) => (
@@ -265,13 +261,15 @@ export default function AttendanceScreen() {
                   key={classItem.id}
                   style={[
                     styles.classButton,
-                    selectedClass === classItem.id && styles.classButtonSelected,
+                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                    selectedClass === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                   ]}
                   onPress={() => setSelectedClass(classItem.id)}
                 >
                   <Text style={[
                     styles.classButtonText,
-                    selectedClass === classItem.id && styles.classButtonTextSelected,
+                    { color: colors.text },
+                    selectedClass === classItem.id && { color: '#ffffff' },
                   ]}>
                     {classItem.name}
                   </Text>
@@ -285,18 +283,18 @@ export default function AttendanceScreen() {
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
           {students.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Users size={48} color="#9CA3AF" />
-              <Text style={styles.emptyText}>No students in this class</Text>
+              <Users size={48} color={colors.textSecondary} />
+              <Text style={[styles.emptyText, { color: colors.text }]}>No students in this class</Text>
             </View>
           ) : (
             students.map((student) => {
               const record = attendance[student.id];
               return (
-                <View key={student.id} style={styles.studentCard}>
+                <View key={student.id} style={[styles.studentCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                   <View style={styles.studentHeader}>
                     <View style={styles.studentInfo}>
-                      <Text style={styles.studentName}>{student.full_name}</Text>
-                      <Text style={styles.rollNumber}>Roll: {student.roll_number}</Text>
+                      <Text style={[styles.studentName, { color: colors.text }]}>{student.full_name}</Text>
+                      <Text style={[styles.rollNumber, { color: colors.textSecondary }]}>Roll: {student.roll_number}</Text>
                     </View>
                     <View style={styles.statusIndicator}>
                       {getStatusIcon(record?.status)}
@@ -309,9 +307,9 @@ export default function AttendanceScreen() {
                   </View>
 
                   {record?.arrival_time && (
-                    <View style={styles.timeInfo}>
-                      <Clock size={16} color="#6B7280" />
-                      <Text style={styles.timeText}>
+                    <View style={[styles.timeInfo, { borderTopColor: colors.border }]}>
+                      <Clock size={16} color={colors.textSecondary} />
+                      <Text style={[styles.timeText, { color: colors.textSecondary }]}>
                         Arrived at {record.arrival_time}
                         {record.late_minutes && ` (${record.late_minutes} min late)`}
                       </Text>
@@ -354,47 +352,57 @@ export default function AttendanceScreen() {
 
         {/* Custom Time Modal */}
         <Modal
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           visible={timeModalVisible}
           onRequestClose={() => setTimeModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.timeModalContent}>
-              <Text style={styles.modalTitle}>Enter Arrival Time</Text>
-              <TextInput
-                style={styles.timeInput}
-                value={customTime}
-                onChangeText={setCustomTime}
-                placeholder="HH:MM (24-hour format)"
-                placeholderTextColor="#9CA3AF"
-              />
-              <View style={styles.modalButtons}>
+            <View style={[styles.timeModalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Enter Arrival Time</Text>
                 <TouchableOpacity
-                  style={styles.cancelButton}
+                  style={styles.closeButton}
                   onPress={() => setTimeModalVisible(false)}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <XCircle size={24} color={colors.textSecondary} />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.confirmButton}
-                  onPress={handleCustomTimeSubmit}
-                >
-                  <Text style={styles.confirmButtonText}>Mark Present</Text>
-                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.modalContent}>
+                <TextInput
+                  style={[styles.timeInput, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                  value={customTime}
+                  onChangeText={setCustomTime}
+                  placeholder="HH:MM (24-hour format)"
+                  placeholderTextColor={colors.textSecondary}
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.cancelButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                    onPress={() => setTimeModalVisible(false)}
+                  >
+                    <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.confirmButton, { backgroundColor: colors.primary }]}
+                    onPress={handleCustomTimeSubmit}
+                  >
+                    <Text style={styles.confirmButtonText}>Mark Present</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </View>
         </Modal>
       </SafeAreaView>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
   },
   errorContainer: {
     flex: 1,
@@ -405,52 +413,21 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 24,
     fontFamily: 'Inter-SemiBold',
-    color: '#374151',
     marginBottom: 8,
   },
   errorSubtext: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     textAlign: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    borderWidth : 1
-  },
-  title: {
-    fontSize: 28,
-    fontFamily: 'Inter-SemiBold',
-    color: '#111827',
-  },
-  dateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  dateText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#374151',
-    marginLeft: 8,
   },
   classSelection: {
     paddingHorizontal: 24,
     marginBottom: 20,
+    paddingTop: 16,
   },
   sectionLabel: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
     marginBottom: 12,
   },
   classButtons: {
@@ -460,22 +437,12 @@ const styles = StyleSheet.create({
   classButton: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 8,
-  },
-  classButtonSelected: {
-    backgroundColor: '#274d71',
-    borderColor: '#274d71',
   },
   classButtonText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#374151',
-  },
-  classButtonTextSelected: {
-    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -489,16 +456,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontFamily: 'Inter-SemiBold',
-    color: '#374151',
     marginTop: 16,
   },
   studentCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -517,13 +481,11 @@ const styles = StyleSheet.create({
   studentName: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
     marginBottom: 2,
   },
   rollNumber: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
   },
   statusIndicator: {
     alignItems: 'center',
@@ -539,12 +501,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
   },
   timeText: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     marginLeft: 8,
   },
   actionButtons: {
@@ -577,33 +537,43 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   timeModalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    width: '80%',
-    maxWidth: 300,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '50%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
-    marginBottom: 16,
-    textAlign: 'center',
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalContent: {
+    paddingHorizontal: 24,
+    paddingVertical: 24,
   },
   timeInput: {
     height: 50,
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#111827',
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -614,19 +584,17 @@ const styles = StyleSheet.create({
   cancelButton: {
     flex: 1,
     paddingVertical: 12,
-    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
     borderRadius: 8,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#374151',
     fontSize: 14,
     fontFamily: 'Inter-Medium',
   },
   confirmButton: {
     flex: 1,
     paddingVertical: 12,
-    backgroundColor: '#274d71',
     borderRadius: 8,
     alignItems: 'center',
   },

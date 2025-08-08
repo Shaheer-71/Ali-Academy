@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { sendWhatsAppMessage, formatLectureMessage } from '@/lib/whatsapp';
@@ -27,7 +28,7 @@ import {
   Upload,
   Search
 } from 'lucide-react-native';
-import TopSection from '@/components/TopSection';
+import TopSection from '@/components/TopSections';
 
 interface Lecture {
   id: string;
@@ -43,6 +44,7 @@ interface Lecture {
 
 export default function LecturesScreen() {
   const { profile } = useAuth();
+  const { colors } = useTheme();
   const [lectures, setLectures] = useState<Lecture[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -194,13 +196,13 @@ export default function LecturesScreen() {
     if (fileType.includes('video')) {
       return <Video size={20} color="#8B5CF6" />;
     }
-    return <FileText size={20} color="#274d71" />;
+    return <FileText size={20} color="#fff" />;
   };
 
   return (
-    <>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TopSection />
-      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
         {/* Header */}
         {/* <View style={styles.header}>
           <Text style={styles.title}>Lectures</Text>
@@ -208,19 +210,19 @@ export default function LecturesScreen() {
         </View> */}
 
         <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
-            <Search size={20} color="#9CA3AF" />
+          <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Search size={20} color={colors.textSecondary} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: colors.text }]}
               placeholder="Search students..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
           {profile?.role === 'teacher' && (
             <TouchableOpacity
-              style={styles.addButton}
+              style={[styles.addButton, { backgroundColor: colors.primary }]}
               onPress={() => setModalVisible(true)}
             >
               <Plus size={20} color="#ffffff" />
@@ -233,13 +235,13 @@ export default function LecturesScreen() {
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
           {loading ? (
             <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading lectures...</Text>
+              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading lectures...</Text>
             </View>
           ) : lectures.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <BookOpen size={48} color="#9CA3AF" />
-              <Text style={styles.emptyText}>No lectures available</Text>
-              <Text style={styles.emptySubtext}>
+              <BookOpen size={48} color={colors.textSecondary} />
+              <Text style={[styles.emptyText, { color: colors.text }]}>No lectures available</Text>
+              <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
                 {profile?.role === 'teacher'
                   ? 'Upload your first lecture to get started'
                   : 'Check back later for new lectures'}
@@ -247,34 +249,34 @@ export default function LecturesScreen() {
             </View>
           ) : (
             lectures.map((lecture) => (
-              <View key={lecture.id} style={styles.lectureCard}>
+              <View key={lecture.id} style={[styles.lectureCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <View style={styles.lectureHeader}>
-                  <View style={styles.fileIconContainer}>
+                  <View style={[styles.fileIconContainer, { backgroundColor: colors.primary }]}>
                     {getFileIcon(lecture.file_type)}
                   </View>
                   <View style={styles.lectureInfo}>
-                    <Text style={styles.lectureTitle}>{lecture.title}</Text>
+                    <Text style={[styles.lectureTitle, { color: colors.text }]}>{lecture.title}</Text>
                     <View style={styles.lectureDetails}>
                       <View style={styles.detailItem}>
-                        <BookOpen size={14} color="#6B7280" />
-                        <Text style={styles.detailText}>{lecture.classes?.name}</Text>
+                        <BookOpen size={14} color={colors.textSecondary} />
+                        <Text style={[styles.detailText, { color: colors.textSecondary }]}>{lecture.classes?.name}</Text>
                       </View>
                       <View style={styles.detailItem}>
-                        <Calendar size={14} color="#6B7280" />
-                        <Text style={styles.detailText}>
+                        <Calendar size={14} color={colors.textSecondary} />
+                        <Text style={[styles.detailText, { color: colors.textSecondary }]}>
                           {new Date(lecture.created_at).toLocaleDateString()}
                         </Text>
                       </View>
                     </View>
                     {lecture.description && (
-                      <Text style={styles.lectureDescription}>{lecture.description}</Text>
+                      <Text style={[styles.lectureDescription, { color: colors.textSecondary }]}>{lecture.description}</Text>
                     )}
                   </View>
                 </View>
 
-                <TouchableOpacity style={styles.downloadButton}>
-                  <Download size={16} color="#274d71" />
-                  <Text style={styles.downloadButtonText}>Download</Text>
+                <TouchableOpacity style={[styles.downloadButton, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Download size={16} color={colors.primary} />
+                  <Text style={[styles.downloadButtonText, { color: colors.primary }]}>Download</Text>
                 </TouchableOpacity>
               </View>
             ))
@@ -284,50 +286,50 @@ export default function LecturesScreen() {
         {/* Upload Lecture Modal */}
         {profile?.role === 'teacher' && (
           <Modal
-            animationType="slide"
+            animationType="fade"
             transparent={true}
             visible={modalVisible}
             onRequestClose={() => setModalVisible(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Upload Lecture</Text>
+              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>Upload Lecture</Text>
                   <TouchableOpacity
                     style={styles.closeButton}
                     onPress={() => setModalVisible(false)}
                   >
-                    <X size={24} color="#6B7280" />
+                    <X size={24} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
                 <ScrollView style={styles.modalScrollView}>
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Lecture Title</Text>
+                    <Text style={[styles.label, { color: colors.text }]}>Lecture Title</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                       value={newLecture.title}
                       onChangeText={(text) => setNewLecture({ ...newLecture, title: text })}
                       placeholder="Enter lecture title"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={colors.textSecondary}
                     />
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Description (Optional)</Text>
+                    <Text style={[styles.label, { color: colors.text }]}>Description (Optional)</Text>
                     <TextInput
-                      style={[styles.input, styles.textArea]}
+                      style={[styles.input, styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                       value={newLecture.description}
                       onChangeText={(text) => setNewLecture({ ...newLecture, description: text })}
                       placeholder="Enter lecture description"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={colors.textSecondary}
                       multiline
                       numberOfLines={3}
                     />
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Class</Text>
+                    <Text style={[styles.label, { color: colors.text }]}>Class</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                       <View style={styles.classOptions}>
                         {classes.map((classItem) => (
@@ -335,13 +337,15 @@ export default function LecturesScreen() {
                             key={classItem.id}
                             style={[
                               styles.classOption,
-                              newLecture.class_id === classItem.id && styles.classOptionSelected,
+                              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                              newLecture.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                             ]}
                             onPress={() => setNewLecture({ ...newLecture, class_id: classItem.id })}
                           >
                             <Text style={[
                               styles.classOptionText,
-                              newLecture.class_id === classItem.id && styles.classOptionTextSelected,
+                              { color: colors.text },
+                              newLecture.class_id === classItem.id && { color: '#ffffff' },
                             ]}>
                               {classItem.name}
                             </Text>
@@ -352,20 +356,20 @@ export default function LecturesScreen() {
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>File</Text>
+                    <Text style={[styles.label, { color: colors.text }]}>File</Text>
                     <TouchableOpacity
-                      style={styles.filePickerButton}
+                      style={[styles.filePickerButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
                       onPress={pickDocument}
                     >
-                      <Upload size={20} color="#274d71" />
-                      <Text style={styles.filePickerText}>
+                      <Upload size={20} color={colors.primary} />
+                      <Text style={[styles.filePickerText, { color: colors.text }]}>
                         {newLecture.file ? newLecture.file.name : 'Select file (PDF, Video, Image)'}
                       </Text>
                     </TouchableOpacity>
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.submitButton, uploading && styles.submitButtonDisabled]}
+                    style={[styles.submitButton, { backgroundColor: colors.primary }, uploading && styles.submitButtonDisabled]}
                     onPress={handleUploadLecture}
                     disabled={uploading}
                   >
@@ -379,14 +383,13 @@ export default function LecturesScreen() {
           </Modal>
         )}
       </SafeAreaView>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -399,12 +402,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
   },
   addButton: {
     width: 48,
     height: 48,
-    backgroundColor: '#274d71',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -422,7 +423,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -432,18 +432,15 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontFamily: 'Inter-SemiBold',
-    color: '#374151',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     textAlign: 'center',
   },
   lectureCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
     marginBottom: 12,
@@ -462,7 +459,6 @@ const styles = StyleSheet.create({
   fileIconContainer: {
     width: 48,
     height: 48,
-    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -474,7 +470,6 @@ const styles = StyleSheet.create({
   lectureTitle: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
     marginBottom: 8,
   },
   lectureDetails: {
@@ -489,31 +484,26 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     marginLeft: 4,
   },
   lectureDescription: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     lineHeight: 20,
   },
   downloadButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F9FAFB',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     gap: 8,
   },
   downloadButtonText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#274d71',
   },
   modalOverlay: {
     flex: 1,
@@ -521,7 +511,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',
@@ -534,12 +523,10 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   modalTitle: {
     fontSize: 20,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
   },
   closeButton: {
     width: 32,
@@ -550,6 +537,7 @@ const styles = StyleSheet.create({
   modalScrollView: {
     paddingHorizontal: 24,
     paddingBottom: 24,
+    paddingTop: 24,
   },
   inputGroup: {
     marginBottom: 20,
@@ -557,19 +545,15 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#374151',
     marginBottom: 8,
   },
   input: {
     height: 50,
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#111827',
   },
   textArea: {
     height: 80,
@@ -583,42 +567,28 @@ const styles = StyleSheet.create({
   classOption: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 8,
-  },
-  classOptionSelected: {
-    backgroundColor: '#274d71',
-    borderColor: '#274d71',
   },
   classOptionText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#374151',
-  },
-  classOptionTextSelected: {
-    color: '#ffffff',
   },
   filePickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     height: 50,
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     gap: 8,
   },
   filePickerText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#374151',
   },
   submitButton: {
     height: 50,
-    backgroundColor: '#274d71',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -644,11 +614,9 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
     borderRadius: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     flex :1
   },
   searchInput: {
@@ -656,7 +624,6 @@ const styles = StyleSheet.create({
     height: 48,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#111827',
     marginLeft: 12,
   },
 });
