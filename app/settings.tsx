@@ -11,11 +11,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { User, LogOut, Bell, Shield, CircleHelp as HelpCircle, Info, ChevronRight, Mail, Phone } from 'lucide-react-native';
-import TopSection from '@/components/TopSections';
+import TopSections from '@/components/TopSections';
+import { useRouter } from 'expo-router';
 
 export default function SettingsScreen() {
   const { profile, signOut } = useAuth();
   const { colors } = useTheme();
+  const router = useRouter();
 
   const handleSignOut = () => {
     Alert.alert(
@@ -23,12 +25,23 @@ export default function SettingsScreen() {
       'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: signOut },
+        {
+          text: 'Sign Out', style: 'destructive', onPress: () => {
+            signOut();
+            router.back();
+          }
+        },
       ]
     );
   };
 
   const settingsOptions = [
+    {
+      title: 'Notifications',
+      subtitle: 'Manage your notification preferences',
+      icon: Bell,
+      onPress: () => Alert.alert('Coming Soon', 'Notification settings will be available soon'),
+    },
     {
       title: 'Privacy & Security',
       subtitle: 'Manage your privacy settings',
@@ -51,7 +64,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TopSection />
+      <TopSections />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
 
@@ -93,8 +106,8 @@ export default function SettingsScreen() {
                 style={[styles.settingItem, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
                 onPress={option.onPress}
               >
-                <View style={[styles.settingIcon, { backgroundColor: colors.primary }]}>
-                  <option.icon size={20} color={colors.text} />
+                <View style={[styles.settingIcon, { backgroundColor: colors.background }]}>
+                  <option.icon size={20} color={colors.primary} />
                 </View>
                 <View style={styles.settingInfo}>
                   <Text style={[styles.settingTitle, { color: colors.text }]}>{option.title}</Text>
@@ -145,7 +158,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingBottom : 20
   },
   scrollView: {
     flex: 1,

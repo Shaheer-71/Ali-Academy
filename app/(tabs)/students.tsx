@@ -24,7 +24,7 @@ import {
   CreditCard as Edit,
   Trash2
 } from 'lucide-react-native';
-import TopSection from '@/components/TopSections';
+import TopSections from '@/components/TopSections';
 
   
 interface Student  {
@@ -48,6 +48,9 @@ export default function StudentsScreen() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Form states
@@ -125,6 +128,69 @@ export default function StudentsScreen() {
     }
   };
 
+  const handleStudentPress = (student: Student) => {
+    setSelectedStudent(student);
+    setDetailModalVisible(true);
+    setEditMode(false);
+  };
+
+  const handleEditStudent = async () => {
+    if (!selectedStudent) return;
+
+    try {
+      const { error } = await supabase
+        .from('students')
+        .update({
+          full_name: selectedStudent.full_name,
+          roll_number: selectedStudent.roll_number,
+          parent_contact: selectedStudent.parent_contact,
+          class_id: selectedStudent.class_id,
+        })
+        .eq('id', selectedStudent.id);
+
+      if (error) throw error;
+
+      Alert.alert('Success', 'Student updated successfully');
+      setDetailModalVisible(false);
+      setEditMode(false);
+      fetchStudents();
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!selectedStudent) return;
+
+    Alert.alert(
+      'Delete Student',
+      `Are you sure you want to delete ${selectedStudent.full_name}? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('students')
+                .delete()
+                .eq('id', selectedStudent.id);
+
+              if (error) throw error;
+
+              Alert.alert('Success', 'Student deleted successfully');
+              setDetailModalVisible(false);
+              fetchStudents();
+            } catch (error: any) {
+              Alert.alert('Error', error.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const filteredStudents = students.filter(student =>
     student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.roll_number.toLowerCase().includes(searchQuery.toLowerCase())
@@ -145,7 +211,7 @@ export default function StudentsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TopSection />
+      <TopSections />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
         {/* Header */}
 
@@ -190,7 +256,11 @@ export default function StudentsScreen() {
             </View>
           ) : (
             filteredStudents.map((student) => (
-              <View key={student.id} style={[styles.studentCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <TouchableOpacity 
+                key={student.id} 
+                style={[styles.studentCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                onPress={() => handleStudentPress(student)}
+              >
                 <View style={styles.studentHeader}>
                   <View style={[styles.studentAvatar, { backgroundColor: colors.primary }]}>
                     <Text style={styles.studentInitial}>
@@ -215,7 +285,7 @@ export default function StudentsScreen() {
                   <Phone size={16} color={colors.textSecondary} />
                   <Text style={[styles.contactText, { color: colors.text }]}>{student.parent_contact}</Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </ScrollView>
@@ -308,6 +378,178 @@ export default function StudentsScreen() {
                   <Text style={styles.submitButtonText}>Add Student</Text>
                 </TouchableOpacity>
               </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Student Detail Modal */}
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={detailModalVisible}
+          onRequestClose={() => setDetailModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  {editMode ? 'Edit Student' : 'Student Details'}
+                </Text>
+                <View style={styles.headerButtons}>
+                  {!editMode && (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.editButton, { backgroundColor: colors.primary }]}
+                        onPress={() => setEditMode(true)}
+                      >
+                        <Edit size={16} color="#ffffff" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.deleteButton, { backgroundColor: '#EF4444' }]}
+                        onPress={handleDeleteStudent}
+                      >
+                        <Trash2 size={16} color="#ffffff" />
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => {
+                      setDetailModalVisible(false);
+                      setEditMode(false);
+                    }}
+                  >
+                    <X size={24} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {selectedStudent && (
+                <ScrollView style={styles.modalScrollView}>
+                  <View style={styles.studentDetailHeader}>
+                    <View style={[styles.studentDetailAvatar, { backgroundColor: colors.primary }]}>
+                      <Text style={styles.studentDetailInitial}>
+                        {selectedStudent.full_name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: colors.text }]}>Student Name</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text },
+                        !editMode && styles.inputDisabled,
+                      ]}
+                      value={selectedStudent.full_name}
+                      onChangeText={(text) => setSelectedStudent({ ...selectedStudent, full_name: text })}
+                      placeholder="Enter student name"
+                      placeholderTextColor={colors.textSecondary}
+                      editable={editMode}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: colors.text }]}>Roll Number</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text },
+                        !editMode && styles.inputDisabled,
+                      ]}
+                      value={selectedStudent.roll_number}
+                      onChangeText={(text) => setSelectedStudent({ ...selectedStudent, roll_number: text })}
+                      placeholder="Enter roll number"
+                      placeholderTextColor={colors.textSecondary}
+                      editable={editMode}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: colors.text }]}>Parent Contact</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text },
+                        !editMode && styles.inputDisabled,
+                      ]}
+                      value={selectedStudent.parent_contact}
+                      onChangeText={(text) => setSelectedStudent({ ...selectedStudent, parent_contact: text })}
+                      placeholder="Enter parent contact number"
+                      placeholderTextColor={colors.textSecondary}
+                      keyboardType="phone-pad"
+                      editable={editMode}
+                    />
+                  </View>
+
+                  {editMode && (
+                    <View style={styles.inputGroup}>
+                      <Text style={[styles.label, { color: colors.text }]}>Class</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <View style={styles.classOptions}>
+                          {classes.map((classItem) => (
+                            <TouchableOpacity
+                              key={classItem.id}
+                              style={[
+                                styles.classOption,
+                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                selectedStudent.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
+                              ]}
+                              onPress={() => setSelectedStudent({ ...selectedStudent, class_id: classItem.id })}
+                            >
+                              <Text style={[
+                                styles.classOptionText,
+                                { color: colors.text },
+                                selectedStudent.class_id === classItem.id && { color: '#ffffff' },
+                              ]}>
+                                {classItem.name}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  {!editMode && (
+                    <View style={styles.studentStats}>
+                      <Text style={[styles.statsTitle, { color: colors.text }]}>Quick Stats</Text>
+                      <View style={styles.statsGrid}>
+                        <View style={[styles.statCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                          <Text style={[styles.statValue, { color: colors.primary }]}>95%</Text>
+                          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Attendance</Text>
+                        </View>
+                        <View style={[styles.statCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                          <Text style={[styles.statValue, { color: colors.secondary }]}>A</Text>
+                          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Avg Grade</Text>
+                        </View>
+                        <View style={[styles.statCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                          <Text style={[styles.statValue, { color: '#10B981' }]}>8/10</Text>
+                          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Assignments</Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
+                  {editMode && (
+                    <View style={styles.editButtons}>
+                      <TouchableOpacity
+                        style={[styles.cancelButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                        onPress={() => setEditMode(false)}
+                      >
+                        <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                        onPress={handleEditStudent}
+                      >
+                        <Text style={styles.saveButtonText}>Save Changes</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </ScrollView>
+              )}
             </View>
           </View>
         </Modal>
@@ -540,6 +782,101 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   submitButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  editButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  studentDetailHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  studentDetailAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  studentDetailInitial: {
+    fontSize: 32,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
+  },
+  inputDisabled: {
+    opacity: 0.7,
+  },
+  studentStats: {
+    marginTop: 20,
+  },
+  statsTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 12,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  statValue: {
+    fontSize: 20,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+  },
+  editButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  cancelButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+  },
+  saveButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',

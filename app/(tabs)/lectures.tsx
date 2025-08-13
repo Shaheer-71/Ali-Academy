@@ -28,7 +28,7 @@ import {
   Upload,
   Search
 } from 'lucide-react-native';
-import TopSection from '@/components/TopSections';
+import TopSections from '@/components/TopSections';
 
 interface Lecture {
   id: string;
@@ -201,7 +201,7 @@ export default function LecturesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TopSection />
+      <TopSections />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
         {/* Header */}
         {/* <View style={styles.header}>

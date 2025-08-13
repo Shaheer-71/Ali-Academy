@@ -14,6 +14,7 @@ import { Settings, Moon, Sun, Bell, X , ChevronLeft } from 'lucide-react-native'
 import { useTheme } from '@/contexts/ThemeContext';
 import { NotificationCard } from '@/components/NotificationCard';
 
+
 // Dummy notifications data
 const dummyNotifications = [
     {
@@ -196,7 +197,7 @@ export default function TopSection({ showNotifications = false }: TopSectionProp
                             </TouchableOpacity>
                         </View>
 
-                        <ScrollView style={styles.notificationsList}>
+                        <ScrollView style={styles.notificationsList }>
                             {notifications.length === 0 ? (
                                 <View style={styles.emptyNotifications}>
                                     <Bell

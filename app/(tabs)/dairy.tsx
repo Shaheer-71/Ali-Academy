@@ -28,7 +28,7 @@ import {
   Upload,
   Search
 } from 'lucide-react-native';
-import TopSection from '@/components/TopSections';
+import TopSections from '@/components/TopSections';
 
 interface DiaryAssignment {
   id: string;
@@ -269,16 +269,15 @@ export default function DiaryScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TopSection />
+      <TopSections />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
-
 
         <View style={styles.searchContainer}>
           <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <Search size={20} color={colors.textSecondary} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
-              placeholder="Search students..."
+              placeholder="Search assignments..."
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor={colors.textSecondary}
@@ -302,7 +301,7 @@ export default function DiaryScreen() {
             </View>
           ) : assignments.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <NotebookPen size={48} color="#fff" />
+              <NotebookPen size={48} color={colors.textSecondary} />
               <Text style={[styles.emptyText, { color: colors.text }]}>No assignments yet</Text>
               <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
                 {profile?.role === 'teacher'
@@ -317,7 +316,7 @@ export default function DiaryScreen() {
                 <View key={assignment.id} style={[
                   styles.assignmentCard,
                   { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                  overdue && styles.overdueCard
+                  overdue && { borderColor: '#FEE2E2', backgroundColor: colors.cardBackground }
                 ]}>
                   <View style={styles.assignmentHeader}>
                     <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
@@ -621,7 +620,6 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -713,7 +711,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '85%',
-
   },
   modalHeader: {
     flexDirection: 'row',
@@ -738,7 +735,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 50,
     paddingTop: 20
-
   },
   inputGroup: {
     marginBottom: 20,
@@ -828,7 +824,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignContent: 'center',
     alignItems: "center"
-
   },
   searchInputContainer: {
     flexDirection: 'row',

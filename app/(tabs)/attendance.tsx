@@ -13,16 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { sendWhatsAppMessage, formatAttendanceMessage } from '@/lib/whatsapp';
-import {
-  Calendar,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Users,
-  MessageCircle
-} from 'lucide-react-native';
-import TopSection from '@/components/TopSections';
+import { Calendar, Clock, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, Users, MessageCircle } from 'lucide-react-native';
+import TopSections from '@/components/TopSections';
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface Student {
@@ -249,7 +241,7 @@ export default function AttendanceScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TopSection />
+      <TopSections />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
         {/* Class Selection */}
         <View style={styles.classSelection}>

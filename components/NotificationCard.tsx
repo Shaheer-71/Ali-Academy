@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Bell, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Info, X } from 'lucide-react-native';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Notification {
   id: string;
@@ -52,47 +53,50 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
     const now = new Date();
     const time = new Date(timestamp);
     const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
-    
+
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    
+
     const diffInHours = Math.floor(diffInMinutes / 60);
     if (diffInHours < 24) return `${diffInHours}h ago`;
-    
+
     return time.toLocaleDateString();
   };
 
+  const { colors } = useTheme();
+
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[
         styles.container,
         !notification.read && styles.unreadContainer,
-      ]} 
+        { backgroundColor: colors.cardBackground }
+      ]}
       onPress={onPress}
     >
       <View style={[styles.iconContainer, { backgroundColor: getNotificationColor() }]}>
         {getNotificationIcon()}
       </View>
-      
+
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
             {notification.title}
           </Text>
           <Text style={styles.timestamp}>
             {getTimeAgo(notification.timestamp)}
           </Text>
         </View>
-        
+
         <Text style={styles.message} numberOfLines={2}>
           {notification.message}
         </Text>
-        
+
         {!notification.read && (
           <View style={styles.unreadIndicator} />
         )}
       </View>
-      
+
       {onDismiss && (
         <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
           <X size={16} color="#9CA3AF" />

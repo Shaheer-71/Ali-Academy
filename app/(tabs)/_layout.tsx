@@ -3,7 +3,19 @@ import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Redirect } from 'expo-router';
-import { House as Home, Users, ClipboardCheck, BookOpen, NotebookPen , NotepadText} from 'lucide-react-native';
+import {
+  House as Home,
+  Users,
+  ClipboardCheck,
+  BookOpen,
+  NotebookPen,
+  NotepadText,
+  BarChart3,
+  Calendar,
+  GraduationCap,
+} from 'lucide-react-native';
+
+
 
 export default function TabLayout() {
   const { user, profile, loading } = useAuth();
@@ -84,6 +96,40 @@ export default function TabLayout() {
           />
         )}
 
+        {/* Performance Analytics - Only for Teachers */}
+        {isTeacher && (
+          <Tabs.Screen
+            name="analytics"
+            options={{
+              title: 'Analytics',
+              tabBarIcon: ({ size, color }) => (
+                <BarChart3 size={size} color={color} />
+              ),
+            }}
+          />
+        )}
+
+        {/* Class Timetable - Available to all roles */}
+        <Tabs.Screen
+          name="timetable"
+          options={{
+            title: 'Timetable',
+            tabBarIcon: ({ size, color }) => (
+              <Calendar size={size} color={color} />
+            ),
+          }}
+        />
+
+        {/* Exam Schedules & Results - Available to all roles */}
+        <Tabs.Screen
+          name="exams"
+          options={{
+            title: 'Exams',
+            tabBarIcon: ({ size, color }) => (
+              <GraduationCap size={size} color={color} />
+            ),
+          }}
+        />
         {/* Lectures - Available to all roles */}
         <Tabs.Screen
           name="lectures"

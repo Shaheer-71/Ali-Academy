@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Users, ClipboardCheck, BookOpen, NotebookPen, ChartBar as BarChart3, Calendar, Bell, Sparkles, TrendingUp } from 'lucide-react-native';
-import TopSection from '@/components/TopSections';
+import TopSections from '@/components/TopSections';
 
 export default function HomeScreen() {
   const { profile } = useAuth();
@@ -33,25 +33,25 @@ export default function HomeScreen() {
           title: 'Mark Attendance',
           icon: ClipboardCheck,
           color: '#b6d509',
-          onPress: () => router.push('/(tabs)/attendance')
+          onPress: () => router.push('/attendance')
         },
         {
           title: 'Upload Lecture',
           icon: BookOpen,
           color: '#274d71',
-          onPress: () => router.push('/(tabs)/lectures')
+          onPress: () => router.push('/lectures')
         },
         {
           title: 'Assign Diary',
           icon: NotebookPen,
           color: '#EF4444',
-          onPress: () => router.push('/(tabs)/diary')
+          onPress: () => router.push('/dairy')
         },
         {
           title: 'Manage Students',
           icon: Users,
           color: '#8B5CF6',
-          onPress: () => router.push('/(tabs)/students')
+          onPress: () => router.push('/analytics')
         },
       ];
     }
@@ -73,7 +73,7 @@ export default function HomeScreen() {
         title: 'Homework',
         icon: NotebookPen,
         color: '#EF4444',
-        onPress: () => router.push('/(tabs)/diary')
+        onPress: () => router.push('/(tabs)/dairy')
       },
       {
         title: 'Progress',
@@ -88,7 +88,7 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TopSection showNotifications={true} />
+      <TopSections showNotifications={true} />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[ 'left', 'right']}>
         <View style={{ flex: 1 }}>
 
