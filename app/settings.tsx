@@ -118,23 +118,6 @@ export default function SettingsScreen() {
             ))}
           </View>
 
-          {/* App Information */}
-          <View style={styles.section}>
-            <View style={[styles.appInfoCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-              <Text style={[styles.appInfoTitle, { color: colors.primary }]}>Academy Management System</Text>
-              <Text style={[styles.appInfoDescription, { color: colors.text }]}>
-                A comprehensive solution for managing academy operations including attendance,
-                lectures, assignments, and parent communication.
-              </Text>
-              <View style={styles.appInfoDetails}>
-                <Text style={[styles.appInfoDetail, { color: colors.textSecondary }]}>• Real-time WhatsApp notifications</Text>
-                <Text style={[styles.appInfoDetail, { color: colors.textSecondary }]}>• Secure file storage and sharing</Text>
-                <Text style={[styles.appInfoDetail, { color: colors.textSecondary }]}>• Role-based access control</Text>
-                <Text style={[styles.appInfoDetail, { color: colors.textSecondary }]}>• Comprehensive attendance tracking</Text>
-              </View>
-            </View>
-          </View>
-
           {/* Sign Out Button */}
           <View style={styles.section}>
             <TouchableOpacity style={[styles.signOutButton, { backgroundColor: colors.cardBackground, borderColor: colors.error }]} onPress={handleSignOut}>
@@ -303,7 +286,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    paddingVertical: 24,
+    // paddingVertical: 24,
     paddingHorizontal: 24,
   },
   footerText: {

@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
-import { ChartBar as BarChart3, TrendingUp, TrendingDown, Users, Award, Target, Calendar, BookOpen, ClipboardCheck } from 'lucide-react-native';
+import { ChartBar as BarChart3, TrendingUp, TrendingDown, Users, Award, Target, Calendar, BookOpen, ClipboardCheck, User, Activity } from 'lucide-react-native';
 import TopSections from '@/components/TopSections';
 
 const { width } = Dimensions.get('window');
@@ -36,11 +36,29 @@ interface ClassAnalytics {
     top_performer: string;
 }
 
+interface StudentAnalytics {
+    attendance_rate: number;
+    average_grade: number;
+    assignments_completed: number;
+    total_assignments: number;
+    rank_in_class: number;
+    total_students: number;
+    improvement_trend: 'up' | 'down' | 'stable';
+    recent_grades: number[];
+    subjects: {
+        name: string;
+        grade: number;
+        assignments_completed: number;
+        total_assignments: number;
+    }[];
+}
+
 export default function AnalyticsScreen() {
     const { profile } = useAuth();
     const { colors } = useTheme();
     const [studentPerformances, setStudentPerformances] = useState<StudentPerformance[]>([]);
     const [classAnalytics, setClassAnalytics] = useState<ClassAnalytics[]>([]);
+    const [studentAnalytics, setStudentAnalytics] = useState<StudentAnalytics | null>(null);
     const [selectedClass, setSelectedClass] = useState<string>('all');
     const [classes, setClasses] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -49,14 +67,64 @@ export default function AnalyticsScreen() {
         if (profile?.role === 'teacher') {
             fetchClasses();
             fetchAnalyticsData();
+        } else if (profile?.role === 'student') {
+            fetchStudentAnalytics();
         }
     }, [profile]);
 
     useEffect(() => {
-        if (selectedClass) {
+        if (selectedClass && profile?.role === 'teacher') {
             fetchAnalyticsData();
         }
     }, [selectedClass]);
+
+    const fetchStudentAnalytics = async () => {
+        try {
+            // Mock data for student analytics - replace with actual database queries
+            const mockStudentAnalytics: StudentAnalytics = {
+                attendance_rate: 92,
+                average_grade: 87,
+                assignments_completed: 14,
+                total_assignments: 16,
+                rank_in_class: 3,
+                total_students: 25,
+                improvement_trend: 'up',
+                recent_grades: [85, 88, 90, 87, 89],
+                subjects: [
+                    {
+                        name: 'Mathematics',
+                        grade: 90,
+                        assignments_completed: 4,
+                        total_assignments: 4,
+                    },
+                    {
+                        name: 'Science',
+                        grade: 88,
+                        assignments_completed: 3,
+                        total_assignments: 4,
+                    },
+                    {
+                        name: 'English',
+                        grade: 85,
+                        assignments_completed: 3,
+                        total_assignments: 4,
+                    },
+                    {
+                        name: 'History',
+                        grade: 86,
+                        assignments_completed: 4,
+                        total_assignments: 4,
+                    },
+                ],
+            };
+
+            setStudentAnalytics(mockStudentAnalytics);
+        } catch (error) {
+            console.error('Error fetching student analytics:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const fetchClasses = async () => {
         try {
@@ -236,28 +304,184 @@ export default function AnalyticsScreen() {
         );
     };
 
-    if (profile?.role !== 'teacher') {
+    const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
+        switch (trend) {
+            case 'up':
+                return <TrendingUp size={16} color="#10B981" />;
+            case 'down':
+                return <TrendingDown size={16} color="#EF4444" />;
+            default:
+                return <Activity size={16} color={colors.textSecondary} />;
+        }
+    };
+
+    const getTrendColor = (trend: 'up' | 'down' | 'stable') => {
+        switch (trend) {
+            case 'up':
+                return '#10B981';
+            case 'down':
+                return '#EF4444';
+            default:
+                return colors.textSecondary;
+        }
+    };
+
+    // Student View
+    if (profile?.role === 'student') {
+        if (loading || !studentAnalytics) {
+            return (
+                <View style={[styles.container, { backgroundColor: colors.background }]}>
+                    <TopSections />
+                    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
+                        <View style={styles.loadingContainer}>
+                            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your analytics...</Text>
+                        </View>
+                    </SafeAreaView>
+                </View>
+            );
+        }
+
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
-                <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-                    <View style={styles.errorContainer}>
-                        <Text style={[styles.errorText, { color: colors.text }]}>Access Denied</Text>
-                        <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>
-                            Performance analytics are only available for teachers.
-                        </Text>
+                <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
+                    {/* Student Header */}
+                    <View style={styles.studentHeaderSection}>
+                        <View style={styles.studentHeaderContent}>
+                            <User size={24} color={colors.primary} />
+                            <Text style={[styles.studentTitle, { color: colors.text }]}>My Performance</Text>
+                        </View>
+                        <View style={styles.rankContainer}>
+                            <Text style={[styles.rankNumber, { color: colors.primary }]}>#{studentAnalytics.rank_in_class}</Text>
+                            <Text style={[styles.rankLabel, { color: colors.textSecondary }]}>of {studentAnalytics.total_students}</Text>
+                        </View>
                     </View>
+
+                    <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
+                        {/* Performance Overview */}
+                        <View style={styles.overviewContainer}>
+                            <View style={styles.overviewCards}>
+                                <View style={[styles.overviewCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                                    <View style={[styles.overviewIcon, { backgroundColor: '#10B98120' }]}>
+                                        <ClipboardCheck size={20} color="#10B981" />
+                                    </View>
+                                    <Text style={[styles.overviewValue, { color: colors.text }]}>{studentAnalytics.attendance_rate}%</Text>
+                                    <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>Attendance</Text>
+                                </View>
+
+                                <View style={[styles.overviewCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                                    <View style={[styles.overviewIcon, { backgroundColor: `${colors.primary}20` }]}>
+                                        <Award size={20} color={colors.primary} />
+                                    </View>
+                                    <Text style={[styles.overviewValue, { color: colors.text }]}>{studentAnalytics.average_grade}%</Text>
+                                    <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>Avg Grade</Text>
+                                </View>
+
+                                <View style={[styles.overviewCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                                    <View style={[styles.overviewIcon, { backgroundColor: `${colors.secondary}20` }]}>
+                                        <BookOpen size={20} color={colors.secondary} />
+                                    </View>
+                                    <Text style={[styles.overviewValue, { color: colors.text }]}>{studentAnalytics.assignments_completed}/{studentAnalytics.total_assignments}</Text>
+                                    <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>Assignments</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Performance Trend */}
+                        <View style={[styles.trendCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                            <View style={styles.trendHeader}>
+                                <Text style={[styles.trendTitle, { color: colors.text }]}>Performance Trend</Text>
+                                <View style={styles.trendIndicator}>
+                                    {getTrendIcon(studentAnalytics.improvement_trend)}
+                                    <Text style={[styles.trendText, { color: getTrendColor(studentAnalytics.improvement_trend) }]}>
+                                        {studentAnalytics.improvement_trend === 'up' ? 'Improving' :
+                                            studentAnalytics.improvement_trend === 'down' ? 'Declining' : 'Stable'}
+                                    </Text>
+                                </View>
+                            </View>
+                            <View style={styles.recentGrades}>
+                                <Text style={[styles.recentGradesLabel, { color: colors.textSecondary }]}>Recent Grades</Text>
+                                <View style={styles.gradesContainer}>
+                                    {studentAnalytics.recent_grades.map((grade, index) => (
+                                        <View key={index} style={[styles.gradeChip, { backgroundColor: colors.primary }]}>
+                                            <Text style={styles.gradeChipText}>{grade}%</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Subject Performance */}
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Subject Performance</Text>
+                            {studentAnalytics.subjects.map((subject, index) => (
+                                <View key={index} style={[styles.subjectCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                                    <View style={styles.subjectHeader}>
+                                        <Text style={[styles.subjectName, { color: colors.text }]}>{subject.name}</Text>
+                                        <Text style={[styles.subjectGrade, { color: colors.primary }]}>{subject.grade}%</Text>
+                                    </View>
+                                    <View style={styles.subjectMetrics}>
+                                        <View style={styles.subjectAssignments}>
+                                            <Text style={[styles.assignmentCount, { color: colors.textSecondary }]}>
+                                                {subject.assignments_completed}/{subject.total_assignments} assignments completed
+                                            </Text>
+                                            <View style={[styles.progressBarContainer, { backgroundColor: colors.border }]}>
+                                                <View
+                                                    style={[
+                                                        styles.progressBarFill,
+                                                        {
+                                                            width: `${(subject.assignments_completed / subject.total_assignments) * 100}%`,
+                                                            backgroundColor: colors.secondary
+                                                        },
+                                                    ]}
+                                                />
+                                            </View>
+                                        </View>
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
+
+                        {/* Overall Progress */}
+                        <View style={[styles.progressCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                            <Text style={[styles.progressTitle, { color: colors.text }]}>Overall Progress</Text>
+                            <View style={styles.progressMetrics}>
+                                <View style={styles.progressMetric}>
+                                    <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>Assignments Completion</Text>
+                                    <View style={styles.progressBarWithValue}>
+                                        {renderProgressBar((studentAnalytics.assignments_completed / studentAnalytics.total_assignments) * 100, colors.secondary)}
+                                        <Text style={[styles.progressValue, { color: colors.text }]}>
+                                            {Math.round((studentAnalytics.assignments_completed / studentAnalytics.total_assignments) * 100)}%
+                                        </Text>
+                                    </View>
+                                </View>
+                                <View style={styles.progressMetric}>
+                                    <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>Grade Performance</Text>
+                                    <View style={styles.progressBarWithValue}>
+                                        {renderProgressBar(studentAnalytics.average_grade, colors.primary)}
+                                        <Text style={[styles.progressValue, { color: colors.text }]}>
+                                            {studentAnalytics.average_grade}%
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+                        </View>
+                    </ScrollView>
                 </SafeAreaView>
             </View>
         );
     }
 
+    // Teacher View (existing code)
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <TopSections />
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
                 {/* Class Filter */}
-                <View style={styles.filterContainer}>
-                    <Text style={[styles.filterLabel, { color: colors.text }]}>Select Class</Text>
+                <View style={[styles.filterContainer , {marginTop : 20}]}>
+                    <View style={[styles.studentHeaderContent , {marginBottom : 10}]}>
+                        <User size={24} color={colors.primary} />
+                        <Text style={[styles.studentTitle, { color: colors.text }]}>My Performance</Text>
+                    </View>
+
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         <View style={styles.filterButtons}>
                             <TouchableOpacity
@@ -301,7 +525,7 @@ export default function AnalyticsScreen() {
 
                 {/* Class Overview Cards */}
                 <View style={styles.overviewContainer}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {/* <ScrollView horizontal showsHorizontalScrollIndicator={false}> */}
                         <View style={styles.overviewCards}>
                             <View style={[styles.overviewCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                                 <View style={[styles.overviewIcon, { backgroundColor: '#10B98120' }]}>
@@ -333,7 +557,7 @@ export default function AnalyticsScreen() {
                                 <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>Avg Grade</Text>
                             </View>
                         </View>
-                    </ScrollView>
+                    {/* </ScrollView> */}
                 </View>
 
                 {/* Student Performance Charts */}
@@ -390,6 +614,143 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    studentHeaderSection: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 24,
+        paddingTop: 16,
+        paddingBottom: 20,
+    },
+    studentHeaderContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    studentTitle: {
+        fontSize: 20,
+        fontFamily: 'Inter-SemiBold',
+        marginLeft: 12,
+    },
+    rankContainer: {
+        alignItems: 'center',
+    },
+    rankNumber: {
+        fontSize: 28,
+        fontFamily: 'Inter-Bold',
+    },
+    rankLabel: {
+        fontSize: 12,
+        fontFamily: 'Inter-Medium',
+    },
+    trendCard: {
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 24,
+        borderWidth: 1,
+    },
+    trendHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    trendTitle: {
+        fontSize: 18,
+        fontFamily: 'Inter-SemiBold',
+    },
+    trendIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    trendText: {
+        fontSize: 14,
+        fontFamily: 'Inter-Medium',
+        marginLeft: 6,
+    },
+    recentGrades: {
+        marginTop: 12,
+    },
+    recentGradesLabel: {
+        fontSize: 14,
+        fontFamily: 'Inter-Medium',
+        marginBottom: 8,
+    },
+    gradesContainer: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    gradeChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+    },
+    gradeChipText: {
+        fontSize: 12,
+        fontFamily: 'Inter-Medium',
+        color: '#ffffff',
+    },
+    subjectCard: {
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+    },
+    subjectHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    subjectName: {
+        fontSize: 16,
+        fontFamily: 'Inter-SemiBold',
+    },
+    subjectGrade: {
+        fontSize: 18,
+        fontFamily: 'Inter-Bold',
+    },
+    subjectMetrics: {
+        gap: 8,
+    },
+    subjectAssignments: {
+        gap: 6,
+    },
+    assignmentCount: {
+        fontSize: 14,
+        fontFamily: 'Inter-Regular',
+    },
+    progressCard: {
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 24,
+        borderWidth: 1,
+    },
+    progressTitle: {
+        fontSize: 18,
+        fontFamily: 'Inter-SemiBold',
+        marginBottom: 16,
+    },
+    progressMetrics: {
+        gap: 16,
+    },
+    progressMetric: {
+        gap: 8,
+    },
+    progressLabel: {
+        fontSize: 14,
+        fontFamily: 'Inter-Medium',
+    },
+    progressBarWithValue: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    progressValue: {
+        fontSize: 14,
+        fontFamily: 'Inter-SemiBold',
+        minWidth: 50,
+        textAlign: 'right',
+    },
     errorContainer: {
         flex: 1,
         alignItems: 'center',
@@ -430,15 +791,18 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-Medium',
     },
     overviewContainer: {
-        paddingHorizontal: 24,
         marginBottom: 24,
+        flex : 1,
+        alignItems : "center",
+        justifyContent : "center",
+        paddingHorizontal : 24
     },
     overviewCards: {
         flexDirection: 'row',
         gap: 12,
     },
     overviewCard: {
-        width: 120,
+        width: "31%",
         borderRadius: 16,
         padding: 16,
         alignItems: 'center',

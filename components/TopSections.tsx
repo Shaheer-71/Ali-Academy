@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { Settings, Moon, Sun, Bell, X , ChevronLeft } from 'lucide-react-native';
+import { Settings, Moon, Sun, Bell, X, ChevronLeft } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { NotificationCard } from '@/components/NotificationCard';
 
@@ -106,8 +106,8 @@ export default function TopSection({ showNotifications = false }: TopSectionProp
                         {screenName === 'Index'
                             ? 'Home'
                             : screenName === 'Dairy'
-                            ? 'Diary'
-                            : screenName || 'Untitled'}
+                                ? 'Diary'
+                                : screenName || 'Untitled'}
                     </Text>
                 </View>
 
@@ -153,7 +153,9 @@ export default function TopSection({ showNotifications = false }: TopSectionProp
                                 styles.iconButton,
                                 { backgroundColor: colors.cardBackground },
                             ]}
-                            onPress={() => router.push('/settings')}
+                            onPress={() => {
+                                router.push('/settings');
+                            }}
                         >
                             <Settings color={colors.primary} size={24} />
                         </TouchableOpacity>
@@ -197,7 +199,7 @@ export default function TopSection({ showNotifications = false }: TopSectionProp
                             </TouchableOpacity>
                         </View>
 
-                        <ScrollView style={styles.notificationsList }>
+                        <ScrollView style={styles.notificationsList}>
                             {notifications.length === 0 ? (
                                 <View style={styles.emptyNotifications}>
                                     <Bell

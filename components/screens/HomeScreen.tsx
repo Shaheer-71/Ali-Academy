@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Users, ClipboardCheck, BookOpen, NotebookPen, ChartBar as BarChart3, Calendar, Bell, Sparkles, TrendingUp } from 'lucide-react-native';
 import TopSections from '@/components/TopSections';
+import AnalyticsScreen from './AnalyticsScreen';
 
 export default function HomeScreen() {
   const { profile } = useAuth();
@@ -89,7 +90,7 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TopSections showNotifications={true} />
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[ 'left', 'right']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right' , "bottom"]}>
         <View style={{ flex: 1 }}>
 
           <ScrollView
@@ -115,13 +116,13 @@ export default function HomeScreen() {
                 <View style={[styles.statsCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
                   <Text style={[styles.statsNumber, { color: colors.primary }]}>15</Text>
                   <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
-                    {profile?.role === 'teacher' ? 'Students' : 'Days Present'}
+                    {profile?.role === 'teacher' ? 'Students' : 'Present'}
                   </Text>
                 </View>
                 <View style={[styles.statsCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
                   <Text style={[styles.statsNumber, { color: colors.primary }]}>3</Text>
                   <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
-                    {profile?.role === 'teacher' ? 'Classes' : 'Pending Tasks'}
+                    {profile?.role === 'teacher' ? 'Classes' : 'Absent'}
                   </Text>
                 </View>
                 <View style={[styles.statsCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
@@ -162,6 +163,9 @@ export default function HomeScreen() {
 
             </View>
 
+            <View>
+                <AnalyticsScreen/>
+            </View>
             {/* Recent Activity */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -215,7 +219,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: 8,
-    paddingBottom: 12,
+    // paddingBottom: 12,
     borderRadius: 12,
     paddingHorizontal: 16,
   },
@@ -265,7 +269,6 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingHorizontal: 24,
-    marginBottom: 32,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -291,9 +294,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionCard: {
-    width: '47%',
+    width: '48%',
     borderRadius: 16,
-    padding: 20,
+    padding: 15,
     alignItems: 'center',
     borderWidth: 1,
     shadowColor: '#000',

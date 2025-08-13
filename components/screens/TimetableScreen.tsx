@@ -39,9 +39,7 @@ interface TimetableEntry {
     teacher_name?: string;
 }
 
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'
-    , 'Sat'
-];
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function TimetableScreen() {
     const { profile } = useAuth();
@@ -109,7 +107,7 @@ export default function TimetableScreen() {
                 },
                 {
                     id: '2',
-                    day: 'Monday',
+                    day: 'Mon',
                     start_time: '10:30',
                     end_time: '11:30',
                     subject: 'Physics',
@@ -121,7 +119,7 @@ export default function TimetableScreen() {
                 },
                 {
                     id: '3',
-                    day: 'Monday',
+                    day: 'Mon',
                     start_time: '14:00',
                     end_time: '15:00',
                     subject: 'Chemistry',
@@ -298,7 +296,7 @@ export default function TimetableScreen() {
                 <View style={styles.header}>
                     {profile?.role === 'teacher' && (
                         <TouchableOpacity
-                            style={styles.addHeaderButton}
+                            style={[styles.addHeaderButton, { backgroundColor: colors.primary }]}
                             onPress={() => setModalVisible(true)}
                         >
                             <Plus size={20} color="#ffffff" />
@@ -307,32 +305,32 @@ export default function TimetableScreen() {
                 </View>
 
                 {/* Week Navigation */}
-                <View style={styles.weekNavigation }>
+                <View style={styles.weekNavigation}>
                     <TouchableOpacity
-                        style={styles.weekNavButton}
+                        style={[styles.weekNavButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
                         onPress={() => {
                             const prevWeek = new Date(currentWeek);
                             prevWeek.setDate(currentWeek.getDate() - 7);
                             setCurrentWeek(prevWeek);
                         }}
                     >
-                        <ChevronLeft size={20} color="#274d71" />
+                        <ChevronLeft size={20} color={colors.primary} />
                     </TouchableOpacity>
 
-                    <Text style={styles.weekText}>
+                    <Text style={[styles.weekText, { color: colors.text }]}>
                         {weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {' '}
                         {weekDates[5].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </Text>
 
                     <TouchableOpacity
-                        style={styles.weekNavButton}
+                        style={[styles.weekNavButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
                         onPress={() => {
                             const nextWeek = new Date(currentWeek);
                             nextWeek.setDate(currentWeek.getDate() + 7);
                             setCurrentWeek(nextWeek);
                         }}
                     >
-                        <ChevronRight size={20} color="#274d71" />
+                        <ChevronRight size={20} color={colors.primary} />
                     </TouchableOpacity>
                 </View>
 
@@ -344,13 +342,15 @@ export default function TimetableScreen() {
                                 <TouchableOpacity
                                     style={[
                                         styles.classButton,
-                                        selectedClass === '' && styles.classButtonSelected,
+                                        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                        selectedClass === '' && { backgroundColor: colors.primary, borderColor: colors.primary },
                                     ]}
                                     onPress={() => setSelectedClass('')}
                                 >
                                     <Text style={[
                                         styles.classButtonText,
-                                        selectedClass === '' && styles.classButtonTextSelected,
+                                        { color: colors.text },
+                                        selectedClass === '' && { color: '#ffffff' },
                                     ]}>
                                         All Classes
                                     </Text>
@@ -360,13 +360,15 @@ export default function TimetableScreen() {
                                         key={classItem.id}
                                         style={[
                                             styles.classButton,
-                                            selectedClass === classItem.id && styles.classButtonSelected,
+                                            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                            selectedClass === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                                         ]}
                                         onPress={() => setSelectedClass(classItem.id)}
                                     >
                                         <Text style={[
                                             styles.classButtonText,
-                                            selectedClass === classItem.id && styles.classButtonTextSelected,
+                                            { color: colors.text },
+                                            selectedClass === classItem.id && { color: '#ffffff' },
                                         ]}>
                                             {classItem.name}
                                         </Text>
@@ -390,17 +392,20 @@ export default function TimetableScreen() {
                                     {/* Day Header */}
                                     <View style={[
                                         styles.dayHeader,
-                                        isToday && styles.todayHeader
+                                        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                        isToday && { backgroundColor: colors.primary, borderColor: colors.primary }
                                     ]}>
                                         <Text style={[
                                             styles.dayName,
-                                            isToday && styles.todayText
+                                            { color: colors.text },
+                                            isToday && { color: '#ffffff' }
                                         ]}>
                                             {day}
                                         </Text>
                                         <Text style={[
                                             styles.dayDate,
-                                            isToday && styles.todayDateText
+                                            { color: colors.primary },
+                                            isToday && { color: '#b6d509' }
                                         ]}>
                                             {dayDate.getDate()}
                                         </Text>
@@ -409,37 +414,38 @@ export default function TimetableScreen() {
                                     {/* Time Slots */}
                                     <View style={styles.timeSlots}>
                                         {dayEntries.length === 0 ? (
-                                            <View style={styles.emptyDay}>
-                                                <Calendar size={24} color="#9CA3AF" />
-                                                <Text style={styles.emptyDayText}>No classes scheduled</Text>
+                                            <View style={[styles.emptyDay, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                                                <Calendar size={24} color={colors.textSecondary} />
+                                                <Text style={[styles.emptyDayText, { color: colors.textSecondary }]}>No classes scheduled</Text>
                                             </View>
                                         ) : (
                                             dayEntries.map((entry, index) => (
                                                 <View key={entry.id} style={[
                                                     styles.timeSlot,
+                                                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
                                                     index === 0 && styles.firstTimeSlot,
                                                     index === dayEntries.length - 1 && styles.lastTimeSlot,
                                                 ]}>
                                                     <View style={styles.timeSlotContent}>
                                                         <View style={styles.timeSlotHeader}>
                                                             <View style={styles.timeInfo}>
-                                                                <Clock size={14} color="#274d71" />
-                                                                <Text style={styles.timeText}>
+                                                                <Clock size={14} color={colors.primary} />
+                                                                <Text style={[styles.timeText, { color: colors.primary }]}>
                                                                     {entry.start_time} - {entry.end_time}
                                                                 </Text>
                                                             </View>
-                                                            <View style={styles.roomBadge}>
+                                                            <View style={[styles.roomBadge, { backgroundColor: colors.secondary }]}>
                                                                 <MapPin size={10} color="#274d71" />
                                                                 <Text style={styles.roomText}>{entry.room_number}</Text>
                                                             </View>
                                                         </View>
 
-                                                        <Text style={styles.subjectText}>{entry.subject}</Text>
+                                                        <Text style={[styles.subjectText, { color: colors.text }]}>{entry.subject}</Text>
 
                                                         {entry.teacher_name && (
                                                             <View style={styles.teacherInfo}>
-                                                                <User size={12} color="#6B7280" />
-                                                                <Text style={styles.teacherText}>{entry.teacher_name}</Text>
+                                                                <User size={12} color={colors.textSecondary} />
+                                                                <Text style={[styles.teacherText, { color: colors.textSecondary }]}>{entry.teacher_name}</Text>
                                                             </View>
                                                         )}
                                                     </View>
@@ -462,20 +468,20 @@ export default function TimetableScreen() {
                         onRequestClose={() => setModalVisible(false)}
                     >
                         <View style={styles.modalOverlay}>
-                            <View style={styles.modalContent}>
-                                <View style={styles.modalHeader}>
-                                    <Text style={styles.modalTitle}>Add Timetable Entry</Text>
+                            <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                                <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                                    <Text style={[styles.modalTitle, { color: colors.text }]}>Add Timetable Entry</Text>
                                     <TouchableOpacity
                                         style={styles.closeButton}
                                         onPress={() => setModalVisible(false)}
                                     >
-                                        <X size={24} color="#6B7280" />
+                                        <X size={24} color={colors.textSecondary} />
                                     </TouchableOpacity>
                                 </View>
 
                                 <ScrollView style={styles.modalScrollView}>
                                     <View style={styles.inputGroup}>
-                                        <Text style={styles.label}>Day</Text>
+                                        <Text style={[styles.label, { color: colors.text }]}>Day</Text>
                                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                             <View style={styles.dayOptions}>
                                                 {DAYS.map((day) => (
@@ -483,13 +489,15 @@ export default function TimetableScreen() {
                                                         key={day}
                                                         style={[
                                                             styles.dayOption,
-                                                            newEntry.day === day && styles.dayOptionSelected,
+                                                            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                                            newEntry.day === day && { backgroundColor: colors.primary, borderColor: colors.primary },
                                                         ]}
                                                         onPress={() => setNewEntry({ ...newEntry, day })}
                                                     >
                                                         <Text style={[
                                                             styles.dayOptionText,
-                                                            newEntry.day === day && styles.dayOptionTextSelected,
+                                                            { color: colors.text },
+                                                            newEntry.day === day && { color: '#ffffff' },
                                                         ]}>
                                                             {day.slice(0, 3)}
                                                         </Text>
@@ -501,51 +509,51 @@ export default function TimetableScreen() {
 
                                     <View style={styles.timeRow}>
                                         <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                            <Text style={styles.label}>Start Time</Text>
+                                            <Text style={[styles.label, { color: colors.text }]}>Start Time</Text>
                                             <TextInput
-                                                style={styles.input}
+                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                                 value={newEntry.start_time}
                                                 onChangeText={(text) => setNewEntry({ ...newEntry, start_time: text })}
                                                 placeholder="09:00"
-                                                placeholderTextColor="#9CA3AF"
+                                                placeholderTextColor={colors.textSecondary}
                                             />
                                         </View>
                                         <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                                            <Text style={styles.label}>End Time</Text>
+                                            <Text style={[styles.label, { color: colors.text }]}>End Time</Text>
                                             <TextInput
-                                                style={styles.input}
+                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                                 value={newEntry.end_time}
                                                 onChangeText={(text) => setNewEntry({ ...newEntry, end_time: text })}
                                                 placeholder="10:00"
-                                                placeholderTextColor="#9CA3AF"
+                                                placeholderTextColor={colors.textSecondary}
                                             />
                                         </View>
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={styles.label}>Subject</Text>
+                                        <Text style={[styles.label, { color: colors.text }]}>Subject</Text>
                                         <TextInput
-                                            style={styles.input}
+                                            style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                             value={newEntry.subject}
                                             onChangeText={(text) => setNewEntry({ ...newEntry, subject: text })}
                                             placeholder="Enter subject name"
-                                            placeholderTextColor="#9CA3AF"
+                                            placeholderTextColor={colors.textSecondary}
                                         />
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={styles.label}>Room Number</Text>
+                                        <Text style={[styles.label, { color: colors.text }]}>Room Number</Text>
                                         <TextInput
-                                            style={styles.input}
+                                            style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                             value={newEntry.room_number}
                                             onChangeText={(text) => setNewEntry({ ...newEntry, room_number: text })}
                                             placeholder="Enter room number"
-                                            placeholderTextColor="#9CA3AF"
+                                            placeholderTextColor={colors.textSecondary}
                                         />
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={styles.label}>Class</Text>
+                                        <Text style={[styles.label, { color: colors.text }]}>Class</Text>
                                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                             <View style={styles.classOptions}>
                                                 {classes.map((classItem) => (
@@ -553,13 +561,15 @@ export default function TimetableScreen() {
                                                         key={classItem.id}
                                                         style={[
                                                             styles.classOption,
-                                                            newEntry.class_id === classItem.id && styles.classOptionSelected,
+                                                            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                                            newEntry.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                                                         ]}
                                                         onPress={() => setNewEntry({ ...newEntry, class_id: classItem.id })}
                                                     >
                                                         <Text style={[
                                                             styles.classOptionText,
-                                                            newEntry.class_id === classItem.id && styles.classOptionTextSelected,
+                                                            { color: colors.text },
+                                                            newEntry.class_id === classItem.id && { color: '#ffffff' },
                                                         ]}>
                                                             {classItem.name}
                                                         </Text>
@@ -570,7 +580,7 @@ export default function TimetableScreen() {
                                     </View>
 
                                     <TouchableOpacity
-                                        style={styles.submitButton}
+                                        style={[styles.submitButton, { backgroundColor: colors.primary }]}
                                         onPress={handleAddEntry}
                                     >
                                         <Text style={styles.submitButtonText}>Add to Timetable</Text>
@@ -582,15 +592,12 @@ export default function TimetableScreen() {
                 )}
             </SafeAreaView>
         </>
-
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#ffffff',
-        // borderWidth : 1
     },
     header: {
         flexDirection: 'row',
@@ -598,17 +605,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 24,
         paddingBottom: 20,
-        // borderWidth : 1
     },
     title: {
         fontSize: 28,
         fontFamily: 'Inter-SemiBold',
-        color: '#111827',
     },
     addHeaderButton: {
-        flex : 1, 
+        flex: 1, 
         height: 44,
-        backgroundColor: '#274d71',
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
@@ -624,17 +628,14 @@ const styles = StyleSheet.create({
     weekNavButton: {
         width: 40,
         height: 40,
-        backgroundColor: '#F9FAFB',
         borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: '#E5E7EB',
     },
     weekText: {
         fontSize: 16,
         fontFamily: 'Inter-SemiBold',
-        color: '#111827',
         textAlign: 'center',
         flex: 1,
     },
@@ -649,22 +650,12 @@ const styles = StyleSheet.create({
     classButton: {
         paddingHorizontal: 16,
         paddingVertical: 10,
-        backgroundColor: '#F9FAFB',
         borderWidth: 1,
-        borderColor: '#E5E7EB',
         borderRadius: 8,
-    },
-    classButtonSelected: {
-        backgroundColor: '#274d71',
-        borderColor: '#274d71',
     },
     classButtonText: {
         fontSize: 14,
         fontFamily: 'Inter-Medium',
-        color: '#374151',
-    },
-    classButtonTextSelected: {
-        color: '#ffffff',
     },
     scrollView: {
         flex: 1,
@@ -680,36 +671,22 @@ const styles = StyleSheet.create({
     },
     dayHeader: {
         width: 80,
-        backgroundColor: '#F9FAFB',
         borderRadius: 12,
         padding: 12,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 16,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
-    },
-    todayHeader: {
-        backgroundColor: '#274d71',
-        borderColor: '#274d71',
     },
     dayName: {
         fontSize: 14,
         fontFamily: 'Inter-SemiBold',
-        color: '#111827',
         marginBottom: 4,
         textAlign: 'center',
-    },
-    todayText: {
-        color: '#ffffff',
     },
     dayDate: {
         fontSize: 18,
         fontFamily: 'Inter-SemiBold',
-        color: '#274d71',
-    },
-    todayDateText: {
-        color: '#b6d509',
     },
     timeSlots: {
         flex: 1,
@@ -719,25 +696,20 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F9FAFB',
         borderRadius: 12,
         padding: 20,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
         borderStyle: 'dashed',
     },
     emptyDayText: {
         fontSize: 14,
         fontFamily: 'Inter-Regular',
-        color: '#6B7280',
         marginTop: 8,
         textAlign: 'center',
     },
     timeSlot: {
-        backgroundColor: '#ffffff',
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -768,13 +740,11 @@ const styles = StyleSheet.create({
     timeText: {
         fontSize: 12,
         fontFamily: 'Inter-SemiBold',
-        color: '#274d71',
         marginLeft: 6,
     },
     roomBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#b6d509',
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 6,
@@ -788,7 +758,6 @@ const styles = StyleSheet.create({
     subjectText: {
         fontSize: 16,
         fontFamily: 'Inter-SemiBold',
-        color: '#111827',
         marginBottom: 6,
     },
     teacherInfo: {
@@ -798,7 +767,6 @@ const styles = StyleSheet.create({
     teacherText: {
         fontSize: 12,
         fontFamily: 'Inter-Regular',
-        color: '#6B7280',
         marginLeft: 4,
     },
     modalOverlay: {
@@ -807,7 +775,6 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: '#ffffff',
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         maxHeight: '85%',
@@ -820,12 +787,10 @@ const styles = StyleSheet.create({
         paddingTop: 24,
         paddingBottom: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
     },
     modalTitle: {
         fontSize: 20,
         fontFamily: 'Inter-SemiBold',
-        color: '#111827',
     },
     closeButton: {
         width: 32,
@@ -843,19 +808,15 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 14,
         fontFamily: 'Inter-Medium',
-        color: '#374151',
         marginBottom: 8,
     },
     input: {
         height: 50,
-        backgroundColor: '#F9FAFB',
         borderWidth: 1,
-        borderColor: '#E5E7EB',
         borderRadius: 12,
         paddingHorizontal: 16,
         fontSize: 16,
         fontFamily: 'Inter-Regular',
-        color: '#111827',
     },
     timeRow: {
         flexDirection: 'row',
@@ -868,22 +829,12 @@ const styles = StyleSheet.create({
     dayOption: {
         paddingHorizontal: 12,
         paddingVertical: 10,
-        backgroundColor: '#F9FAFB',
         borderWidth: 1,
-        borderColor: '#E5E7EB',
         borderRadius: 8,
-    },
-    dayOptionSelected: {
-        backgroundColor: '#274d71',
-        borderColor: '#274d71',
     },
     dayOptionText: {
         fontSize: 12,
         fontFamily: 'Inter-Medium',
-        color: '#374151',
-    },
-    dayOptionTextSelected: {
-        color: '#ffffff',
     },
     classOptions: {
         flexDirection: 'row',
@@ -892,26 +843,15 @@ const styles = StyleSheet.create({
     classOption: {
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: '#F9FAFB',
         borderWidth: 1,
-        borderColor: '#E5E7EB',
         borderRadius: 8,
-    },
-    classOptionSelected: {
-        backgroundColor: '#274d71',
-        borderColor: '#274d71',
     },
     classOptionText: {
         fontSize: 14,
         fontFamily: 'Inter-Medium',
-        color: '#374151',
-    },
-    classOptionTextSelected: {
-        color: '#ffffff',
     },
     submitButton: {
         height: 50,
-        backgroundColor: '#274d71',
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
