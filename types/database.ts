@@ -190,6 +190,139 @@ export interface Database {
           created_at?: string;
         };
       };
+      quizzes: {
+        Row: {
+          id: string;
+          title: string;
+          description?: string;
+          subject_id: string;
+          class_id: string;
+          scheduled_date: string;
+          duration_minutes: number;
+          total_marks: number;
+          passing_marks: number;
+          quiz_type: 'quiz' | 'test' | 'exam' | 'assignment';
+          status: 'scheduled' | 'active' | 'completed' | 'cancelled';
+          instructions?: string;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+          updated_by?: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description?: string;
+          subject_id: string;
+          class_id: string;
+          scheduled_date: string;
+          duration_minutes?: number;
+          total_marks?: number;
+          passing_marks?: number;
+          quiz_type?: 'quiz' | 'test' | 'exam' | 'assignment';
+          status?: 'scheduled' | 'active' | 'completed' | 'cancelled';
+          instructions?: string;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+          updated_by?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          description?: string;
+          subject_id?: string;
+          class_id?: string;
+          scheduled_date?: string;
+          duration_minutes?: number;
+          total_marks?: number;
+          passing_marks?: number;
+          quiz_type?: 'quiz' | 'test' | 'exam' | 'assignment';
+          status?: 'scheduled' | 'active' | 'completed' | 'cancelled';
+          instructions?: string;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+          updated_by?: string;
+        };
+      };
+      quiz_results: {
+        Row: {
+          id: string;
+          quiz_id: string;
+          student_id: string;
+          marks_obtained?: number;
+          total_marks: number;
+          percentage?: number;
+          grade?: string;
+          is_checked: boolean;
+          remarks?: string;
+          marked_by?: string;
+          marked_at?: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          quiz_id: string;
+          student_id: string;
+          marks_obtained?: number;
+          total_marks: number;
+          percentage?: number;
+          grade?: string;
+          is_checked?: boolean;
+          remarks?: string;
+          marked_by?: string;
+          marked_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          quiz_id?: string;
+          student_id?: string;
+          marks_obtained?: number;
+          total_marks?: number;
+          percentage?: number;
+          grade?: string;
+          is_checked?: boolean;
+          remarks?: string;
+          marked_by?: string;
+          marked_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      quiz_submissions: {
+        Row: {
+          id: string;
+          quiz_id: string;
+          student_id: string;
+          submitted_at: string;
+          submission_status: 'submitted' | 'late' | 'absent';
+          notes?: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          quiz_id: string;
+          student_id: string;
+          submitted_at?: string;
+          submission_status?: 'submitted' | 'late' | 'absent';
+          notes?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          quiz_id?: string;
+          student_id?: string;
+          submitted_at?: string;
+          submission_status?: 'submitted' | 'late' | 'absent';
+          notes?: string;
+          created_at?: string;
+        };
+      };
+    };
     };
     Views: {
       [_ in never]: never;

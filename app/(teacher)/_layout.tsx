@@ -83,21 +83,21 @@ export default function TeacherLayout() {
                 />
 
                 <Tabs.Screen
-                    name="timetable"
-                    options={{
-                        title: 'Timetable',
-                        tabBarIcon: ({ size, color }) => (
-                            <Calendar size={size} color={color} />
-                        ),
-                    }}
-                />
-
-                <Tabs.Screen
                     name="exams"
                     options={{
                         title: 'Exams',
                         tabBarIcon: ({ size, color }) => (
                             <GraduationCap size={size} color={color} />
+                        ),
+                    }}
+                />
+
+                <Tabs.Screen
+                    name="timetable"
+                    options={{
+                        title: 'Timetable',
+                        tabBarIcon: ({ size, color }) => (
+                            <Calendar size={size} color={color} />
                         ),
                     }}
                 />
