@@ -1,4 +1,4 @@
-// components/CreateQuizModal.tsx - Fixed with class-first selection
+// components/CreateQuizModal.tsx - Fixed TypeScript issues
 import React, { useState, useEffect } from 'react';
 import {
     Modal,
@@ -13,15 +13,38 @@ import {
 } from 'react-native';
 import { X } from 'lucide-react-native';
 
+interface Subject {
+    id: string;
+    name: string;
+}
+
+interface Class {
+    id: string;
+    name: string;
+}
+
+interface QuizData {
+    title: string;
+    description?: string;
+    subject_id: string;
+    class_id: string;
+    scheduled_date: string;
+    duration_minutes: number;
+    total_marks: number;
+    passing_marks: number;
+    quiz_type: string;
+    instructions?: string;
+}
+
 interface CreateQuizModalProps {
     colors: any;
     modalVisible: boolean;
     setModalVisible: (visible: boolean) => void;
-    subjects: any[];
-    classes: any[];
+    subjects: Subject[];
+    classes: Class[];
     selectedClass: string;
-    createQuiz: (quizData: any) => Promise<{ success: boolean }>;
-    getSubjectsForClass: (classId: string) => any[]; // NEW: Function to get subjects for specific class
+    createQuiz: (quizData: QuizData) => Promise<{ success: boolean; error?: any }>;
+    getSubjectsForClass: (classId: string) => Subject[];
 }
 
 const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
@@ -32,9 +55,9 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
     classes,
     selectedClass,
     createQuiz,
-    getSubjectsForClass, // NEW: Get subjects for class function
+    getSubjectsForClass,
 }) => {
-    const [creating, setCreating] = useState(false);
+    const [creating, setCreating] = useState<boolean>(false);
     const [newQuiz, setNewQuiz] = useState({
         title: '',
         description: '',
@@ -48,7 +71,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
     });
 
     // Available subjects based on selected class
-    const [availableSubjects, setAvailableSubjects] = useState<any[]>([]);
+    const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
 
     // Reset form when modal is opened
     useEffect(() => {
@@ -69,10 +92,8 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
 
     // Update available subjects when class changes
     useEffect(() => {
-        console.log('🎯 CreateQuiz: Class changed to:', newQuiz.class_id);
         if (newQuiz.class_id && newQuiz.class_id !== '') {
             const classSubjects = getSubjectsForClass(newQuiz.class_id);
-            console.log('🎯 CreateQuiz: Available subjects for class:', classSubjects.map(s => s.name));
             setAvailableSubjects(classSubjects);
             // Reset subject selection when class changes
             setNewQuiz(prev => ({ ...prev, subject_id: '' }));
@@ -82,9 +103,9 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
         }
     }, [newQuiz.class_id, getSubjectsForClass]);
 
-    const handleCreateQuiz = async () => {
+    const handleCreateQuiz = async (): Promise<void> => {
         // Validation
-        const missingFields = [];
+        const missingFields: string[] = [];
         if (!newQuiz.title.trim()) missingFields.push('Title');
         if (!newQuiz.class_id) missingFields.push('Class');
         if (!newQuiz.subject_id) missingFields.push('Subject');

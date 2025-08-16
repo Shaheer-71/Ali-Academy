@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { Bell, Menu } from 'lucide-react-native';
+import { TitleText, CaptionText, SmallText } from './ConsistentText';
 
 interface HeaderProps {
   title: string;
@@ -27,8 +28,8 @@ export const Header: React.FC<HeaderProps> = ({
           </TouchableOpacity>
         )}
         <View>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{profile?.full_name}</Text>
+          <TitleText>{title}</TitleText>
+          <CaptionText color="#6B7280" style={{ marginTop: 2 }}>{profile?.full_name}</CaptionText>
         </View>
       </View>
       
@@ -38,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
             <TouchableOpacity style={styles.notificationButton}>
               <Bell size={20} color="#274d71" />
               <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>3</Text>
+                <SmallText color="#ffffff">3</SmallText>
               </View>
             </TouchableOpacity>
           )
@@ -71,17 +72,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  title: {
-    fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
-    color: '#111827',
-  },
-  subtitle: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-    marginTop: 2,
-  },
+  // Text styles are now handled by ConsistentText components
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -106,9 +97,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  notificationBadgeText: {
-    fontSize: 10,
-    fontFamily: 'Inter-SemiBold',
-    color: '#ffffff',
-  },
+  // Text styles are now handled by ConsistentText components
 });

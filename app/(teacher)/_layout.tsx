@@ -62,15 +62,7 @@ export default function TeacherLayout() {
                     }}
                 />
 
-                <Tabs.Screen
-                    name="students"
-                    options={{
-                        title: 'Students',
-                        tabBarIcon: ({ size, color }) => (
-                            <Users size={size} color={color} />
-                        ),
-                    }}
-                />
+
 
                 <Tabs.Screen
                     name="attendance"
@@ -128,6 +120,16 @@ export default function TeacherLayout() {
                         title: 'Analytics',
                         tabBarIcon: ({ size, color }) => (
                             <BarChart3 size={size} color={color} />
+                        ),
+                    }}
+                />
+
+                <Tabs.Screen
+                    name="students"
+                    options={{
+                        title: 'Students',
+                        tabBarIcon: ({ size, color }) => (
+                            <Users size={size} color={color} />
                         ),
                     }}
                 />

@@ -1,0 +1,20 @@
+Fetched students: [
+    {
+        "classes": {
+            "name": "Class 10"
+        },
+        "full_name": "Shaheer-10-1",
+        "id": "55445804-9c4f-4d3e-8ae9-41655c449492",
+        "parent_contact": "03364749474",
+        "roll_number": "S1"
+    },
+    {
+        "classes": {
+            "name": "Class 10"
+        },
+        "full_name": "Shaheer-10-2",
+        "id": "24f6b09e-60e7-4e7a-b5bf-b4c70b71ff22",
+        "parent_contact": "03001234567",
+        "roll_number": "s11"
+    }
+]

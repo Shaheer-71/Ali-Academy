@@ -1,3 +1,4 @@
+// hooks/useAttendance.ts
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,14 +11,12 @@ interface AttendanceRecord {
   arrival_time?: string;
   status: 'present' | 'late' | 'absent';
   late_minutes?: number;
-  notes?: string;
   students?: {
     full_name: string;
     roll_number: string;
     parent_contact: string;
   };
   created_at: string;
-  updated_at: string;
 }
 
 interface AttendanceSession {
@@ -60,23 +59,57 @@ export const useAttendance = (classId?: string) => {
     attendanceRate: 0,
   });
   const [currentAttendance, setCurrentAttendance] = useState<Record<string, Partial<AttendanceRecord>>>({});
+  const [todaysAttendance, setTodaysAttendance] = useState<Record<string, AttendanceRecord>>({});
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const { profile } = useAuth();
 
+  // Clear all data when classId changes
   useEffect(() => {
-    if (profile?.role === 'teacher' && classId) {
-      fetchStudents();
-      fetchAttendanceData();
+    if (profile?.role === 'teacher') {
+      setStudents([]);
+      setAttendanceRecords([]);
+      setAttendanceSessions([]);
+      setCurrentAttendance({});
+      setTodaysAttendance({});
+      setAttendanceStats({
+        totalDays: 0,
+        presentDays: 0,
+        lateDays: 0,
+        absentDays: 0,
+        attendanceRate: 0,
+      });
+      
+      if (classId) {
+        setLoading(true);
+        fetchStudents();
+        fetchAttendanceData();
+        fetchTodaysAttendance(new Date().toISOString().split('T')[0]);
+      }
     } else if (profile?.role === 'student') {
+      setAttendanceRecords([]);
+      setAttendanceStats({
+        totalDays: 0,
+        presentDays: 0,
+        lateDays: 0,
+        absentDays: 0,
+        attendanceRate: 0,
+      });
       fetchStudentAttendance();
     }
   }, [classId, profile]);
 
   const fetchStudents = async () => {
-    if (!classId) return;
+    if (!classId) {
+      setStudents([]);
+      setLoading(false);
+      return;
+    }
     
     try {
+      console.log('Fetching students for class:', classId);
+      
       const { data, error } = await supabase
         .from('students')
         .select(`
@@ -91,14 +124,65 @@ export const useAttendance = (classId?: string) => {
         .order('roll_number');
 
       if (error) throw error;
+      
+      console.log('Fetched students:', data);
       setStudents(data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
+      setStudents([]);
+    }
+  };
+
+  const fetchTodaysAttendance = async (date: string) => {
+    if (!classId) {
+      setTodaysAttendance({});
+      return;
+    }
+
+    try {
+      console.log('Fetching attendance for date:', date, 'class:', classId);
+      
+      const { data, error } = await supabase
+        .from('attendance')
+        .select(`
+          *,
+          students (
+            full_name,
+            roll_number,
+            parent_contact
+          )
+        `)
+        .eq('class_id', classId)
+        .eq('date', date);
+
+      if (error) throw error;
+
+      console.log('Found attendance records:', data);
+
+      // Convert array to object with student_id as key for easy lookup
+      const todaysRecords: Record<string, AttendanceRecord> = {};
+      data?.forEach(record => {
+        todaysRecords[record.student_id] = record;
+      });
+
+      setTodaysAttendance(todaysRecords);
+      console.log('Todays attendance set:', todaysRecords);
+    } catch (error) {
+      console.error('Error fetching todays attendance:', error);
+      setTodaysAttendance({});
     }
   };
 
   const fetchAttendanceData = async (startDate?: string, endDate?: string) => {
+    if (!classId && profile?.role === 'teacher') {
+      setAttendanceRecords([]);
+      setLoading(false);
+      return;
+    }
+    
     try {
+      setLoading(true);
+      
       let query = supabase
         .from('attendance')
         .select(`
@@ -111,8 +195,12 @@ export const useAttendance = (classId?: string) => {
         `)
         .order('date', { ascending: false });
 
-      if (classId) {
+      if (classId && profile?.role === 'teacher') {
         query = query.eq('class_id', classId);
+      }
+
+      if (profile?.role === 'student') {
+        query = query.eq('student_id', profile.id);
       }
 
       if (startDate) {
@@ -129,10 +217,13 @@ export const useAttendance = (classId?: string) => {
       setAttendanceRecords(data || []);
       calculateStats(data || []);
 
-      // Fetch attendance sessions
-      await fetchAttendanceSessions(startDate, endDate);
+      // Fetch attendance sessions for teachers
+      if (profile?.role === 'teacher' && classId) {
+        await fetchAttendanceSessions(startDate, endDate);
+      }
     } catch (error) {
       console.error('Error fetching attendance data:', error);
+      setAttendanceRecords([]);
     } finally {
       setLoading(false);
     }
@@ -167,6 +258,11 @@ export const useAttendance = (classId?: string) => {
   };
 
   const fetchAttendanceSessions = async (startDate?: string, endDate?: string) => {
+    if (!classId) {
+      setAttendanceSessions([]);
+      return;
+    }
+    
     try {
       let query = supabase
         .from('attendance_sessions')
@@ -174,11 +270,8 @@ export const useAttendance = (classId?: string) => {
           *,
           classes (name)
         `)
+        .eq('class_id', classId)
         .order('date', { ascending: false });
-
-      if (classId) {
-        query = query.eq('class_id', classId);
-      }
 
       if (startDate) {
         query = query.gte('date', startDate);
@@ -194,6 +287,7 @@ export const useAttendance = (classId?: string) => {
       setAttendanceSessions(data || []);
     } catch (error) {
       console.error('Error fetching attendance sessions:', error);
+      setAttendanceSessions([]);
     }
   };
 
@@ -216,13 +310,13 @@ export const useAttendance = (classId?: string) => {
   const markStudentAttendance = (
     studentId: string,
     status: 'present' | 'late' | 'absent',
-    arrivalTime?: string,
-    notes?: string
+    arrivalTime?: string
   ) => {
     const currentTime = arrivalTime || new Date().toLocaleTimeString('en-US', { 
       hour12: false,
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      second: '2-digit'
     });
 
     // Calculate if late (assuming class starts at 16:00)
@@ -250,7 +344,6 @@ export const useAttendance = (classId?: string) => {
         arrival_time: currentTime,
         status: finalStatus,
         late_minutes: lateMinutes > 0 ? lateMinutes : undefined,
-        notes,
       }
     }));
   };
@@ -263,8 +356,12 @@ export const useAttendance = (classId?: string) => {
     setPosting(true);
     try {
       const attendanceData = Object.values(currentAttendance).map(record => ({
-        ...record,
-        date,
+        student_id: record.student_id,
+        class_id: record.class_id,
+        date: date,
+        arrival_time: record.arrival_time,
+        status: record.status,
+        late_minutes: record.late_minutes,
         marked_by: profile!.id,
       }));
 
@@ -277,8 +374,11 @@ export const useAttendance = (classId?: string) => {
       // Clear current attendance after posting
       setCurrentAttendance({});
       
-      // Refresh data
-      await fetchAttendanceData();
+      // Refresh today's attendance and other data
+      await Promise.all([
+        onRefresh(),
+        fetchTodaysAttendance(date)
+      ]);
       
       return { success: true };
     } catch (error) {
@@ -294,21 +394,152 @@ export const useAttendance = (classId?: string) => {
     updates: Partial<AttendanceRecord>
   ) => {
     try {
+      const cleanUpdates = {
+        status: updates.status,
+        arrival_time: updates.arrival_time,
+        late_minutes: updates.late_minutes,
+      };
+
       const { error } = await supabase
         .from('attendance')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
+        .update(cleanUpdates)
         .eq('id', attendanceId);
 
       if (error) throw error;
 
-      await fetchAttendanceData();
+      // Refresh data including today's attendance
+      await Promise.all([
+        onRefresh(),
+        fetchTodaysAttendance(new Date().toISOString().split('T')[0])
+      ]);
+      
       return { success: true };
     } catch (error) {
       console.error('Error updating attendance:', error);
       return { success: false, error };
+    }
+  };
+
+  // Comprehensive refresh function
+  const onRefresh = async () => {
+    setRefreshing(true);
+    setLoading(true);
+    
+    try {
+      if (profile?.role === 'teacher' && classId) {
+        // Clear all data first
+        setStudents([]);
+        setAttendanceRecords([]);
+        setAttendanceSessions([]);
+        setCurrentAttendance({});
+        setTodaysAttendance({});
+        
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Fetch fresh data in parallel
+        await Promise.all([
+          fetchStudents(),
+          fetchAttendanceSessions(),
+          fetchTodaysAttendance(today),
+        ]);
+        
+        // Fetch fresh attendance data with recalculation
+        const { data: freshAttendanceData, error } = await supabase
+          .from('attendance')
+          .select(`
+            *,
+            students (
+              full_name,
+              roll_number,
+              parent_contact
+            )
+          `)
+          .eq('class_id', classId)
+          .order('date', { ascending: false });
+
+        if (!error && freshAttendanceData) {
+          setAttendanceRecords(freshAttendanceData);
+          calculateStats(freshAttendanceData);
+        }
+
+      } else if (profile?.role === 'student') {
+        // Clear student data first
+        setAttendanceRecords([]);
+        
+        // Refresh all student data
+        const { data: studentAttendanceData, error } = await supabase
+          .from('attendance')
+          .select('*')
+          .eq('student_id', profile.id)
+          .order('date', { ascending: false });
+
+        if (!error && studentAttendanceData) {
+          setAttendanceRecords(studentAttendanceData);
+          calculateStats(studentAttendanceData);
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
+      setLoading(false);
+    }
+  };
+
+  const clearCurrentAttendance = () => {
+    setCurrentAttendance({});
+  };
+
+  const clearAllData = () => {
+    setStudents([]);
+    setAttendanceRecords([]);
+    setAttendanceSessions([]);
+    setCurrentAttendance({});
+    setTodaysAttendance({});
+    setAttendanceStats({
+      totalDays: 0,
+      presentDays: 0,
+      lateDays: 0,
+      absentDays: 0,
+      attendanceRate: 0,
+    });
+  };
+
+  // Check if student has attendance marked for specific date
+  const isStudentMarkedForDate = (studentId: string, date: string) => {
+    const isMarked = !!todaysAttendance[studentId];
+    console.log(`Student ${studentId} marked for ${date}:`, isMarked);
+    return isMarked;
+  };
+
+  // Get student's attendance record for specific date
+  const getStudentRecordForDate = (studentId: string, date: string) => {
+    return todaysAttendance[studentId] || null;
+  };
+
+  const checkAttendanceForDate = async (date: string) => {
+    if (!classId) return [];
+    
+    try {
+      const { data, error } = await supabase
+        .from('attendance')
+        .select(`
+          *,
+          students (
+            full_name,
+            roll_number,
+            parent_contact
+          )
+        `)
+        .eq('class_id', classId)
+        .eq('date', date);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error checking attendance for date:', error);
+      return [];
     }
   };
 
@@ -354,15 +585,24 @@ export const useAttendance = (classId?: string) => {
     attendanceSessions,
     attendanceStats,
     currentAttendance,
+    todaysAttendance,
     loading,
     posting,
+    refreshing,
     markStudentAttendance,
     postAttendance,
     updateAttendance,
     fetchAttendanceData,
+    fetchTodaysAttendance,
+    onRefresh,
+    clearCurrentAttendance,
+    clearAllData,
+    isStudentMarkedForDate,
+    getStudentRecordForDate,
+    checkAttendanceForDate,
     getAttendanceForDateRange,
     getStudentAttendanceStats,
     getClassAttendanceForDate,
-    refetch: () => fetchAttendanceData(),
+    refetch: onRefresh,
   };
 };

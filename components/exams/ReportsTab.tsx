@@ -43,10 +43,6 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
 
     // FIXED: Proper class-based filtering for reports
     const getFilteredDataForReports = () => {
-        console.log('=== REPORTS FILTERING DEBUG ===');
-        console.log('Selected class:', selectedClass);
-        console.log('All quizzes:', quizzes.length);
-        console.log('All quiz results:', quizResults.length);
         
         let filteredQuizzes = [...quizzes];
         let filteredResults = [...quizResults];
@@ -59,11 +55,11 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                 classQuizIds.includes(result.quiz_id)
             );
             
-            console.log('Filtered quizzes for class:', filteredQuizzes.length);
-            console.log('Filtered results for class:', filteredResults.length);
+            // console.log('Filtered quizzes for class:', filteredQuizzes.length);
+            // console.log('Filtered results for class:', filteredResults.length);
         }
         
-        console.log('============================');
+        // console.log('============================');
         return { filteredQuizzes, filteredResults };
     };
 

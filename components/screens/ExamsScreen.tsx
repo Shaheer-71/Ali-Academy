@@ -66,7 +66,6 @@ export default function ExamsScreen() {
 
   // ENHANCED: Comprehensive refresh function
   const handleRefresh = async () => {
-    console.log('🔄 ExamsScreen: Starting comprehensive refresh...');
     
     try {
       // Use the refetch function from the hook to refresh quiz data
@@ -75,7 +74,7 @@ export default function ExamsScreen() {
       // Also refresh classes data
       await fetchClasses();
       
-      console.log('✅ ExamsScreen: Refresh completed successfully');
+      // console.log('✅ ExamsScreen: Refresh completed successfully');
     } catch (error) {
       console.error('❌ ExamsScreen: Error during refresh:', error);
       throw error; // Re-throw so components can handle loading states
@@ -104,15 +103,15 @@ export default function ExamsScreen() {
     // Use the passed classId parameter or fall back to selectedClass
     const targetClass = classId || selectedClass;
     
-    console.log('=== REAL-TIME SUBJECTS FILTERING ===');
-    console.log('Target class:', targetClass, typeof targetClass);
-    console.log('All subjects:', subjects.map(s => ({id: s.id, name: s.name})));
-    console.log('All quizzes:', quizzes.map(q => ({
-      id: q.id, 
-      title: q.title, 
-      class_id: q.class_id, 
-      subject_id: q.subject_id
-    })));
+    // console.log('=== REAL-TIME SUBJECTS FILTERING ===');
+    // console.log('Target class:', targetClass, typeof targetClass);
+    // console.log('All subjects:', subjects.map(s => ({id: s.id, name: s.name})));
+    // console.log('All quizzes:', quizzes.map(q => ({
+    //   id: q.id, 
+    //   title: q.title, 
+    //   class_id: q.class_id, 
+    //   subject_id: q.subject_id
+    // })));
     
     let filteredSubjects = subjects;
     
@@ -124,32 +123,32 @@ export default function ExamsScreen() {
         const selectedClassStr = String(targetClass);
         const match = quizClassId === selectedClassStr;
         
-        console.log(`Quiz "${quiz.title}": quiz.class_id="${quizClassId}" vs targetClass="${selectedClassStr}", match: ${match}`);
+        // console.log(`Quiz "${quiz.title}": quiz.class_id="${quizClassId}" vs targetClass="${selectedClassStr}", match: ${match}`);
         return match;
       });
       
-      console.log('Class quizzes found:', classQuizzes.length);
-      console.log('Class quizzes details:', classQuizzes.map(q => ({title: q.title, subject_id: q.subject_id})));
+      // console.log('Class quizzes found:', classQuizzes.length);
+      // console.log('Class quizzes details:', classQuizzes.map(q => ({title: q.title, subject_id: q.subject_id})));
       
       // Get unique subject IDs from those quizzes
       const subjectIdsInClass = [...new Set(classQuizzes.map(quiz => quiz.subject_id))];
-      console.log('Subject IDs in class:', subjectIdsInClass);
+      // console.log('Subject IDs in class:', subjectIdsInClass);
       
       // Filter subjects to only those that have quizzes in this class
       filteredSubjects = subjects.filter(subject => {
         const included = subjectIdsInClass.includes(subject.id);
-        console.log(`Subject "${subject.name}" (${subject.id}) included: ${included}`);
+        // console.log(`Subject "${subject.name}" (${subject.id}) included: ${included}`);
         return included;
       });
       
-      console.log('Filtered subjects for class:', filteredSubjects.map(s => s.name));
+      // console.log('Filtered subjects for class:', filteredSubjects.map(s => s.name));
     } else {
       // For "all classes", show all subjects that have any quizzes
       const allSubjectIds = [...new Set(quizzes.map(quiz => quiz.subject_id))];
       filteredSubjects = subjects.filter(subject => 
         allSubjectIds.includes(subject.id)
       );
-      console.log('All classes - subjects with quizzes:', filteredSubjects.map(s => s.name));
+      // console.log('All classes - subjects with quizzes:', filteredSubjects.map(s => s.name));
     }
     
     const result = [
@@ -157,9 +156,9 @@ export default function ExamsScreen() {
       ...filteredSubjects
     ];
     
-    console.log('Final subjects list:', result.map(s => s.name));
-    console.log('Expected for Class 10: All Subjects, Mathematics, Physics, Chemistry, Computer Science');
-    console.log('==========================================');
+    // console.log('Final subjects list:', result.map(s => s.name));
+    // console.log('Expected for Class 10: All Subjects, Mathematics, Physics, Chemistry, Computer Science');
+    // console.log('==========================================');
     
     return result;
   };
@@ -173,13 +172,13 @@ export default function ExamsScreen() {
 
   // Reset selectedSubject when class changes
   useEffect(() => {
-    console.log('🔄 Class changed to:', selectedClass);
+    // console.log('🔄 Class changed to:', selectedClass);
     setSelectedSubject('all');
   }, [selectedClass]);
 
   // Add useEffect to trigger re-render when data changes
   useEffect(() => {
-    console.log('📊 Data updated - Quizzes:', quizzes.length, 'Subjects:', subjects.length);
+    // console.log('📊 Data updated - Quizzes:', quizzes.length, 'Subjects:', subjects.length);
   }, [quizzes, subjects]);
 
   const renderTabContent = () => {
@@ -222,6 +221,7 @@ export default function ExamsScreen() {
           />
         );
       case 'reports':
+        // console.log('🔄 ExamsScreen: Rendering ReportsTab with onRefresh:', !!handleRefresh);
         return (
           <ReportsTab
             colors={colors}

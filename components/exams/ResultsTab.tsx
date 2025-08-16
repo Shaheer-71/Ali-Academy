@@ -66,7 +66,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     }, [selectedClass, setSelectedSubject]);
 
     useEffect(() => {
-        console.log('📊 ResultsTab: Data updated - Quizzes:', quizzes.length, 'Subjects:', subjects.length);
+        // console.log('📊 ResultsTab: Data updated - Quizzes:', quizzes.length, 'Subjects:', subjects.length);
         setRefreshKey(prev => prev + 1);
     }, [quizzes, subjects]);
 
@@ -106,7 +106,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                 }
             };
 
-            console.log('Opening marking modal for result:', enrichedResult);
+            // console.log('Opening marking modal for result:', enrichedResult);
             setSelectedResult(enrichedResult);
             setMarkingModalVisible(true);
         }
@@ -117,11 +117,11 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
 
     // UPDATED: Get available subjects using the improved function
     const getAvailableSubjects = () => {
-        console.log('🎯 RESULTS TAB: Getting available subjects for class:', selectedClass);
+        // console.log('🎯 RESULTS TAB: Getting available subjects for class:', selectedClass);
 
         const availableSubjects = getSubjectsWithAll(selectedClass);
 
-        console.log('🎯 RESULTS TAB: Available subjects:', availableSubjects.map(s => s.name));
+        // console.log('🎯 RESULTS TAB: Available subjects:', availableSubjects.map(s => s.name));
 
         return availableSubjects;
     };
@@ -243,15 +243,15 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
 
     const availableSubjects = getAvailableSubjects();
 
-    console.log('🎯 RESULTS TAB RENDER:', {
-        selectedClass,
-        selectedSubject,
-        checkedFilter,
-        availableSubjectsCount: availableSubjects.length,
-        availableSubjectNames: availableSubjects.map(s => s.name),
-        filteredResultsCount: filteredResults.length,
-        refreshKey
-    });
+    // console.log('🎯 RESULTS TAB RENDER:', {
+    //     selectedClass,
+    //     selectedSubject,
+    //     checkedFilter,
+    //     availableSubjectsCount: availableSubjects.length,
+    //     availableSubjectNames: availableSubjects.map(s => s.name),
+    //     filteredResultsCount: filteredResults.length,
+    //     refreshKey
+    // });
 
     return (
         <View style={styles.resultsContainer} key={refreshKey}>
@@ -285,7 +285,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                                     selectedSubject === subject.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                                 ]}
                                 onPress={() => {
-                                    console.log('🎯 Subject selected:', subject.name);
+                                    // console.log('🎯 Subject selected:', subject.name);
                                     setSelectedSubject(subject.id);
                                 }}
                             >

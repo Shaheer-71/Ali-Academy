@@ -6,6 +6,9 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
+// Import text scaling configuration to ensure consistent text sizes across devices
+import '@/constants/TextScaling';
+// import '@/lib/globalTextOverride';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();

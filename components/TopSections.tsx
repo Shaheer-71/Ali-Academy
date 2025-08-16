@@ -9,11 +9,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
-import { Settings, Moon, Sun, Bell, X, ChevronLeft } from 'lucide-react-native';
+import { useRouter } from 'expo-router'; // Changed to expo-router for router.push to work
+import { Settings, Moon, Sun, Bell, X } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { NotificationCard } from '@/components/NotificationCard';
-
+import { defaultTextProps } from '@/constants/Fonts';
 
 // Dummy notifications data
 const dummyNotifications = [
@@ -61,7 +61,6 @@ export default function TopSection({ showNotifications = false }: TopSectionProp
     const { isDark, toggleTheme, colors } = useTheme();
     const [notificationsVisible, setNotificationsVisible] = useState(false);
     const [notifications, setNotifications] = useState(dummyNotifications);
-    const isSettingsScreen = route.name.toLowerCase() === 'settings';
 
     const screenName = route.name.charAt(0).toUpperCase() + route.name.slice(1);
     const unreadCount = notifications.filter((n) => !n.read).length;
@@ -90,29 +89,24 @@ export default function TopSection({ showNotifications = false }: TopSectionProp
             <View
                 style={[styles.content, { backgroundColor: colors.background }]}
             >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    {isSettingsScreen && (
-                        <TouchableOpacity
-                            style={[
-                                styles.iconButton,
-                                { backgroundColor: colors.cardBackground },
-                            ]}
-                            onPress={() => router.back()}
-                        >
-                            <ChevronLeft color={colors.primary} size={24} />
-                        </TouchableOpacity>
-                    )}
-                    <Text style={[styles.title, { color: colors.text }]}>
-                        {screenName === 'Index'
-                            ? 'Home'
-                            : screenName === 'Dairy'
-                                ? 'Diary'
-                                : screenName || 'Untitled'}
-                    </Text>
-                </View>
+                <Text style={[styles.title, { color: colors.text }]}>
+                    {screenName === 'Index'
+                        ? 'Home'
+                        : screenName === 'Dairy'
+                        ? 'Diary'
+                        : screenName || 'Untitled'}
+                </Text>
+                {/* Apply defaultTextProps to ensure consistent text rendering */}
+                {/* <Text {...defaultTextProps} style={[styles.title, { color: colors.text }]}>
+                    {screenName === 'Index'
+                        ? 'Home'
+                        : screenName === 'Dairy'
+                        ? 'Diary'
+                        : screenName || 'Untitled'}
+                </Text> */}
 
                 <View style={styles.rightSection}>
-                    {!isSettingsScreen && showNotifications && (
+                    {showNotifications && (
                         <TouchableOpacity
                             style={[
                                 styles.iconButton,
@@ -131,41 +125,35 @@ export default function TopSection({ showNotifications = false }: TopSectionProp
                         </TouchableOpacity>
                     )}
 
-                    {!isSettingsScreen && (
-                        <TouchableOpacity
-                            style={[
-                                styles.iconButton,
-                                { backgroundColor: colors.cardBackground },
-                            ]}
-                            onPress={toggleTheme}
-                        >
-                            {isDark ? (
-                                <Sun color={colors.primary} size={24} />
-                            ) : (
-                                <Moon color={colors.primary} size={24} />
-                            )}
-                        </TouchableOpacity>
-                    )}
+                    <TouchableOpacity
+                        style={[
+                            styles.iconButton,
+                            { backgroundColor: colors.cardBackground },
+                        ]}
+                        onPress={toggleTheme}
+                    >
+                        {isDark ? (
+                            <Sun color={colors.primary} size={24} />
+                        ) : (
+                            <Moon color={colors.primary} size={24} />
+                        )}
+                    </TouchableOpacity>
 
-                    {!isSettingsScreen && (
-                        <TouchableOpacity
-                            style={[
-                                styles.iconButton,
-                                { backgroundColor: colors.cardBackground },
-                            ]}
-                            onPress={() => {
-                                router.push('/settings');
-                            }}
-                        >
-                            <Settings color={colors.primary} size={24} />
-                        </TouchableOpacity>
-                    )}
+                    <TouchableOpacity
+                        style={[
+                            styles.iconButton,
+                            { backgroundColor: colors.cardBackground },
+                        ]}
+                        onPress={() => router.push('/(tabs)/settings')}
+                    >
+                        <Settings color={colors.primary} size={24} />
+                    </TouchableOpacity>
                 </View>
             </View>
 
             {/* Notifications Modal */}
             <Modal
-                animationType="fade"
+                animationType="slide"
                 transparent
                 visible={notificationsVisible}
                 onRequestClose={() => setNotificationsVisible(false)}
