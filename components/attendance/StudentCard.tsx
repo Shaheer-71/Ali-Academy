@@ -129,7 +129,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
             {recordSource === 'database' && (
                 <View style={[styles.databaseInfo, { backgroundColor: colors.primary }]}>
                     <Text style={styles.databaseText}>
-                        ✅ Attendance recorded in database for {new Date(selectedDate).toLocaleDateString()}
+                        ✅ Attendance recorded for {new Date(selectedDate).toLocaleDateString()}
                     </Text>
                 </View>
             )}

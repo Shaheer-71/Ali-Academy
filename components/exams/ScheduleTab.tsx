@@ -1,4 +1,4 @@
-// components/ScheduleTab.tsx - Fixed syntax error and enhanced with auto-complete logic
+// components/ScheduleTab.tsx - Updated without filter UI (filters now centralized)
 import React from 'react';
 import { View, ScrollView, TouchableOpacity, Text, StyleSheet, Alert, RefreshControl } from 'react-native';
 import { Calendar, Clock, Target, GraduationCap, Edit3, Users, Play, Square } from 'lucide-react-native';
@@ -141,35 +141,16 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
     return (
         <View style={styles.scheduleContainer}>
-            {/* Status Filter */}
-            <View style={styles.statusFilter}>
-                <Text style={[styles.filterLabel, { color: colors.text }]}>Filter by Status</Text>
-                <View style={styles.statusButtons}>
-                    {[
-                        { key: 'all', label: 'All' },
-                        { key: 'scheduled', label: 'Scheduled' },
-                        { key: 'completed', label: 'Completed' },
-                    ].map((status) => (
-                        <TouchableOpacity
-                            key={status.key}
-                            style={[
-                                styles.statusButton,
-                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                statusFilter === status.key && { backgroundColor: colors.primary, borderColor: colors.primary },
-                            ]}
-                            onPress={() => setStatusFilter(status.key as any)}
-                        >
-                            <Text style={[
-                                styles.statusButtonText,
-                                { color: colors.text },
-                                statusFilter === status.key && { color: '#ffffff' },
-                            ]}>
-                                {status.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
+            {/* Filter info banner - showing current filters */}
+            {(statusFilter !== 'all' || selectedClass !== 'all') && (
+                <View style={[styles.filterBanner, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                    <Text style={[styles.filterText, { color: colors.textSecondary }]}>
+                        Active Filters:
+                        {statusFilter !== 'all' && ` Status: ${statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}`}
+                        {selectedClass !== 'all' && ` • Class: Selected`}
+                    </Text>
                 </View>
-            </View>
+            )}
 
             <ScrollView 
                 showsVerticalScrollIndicator={false} 
@@ -190,7 +171,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                         <Calendar size={48} color={colors.textSecondary} />
                         <Text style={[styles.emptyText, { color: colors.text }]}>No quizzes found</Text>
                         <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                            {profile?.role === 'teacher' ? 'Schedule your first quiz or adjust filters' : 'Check back later for quiz schedules'}
+                            {profile?.role === 'teacher' ? 'Schedule your first quiz or adjust filters using the Filter button' : 'Check back later for quiz schedules or adjust filters'}
                         </Text>
                     </View>
                 ) : (
@@ -351,25 +332,14 @@ const styles = StyleSheet.create({
     scheduleContainer: {
         flex: 1,
     },
-    statusFilter: {
-        marginBottom: 20,
-    },
-    filterLabel: {
-        fontSize: 16,
-        fontFamily: 'Inter-SemiBold',
-        marginBottom: 12,
-    },
-    statusButtons: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    statusButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderWidth: 1,
+    filterBanner: {
         borderRadius: 8,
+        padding: 12,
+        marginBottom: 16,
+        borderWidth: 1,
+        alignItems: 'center',
     },
-    statusButtonText: {
+    filterText: {
         fontSize: 14,
         fontFamily: 'Inter-Medium',
     },
@@ -388,6 +358,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
+        paddingHorizontal: 20,
     },
     quizCard: {
         borderRadius: 16,

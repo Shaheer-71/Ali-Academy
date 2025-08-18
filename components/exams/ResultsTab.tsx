@@ -1,5 +1,5 @@
-// components/ResultsTab.tsx - Fixed with pull-to-refresh and real-time updates
-import React, { useState, useEffect } from 'react';
+// components/ResultsTab.tsx - Fixed to prevent infinite loop
+import React, { useState, useEffect, useRef } from 'react';
 import { View, ScrollView, TouchableOpacity, Text, StyleSheet, RefreshControl } from 'react-native';
 import { BookOpen, CircleCheck as CheckCircle, Circle, UserX } from 'lucide-react-native';
 
@@ -12,14 +12,14 @@ interface ResultsTabProps {
     checkedFilter: 'all' | 'checked' | 'unchecked';
     setCheckedFilter: (filter: 'all' | 'checked' | 'unchecked') => void;
     getSubjectsWithAll: (selectedClass?: string) => any[];
-    getFilteredResults: (selectedClass: string, selectedSubject: string, checkedFilter: 'all' | 'checked' | 'unchecked') => any[];
+    getFilteredResults: () => any[]; // Updated to use function that returns filtered results
     setSelectedResult: (result: any) => void;
     setMarkingModalVisible: (visible: boolean) => void;
     quizzes: any[];
     quizResults: any[];
     subjects: any[];
     classes?: any[];
-    onRefresh?: () => Promise<void>; // NEW: Add refresh function
+    onRefresh?: () => Promise<void>;
 }
 
 const ResultsTab: React.FC<ResultsTabProps> = ({
@@ -38,12 +38,13 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     quizResults,
     subjects,
     classes = [],
-    onRefresh, // NEW: Accept refresh function
+    onRefresh,
 }) => {
     const [refreshKey, setRefreshKey] = useState(0);
-    const [refreshing, setRefreshing] = useState(false); // NEW: Add refreshing state
+    const [refreshing, setRefreshing] = useState(false);
+    const previousClassRef = useRef<string>();
 
-    // NEW: Handle pull-to-refresh
+    // Handle pull-to-refresh
     const handleRefresh = async () => {
         if (onRefresh) {
             setRefreshing(true);
@@ -58,15 +59,18 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         }
     };
 
+    // Only reset subject when class actually changes (not on every render)
     useEffect(() => {
-        console.log('🔄 ResultsTab: Class changed to:', selectedClass);
-        setRefreshKey(prev => prev + 1);
-        // Reset subject selection when class changes
-        setSelectedSubject('all');
+        if (previousClassRef.current !== undefined && previousClassRef.current !== selectedClass) {
+            console.log('🔄 ResultsTab: Class changed from', previousClassRef.current, 'to:', selectedClass);
+            setRefreshKey(prev => prev + 1);
+            setSelectedSubject('all');
+        }
+        previousClassRef.current = selectedClass;
     }, [selectedClass, setSelectedSubject]);
 
+    // Separate effect for data changes that don't need subject reset
     useEffect(() => {
-        // console.log('📊 ResultsTab: Data updated - Quizzes:', quizzes.length, 'Subjects:', subjects.length);
         setRefreshKey(prev => prev + 1);
     }, [quizzes, subjects]);
 
@@ -95,7 +99,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
 
     const handleResultPress = (result: any) => {
         if (profile?.role === 'teacher') {
-            // Allow editing for both checked and unchecked results
             const fullQuiz = quizzes.find(quiz => quiz.id === result.quiz_id);
 
             const enrichedResult = {
@@ -106,25 +109,13 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                 }
             };
 
-            // console.log('Opening marking modal for result:', enrichedResult);
             setSelectedResult(enrichedResult);
             setMarkingModalVisible(true);
         }
     };
 
-    // UPDATED: Use the new advanced filtering function
-    const filteredResults = getFilteredResults(selectedClass, selectedSubject, checkedFilter);
-
-    // UPDATED: Get available subjects using the improved function
-    const getAvailableSubjects = () => {
-        // console.log('🎯 RESULTS TAB: Getting available subjects for class:', selectedClass);
-
-        const availableSubjects = getSubjectsWithAll(selectedClass);
-
-        // console.log('🎯 RESULTS TAB: Available subjects:', availableSubjects.map(s => s.name));
-
-        return availableSubjects;
-    };
+    // Use the centralized filtering function
+    const filteredResults = getFilteredResults();
 
     const renderResultCard = (result: any) => {
         const fullQuiz = quizzes.find(quiz => quiz.id === result.quiz_id);
@@ -141,10 +132,10 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                     { backgroundColor: colors.cardBackground, borderColor: colors.border },
                     !isChecked && !isAbsent && { borderColor: '#F59E0B', backgroundColor: '#FEF3C7' },
                     isAbsent && { borderColor: '#EF4444', backgroundColor: '#FEE2E2' },
-                    profile?.role === 'teacher' && { opacity: 1 }, // Always clickable for teachers
+                    profile?.role === 'teacher' && { opacity: 1 },
                 ]}
                 onPress={() => handleResultPress(result)}
-                disabled={profile?.role !== 'teacher'} // Only teachers can click
+                disabled={profile?.role !== 'teacher'}
             >
                 <View style={styles.resultHeader}>
                     <View style={styles.resultInfo}>
@@ -241,100 +232,37 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         );
     };
 
-    const availableSubjects = getAvailableSubjects();
-
-    // console.log('🎯 RESULTS TAB RENDER:', {
-    //     selectedClass,
-    //     selectedSubject,
-    //     checkedFilter,
-    //     availableSubjectsCount: availableSubjects.length,
-    //     availableSubjectNames: availableSubjects.map(s => s.name),
-    //     filteredResultsCount: filteredResults.length,
-    //     refreshKey
-    // });
+    // Get current filter summary for display
+    const getFilterSummary = () => {
+        const items = [];
+        
+        if (selectedClass !== 'all') {
+            items.push(`Class: ${classes.find(c => c.id === selectedClass)?.name || 'Unknown'}`);
+        }
+        
+        if (selectedSubject !== 'all') {
+            const availableSubjects = getSubjectsWithAll(selectedClass);
+            items.push(`Subject: ${availableSubjects.find(s => s.id === selectedSubject)?.name || 'Unknown'}`);
+        }
+        
+        if (checkedFilter !== 'all') {
+            items.push(`Status: ${checkedFilter.charAt(0).toUpperCase() + checkedFilter.slice(1)}`);
+        }
+        
+        return items.join(' • ') || 'Showing all quiz results';
+    };
 
     return (
         <View style={styles.resultsContainer} key={refreshKey}>
-            {/* Filter Summary */}
-            {/* <View style={[styles.filterSummary, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            {/* Filter Summary Banner */}
+            <View style={[styles.filterSummary, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <Text style={[styles.filterSummaryText, { color: colors.textSecondary }]}>
-                    {selectedClass !== 'all' && `Class: ${classes.find(c => c.id === selectedClass)?.name || 'Unknown'}`}
-                    {selectedClass !== 'all' && selectedSubject !== 'all' && ' • '}
-                    {selectedSubject !== 'all' && `Subject: ${availableSubjects.find(s => s.id === selectedSubject)?.name || 'Unknown'}`}
-                    {checkedFilter !== 'all' && ` • Status: ${checkedFilter.charAt(0).toUpperCase() + checkedFilter.slice(1)}`}
-                    {selectedClass === 'all' && selectedSubject === 'all' && checkedFilter === 'all' && 'Showing all quiz results'}
+                    {getFilterSummary()}
                 </Text>
                 <Text style={[styles.resultCount, { color: colors.primary }]}>
                     {filteredResults.length} result{filteredResults.length !== 1 ? 's' : ''}
                 </Text>
-            </View> */}
-
-            {/* Subject Filter */}
-            <View style={styles.subjectFilter}>
-                <Text style={[styles.filterLabel, { color: colors.text }]}>
-                    Select Subject {selectedClass !== 'all' && `(${classes.find(c => c.id === selectedClass)?.name || 'Unknown Class'})`}
-                </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={styles.subjectButtons}>
-                        {availableSubjects.map((subject) => (
-                            <TouchableOpacity
-                                key={`${subject.id}-${refreshKey}`}
-                                style={[
-                                    styles.subjectButton,
-                                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                    selectedSubject === subject.id && { backgroundColor: colors.primary, borderColor: colors.primary },
-                                ]}
-                                onPress={() => {
-                                    // console.log('🎯 Subject selected:', subject.name);
-                                    setSelectedSubject(subject.id);
-                                }}
-                            >
-                                <BookOpen size={16} color={selectedSubject === subject.id ? '#ffffff' : colors.text} />
-                                <Text style={[
-                                    styles.subjectButtonText,
-                                    { color: colors.text },
-                                    selectedSubject === subject.id && { color: '#ffffff' },
-                                ]}>
-                                    {subject.name}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </ScrollView>
             </View>
-
-            {/* Checked/Unchecked Filter */}
-            {profile?.role === 'teacher' && (
-                <View style={styles.checkedFilter}>
-                    <Text style={[styles.filterLabel, { color: colors.text }]}>Evaluation Status</Text>
-                    <View style={styles.filterButtons}>
-                        {[
-                            { key: 'all', label: 'All', icon: Circle },
-                            { key: 'checked', label: 'Evaluated', icon: CheckCircle },
-                            { key: 'unchecked', label: 'Pending', icon: Circle },
-                        ].map((filter) => (
-                            <TouchableOpacity
-                                key={filter.key}
-                                style={[
-                                    styles.filterButton,
-                                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                    checkedFilter === filter.key && { backgroundColor: colors.secondary, borderColor: colors.secondary },
-                                ]}
-                                onPress={() => setCheckedFilter(filter.key as any)}
-                            >
-                                <filter.icon size={16} color={checkedFilter === filter.key ? '#274d71' : colors.text} />
-                                <Text style={[
-                                    styles.filterButtonText,
-                                    { color: colors.text },
-                                    checkedFilter === filter.key && { color: '#274d71' },
-                                ]}>
-                                    {filter.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
-            )}
 
             {/* Results List */}
             <ScrollView 
@@ -357,26 +285,17 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                         <BookOpen size={48} color={colors.textSecondary} />
                         <Text style={[styles.emptyText, { color: colors.text }]}>No quiz results found</Text>
                         <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                            {selectedClass !== 'all' && selectedSubject !== 'all'
-                                ? `No ${checkedFilter === 'all' ? '' : checkedFilter + ' '}results found for the selected class and subject combination`
-                                : selectedClass !== 'all'
-                                    ? `No ${checkedFilter === 'all' ? '' : checkedFilter + ' '}results found for the selected class`
-                                    : selectedSubject !== 'all'
-                                        ? `No ${checkedFilter === 'all' ? '' : checkedFilter + ' '}results found for the selected subject`
-                                        : checkedFilter !== 'all'
-                                            ? `No ${checkedFilter} quiz results available`
-                                            : 'No quiz results available'
-                            }
+                            No results match your current filters. Use the Filter button to adjust your search criteria.
                         </Text>
                         
                         {/* Helpful suggestions */}
                         <View style={[styles.suggestionsContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                             <Text style={[styles.suggestionsTitle, { color: colors.text }]}>Try:</Text>
                             <Text style={[styles.suggestionText, { color: colors.textSecondary }]}>
-                                • Selecting "All Classes" or "All Subjects"
+                                • Using the Filter button to adjust class/subject selection
                             </Text>
                             <Text style={[styles.suggestionText, { color: colors.textSecondary }]}>
-                                • Checking if quizzes exist for this combination
+                                • Selecting "All Classes" or "All Subjects"
                             </Text>
                             <Text style={[styles.suggestionText, { color: colors.textSecondary }]}>
                                 • Changing the evaluation status filter
@@ -412,51 +331,6 @@ const styles = StyleSheet.create({
     resultCount: {
         fontSize: 14,
         fontFamily: 'Inter-SemiBold',
-    },
-    subjectFilter: {
-        marginBottom: 20,
-    },
-    filterLabel: {
-        fontSize: 16,
-        fontFamily: 'Inter-SemiBold',
-        marginBottom: 12,
-    },
-    subjectButtons: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    subjectButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderWidth: 1,
-        borderRadius: 8,
-        gap: 6,
-    },
-    subjectButtonText: {
-        fontSize: 14,
-        fontFamily: 'Inter-Medium',
-    },
-    checkedFilter: {
-        marginBottom: 20,
-    },
-    filterButtons: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    filterButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderWidth: 1,
-        borderRadius: 8,
-        gap: 6,
-    },
-    filterButtonText: {
-        fontSize: 14,
-        fontFamily: 'Inter-Medium',
     },
     resultsList: {
         flex: 1,

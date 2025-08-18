@@ -165,7 +165,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
 
     // Filter students based on selected class
     const filteredStudents = students.filter(student => 
-        !filters.selectedClass || student.class_id === filters.selectedClass
+        !filters.selectedClass || student?.class_id === filters.selectedClass
     );
 
     return (
