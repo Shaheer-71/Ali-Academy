@@ -144,7 +144,7 @@ export default function TopSection({ showNotifications = false }: TopSectionProp
                             styles.iconButton,
                             { backgroundColor: colors.cardBackground },
                         ]}
-                        onPress={() => router.push('/(tabs)/settings')}
+                        onPress={() => router.push('/settings')}
                     >
                         <Settings color={colors.primary} size={24} />
                     </TouchableOpacity>
