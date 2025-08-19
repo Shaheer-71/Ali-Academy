@@ -1,4 +1,4 @@
-// hooks/useTimetable.ts
+// hooks/useTimetable.ts - FIXED WITHOUT ADMIN ROLE
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -12,7 +12,8 @@ import {
     TimetableConflict,
     UseTimetableReturn,
     DayOfWeek,
-    DAYS_ORDER
+    DAYS_ORDER,
+    UserProfile
 } from '@/types/timetable';
 import { Alert } from 'react-native';
 
@@ -60,12 +61,22 @@ export const useTimetable = (): UseTimetableReturn => {
                     // If no class selected, show all classes this teacher teaches
                     query = query.eq('teacher_id', profile.id);
                 }
-            } else if (profile?.role === 'admin') {
-                // Admin can see all classes, or filter by selected class
-                if (filters.class_id) {
-                    query = query.eq('class_id', filters.class_id);
+            } else if (profile?.role === 'parent') {
+                // Parent can see their children's classes
+                // For now, treat like student - you can implement children logic later
+                const { data: studentData } = await supabase
+                    .from('students')
+                    .select('class_id')
+                    .eq('parent_id', profile.id)
+                    .single();
+
+                if (studentData?.class_id) {
+                    query = query.eq('class_id', studentData.class_id);
+                } else {
+                    setTimetable([]);
+                    setLoading(false);
+                    return;
                 }
-                // If no class selected, show all classes
             }
 
             // Apply additional filters
@@ -126,40 +137,54 @@ export const useTimetable = (): UseTimetableReturn => {
             const validation = await validateEntry(entry);
             if (!validation.is_valid) {
                 const errorMsg = validation.conflicts.length > 0
-                    ? `Time conflict detected with existing ${validation.conflicts[0].existing_entry.subject} class`
+                    ? `Time conflict detected with existing ${validation.conflicts[0].existing_entry.subject_name} class`
                     : validation.errors[0];
                 Alert.alert('Validation Error', errorMsg);
+                return null;
+            }
+
+            // Convert subject name to subject_id for database insertion
+            const { data: subjectData } = await supabase
+                .from('subjects')
+                .select('id')
+                .eq('name', entry.subject)
+                .single();
+
+            if (!subjectData) {
+                Alert.alert('Error', 'Subject not found');
                 return null;
             }
 
             const { data, error } = await supabase
                 .from('timetable')
                 .insert([{
-                    ...entry,
+                    day: entry.day,
+                    start_time: entry.start_time,
+                    end_time: entry.end_time,
+                    subject_id: subjectData.id,
+                    room_number: entry.room_number,
+                    class_id: entry.class_id,
+                    teacher_id: entry.teacher_id,
                     created_by: profile?.id
                 }])
-                .select(`
-          *,
-          subject_name:subjects(name),
-          class_name:classes(name),
-          teacher_name:profiles(full_name),
-          teacher_avatar:profiles(avatar_url)
-        `)
+                .select()
                 .single();
 
             if (error) throw error;
 
-            // Transform the response to match our type
-            const newEntry: TimetableEntryWithDetails = {
-                ...data,
-                subject_name: data.subject_name?.name,
-                class_name: data.class_name?.name,
-                teacher_name: data.teacher_name?.full_name,
-                teacher_avatar: data.teacher_avatar?.avatar_url
-            };
+            // Fetch the complete entry with details from timetable_view
+            const { data: completeEntry } = await supabase
+                .from('timetable_view')
+                .select('*')
+                .eq('id', data.id)
+                .single();
 
-            Alert.alert('Success', 'Timetable entry created successfully');
-            return newEntry;
+            if (completeEntry) {
+                Alert.alert('Success', 'Timetable entry created successfully');
+                return completeEntry;
+            }
+
+            return null;
         } catch (err: any) {
             console.error('Error creating timetable entry:', err);
             Alert.alert('Error', err.message);
@@ -174,11 +199,28 @@ export const useTimetable = (): UseTimetableReturn => {
             if (entry.start_time || entry.end_time || entry.day) {
                 const currentEntry = timetable.find(t => t.id === entry.id);
                 if (currentEntry) {
-                    const validationEntry = {
+                    let subjectId = currentEntry.subject_id;
+                    
+                    // If subject is being changed, get the subject_id
+                    if (entry.subject) {
+                        const { data: subjectData } = await supabase
+                            .from('subjects')
+                            .select('id')
+                            .eq('name', entry.subject)
+                            .single();
+
+                        if (!subjectData) {
+                            Alert.alert('Error', 'Subject not found');
+                            return null;
+                        }
+                        subjectId = subjectData.id;
+                    }
+
+                    const validationEntry: CreateTimetableEntry = {
                         day: entry.day || currentEntry.day,
                         start_time: entry.start_time || currentEntry.start_time,
                         end_time: entry.end_time || currentEntry.end_time,
-                        subject_id: entry.subject_id || currentEntry.subject_id,
+                        subject: entry.subject || currentEntry.subject_name,
                         room_number: entry.room_number || currentEntry.room_number,
                         class_id: entry.class_id || currentEntry.class_id,
                         teacher_id: entry.teacher_id || currentEntry.teacher_id,
@@ -187,7 +229,7 @@ export const useTimetable = (): UseTimetableReturn => {
                     const validation = await validateEntry(validationEntry, entry.id);
                     if (!validation.is_valid) {
                         const errorMsg = validation.conflicts.length > 0
-                            ? `Time conflict detected with existing ${validation.conflicts[0].existing_entry.subject} class`
+                            ? `Time conflict detected with existing ${validation.conflicts[0].existing_entry.subject_name} class`
                             : validation.errors[0];
                         Alert.alert('Validation Error', errorMsg);
                         return null;
@@ -195,35 +237,56 @@ export const useTimetable = (): UseTimetableReturn => {
                 }
             }
 
+            // Prepare update object
+            const updateData: any = {
+                updated_by: profile?.id
+            };
+
+            // Add fields that are being updated
+            if (entry.day) updateData.day = entry.day;
+            if (entry.start_time) updateData.start_time = entry.start_time;
+            if (entry.end_time) updateData.end_time = entry.end_time;
+            if (entry.room_number) updateData.room_number = entry.room_number;
+            if (entry.class_id) updateData.class_id = entry.class_id;
+            if (entry.teacher_id) updateData.teacher_id = entry.teacher_id;
+
+            // Handle subject update
+            if (entry.subject) {
+                const { data: subjectData } = await supabase
+                    .from('subjects')
+                    .select('id')
+                    .eq('name', entry.subject)
+                    .single();
+
+                if (!subjectData) {
+                    Alert.alert('Error', 'Subject not found');
+                    return null;
+                }
+                updateData.subject_id = subjectData.id;
+            }
+
             const { data, error } = await supabase
                 .from('timetable')
-                .update({
-                    ...entry,
-                    updated_by: profile?.id
-                })
+                .update(updateData)
                 .eq('id', entry.id)
-                .select(`
-          *,
-          subject_name:subjects(name),
-          class_name:classes(name),
-          teacher_name:profiles(full_name),
-          teacher_avatar:profiles(avatar_url)
-        `)
+                .select()
                 .single();
 
             if (error) throw error;
 
-            // Transform the response to match our type
-            const updatedEntry: TimetableEntryWithDetails = {
-                ...data,
-                subject_name: data.subject_name?.name,
-                class_name: data.class_name?.name,
-                teacher_name: data.teacher_name?.full_name,
-                teacher_avatar: data.teacher_avatar?.avatar_url
-            };
+            // Fetch the complete entry with details from timetable_view
+            const { data: completeEntry } = await supabase
+                .from('timetable_view')
+                .select('*')
+                .eq('id', entry.id)
+                .single();
 
-            Alert.alert('Success', 'Timetable entry updated successfully');
-            return updatedEntry;
+            if (completeEntry) {
+                Alert.alert('Success', 'Timetable entry updated successfully');
+                return completeEntry;
+            }
+
+            return null;
         } catch (err: any) {
             console.error('Error updating timetable entry:', err);
             Alert.alert('Error', err.message);
@@ -262,7 +325,7 @@ export const useTimetable = (): UseTimetableReturn => {
         const conflicts: TimetableConflict[] = [];
 
         // Basic validation
-        if (!entry.day || !entry.start_time || !entry.end_time || !entry.subject_id || !entry.room_number || !entry.class_id) {
+        if (!entry.day || !entry.start_time || !entry.end_time || !entry.subject || !entry.room_number || !entry.class_id) {
             errors.push('All fields are required');
         }
 

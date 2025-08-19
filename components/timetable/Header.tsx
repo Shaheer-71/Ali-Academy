@@ -1,18 +1,27 @@
 import React from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Plus, Search } from 'lucide-react-native';
+import { UserProfile, ThemeColors, TimetableEntryWithDetails } from '@/types/timetable';
 
 interface HeaderProps {
-    profile: any;
-    colors: any;
+    profile: UserProfile | null;
+    colors: ThemeColors;
     searchQuery: string;
     setSearchQuery: (query: string) => void;
     setModalVisible: (visible: boolean) => void;
     resetForm: () => void;
-    setEditingEntry: (entry: any) => void;
+    setEditingEntry: (entry: TimetableEntryWithDetails | null) => void;
 }
 
-export default function Header({ profile, colors, searchQuery, setSearchQuery, setModalVisible, resetForm, setEditingEntry }: HeaderProps) {
+export default function Header({ 
+    profile, 
+    colors, 
+    searchQuery, 
+    setSearchQuery, 
+    setModalVisible, 
+    resetForm, 
+    setEditingEntry 
+}: HeaderProps) {
     return (
         <View style={styles.header}>
             <View style={styles.searchContainer}>
@@ -26,7 +35,7 @@ export default function Header({ profile, colors, searchQuery, setSearchQuery, s
                         placeholderTextColor={colors.textSecondary}
                     />
                 </View>
-                {profile?.role === 'teacher' && (
+                {profile?.role === 'teacher' && ( // Only teachers can add entries
                     <TouchableOpacity
                         style={[styles.addHeaderButton, { backgroundColor: colors.primary }]}
                         onPress={() => {
@@ -58,6 +67,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignContent: 'center',
         alignItems: "center",
+        flex: 1,
     },
     searchInputContainer: {
         flexDirection: 'row',

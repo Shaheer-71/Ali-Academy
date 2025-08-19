@@ -1,30 +1,35 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Clock, MapPin, User, BookOpen } from 'lucide-react-native';
-import { TimetableEntryWithDetails, Profile } from '@/types/timetable';
+import { TimetableEntryWithDetails, UserProfile, ThemeColors } from '@/types/timetable';
 
 interface TimeSlotProps {
     entry: TimetableEntryWithDetails;
     index: number;
-    colors: {
-        background: string;
-        text: string;
-        textSecondary: string;
-        primary: string;
-        border: string;
-        cardBackground: string;
-        secondary: string;
-        error: string;
-    };
-    profile: Profile | null;
+    colors: ThemeColors;
     handleEditEntry: (entry: TimetableEntryWithDetails) => void;
     handleDeleteEntry: (entry: TimetableEntryWithDetails) => void;
     isFirst: boolean;
     isLast: boolean;
+    profile: UserProfile | null;
 }
 
-export default function TimeSlot({ entry, index, colors, profile, handleEditEntry, handleDeleteEntry, isFirst, isLast }: TimeSlotProps) {
-    const canPress = profile?.role === 'admin' || (profile?.role === 'teacher' && entry.teacher_id === profile.id);
+export default function TimeSlot({
+    entry,
+    index,
+    colors,
+    profile,
+    handleEditEntry,
+    handleDeleteEntry,
+    isFirst,
+    isLast
+}: TimeSlotProps) {
+    const canPress =  (profile?.role === 'teacher' && entry.teacher_id === profile.id);
+
+    // Convert time from HH:MM:SS to HH:MM format for display
+    const formatTime = (time: string) => {
+        return time.substring(0, 5); // Remove seconds part
+    };
 
     return (
         <TouchableOpacity
@@ -45,7 +50,7 @@ export default function TimeSlot({ entry, index, colors, profile, handleEditEntr
                     <View style={styles.timeInfo}>
                         <Clock size={14} color={colors.primary} />
                         <Text style={[styles.timeText, { color: colors.primary }]}>
-                            {entry.start_time} - {entry.end_time}
+                            {formatTime(entry.start_time)} - {formatTime(entry.end_time)}
                         </Text>
                     </View>
                     <View style={styles.timeSlotActions}>
@@ -55,7 +60,7 @@ export default function TimeSlot({ entry, index, colors, profile, handleEditEntr
                         </View>
                     </View>
                 </View>
-                <Text style={[styles.subjectText, { color: colors.text }]}>{entry.subject}</Text>
+                <Text style={[styles.subjectText, { color: colors.text }]}>{entry.subject_name}</Text>
                 <View style={styles.entryDetails}>
                     {entry.teacher_name && (
                         <View style={styles.teacherInfo}>

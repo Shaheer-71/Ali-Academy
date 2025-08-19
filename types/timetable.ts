@@ -1,11 +1,47 @@
+// types/timetable.ts - UPDATED WITHOUT ADMIN ROLE
+
 export type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
 
+// UserProfile interface (your existing auth context type)
+export interface UserProfile {
+    id: string;
+    email: string;
+    full_name: string;
+    role: 'teacher' | 'student' | 'parent'; // Removed 'admin'
+    contact_number: string;
+    parent_phone?: string;
+    avatar_url?: string;
+}
+
+// Database Profile type (matches your Supabase schema)
+export interface Profile extends UserProfile {
+    created_at: string;
+    updated_at: string;
+}
+
+// Database Class type
+export interface Class {
+    id: string;
+    name: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+// Database Subject type
+export interface Subject {
+    id: string;
+    name: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+// Raw timetable entry from database
 export interface TimetableEntry {
     id: string;
     day: DayOfWeek;
-    start_time: string; // Format: "HH:MM"
-    end_time: string;   // Format: "HH:MM"
-    subject: string;
+    start_time: string; // Format: "HH:MM:SS"
+    end_time: string;   // Format: "HH:MM:SS"
+    subject_id: string;
     room_number: string;
     class_id: string;
     teacher_id: string;
@@ -17,17 +53,19 @@ export interface TimetableEntry {
     deleted_by?: string;
 }
 
+// Timetable view entry with joined data (matches your timetable_view)
 export interface TimetableEntryWithDetails extends TimetableEntry {
-    class_name?: string;
-    teacher_name?: string;
-    teacher_avatar?: string;
+    subject_name: string;   // From subjects table
+    class_name: string;     // From classes table
+    teacher_name: string;   // From profiles table
+    teacher_avatar?: string; // From profiles table
 }
 
 export interface CreateTimetableEntry {
     day: DayOfWeek;
     start_time: string;
     end_time: string;
-    subject: string;
+    subject: string; // This should be subject_id in the API call
     room_number: string;
     class_id: string;
     teacher_id: string;
@@ -38,7 +76,7 @@ export interface UpdateTimetableEntry {
     day?: DayOfWeek;
     start_time?: string;
     end_time?: string;
-    subject?: string;
+    subject?: string; // This should be subject_id in the API call
     room_number?: string;
     class_id?: string;
     teacher_id?: string;
@@ -63,6 +101,18 @@ export interface TimetableValidation {
     is_valid: boolean;
     conflicts: TimetableConflict[];
     errors: string[];
+}
+
+// Theme colors interface
+export interface ThemeColors {
+    background: string;
+    text: string;
+    textSecondary: string;
+    primary: string;
+    border: string;
+    cardBackground: string;
+    secondary: string;
+    error: string;
 }
 
 export interface UseTimetableReturn {

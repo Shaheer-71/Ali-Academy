@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, ScrollView, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { Class, TimetableFilters, ThemeColors } from '@/types/timetable';
 
 interface ClassFilterProps {
-    classes: any[];
-    filters: any;
-    setFilters: (filters: any) => void;
-    colors: any;
+    classes: Class[];
+    filters: TimetableFilters;
+    setFilters: (filters: Partial<TimetableFilters>) => void;
+    colors: ThemeColors;
     loading: boolean;
 }
 

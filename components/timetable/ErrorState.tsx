@@ -3,10 +3,11 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { AlertCircle } from 'lucide-react-native';
 import TopSection from '@/components/TopSection';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemeColors } from '@/types/timetable';
 
 interface ErrorStateProps {
     error: string;
-    colors: any;
+    colors: ThemeColors;
     refreshTimetable: () => void;
 }
 
@@ -44,6 +45,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
+        marginVertical: 16,
     },
     retryButton: {
         paddingHorizontal: 24,

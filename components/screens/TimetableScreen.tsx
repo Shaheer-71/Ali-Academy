@@ -1,3 +1,4 @@
+// TimetableScreen.tsx - UPDATED WITHOUT ADMIN ROLE
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView, ScrollView, RefreshControl, StyleSheet, Alert, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,16 +11,22 @@ import DayRow from '@/components/timetable/DayRow';
 import TimetableEntryModal from '@/components/timetable/TimetableEntryModal';
 import ErrorState from '@/components/timetable/ErrorState';
 import { supabase } from '@/lib/supabase';
-import { Class, Profile, TimetableEntryWithDetails, CreateTimetableEntry, UpdateTimetableEntry, DAYS_ORDER, DayOfWeek, TimetableFilters } from '@/types/timetable';
-
-interface Subject {
-    id: string;
-    name: string;
-}
+import { 
+    Class, 
+    Subject,
+    TimetableEntryWithDetails, 
+    CreateTimetableEntry, 
+    UpdateTimetableEntry, 
+    DAYS_ORDER, 
+    DayOfWeek, 
+    TimetableFilters,
+    ThemeColors,
+    UserProfile
+} from '@/types/timetable';
 
 export default function TimetableScreen() {
-    const { profile } = useAuth();
-    const { colors } = useTheme();
+    const { profile } = useAuth(); // This returns UserProfile | null
+    const { colors } = useTheme() as { colors: ThemeColors };
     const {
         timetable,
         loading,
@@ -35,7 +42,7 @@ export default function TimetableScreen() {
 
     const [classes, setClasses] = useState<Class[]>([]);
     const [subjects, setSubjects] = useState<Subject[]>([]);
-    const [teachers, setTeachers] = useState<Profile[]>([]);
+    const [teachers, setTeachers] = useState<UserProfile[]>([]); // Not used since no admin
     const [modalVisible, setModalVisible] = useState(false);
     const [editingEntry, setEditingEntry] = useState<TimetableEntryWithDetails | null>(null);
     const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -56,9 +63,7 @@ export default function TimetableScreen() {
         console.log('Profile:', profile); // Debugging
         fetchClasses();
         fetchSubjects();
-        if (profile?.role === 'admin') {
-            fetchTeachers();
-        }
+        // Removed admin check since no admin role
     }, [profile]);
 
     useEffect(() => {
@@ -91,19 +96,7 @@ export default function TimetableScreen() {
         }
     };
 
-    const fetchTeachers = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, full_name, avatar_url, role')
-                .eq('role', 'teacher')
-                .order('full_name');
-            if (error) throw error;
-            setTeachers(data || []);
-        } catch (error) {
-            console.error('Error fetching teachers:', error);
-        }
-    };
+    // Removed fetchTeachers since only teachers can create/edit their own entries
 
     const handleAddEntry = async () => {
         console.log('handleAddEntry called:', newEntry); // Debugging
@@ -112,15 +105,22 @@ export default function TimetableScreen() {
             Alert.alert('Error', 'Please fill in all fields');
             return;
         }
+
+        // Ensure time format includes seconds
+        const formatTime = (time: string) => {
+            return time.includes(':') && time.split(':').length === 2 ? time + ':00' : time;
+        };
+
         const entryData: CreateTimetableEntry = {
             day: newEntry.day,
-            start_time: newEntry.start_time,
-            end_time: newEntry.end_time,
+            start_time: formatTime(newEntry.start_time),
+            end_time: formatTime(newEntry.end_time),
             subject: newEntry.subject,
             room_number: newEntry.room_number,
             class_id: newEntry.class_id,
             teacher_id: newEntry.teacher_id || profile!.id,
         };
+
         const result = await createEntry(entryData);
         if (result) {
             setModalVisible(false);
@@ -131,16 +131,24 @@ export default function TimetableScreen() {
     const handleUpdateEntry = async () => {
         console.log('handleUpdateEntry called:', { editingEntry, newEntry }); // Debugging
         if (!editingEntry) return;
+
+        // Ensure time format includes seconds
+        const formatTime = (time: string) => {
+            if (!time) return undefined;
+            return time.includes(':') && time.split(':').length === 2 ? time + ':00' : time;
+        };
+
         const entryData: UpdateTimetableEntry = {
             id: editingEntry.id,
             day: newEntry.day,
-            start_time: newEntry.start_time,
-            end_time: newEntry.end_time,
+            start_time: formatTime(newEntry.start_time || ''),
+            end_time: formatTime(newEntry.end_time || ''),
             subject: newEntry.subject,
             room_number: newEntry.room_number,
             class_id: newEntry.class_id,
             teacher_id: newEntry.teacher_id,
         };
+
         const result = await updateEntry(entryData);
         if (result) {
             setModalVisible(false);
@@ -153,7 +161,7 @@ export default function TimetableScreen() {
         console.log('handleDeleteEntry called:', { entryId: entry.id }); // Debugging
         Alert.alert(
             'Delete Entry',
-            `Are you sure you want to delete ${entry.subject} class?`,
+            `Are you sure you want to delete ${entry.subject_name} class?`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -203,6 +211,28 @@ export default function TimetableScreen() {
 
     const weekDates = getCurrentWeekDates();
 
+    // Helper function to handle edit entry with proper time formatting
+    const handleEditEntry = (entry: TimetableEntryWithDetails) => {
+        console.log('handleEditEntry called:', { entryId: entry.id }); // Debugging
+        setEditingEntry(entry);
+        
+        // Format times for input (remove seconds)
+        const formatTimeForInput = (time: string) => {
+            return time ? time.substring(0, 5) : '';
+        };
+
+        setNewEntry({
+            day: entry.day,
+            start_time: formatTimeForInput(entry.start_time),
+            end_time: formatTimeForInput(entry.end_time),
+            subject: entry.subject_name, // Use subject_name from the view
+            room_number: entry.room_number,
+            class_id: entry.class_id,
+            teacher_id: entry.teacher_id,
+        });
+        setModalVisible(true);
+    };
+
     if (error && !loading) {
         return <ErrorState error={error} colors={colors} refreshTimetable={refreshTimetable} />;
     }
@@ -220,7 +250,7 @@ export default function TimetableScreen() {
                     resetForm={resetForm}
                     setEditingEntry={setEditingEntry}
                 />
-                {(profile?.role === 'teacher' || profile?.role === 'admin') && (
+                {profile?.role === 'teacher' && ( // Only teachers get class filter
                     <ClassFilter
                         classes={classes}
                         filters={filters}
@@ -244,26 +274,13 @@ export default function TimetableScreen() {
                                 getEntriesForDay={getEntriesForDay}
                                 colors={colors}
                                 profile={profile}
-                                handleEditEntry={(entry) => {
-                                    console.log('handleEditEntry called:', { entryId: entry.id }); // Debugging
-                                    setEditingEntry(entry);
-                                    setNewEntry({
-                                        day: entry.day,
-                                        start_time: entry.start_time,
-                                        end_time: entry.end_time,
-                                        subject: entry.subject,
-                                        room_number: entry.room_number,
-                                        class_id: entry.class_id,
-                                        teacher_id: entry.teacher_id,
-                                    });
-                                    setModalVisible(true);
-                                }}
+                                handleEditEntry={handleEditEntry}
                                 handleDeleteEntry={handleDeleteEntry}
                             />
                         ))}
                     </View>
                 </ScrollView>
-                {(profile?.role === 'teacher' || profile?.role === 'admin') && (
+                {profile?.role === 'teacher' && ( // Only teachers get modal
                     <TimetableEntryModal
                         modalVisible={modalVisible}
                         setModalVisible={setModalVisible}
@@ -275,7 +292,7 @@ export default function TimetableScreen() {
                         colors={colors}
                         classes={classes}
                         subjects={subjects}
-                        teachers={teachers}
+                        teachers={teachers} // Empty array since no admin
                         handleAddEntry={handleAddEntry}
                         handleUpdateEntry={handleUpdateEntry}
                         handleDeleteEntry={handleDeleteEntry}

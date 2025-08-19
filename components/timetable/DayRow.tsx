@@ -2,27 +2,29 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Calendar } from 'lucide-react-native';
 import TimeSlot from './TimeSlot';
-import { DAYS_SHORT, TimetableEntryWithDetails } from '@/types/timetable';
+import { DAYS_SHORT, TimetableEntryWithDetails, DayOfWeek, UserProfile, ThemeColors } from '@/types/timetable';
 
 interface DayRowProps {
-    day: string;
+    day: DayOfWeek;
     dayIndex: number;
     weekDates: Date[];
-    getEntriesForDay: (day: string) => TimetableEntryWithDetails[];
-    colors: {
-        background: string;
-        text: string;
-        textSecondary: string;
-        primary: string;
-        border: string;
-        cardBackground: string;
-    };
-    profile: { id: string; role: string } | null;
+    getEntriesForDay: (day: DayOfWeek) => TimetableEntryWithDetails[];
+    colors: ThemeColors;
+    profile: UserProfile | null;
     handleEditEntry: (entry: TimetableEntryWithDetails) => void;
     handleDeleteEntry: (entry: TimetableEntryWithDetails) => void;
 }
 
-export default function DayRow({ day, dayIndex, weekDates, getEntriesForDay, colors, profile, handleEditEntry, handleDeleteEntry }: DayRowProps) {
+export default function DayRow({
+    day,
+    dayIndex,
+    weekDates,
+    getEntriesForDay,
+    colors,
+    profile,
+    handleEditEntry,
+    handleDeleteEntry
+}: DayRowProps) {
     const dayEntries = getEntriesForDay(day);
     // Safe to access weekDates[dayIndex] as dayIndex aligns with DAYS_ORDER
     const dayDate = weekDates[dayIndex];

@@ -1,17 +1,17 @@
 import React, { useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, StyleSheet } from 'react-native';
 import { X, Trash2 } from 'lucide-react-native';
-import { DAYS_ORDER, DAYS_SHORT, DayOfWeek, TimetableEntryWithDetails, CreateTimetableEntry, Profile } from '@/types/timetable';
-
-interface Class {
-    id: string;
-    name: string;
-}
-
-interface Subject {
-    id: string;
-    name: string;
-}
+import { 
+    DAYS_ORDER, 
+    DAYS_SHORT, 
+    DayOfWeek, 
+    TimetableEntryWithDetails, 
+    CreateTimetableEntry, 
+    UserProfile,
+    Class,
+    Subject,
+    ThemeColors
+} from '@/types/timetable';
 
 interface TimetableEntryModalProps {
     modalVisible: boolean;
@@ -20,20 +20,11 @@ interface TimetableEntryModalProps {
     setEditingEntry: (entry: TimetableEntryWithDetails | null) => void;
     newEntry: Partial<CreateTimetableEntry>;
     setNewEntry: (entry: Partial<CreateTimetableEntry>) => void;
-    Profile: Profile | null;
-    colors: {
-        background: string;
-        text: string;
-        textSecondary: string;
-        primary: string;
-        border: string;
-        cardBackground: string;
-        secondary: string;
-        error: string;
-    };
-    classes: Class[] | any;
+    profile: UserProfile | null;
+    colors: ThemeColors;
+    classes: Class[];
     subjects: Subject[];
-    teachers: Profile[];
+    teachers: UserProfile[]; // This won't be used since no admin role
     handleAddEntry: () => void;
     handleUpdateEntry: () => void;
     handleDeleteEntry: (entry: TimetableEntryWithDetails) => void;
@@ -51,17 +42,29 @@ export default function TimetableEntryModal({
     colors,
     classes,
     subjects,
-    teachers,
+    teachers, // Keeping for future use
     handleAddEntry,
     handleUpdateEntry,
     handleDeleteEntry,
     resetForm
 }: TimetableEntryModalProps) {
-    const canDelete = profile?.role === 'admin' || (profile?.role === 'teacher' && editingEntry?.teacher_id === profile?.id);
+    // Only teachers can delete their own entries
+    const canDelete = profile?.role === 'teacher' && editingEntry?.teacher_id === profile?.id;
 
     useEffect(() => {
-        console.log('Modal opened:', { modalVisible, editingEntry, newEntry, canDelete }); // Debugging
+        console.log('Modal opened:', { modalVisible, editingEntry, newEntry, canDelete });
     }, [modalVisible, editingEntry, newEntry, canDelete]);
+
+    const formatTimeForInput = (time: string) => {
+        // Convert HH:MM:SS to HH:MM for display in input
+        return time ? time.substring(0, 5) : '';
+    };
+
+    const handleTimeChange = (field: 'start_time' | 'end_time', value: string) => {
+        // Ensure time is in HH:MM format and add seconds if needed
+        const formattedTime = value.includes(':') ? value : value + ':00';
+        setNewEntry({ ...newEntry, [field]: formattedTime });
+    };
 
     return (
         <Modal
@@ -69,7 +72,7 @@ export default function TimetableEntryModal({
             transparent={true}
             visible={modalVisible}
             onRequestClose={() => {
-                console.log('Modal closed'); // Debugging
+                console.log('Modal closed');
                 setModalVisible(false);
                 setEditingEntry(null);
                 resetForm();
@@ -84,7 +87,7 @@ export default function TimetableEntryModal({
                         <TouchableOpacity
                             style={styles.closeButton}
                             onPress={() => {
-                                console.log('Close button pressed'); // Debugging
+                                console.log('Close button pressed');
                                 setModalVisible(false);
                                 setEditingEntry(null);
                                 resetForm();
@@ -107,7 +110,7 @@ export default function TimetableEntryModal({
                                                 newEntry.day === day && { backgroundColor: colors.primary, borderColor: colors.primary },
                                             ]}
                                             onPress={() => {
-                                                console.log('Day selected:', day); // Debugging
+                                                console.log('Day selected:', day);
                                                 setNewEntry({ ...newEntry, day });
                                             }}
                                         >
@@ -123,13 +126,14 @@ export default function TimetableEntryModal({
                                 </View>
                             </ScrollView>
                         </View>
+                        
                         <View style={styles.timeRow}>
                             <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
                                 <Text style={[styles.label, { color: colors.text }]}>Start Time</Text>
                                 <TextInput
                                     style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                    value={newEntry.start_time}
-                                    onChangeText={(text) => setNewEntry({ ...newEntry, start_time: text })}
+                                    value={formatTimeForInput(newEntry.start_time || '')}
+                                    onChangeText={(text) => handleTimeChange('start_time', text)}
                                     placeholder="09:00"
                                     placeholderTextColor={colors.textSecondary}
                                 />
@@ -138,13 +142,14 @@ export default function TimetableEntryModal({
                                 <Text style={[styles.label, { color: colors.text }]}>End Time</Text>
                                 <TextInput
                                     style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                    value={newEntry.end_time}
-                                    onChangeText={(text) => setNewEntry({ ...newEntry, end_time: text })}
+                                    value={formatTimeForInput(newEntry.end_time || '')}
+                                    onChangeText={(text) => handleTimeChange('end_time', text)}
                                     placeholder="10:00"
                                     placeholderTextColor={colors.textSecondary}
                                 />
                             </View>
                         </View>
+                        
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: colors.text }]}>Subject</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -158,7 +163,7 @@ export default function TimetableEntryModal({
                                                 newEntry.subject === subject.name && { backgroundColor: colors.primary, borderColor: colors.primary },
                                             ]}
                                             onPress={() => {
-                                                console.log('Subject selected:', subject.name); // Debugging
+                                                console.log('Subject selected:', subject.name);
                                                 setNewEntry({ ...newEntry, subject: subject.name });
                                             }}
                                         >
@@ -174,6 +179,7 @@ export default function TimetableEntryModal({
                                 </View>
                             </ScrollView>
                         </View>
+                        
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: colors.text }]}>Room Number</Text>
                             <TextInput
@@ -184,6 +190,7 @@ export default function TimetableEntryModal({
                                 placeholderTextColor={colors.textSecondary}
                             />
                         </View>
+                        
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: colors.text }]}>Class</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -197,7 +204,7 @@ export default function TimetableEntryModal({
                                                 newEntry.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                                             ]}
                                             onPress={() => {
-                                                console.log('Class selected:', classItem.name); // Debugging
+                                                console.log('Class selected:', classItem.name);
                                                 setNewEntry({ ...newEntry, class_id: classItem.id });
                                             }}
                                         >
@@ -213,42 +220,14 @@ export default function TimetableEntryModal({
                                 </View>
                             </ScrollView>
                         </View>
-                        {profile?.role === 'admin' && (
-                            <View style={styles.inputGroup}>
-                                <Text style={[styles.label, { color: colors.text }]}>Teacher</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                    <View style={styles.teacherOptions}>
-                                        {teachers.map((teacher) => (
-                                            <TouchableOpacity
-                                                key={teacher.id}
-                                                style={[
-                                                    styles.teacherOption,
-                                                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                                    newEntry.teacher_id === teacher.id && { backgroundColor: colors.primary, borderColor: colors.primary },
-                                                ]}
-                                                onPress={() => {
-                                                    console.log('Teacher selected:', teacher.full_name); // Debugging
-                                                    setNewEntry({ ...newEntry, teacher_id: teacher.id });
-                                                }}
-                                            >
-                                                <Text style={[
-                                                    styles.teacherOptionText,
-                                                    { color: colors.text },
-                                                    newEntry.teacher_id === teacher.id && { color: '#ffffff' },
-                                                ]}>
-                                                    {teacher.full_name}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                </ScrollView>
-                            </View>
-                        )}
+                        
+                        {/* Removed teacher selection since only teachers can create entries for themselves */}
+                        
                         <View style={styles.buttonContainer}>
                             <TouchableOpacity
                                 style={[styles.submitButton, { backgroundColor: colors.primary }]}
                                 onPress={() => {
-                                    console.log('Submit button pressed:', { editingEntry, newEntry }); // Debugging
+                                    console.log('Submit button pressed:', { editingEntry, newEntry });
                                     editingEntry ? handleUpdateEntry() : handleAddEntry();
                                 }}
                             >
@@ -260,7 +239,7 @@ export default function TimetableEntryModal({
                                 <TouchableOpacity
                                     style={[styles.deleteButton, { backgroundColor: colors.error }]}
                                     onPress={() => {
-                                        console.log('Delete button pressed:', { entryId: editingEntry.id }); // Debugging
+                                        console.log('Delete button pressed:', { entryId: editingEntry.id });
                                         handleDeleteEntry(editingEntry);
                                     }}
                                 >
@@ -369,20 +348,6 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     subjectOptionText: {
-        fontSize: 14,
-        fontFamily: 'Inter-Medium',
-    },
-    teacherOptions: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    teacherOption: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderWidth: 1,
-        borderRadius: 8,
-    },
-    teacherOptionText: {
         fontSize: 14,
         fontFamily: 'Inter-Medium',
     },
