@@ -26,7 +26,6 @@ export default function DayRow({
     handleDeleteEntry
 }: DayRowProps) {
     const dayEntries = getEntriesForDay(day);
-    // Safe to access weekDates[dayIndex] as dayIndex aligns with DAYS_ORDER
     const dayDate = weekDates[dayIndex];
     const isToday = dayDate.toDateString() === new Date().toDateString();
 

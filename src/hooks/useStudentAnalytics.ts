@@ -1,26 +1,9 @@
-// hooks/useStudentAnalytics.ts
+// hooks/useStudentAnalytics.ts - DEFINITIVE TYPE FIX
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
-import { useLoading } from '@/src/contexts/LoadingContext';
+import { StudentAnalytics, QuizResult, Student, Subject } from '../types/analytics';
 
-interface StudentAnalytics {
-    attendance_rate: number;
-    average_grade: number;
-    assignments_completed: number;
-    total_assignments: number;
-    rank_in_class: number;
-    total_students: number;
-    improvement_trend: 'up' | 'down' | 'stable';
-    recent_grades: number[];
-    subjects: {
-        name: string;
-        grade: number;
-        assignments_completed: number;
-        total_assignments: number;
-    }[];
-}
-
-interface QuizResult {
+type QuizResultWithSubject = {
     percentage: number | null;
     marks_obtained: number | null;
     total_marks: number;
@@ -33,41 +16,32 @@ interface QuizResult {
             name: string;
         };
     };
-}
+};
 
-interface Student {
-    id: string;
-    full_name: string;
-    class_id: string;
-    email: string;
-    classes: {
-        id: string;
+type SubjectQuizData = {
+    subject_id: string;
+    subjects: {
         name: string;
     };
-}
+};
 
 export const useStudentAnalytics = (profileId: string | undefined) => {
     const [analytics, setAnalytics] = useState<StudentAnalytics | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { setAnalyticsLoading } = useLoading();
 
     useEffect(() => {
         if (!profileId) {
             setLoading(false);
-            setAnalyticsLoading(false);
             return;
         }
 
         const fetchStudentAnalytics = async () => {
             try {
                 setLoading(true);
-                setAnalyticsLoading(true);
                 setError(null);
 
-                console.log('Fetching analytics for profile ID:', profileId);
-
-                // First, get the profile data
+                // Get the profile data
                 const { data: profileData, error: profileError } = await supabase
                     .from('profiles')
                     .select('email, id')
@@ -78,8 +52,6 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     console.error('Profile error:', profileError);
                     throw new Error('Profile not found');
                 }
-
-                console.log('Profile data:', profileData);
 
                 // Find student record by email
                 const { data: studentData, error: studentError } = await supabase
@@ -100,8 +72,7 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     throw new Error('Student record not found. Please contact administrator.');
                 }
 
-                const student = studentData as Student;
-                console.log('Student data:', student);
+                const student = studentData;
 
                 if (!student.class_id) {
                     throw new Error('Student is not assigned to any class.');
@@ -115,15 +86,14 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
 
                 if (attendanceError) {
                     console.error('Attendance error:', attendanceError);
-                    // Don't throw error for attendance, just log it
                 }
 
                 const totalAttendanceDays = attendanceData?.length || 0;
                 const presentDays = attendanceData?.filter(record => record.status === 'present').length || 0;
                 const attendance_rate = totalAttendanceDays > 0 ? Math.round((presentDays / totalAttendanceDays) * 100) : 0;
 
-                // Get student's quiz results
-                const { data: quizResults, error: quizError } = await supabase
+                // Get student's quiz results - FIXED TYPE HANDLING
+                const { data: quizResultsRaw, error: quizError } = await supabase
                     .from('quiz_results')
                     .select(`
                         percentage,
@@ -143,11 +113,23 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
 
                 if (quizError) {
                     console.error('Quiz results error:', quizError);
-                    // Don't throw error, just use empty array
                 }
 
-                const typedQuizResults = (quizResults || []) as QuizResult[];
-                console.log('Quiz results:', typedQuizResults);
+                // CRITICAL FIX: Cast the data properly to override TypeScript inference
+                const typedQuizResults = (quizResultsRaw as any[])?.map((result: any) => ({
+                    percentage: result.percentage,
+                    marks_obtained: result.marks_obtained,
+                    total_marks: result.total_marks,
+                    created_at: result.created_at,
+                    quizzes: {
+                        title: result.quizzes.title,
+                        subject_id: result.quizzes.subject_id,
+                        class_id: result.quizzes.class_id,
+                        subjects: {
+                            name: result.quizzes.subjects.name
+                        }
+                    }
+                })) || [] as QuizResultWithSubject[];
 
                 // Calculate average grade from percentages
                 const percentages = typedQuizResults.map(result => result.percentage || 0);
@@ -184,11 +166,12 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                 const total_assignments = totalQuizzes?.length || 0;
                 const assignments_completed = typedQuizResults.length;
 
-                // Group results by subject
+                // Group results by subject - NOW THIS WILL WORK
                 const subjectGroups: Record<string, { name: string; percentages: number[]; completed: number }> = {};
                 
                 typedQuizResults.forEach(result => {
-                    const subjectName = result.quizzes?.subjects?.name;
+                    // This now works because we properly cast the data structure
+                    const subjectName = result.quizzes.subjects.name;
                     if (subjectName) {
                         if (!subjectGroups[subjectName]) {
                             subjectGroups[subjectName] = {
@@ -202,8 +185,8 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     }
                 });
 
-                // Get total quizzes per subject for this class
-                const { data: subjectQuizzes, error: subjectQuizzesError } = await supabase
+                // Get total quizzes per subject for this class - FIXED TYPE HANDLING
+                const { data: subjectQuizzesRaw, error: subjectQuizzesError } = await supabase
                     .from('quizzes')
                     .select(`
                         subject_id,
@@ -215,9 +198,17 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     console.error('Subject quizzes error:', subjectQuizzesError);
                 }
 
+                // CRITICAL FIX: Cast the subject quiz data properly
+                const subjectQuizzes = (subjectQuizzesRaw as any[])?.map((quiz: any) => ({
+                    subject_id: quiz.subject_id,
+                    subjects: {
+                        name: quiz.subjects.name
+                    }
+                })) || [] as SubjectQuizData[];
+
                 const subjectTotals: Record<string, number> = {};
-                (subjectQuizzes || []).forEach((quiz: any) => {
-                    const subjectName = quiz.subjects?.name;
+                subjectQuizzes.forEach((quiz) => {
+                    const subjectName = quiz.subjects.name;
                     if (subjectName) {
                         subjectTotals[subjectName] = (subjectTotals[subjectName] || 0) + 1;
                     }
@@ -287,7 +278,6 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     subjects
                 };
 
-                console.log('Final analytics:', analyticsResult);
                 setAnalytics(analyticsResult);
 
             } catch (err) {
@@ -295,12 +285,11 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                 setError(err instanceof Error ? err.message : 'Failed to fetch analytics');
             } finally {
                 setLoading(false);
-                setAnalyticsLoading(false);
             }
         };
 
         fetchStudentAnalytics();
-    }, [profileId, setAnalyticsLoading]);
+    }, [profileId]);
 
     return { analytics, loading, error };
 };

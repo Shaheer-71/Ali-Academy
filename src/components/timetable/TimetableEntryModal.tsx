@@ -1,10 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, StyleSheet } from 'react-native';
 import { X, Trash2 } from 'lucide-react-native';
 import { 
     DAYS_ORDER, 
     DAYS_SHORT, 
-    DayOfWeek, 
     TimetableEntryWithDetails, 
     CreateTimetableEntry, 
     UserProfile,
@@ -24,7 +23,7 @@ interface TimetableEntryModalProps {
     colors: ThemeColors;
     classes: Class[];
     subjects: Subject[];
-    teachers: UserProfile[]; // This won't be used since no admin role
+    teachers: UserProfile[];
     handleAddEntry: () => void;
     handleUpdateEntry: () => void;
     handleDeleteEntry: (entry: TimetableEntryWithDetails) => void;
@@ -42,28 +41,27 @@ export default function TimetableEntryModal({
     colors,
     classes,
     subjects,
-    teachers, // Keeping for future use
     handleAddEntry,
     handleUpdateEntry,
     handleDeleteEntry,
     resetForm
 }: TimetableEntryModalProps) {
-    // Only teachers can delete their own entries
     const canDelete = profile?.role === 'teacher' && editingEntry?.teacher_id === profile?.id;
 
-    useEffect(() => {
-        console.log('Modal opened:', { modalVisible, editingEntry, newEntry, canDelete });
-    }, [modalVisible, editingEntry, newEntry, canDelete]);
-
-    const formatTimeForInput = (time: string) => {
-        // Convert HH:MM:SS to HH:MM for display in input
-        return time ? time.substring(0, 5) : '';
-    };
+    const formatTimeForInput = (time: string) => time.substring(0, 5);
 
     const handleTimeChange = (field: 'start_time' | 'end_time', value: string) => {
-        // Ensure time is in HH:MM format and add seconds if needed
-        const formattedTime = value.includes(':') ? value : value + ':00';
-        setNewEntry({ ...newEntry, [field]: formattedTime });
+        setNewEntry({ ...newEntry, [field]: value });
+    };
+
+    const closeModal = () => {
+        setModalVisible(false);
+        setEditingEntry(null);
+        resetForm();
+    };
+
+    const handleSubmit = () => {
+        editingEntry ? handleUpdateEntry() : handleAddEntry();
     };
 
     return (
@@ -71,12 +69,7 @@ export default function TimetableEntryModal({
             animationType="slide"
             transparent={true}
             visible={modalVisible}
-            onRequestClose={() => {
-                console.log('Modal closed');
-                setModalVisible(false);
-                setEditingEntry(null);
-                resetForm();
-            }}
+            onRequestClose={closeModal}
         >
             <View style={styles.modalOverlay}>
                 <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
@@ -84,18 +77,11 @@ export default function TimetableEntryModal({
                         <Text style={[styles.modalTitle, { color: colors.text }]}>
                             {editingEntry ? 'Edit Timetable Entry' : 'Add Timetable Entry'}
                         </Text>
-                        <TouchableOpacity
-                            style={styles.closeButton}
-                            onPress={() => {
-                                console.log('Close button pressed');
-                                setModalVisible(false);
-                                setEditingEntry(null);
-                                resetForm();
-                            }}
-                        >
+                        <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
                             <X size={24} color={colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
+                    
                     <ScrollView style={styles.modalScrollView}>
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: colors.text }]}>Day</Text>
@@ -109,10 +95,7 @@ export default function TimetableEntryModal({
                                                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
                                                 newEntry.day === day && { backgroundColor: colors.primary, borderColor: colors.primary },
                                             ]}
-                                            onPress={() => {
-                                                console.log('Day selected:', day);
-                                                setNewEntry({ ...newEntry, day });
-                                            }}
+                                            onPress={() => setNewEntry({ ...newEntry, day })}
                                         >
                                             <Text style={[
                                                 styles.dayOptionText,
@@ -162,10 +145,7 @@ export default function TimetableEntryModal({
                                                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
                                                 newEntry.subject === subject.name && { backgroundColor: colors.primary, borderColor: colors.primary },
                                             ]}
-                                            onPress={() => {
-                                                console.log('Subject selected:', subject.name);
-                                                setNewEntry({ ...newEntry, subject: subject.name });
-                                            }}
+                                            onPress={() => setNewEntry({ ...newEntry, subject: subject.name })}
                                         >
                                             <Text style={[
                                                 styles.subjectOptionText,
@@ -184,7 +164,7 @@ export default function TimetableEntryModal({
                             <Text style={[styles.label, { color: colors.text }]}>Room Number</Text>
                             <TextInput
                                 style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                value={newEntry.room_number}
+                                value={newEntry.room_number || ''}
                                 onChangeText={(text) => setNewEntry({ ...newEntry, room_number: text })}
                                 placeholder="Enter room number"
                                 placeholderTextColor={colors.textSecondary}
@@ -203,10 +183,7 @@ export default function TimetableEntryModal({
                                                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
                                                 newEntry.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                                             ]}
-                                            onPress={() => {
-                                                console.log('Class selected:', classItem.name);
-                                                setNewEntry({ ...newEntry, class_id: classItem.id });
-                                            }}
+                                            onPress={() => setNewEntry({ ...newEntry, class_id: classItem.id })}
                                         >
                                             <Text style={[
                                                 styles.classOptionText,
@@ -221,15 +198,10 @@ export default function TimetableEntryModal({
                             </ScrollView>
                         </View>
                         
-                        {/* Removed teacher selection since only teachers can create entries for themselves */}
-                        
                         <View style={styles.buttonContainer}>
                             <TouchableOpacity
                                 style={[styles.submitButton, { backgroundColor: colors.primary }]}
-                                onPress={() => {
-                                    console.log('Submit button pressed:', { editingEntry, newEntry });
-                                    editingEntry ? handleUpdateEntry() : handleAddEntry();
-                                }}
+                                onPress={handleSubmit}
                             >
                                 <Text style={styles.submitButtonText}>
                                     {editingEntry ? 'Update Entry' : 'Add to Timetable'}
@@ -238,10 +210,7 @@ export default function TimetableEntryModal({
                             {editingEntry && canDelete && (
                                 <TouchableOpacity
                                     style={[styles.deleteButton, { backgroundColor: colors.error }]}
-                                    onPress={() => {
-                                        console.log('Delete button pressed:', { entryId: editingEntry.id });
-                                        handleDeleteEntry(editingEntry);
-                                    }}
+                                    onPress={() => handleDeleteEntry(editingEntry)}
                                 >
                                     <Trash2 size={20} color="#ffffff" />
                                     <Text style={styles.deleteButtonText}>Delete Entry</Text>

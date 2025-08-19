@@ -11,6 +11,8 @@ interface ClassFilterProps {
 }
 
 export default function ClassFilter({ classes, filters, setFilters, colors, loading }: ClassFilterProps) {
+    const isAllClassesSelected = !filters.class_id;
+
     return (
         <View style={styles.classFilter}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -19,37 +21,40 @@ export default function ClassFilter({ classes, filters, setFilters, colors, load
                         style={[
                             styles.classButton,
                             { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                            !filters.class_id && { backgroundColor: colors.primary, borderColor: colors.primary },
+                            isAllClassesSelected && { backgroundColor: colors.primary, borderColor: colors.primary },
                         ]}
                         onPress={() => setFilters({ class_id: undefined })}
                     >
                         <Text style={[
                             styles.classButtonText,
                             { color: colors.text },
-                            !filters.class_id && { color: '#ffffff' },
+                            isAllClassesSelected && { color: '#ffffff' },
                         ]}>
                             All Classes
                         </Text>
                     </TouchableOpacity>
-                    {classes.map((classItem) => (
-                        <TouchableOpacity
-                            key={classItem.id}
-                            style={[
-                                styles.classButton,
-                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                filters.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
-                            ]}
-                            onPress={() => setFilters({ class_id: classItem.id })}
-                        >
-                            <Text style={[
-                                styles.classButtonText,
-                                { color: colors.text },
-                                filters.class_id === classItem.id && { color: '#ffffff' },
-                            ]}>
-                                {classItem.name}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
+                    {classes.map((classItem) => {
+                        const isSelected = filters.class_id === classItem.id;
+                        return (
+                            <TouchableOpacity
+                                key={classItem.id}
+                                style={[
+                                    styles.classButton,
+                                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                    isSelected && { backgroundColor: colors.primary, borderColor: colors.primary },
+                                ]}
+                                onPress={() => setFilters({ class_id: classItem.id })}
+                            >
+                                <Text style={[
+                                    styles.classButtonText,
+                                    { color: colors.text },
+                                    isSelected && { color: '#ffffff' },
+                                ]}>
+                                    {classItem.name}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </View>
             </ScrollView>
             {loading && (

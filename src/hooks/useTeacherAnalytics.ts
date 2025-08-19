@@ -1,28 +1,10 @@
-// hooks/useTeacherAnalytics.ts
+// hooks/useTeacherAnalytics.ts - FIXED TYPE ISSUES
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
+import { StudentPerformance, ClassAnalytics, Class } from '../types/analytics';
 
-interface StudentPerformance {
-    id: string;
-    full_name: string;
-    roll_number: string;
-    attendance_rate: number;
-    average_grade: number;
-    assignments_completed: number;
-    total_assignments: number;
-    class_name: string;
-}
-
-interface ClassAnalytics {
-    class_id: string;
-    class_name: string;
-    total_students: number;
-    average_attendance: number;
-    average_grade: number;
-    top_performer: string;
-}
-
-interface Student {
+// Define proper types for Supabase responses
+type StudentWithClass = {
     id: string;
     full_name: string;
     roll_number: string | null;
@@ -31,53 +13,8 @@ interface Student {
         id: string;
         name: string;
     };
-}
+};
 
-interface Class {
-    id: string;
-    name: string;
-    description: string | null;
-    teacher_id: string;
-}
-
-
-interface StudentPerformance {
-    id: string;
-    full_name: string;
-    roll_number: string;
-    attendance_rate: number;
-    average_grade: number;
-    assignments_completed: number;
-    total_assignments: number;
-    class_name: string;
-}
-
-interface ClassAnalytics {
-    class_id: string;
-    class_name: string;
-    total_students: number;
-    average_attendance: number;
-    average_grade: number;
-    top_performer: string;
-}
-
-interface Student {
-    id: string;
-    full_name: string;
-    roll_number: string | null;
-    class_id: string;
-    classes: {
-        id: string;
-        name: string;
-    };
-}
-
-interface Class {
-    id: string;
-    name: string;
-    description: string | null;
-    teacher_id: string;
-}
 
 export const useTeacherAnalytics = (profileId: string | undefined, selectedClass: string = 'all') => {
     const [studentPerformances, setStudentPerformances] = useState<StudentPerformance[]>([]);
@@ -86,7 +23,6 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Single effect to handle all data fetching
     useEffect(() => {
         if (!profileId) {
             setLoading(false);
@@ -102,7 +38,6 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                 console.log('Profile ID:', profileId);
                 console.log('Selected Class:', selectedClass);
 
-                // Step 1: Fetch teacher's classes
                 console.log('Step 1: Fetching classes...');
                 const { data: classesData, error: classesError } = await supabase
                     .from('classes')
@@ -133,13 +68,12 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                 if (selectedClass === 'all') {
                     classIds = teacherClasses.map(c => c.id);
                 } else {
-                    // Verify the selected class belongs to this teacher
                     const selectedClassExists = teacherClasses.find(c => c.id === selectedClass);
                     if (selectedClassExists) {
                         classIds = [selectedClass];
                     } else {
                         console.error('Selected class not found or not assigned to teacher');
-                        classIds = teacherClasses.map(c => c.id); // Fallback to all classes
+                        classIds = teacherClasses.map(c => c.id);
                     }
                 }
 
@@ -152,9 +86,9 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     return;
                 }
 
-                // Step 3: Fetch students from selected classes
+                // Step 3: Fetch students from selected classes - FIXED TYPE HANDLING
                 console.log('Step 3: Fetching students...');
-                const { data: studentsData, error: studentsError } = await supabase
+                const { data: studentsRaw, error: studentsError } = await supabase
                     .from('students')
                     .select(`
                         id,
@@ -171,7 +105,18 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     throw new Error('Failed to fetch students: ' + studentsError.message);
                 }
 
-                const students = (studentsData || []);
+                // CRITICAL FIX: Transform the data to ensure correct structure
+                const students = (studentsRaw as any[])?.map((student: any) => ({
+                    id: student.id,
+                    full_name: student.full_name,
+                    roll_number: student.roll_number,
+                    class_id: student.class_id,
+                    classes: {
+                        id: student.classes.id,
+                        name: student.classes.name
+                    }
+                })) || [] as StudentWithClass[];
+
                 console.log('Students found:', students.length, students);
 
                 if (students.length === 0) {
@@ -232,7 +177,7 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                             average_grade,
                             assignments_completed,
                             total_assignments,
-                            class_name: student.classes.name
+                            class_name: student.classes.name // NOW THIS WORKS
                         };
 
                         performanceData.push(studentPerformance);
@@ -249,7 +194,7 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                             average_grade: 0,
                             assignments_completed: 0,
                             total_assignments: 0,
-                            class_name: student.classes.name
+                            class_name: student.classes.name // This works now too
                         });
                     }
                 }
@@ -306,7 +251,7 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
         };
 
         fetchAllData();
-    }, [profileId, selectedClass]); // Only depend on profileId and selectedClass
+    }, [profileId, selectedClass]);
 
     return { 
         studentPerformances, 

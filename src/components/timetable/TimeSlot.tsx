@@ -16,20 +16,14 @@ interface TimeSlotProps {
 
 export default function TimeSlot({
     entry,
-    index,
     colors,
     profile,
     handleEditEntry,
-    handleDeleteEntry,
     isFirst,
     isLast
 }: TimeSlotProps) {
-    const canPress =  (profile?.role === 'teacher' && entry.teacher_id === profile.id);
-
-    // Convert time from HH:MM:SS to HH:MM format for display
-    const formatTime = (time: string) => {
-        return time.substring(0, 5); // Remove seconds part
-    };
+    const canPress = profile?.role === 'teacher' && entry.teacher_id === profile.id;
+    const formatTime = (time: string) => time.substring(0, 5);
 
     return (
         <TouchableOpacity
@@ -39,10 +33,7 @@ export default function TimeSlot({
                 isFirst && styles.firstTimeSlot,
                 isLast && styles.lastTimeSlot,
             ]}
-            onPress={() => {
-                console.log('TimeSlot pressed:', { entryId: entry.id, canPress }); // Debugging
-                if (canPress) handleEditEntry(entry);
-            }}
+            onPress={() => canPress && handleEditEntry(entry)}
             disabled={!canPress}
         >
             <View style={styles.timeSlotContent}>
@@ -53,27 +44,21 @@ export default function TimeSlot({
                             {formatTime(entry.start_time)} - {formatTime(entry.end_time)}
                         </Text>
                     </View>
-                    <View style={styles.timeSlotActions}>
-                        <View style={[styles.roomBadge, { backgroundColor: colors.secondary }]}>
-                            <MapPin size={10} color="#274d71" />
-                            <Text style={styles.roomText}>{entry.room_number}</Text>
-                        </View>
+                    <View style={[styles.roomBadge, { backgroundColor: colors.secondary }]}>
+                        <MapPin size={10} color="#274d71" />
+                        <Text style={styles.roomText}>{entry.room_number}</Text>
                     </View>
                 </View>
                 <Text style={[styles.subjectText, { color: colors.text }]}>{entry.subject_name}</Text>
                 <View style={styles.entryDetails}>
-                    {entry.teacher_name && (
-                        <View style={styles.teacherInfo}>
-                            <User size={12} color={colors.textSecondary} />
-                            <Text style={[styles.teacherText, { color: colors.textSecondary }]}>{entry.teacher_name}</Text>
-                        </View>
-                    )}
-                    {entry.class_name && (
-                        <View style={styles.classInfo}>
-                            <BookOpen size={12} color={colors.textSecondary} />
-                            <Text style={[styles.classText, { color: colors.textSecondary }]}>{entry.class_name}</Text>
-                        </View>
-                    )}
+                    <View style={styles.teacherInfo}>
+                        <User size={12} color={colors.textSecondary} />
+                        <Text style={[styles.teacherText, { color: colors.textSecondary }]}>{entry.teacher_name}</Text>
+                    </View>
+                    <View style={styles.classInfo}>
+                        <BookOpen size={12} color={colors.textSecondary} />
+                        <Text style={[styles.classText, { color: colors.textSecondary }]}>{entry.class_name}</Text>
+                    </View>
                 </View>
             </View>
         </TouchableOpacity>
@@ -106,10 +91,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         marginBottom: 8,
-    },
-    timeSlotActions: {
-        alignItems: 'flex-end',
-        gap: 6,
     },
     timeInfo: {
         flexDirection: 'row',

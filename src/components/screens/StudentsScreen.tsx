@@ -72,7 +72,7 @@ export default function StudentsScreen() {
     });
 
     useEffect(() => {
-        if (profile?.role === 'teacher' || profile?.role === 'admin') {
+        if (profile?.role === 'teacher') {
             fetchClasses();
             fetchStudentsPasswordStatus();
         }
@@ -203,7 +203,7 @@ export default function StudentsScreen() {
             student.roll_number.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    if (profile?.role !== 'teacher' && profile?.role !== 'admin') {
+    if (profile?.role !== 'teacher') {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>

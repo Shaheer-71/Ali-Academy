@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { DayScheduleCard } from './common/DayScheduleCard';
+import { DayScheduleCard } from '../common/DayScheduleCard';
 
 interface TimetableEntry {
     id: string;

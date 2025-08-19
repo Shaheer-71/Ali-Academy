@@ -34,6 +34,13 @@ interface RecentActivity {
   type: 'success' | 'info' | 'warning';
 }
 
+interface QuickAction {
+  title: string;
+  icon: React.ComponentType<{ size: number; color: string }>;
+  color: string;
+  onPress: () => void;
+}
+
 export default function HomeScreen() {
   const { profile } = useAuth();
   const { colors } = useTheme();

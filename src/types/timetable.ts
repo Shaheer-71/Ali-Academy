@@ -7,9 +7,7 @@ export interface UserProfile {
     id: string;
     email: string;
     full_name: string;
-    role: 'teacher' | 'student' | 'parent'; // Removed 'admin'
-    contact_number: string;
-    parent_phone?: string;
+    role: 'teacher' | 'student' | 'parent';
     avatar_url?: string;
 }
 
