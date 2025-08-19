@@ -1,1 +1,1 @@
-﻿export { default } from '@/components/screens/ExamsScreen';
+﻿export { default } from '@/src/components/screens/ExamsScreen';

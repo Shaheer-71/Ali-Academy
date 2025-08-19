@@ -12,8 +12,8 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '@/contexts/AuthContext';
-import { validateStudentEmail, completeStudentRegistration } from '@/lib/auth';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { validateStudentEmail, completeStudentRegistration } from '@/src/lib/auth';
 import { GraduationCap, Eye, EyeOff, CheckCircle, User, BookOpen } from 'lucide-react-native';
 
 interface StudentData {

@@ -8,10 +8,10 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { useTheme } from '@/src/contexts/ThemeContext';
 import { User, LogOut, Bell, Shield, CircleHelp as HelpCircle, Info, ChevronRight, Mail, Phone } from 'lucide-react-native';
-import TopSections from '@/components/TopSections';
+import TopSections from '@/src/components/common/TopSections';
 import { useRouter } from 'expo-router';
 
 export default function SettingsScreen() {

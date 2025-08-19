@@ -13,8 +13,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase'; // Add this import
+import { useAuth } from '@/src/contexts/AuthContext';
+import { supabase } from '@/src/lib/supabase';
 import { GraduationCap } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 

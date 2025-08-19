@@ -1,1 +1,1 @@
-﻿export { default } from '@/components/screens/HomeScreen';
+﻿export { default } from '@/src/components/screens/HomeScreen';
