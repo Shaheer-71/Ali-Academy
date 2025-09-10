@@ -1,46 +1,82 @@
-// Cloudinary integration for file uploads
-// This is a mock implementation - replace with actual Cloudinary setup
+const CLOUD_NAME = 'dvng4f0nj';
+const UPLOAD_PRESET = 'Ali_Academy_Preset';
 
-export interface CloudinaryUpload {
-  public_id: string;
-  secure_url: string;
-  resource_type: string;
-  format: string;
-}
-
-export const uploadToCloudinary = async (
-  file: any,
-  resourceType: 'image' | 'video' | 'raw' = 'raw'
-): Promise<CloudinaryUpload> => {
+export async function uploadToCloudinary(file: {
+  uri: string;
+  name?: string;
+  mimeType?: string;
+}): Promise<string> {
   try {
-    // Mock implementation - replace with actual Cloudinary upload
-    console.log('Uploading to Cloudinary:', file);
-    
-    // Example Cloudinary upload (replace with your cloud name and upload preset)
-    // const formData = new FormData();
-    // formData.append('file', file);
-    // formData.append('upload_preset', 'YOUR_UPLOAD_PRESET');
-    // 
-    // const response = await fetch(
-    //   `https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/${resourceType}/upload`,
-    //   {
-    //     method: 'POST',
-    //     body: formData,
-    //   }
-    // );
-    // 
-    // const data = await response.json();
-    // return data;
+    console.log('Starting upload with file:', {
+      name: file.name,
+      type: file.mimeType,
+      uri: file.uri,
+    });
 
-    // Mock response for development
-    return {
-      public_id: 'mock_file_id',
-      secure_url: 'https://example.com/mock-file.pdf',
-      resource_type: resourceType,
-      format: 'pdf',
-    };
-  } catch (error) {
+    // Validate configuration
+    if (!CLOUD_NAME) {
+      throw new Error(
+        'SETUP REQUIRED: Go to cloudinary.com, get your cloud name, and replace CLOUD_NAME.'
+      );
+    }
+
+    if (!UPLOAD_PRESET) {
+      throw new Error(
+        'SETUP REQUIRED: Create an unsigned upload preset in Cloudinary and replace UPLOAD_PRESET.'
+      );
+    }
+
+    // Validate file
+    if (!file || !file.uri) {
+      throw new Error('No valid file provided');
+    }
+
+    const formData = new FormData();
+
+    // React Native-compatible file object
+    formData.append('file', {
+      uri: file.uri,
+      type: file.mimeType || 'application/octet-stream',
+      name: file.name || 'upload.pdf',
+    } as any);
+
+    formData.append('upload_preset', UPLOAD_PRESET);
+    formData.append('resource_type', 'auto'); // auto detects image/video/document
+
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`;
+    console.log('Upload URL:', uploadUrl);
+
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData,
+      // Do NOT set Content-Type manually in React Native
+    });
+
+    console.log('Response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Cloudinary error response:', errorText);
+
+      if (response.status === 400) {
+        throw new Error('Invalid file or configuration. Check your Cloudinary settings.');
+      } else if (response.status === 401) {
+        throw new Error('Upload not authorized. Check your upload preset settings.');
+      } else {
+        throw new Error(`Upload failed with status ${response.status}: ${errorText}`);
+      }
+    }
+
+    const data = await response.json();
+    console.log('Upload successful:', data.secure_url);
+
+    if (!data.secure_url) {
+      throw new Error('No URL returned from Cloudinary');
+    }
+
+    return data.secure_url;
+  } catch (error: any) {
     console.error('Cloudinary upload error:', error);
-    throw error;
+    throw new Error(`Upload failed: ${error.message}`);
   }
-};
+}

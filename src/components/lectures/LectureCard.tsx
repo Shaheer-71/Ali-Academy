@@ -1,100 +1,223 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { BookOpen, Download, Calendar, Video, FileText, User } from 'lucide-react-native';
+// src/components/lectures/LectureCard.tsx
 
-interface Lecture {
-  id: string;
-  title: string;
-  description?: string;
-  file_url: string;
-  file_type: string;
-  created_at: string;
-  classes?: { name: string };
-  profiles?: { full_name: string };
-}
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import {
+  FileText,
+  Video,
+  Image as ImageIcon,
+  Download,
+  Eye,
+  Share2,
+  Youtube,
+  Calendar,
+  BookOpen,
+} from 'lucide-react-native';
+import { useTheme } from '@/src/contexts/ThemeContext';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { Lecture } from '@/src/types/lectures';
+import { lectureService } from '@/src/services/lecture.service';
 
 interface LectureCardProps {
   lecture: Lecture;
-  onDownload?: () => void;
-  onPress?: () => void;
+  onRefresh?: () => void;
 }
 
-export const LectureCard: React.FC<LectureCardProps> = ({
-  lecture,
-  onDownload,
-  onPress,
-}) => {
+export default function LectureCard({ lecture, onRefresh }: LectureCardProps) {
+  const { colors } = useTheme();
+  const { profile } = useAuth();
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const getFileIcon = () => {
-    if (lecture.file_type.includes('video')) {
-      return <Video size={20} color="#8B5CF6" />;
-    }
-    return <FileText size={20} color="#274d71" />;
+    const iconProps = { size: 20, color: '#fff' };
+
+    if (lecture.file_type.includes('video')) return <Video {...iconProps} />;
+    if (lecture.file_type.includes('image')) return <ImageIcon {...iconProps} />;
+    return <FileText {...iconProps} />;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+  // Format file size
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return '';
+    const mb = bytes / (1024 * 1024);
+    return mb < 1 ? `${Math.round(bytes / 1024)}KB` : `${mb.toFixed(1)}MB`;
+  };
+
+  // Handle view action
+  const handleView = async () => {
+    try {
+      await lectureService.viewLecture(lecture, profile!.id);
+      onRefresh?.();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to open the file');
+    }
+  };
+
+  // Handle download action
+  const handleDownload = async () => {
+    if (isDownloading) return;
+
+    setIsDownloading(true);
+    try {
+      await lectureService.downloadLecture(lecture, profile!.id);
+      Alert.alert('Success', 'File downloaded successfully');
+      onRefresh?.();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to download the file');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Handle share action
+  const handleShare = async () => {
+    try {
+      await lectureService.shareLecture(lecture);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to share the lecture');
+    }
+  };
+
+  // Handle YouTube link
+  const handleYouTube = async () => {
+    if (!lecture.youtube_link) return;
+
+    try {
+      await lectureService.openYouTubeLink(lecture.youtube_link);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to open YouTube link');
+    }
   };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress}>
+    <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+      {/* Header */}
       <View style={styles.header}>
-        <View style={styles.iconContainer}>
+        <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
           {getFileIcon()}
         </View>
+
         <View style={styles.info}>
-          <Text style={styles.title} numberOfLines={2}>
-            {lecture.title}
-          </Text>
-          <View style={styles.metadata}>
-            <View style={styles.metadataItem}>
-              <BookOpen size={12} color="#6B7280" />
-              <Text style={styles.metadataText}>{lecture.classes?.name}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{lecture.title}</Text>
+
+          {/* Meta Info */}
+          <View style={styles.metaRow}>
+            <View style={styles.metaItem}>
+              <BookOpen size={12} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                {lecture.classes?.name}
+              </Text>
             </View>
-            <View style={styles.metadataItem}>
-              <Calendar size={12} color="#6B7280" />
-              <Text style={styles.metadataText}>{formatDate(lecture.created_at)}</Text>
+
+            <View style={styles.metaItem}>
+              <FileText size={12} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                {lecture.subjects?.name}
+              </Text>
             </View>
-            {lecture.profiles && (
-              <View style={styles.metadataItem}>
-                <User size={12} color="#6B7280" />
-                <Text style={styles.metadataText}>{lecture.profiles.full_name}</Text>
-              </View>
+
+            {lecture.file_size && (
+              <Text style={[styles.sizeText, { color: colors.textSecondary }]}>
+                {formatFileSize(lecture.file_size)}
+              </Text>
             )}
+          </View>
+
+          {/* Description */}
+          {lecture.description && (
+            <Text
+              style={[styles.description, { color: colors.textSecondary }]}
+              numberOfLines={2}
+            >
+              {lecture.description}
+            </Text>
+          )}
+
+          {/* Upload Info */}
+          <View style={styles.uploadInfo}>
+            <Text style={[styles.uploadedBy, { color: colors.textSecondary }]}>
+              By {lecture.profiles?.full_name}
+            </Text>
+            <View style={styles.metaItem}>
+              <Calendar size={10} color={colors.textSecondary} />
+              <Text style={[styles.dateText, { color: colors.textSecondary }]}>
+                {new Date(lecture.created_at).toLocaleDateString()}
+              </Text>
+            </View>
           </View>
         </View>
       </View>
 
-      {lecture.description && (
-        <Text style={styles.description} numberOfLines={2}>
-          {lecture.description}
-        </Text>
-      )}
+      {/* Actions */}
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+          onPress={handleView}
+        >
+          <Eye size={13} color={lecture.has_viewed ? colors.success : colors.primary} />
+          <Text style={[styles.actionText, { color: colors.primary }]}>
+            {lecture.has_viewed ? 'Viewed' : 'View'}
+          </Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.downloadButton} onPress={onDownload}>
-        <Download size={16} color="#274d71" />
-        <Text style={styles.downloadText}>Download</Text>
-      </TouchableOpacity>
-    </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+          onPress={handleDownload}
+          disabled={isDownloading}
+        >
+          {isDownloading ? (
+            <ActivityIndicator size={10} color={colors.primary} />
+          ) : (
+            <Download size={13} color={lecture.has_downloaded ? colors.success : colors.primary} />
+          )}
+          <Text style={[styles.actionText, { color: colors.primary }]}>
+            {isDownloading ? null : lecture.has_downloaded ? 'Downloaded' : 'Download'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.actionButton,
+            {
+              backgroundColor: colors.background,
+              borderColor: colors.border,
+              opacity: lecture.youtube_link ? 1 : 0.5
+            }
+          ]}
+          onPress={handleYouTube}
+          disabled={!lecture.youtube_link}
+        >
+          <Youtube size={13} color={lecture.youtube_link ? '#FF0000' : colors.textSecondary} />
+          <Text style={[styles.actionText, { color: lecture.youtube_link ? colors.text : colors.textSecondary }]}>
+            YouTube
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+          onPress={handleShare}
+        >
+          <Share2 size={13} color={colors.primary} />
+          <Text style={[styles.actionText, { color: colors.primary }]}>Share</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#ffffff',
+  card: {
     borderRadius: 12,
     padding: 16,
-    marginBottom: 8,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   header: {
     flexDirection: 'row',
@@ -103,8 +226,7 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 40,
     height: 40,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -114,45 +236,59 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#111827',
-    marginBottom: 6,
+    fontWeight: '600',
+    marginBottom: 4,
   },
-  metadata: {
-    gap: 8,
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 4,
   },
-  metadataItem: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
-  metadataText: {
+  metaText: {
     fontSize: 11,
-    fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-    marginLeft: 4,
+  },
+  sizeText: {
+    fontSize: 10,
   },
   description: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#374151',
+    fontSize: 13,
     lineHeight: 18,
-    marginBottom: 12,
+    marginBottom: 4,
   },
-  downloadButton: {
+  uploadInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  uploadedBy: {
+    fontSize: 11,
+    fontStyle: 'italic',
+  },
+  dateText: {
+    fontSize: 10,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F9FAFB',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 6,
+    gap: 4,
   },
-  downloadText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#274d71',
+  actionText: {
+    fontSize: 11,
+    fontWeight: '500',
   },
 });
