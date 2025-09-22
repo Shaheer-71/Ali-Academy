@@ -76,6 +76,10 @@ export default function LecturesScreen() {
     loadLectures();
   }, [profile]);
 
+  console.log("Hello : " , process.env.EXPO_CLOUD_NAME)
+  console.log("Hello : " , process.env.EXPO_UPLOAD_PRESET)
+
+
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <BookOpen size={48} color={colors.textSecondary} />

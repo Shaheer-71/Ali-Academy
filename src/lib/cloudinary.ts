@@ -1,5 +1,9 @@
 const CLOUD_NAME = 'dvng4f0nj';
-const UPLOAD_PRESET = 'Ali_Academy_Preset';
+const UPLOAD_PRESET = 'Ali-Academy-Preset';
+
+
+// console.log("Hello : " , process.env.EXPO_CLOUD_NAME)
+// console.log("Hello : " , process.env.EXPO_UPLOAD_PRESET)
 
 export async function uploadToCloudinary(file: {
   uri: string;
@@ -41,15 +45,14 @@ export async function uploadToCloudinary(file: {
     } as any);
 
     formData.append('upload_preset', UPLOAD_PRESET);
-    formData.append('resource_type', 'auto'); // auto detects image/video/document
+    formData.append('resource_type', 'raw');
 
-    const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`;
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload`;
     console.log('Upload URL:', uploadUrl);
 
     const response = await fetch(uploadUrl, {
       method: 'POST',
       body: formData,
-      // Do NOT set Content-Type manually in React Native
     });
 
     console.log('Response status:', response.status);
@@ -68,6 +71,7 @@ export async function uploadToCloudinary(file: {
     }
 
     const data = await response.json();
+    console.log("HELLO DATA : ", data)
     console.log('Upload successful:', data.secure_url);
 
     if (!data.secure_url) {
@@ -80,3 +84,4 @@ export async function uploadToCloudinary(file: {
     throw new Error(`Upload failed: ${error.message}`);
   }
 }
+
