@@ -33,6 +33,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
     const [refreshing, setRefreshing] = React.useState(false);
     
     const filteredQuizzes = getFilteredQuizzes();
+    
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {

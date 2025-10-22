@@ -190,9 +190,11 @@ export default function HomeScreen() {
           class_id,
           classes!inner(id, name)
         `)
-        .eq('email', profile.email)
+        .eq('id', profile.id)
         .eq('is_deleted', false)
         .single();
+
+        console.log("object" , studentData)
 
       if (studentError) throw studentError;
 

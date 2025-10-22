@@ -11,6 +11,9 @@ export const StudentAnalyticsView = () => {
     const { colors } = useTheme();
     const { analytics, loading, error } = useStudentAnalytics(profile?.id);
 
+
+    console.log("object" , analytics)
+
     const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
         switch (trend) {
             case 'up': return <TrendingUp size={16} color="#10B981" />;

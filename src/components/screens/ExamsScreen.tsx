@@ -25,14 +25,14 @@ interface ExamFilterData {
 export default function ExamsScreen() {
   const { profile } = useAuth();
   const { colors } = useTheme();
-  
+
   // State management
   const [classes, setClasses] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'schedule' | 'results' | 'reports'>('schedule');
   const [modalVisible, setModalVisible] = useState(false);
   const [markingModalVisible, setMarkingModalVisible] = useState(false);
   const [selectedResult, setSelectedResult] = useState<any>(null);
-  
+
   // NEW: Comprehensive filter state
   const [filters, setFilters] = useState<ExamFilterData>({
     selectedClass: 'all',
@@ -45,19 +45,20 @@ export default function ExamsScreen() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   // Get data WITHOUT class filtering in the hook - we'll filter in the component
-  const { 
-    quizzes, 
-    subjects, 
-    quizResults, 
+  const {
+    quizzes,
+    subjects,
+    quizResults,
     classesSubjects,
-    loading, 
-    createQuiz, 
-    markQuizResult, 
+    loading,
+    createQuiz,
+    markQuizResult,
     updateQuizStatus,
     getFilteredResults,
     getSubjectsForClass,
     areAllResultsMarked,
     refetch,
+    fetchStudentClassId
   } = useQuizzes();
 
   useEffect(() => {
@@ -115,7 +116,7 @@ export default function ExamsScreen() {
       statusFilter: 'all',
       checkedFilter: 'all',
     };
-    
+
     return (
       filters.selectedClass !== defaultFilters.selectedClass ||
       filters.selectedSubject !== defaultFilters.selectedSubject ||
@@ -123,6 +124,7 @@ export default function ExamsScreen() {
       filters.checkedFilter !== defaultFilters.checkedFilter
     );
   };
+
 
   // Filter functions - UPDATED to use comprehensive filters
   const getFilteredQuizzes = () => {
@@ -149,27 +151,27 @@ export default function ExamsScreen() {
   // ENHANCED: Get subjects with all option, filtered by class
   const getSubjectsWithAll = (classId?: string) => {
     const targetClass = classId || filters.selectedClass;
-    
+
     let filteredSubjects = subjects;
-    
+
     if (targetClass !== 'all') {
       const classQuizzes = quizzes.filter(quiz => {
         const quizClassId = String(quiz.class_id);
         const selectedClassStr = String(targetClass);
         return quizClassId === selectedClassStr;
       });
-      
+
       const subjectIdsInClass = [...new Set(classQuizzes.map(quiz => quiz.subject_id))];
-      filteredSubjects = subjects.filter(subject => 
+      filteredSubjects = subjects.filter(subject =>
         subjectIdsInClass.includes(subject.id)
       );
     } else {
       const allSubjectIds = [...new Set(quizzes.map(quiz => quiz.subject_id))];
-      filteredSubjects = subjects.filter(subject => 
+      filteredSubjects = subjects.filter(subject =>
         allSubjectIds.includes(subject.id)
       );
     }
-    
+
     return [
       { id: 'all', name: 'All Subjects' },
       ...filteredSubjects
@@ -249,7 +251,7 @@ export default function ExamsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TopSections />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
-        
+
         <TabNavigation
           colors={colors}
           profile={profile}

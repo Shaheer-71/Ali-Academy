@@ -63,9 +63,12 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                         email,
                         classes!inner(id, name)
                     `)
-                    .eq('email', profileData.email)
+                    .eq('id', profileData.id)
                     .eq('is_deleted', false)
                     .single();
+
+                    console.log("HELLO : " ,studentData)
+
 
                 if (studentError) {
                     console.error('Student error:', studentError);

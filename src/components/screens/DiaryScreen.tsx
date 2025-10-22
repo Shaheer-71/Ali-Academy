@@ -124,6 +124,7 @@ export default function DiaryScreen() {
 
       if (error) throw error;
       setStudents(data || []);
+      console.log("hello " , students)
     } catch (error) {
       console.error('Error fetching students:', error);
     }
