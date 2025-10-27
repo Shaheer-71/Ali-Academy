@@ -79,7 +79,6 @@ export const createStudentWithAuth = async (studentData: StudentData, createdBy:
             throw new Error('Student with this email already exists');
         }
 
-        console.log('Step 1: Creating auth user (this will auto-create profile)...');
 
         // Step 1: Create auth user using signUp 
         // Note: This automatically creates a profile via Supabase triggers
@@ -103,14 +102,11 @@ export const createStudentWithAuth = async (studentData: StudentData, createdBy:
         }
 
         const userId = authData.user.id;
-        console.log('Auth user created with ID:', userId);
-        console.log('Profile should be auto-created by Supabase triggers');
+
 
         try {
             // Wait a moment for the profile to be created by triggers
             await new Promise(resolve => setTimeout(resolve, 1000));
-
-            console.log('Step 2: Updating the auto-created profile with additional info...');
 
             // Step 2: Update the auto-created profile with our specific data
             // Only update fields that exist in the profiles table
@@ -124,15 +120,6 @@ export const createStudentWithAuth = async (studentData: StudentData, createdBy:
                 })
                 .eq('id', userId);
 
-            if (profileUpdateError) {
-                console.error('Profile update error:', profileUpdateError);
-                // Don't throw here - profile might have been created with correct data already
-                console.log('Profile update failed, but continuing...');
-            } else {
-                console.log('Profile updated successfully');
-            }
-
-            console.log('Step 3: Creating student record...');
 
             // Step 3: Create student record
             const { data: studentRecord, error: studentError } = await supabase
@@ -166,7 +153,6 @@ export const createStudentWithAuth = async (studentData: StudentData, createdBy:
                 throw new Error(`Failed to create student record: ${studentError.message}`);
             }
 
-            console.log('Student record created successfully');
 
             return {
                 success: true,
@@ -194,7 +180,7 @@ export const createStudentWithAuth = async (studentData: StudentData, createdBy:
 export const getStudentsWithoutPasswords = async (): Promise<StudentsWithoutPasswords[]> => {
     try {
         // For now, return empty array since we're using client-side auth creation
-        console.log('getStudentsWithoutPasswords called - returning empty array (using client-side auth)');
+        // console.log('getStudentsWithoutPasswords called - returning empty array (using client-side auth)');
         return [];
     } catch (error: any) {
         console.error('Error fetching students without passwords:', error.message);

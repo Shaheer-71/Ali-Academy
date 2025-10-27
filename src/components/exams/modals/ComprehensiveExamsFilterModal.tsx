@@ -135,7 +135,7 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
     };
 
     return (
-        <Modal visible={visible} transparent animationType="slide">
+        <Modal visible={visible} transparent animationType="fade">
             <View style={styles.overlay}>
                 <View style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
                     {/* Header */}

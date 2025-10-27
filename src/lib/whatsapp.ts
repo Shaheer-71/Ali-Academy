@@ -10,7 +10,6 @@ export interface WhatsAppMessage {
 export const sendWhatsAppMessage = async (message: WhatsAppMessage): Promise<boolean> => {
   try {
     // Mock implementation - replace with actual WhatsApp API
-    console.log('Sending WhatsApp message:', message);
     
     // Example with UltraMsg API (replace with your credentials)
     // const response = await fetch('https://api.ultramsg.com/instance/sendChatMessage', {

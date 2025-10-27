@@ -194,7 +194,6 @@ export default function HomeScreen() {
         .eq('is_deleted', false)
         .single();
 
-        console.log("object" , studentData)
 
       if (studentError) throw studentError;
 
@@ -331,7 +330,7 @@ export default function HomeScreen() {
           title: 'Manage Students',
           icon: Users,
           color: '#8B5CF6',
-          onPress: () => router.push('/analytics')
+          onPress: () => router.push('/students')
         },
       ];
     }
@@ -341,25 +340,26 @@ export default function HomeScreen() {
         title: 'View Attendance',
         icon: Calendar,
         color: '#b6d509',
-        onPress: () => Alert.alert('Coming Soon', 'Attendance view will be available soon')
+        onPress: () => router.push('/attendance')
+        // onPress: () => Alert.alert('Coming Soon', 'Attendance view will be available soon')
       },
       {
         title: 'Latest Lectures',
         icon: BookOpen,
         color: '#274d71',
-        onPress: () => router.push('/(tabs)/lectures')
+        onPress: () => router.push('/lectures')
       },
       {
         title: 'Homework',
         icon: NotebookPen,
         color: '#EF4444',
-        onPress: () => router.push('/(tabs)/dairy')
+        onPress: () => router.push('/dairy')
       },
       {
         title: 'Progress',
         icon: BarChart3,
         color: '#8B5CF6',
-        onPress: () => Alert.alert('Coming Soon', 'Progress tracking will be available soon')
+        onPress: () => router.push('/exams')
       },
     ];
   };
@@ -368,7 +368,7 @@ export default function HomeScreen() {
     if (profile?.role === 'teacher') {
       return ['Students', 'Classes', 'Lectures'];
     } else {
-      return ['Attendance', 'Assignments', 'Lectures'];
+      return ['Attendance', 'Dairy', 'Lectures'];
     }
   };
 
@@ -568,12 +568,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statsNumber: {
-    fontSize: 28,
+    fontSize: 20,
     fontFamily: 'Inter-SemiBold',
     marginBottom: 4,
   },
   statsLabel: {
-    fontSize: 12,
+    fontSize: 10,
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
   },

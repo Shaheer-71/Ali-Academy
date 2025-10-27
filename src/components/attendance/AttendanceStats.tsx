@@ -54,7 +54,7 @@ export const AttendanceStats: React.FC<AttendanceStatsProps> = ({ stats }) => {
 const styles = StyleSheet.create({
     statsContainer: {
         flexDirection: 'row',
-        paddingHorizontal: 24,
+        // paddingHorizontal: 24,
         marginBottom: 24,
         gap: 12,
     },
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     attendanceRateCard: {
-        marginHorizontal: 24,
+        // marginHorizontal: 24,
         marginBottom: 24,
         borderRadius: 16,
         padding: 20,

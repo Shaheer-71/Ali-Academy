@@ -82,7 +82,7 @@ export default function AttendanceScreen() {
     const [classes, setClasses] = useState<Class[]>([]);
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [viewMode, setViewMode] = useState<'mark' | 'view' | 'reports'>('mark');
-    
+
     // Filter states for mark/reports modes
     const [filters, setFilters] = useState<FilterData>({
         selectedClass: '',
@@ -113,7 +113,7 @@ export default function AttendanceScreen() {
         attendanceRate: 0,
     });
     const [viewLoading, setViewLoading] = useState(false);
-    
+
     // Modal states
     const [filterModalVisible, setFilterModalVisible] = useState(false);
     const [viewFilterModalVisible, setViewFilterModalVisible] = useState(false);
@@ -236,7 +236,7 @@ export default function AttendanceScreen() {
             if (error) throw error;
 
             let filteredData = data || [];
-            
+
             // Apply status filter
             if (viewFilters.status !== 'all') {
                 filteredData = filteredData.filter(record => record.status === viewFilters.status);
@@ -340,13 +340,13 @@ export default function AttendanceScreen() {
     const handleViewModeChange = (mode: 'mark' | 'view' | 'reports') => {
         setViewMode(mode);
         clearCurrentAttendance();
-        
+
         if (mode === 'reports' && filters.selectedClass) {
             setTimeout(() => {
                 fetchAttendanceData(filters.startDate, filters.endDate);
             }, 100);
         }
-        
+
         if (mode === 'mark' && filters.selectedClass && filters.startDate) {
             setTimeout(() => {
                 fetchTodaysAttendance(filters.startDate);
@@ -367,7 +367,7 @@ export default function AttendanceScreen() {
             clearAllData();
             clearCurrentAttendance();
         }
-        
+
         setFilters(newFilters);
     };
 
@@ -386,7 +386,7 @@ export default function AttendanceScreen() {
             status: 'all',
             dateRange: 'today',
         };
-        
+
         return (
             filters.selectedClass !== defaultFilters.selectedClass ||
             filters.startDate !== defaultFilters.startDate ||
@@ -409,8 +409,8 @@ export default function AttendanceScreen() {
     };
 
     // Filter attendance records based on status for reports mode
-    const filteredAttendanceRecords = filters.status === 'all' 
-        ? attendanceRecords 
+    const filteredAttendanceRecords = filters.status === 'all'
+        ? attendanceRecords
         : attendanceRecords.filter(record => record.status === filters.status);
 
     // Get students for selected class in view mode
@@ -419,8 +419,8 @@ export default function AttendanceScreen() {
     };
 
     const renderStudentContent = () => (
-        <ScrollView 
-            style={styles.scrollView} 
+        <ScrollView
+            style={styles.scrollView}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 50 }}
             refreshControl={
@@ -457,8 +457,8 @@ export default function AttendanceScreen() {
 
     const renderTeacherMarkMode = () => (
         <View style={styles.container}>
-            <ScrollView 
-                style={styles.scrollView} 
+            <ScrollView
+                style={styles.scrollView}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 20 }}
                 refreshControl={
@@ -482,12 +482,12 @@ export default function AttendanceScreen() {
                         subtitle="Pull down to refresh or add students to this class"
                     />
                 ) : (
-                    <>       
+                    <>
                         {students.map((student) => {
                             const isMarkedInDatabase = isStudentMarkedForDate(student.id, filters.startDate);
                             const dbRecord = getStudentRecordForDate(student.id, filters.startDate);
                             const isMarkedTemporarily = !!currentAttendance[student.id];
-                            
+
                             return (
                                 <StudentCard
                                     key={student.id}
@@ -503,7 +503,7 @@ export default function AttendanceScreen() {
                                 />
                             );
                         })}
-                        
+
                         <PostAttendanceButton
                             markedCount={Object.keys(currentAttendance).length}
                             totalCount={students.length}
@@ -517,8 +517,8 @@ export default function AttendanceScreen() {
     );
 
     const renderTeacherViewMode = () => (
-        <ScrollView 
-            style={styles.scrollView} 
+        <ScrollView
+            style={styles.scrollView}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 50 }}
             refreshControl={
@@ -536,13 +536,13 @@ export default function AttendanceScreen() {
             <View style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <View style={styles.statsHeader}>
                     <Text style={[styles.statsTitle, { color: colors.text }]}>
-                        {viewFilters.viewType === 'student' 
+                        {viewFilters.viewType === 'student'
                             ? `${allStudents.find(s => s.id === viewFilters.selectedStudent)?.full_name || 'Student'} - Attendance Stats`
                             : `${classes.find(c => c.id === viewFilters.selectedClass)?.name || 'Class'} - Overview`
                         }
                     </Text>
                 </View>
-                
+
                 <View style={styles.statsGrid}>
                     <View style={styles.statItem}>
                         <Text style={[styles.statValue, { color: colors.textSecondary }]}>{viewAttendanceStats.totalDays}</Text>
@@ -561,7 +561,7 @@ export default function AttendanceScreen() {
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Absent</Text>
                     </View>
                 </View>
-                
+
                 <View style={[styles.attendanceRateContainer, { backgroundColor: colors.primary }]}>
                     <Text style={styles.attendanceRateLabel}>Overall Attendance Rate</Text>
                     <Text style={styles.attendanceRateValue}>{viewAttendanceStats.attendanceRate}%</Text>
@@ -636,8 +636,8 @@ export default function AttendanceScreen() {
     );
 
     const renderTeacherReportsMode = () => (
-        <ScrollView 
-            style={styles.scrollView} 
+        <ScrollView
+            style={styles.scrollView}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 50 }}
             refreshControl={
@@ -741,27 +741,34 @@ export default function AttendanceScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <TopSections />
-            <SafeAreaView 
-                style={[styles.container, { backgroundColor: colors.background }]} 
-                edges={['left', 'right']}
+            <SafeAreaView
+                style={[styles.container, { backgroundColor: colors.background }]}
+                edges={['left', 'right' , 'bottom']}
             >
-                <AttendanceHeader
-                    userRole={profile?.role || 'student'}
-                    viewMode={viewMode}
-                    onViewModeChange={handleViewModeChange}
-                    onFilterPress={() => {
-                        if (viewMode === 'view') {
-                            setViewFilterModalVisible(true);
-                        } else {
-                            setFilterModalVisible(true);
-                        }
-                    }}
-                    hasActiveFilters={viewMode === 'view' ? hasActiveViewFilters() : hasActiveFilters()}
-                />
+
+                {
+                    profile?.role === "teacher" && (
+                        <AttendanceHeader
+                            userRole={profile?.role || 'student'}
+                            viewMode={viewMode}
+                            onViewModeChange={handleViewModeChange}
+                            onFilterPress={() => {
+                                if (viewMode === 'view') {
+                                    setViewFilterModalVisible(true);
+                                } else {
+                                    setFilterModalVisible(true);
+                                }
+                            }}
+                            hasActiveFilters={viewMode === 'view' ? hasActiveViewFilters() : hasActiveFilters()}
+                        />
+                    )
+                }
+
 
                 {renderContent()}
 
                 {/* Filter Modal for Mark/Reports modes */}
+
                 <ComprehensiveFilterModal
                     visible={filterModalVisible}
                     onClose={() => setFilterModalVisible(false)}

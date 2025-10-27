@@ -124,7 +124,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
 const styles = StyleSheet.create({
     // Exact copy from AttendanceHeader
     headerContainer: {
-        marginBottom: 20,
+        marginBottom: 25,
     },
     mainHeader: {
         flexDirection: 'row',

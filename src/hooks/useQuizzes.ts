@@ -97,7 +97,6 @@ export const useQuizzes = () => {
 
     // REAL-TIME SUBSCRIPTIONS
     const setupRealtimeSubscriptions = () => {
-        console.log('🔄 Setting up real-time subscriptions...');
 
         // Subscribe to quiz changes
         const quizChannel = supabase
@@ -110,7 +109,6 @@ export const useQuizzes = () => {
                     table: 'quizzes'
                 },
                 (payload) => {
-                    console.log('🔔 Quiz change detected:', payload);
                     fetchQuizzes(); // Refresh quizzes
                 }
             )
@@ -137,12 +135,10 @@ export const useQuizzes = () => {
             )
             .subscribe();
 
-        console.log('✅ Real-time subscriptions set up');
     };
 
     const fetchClassesSubjects = async () => {
         try {
-            console.log('🔗 Fetching class-subject relationships...');
             const { data, error } = await supabase
                 .from('classes_subjects')
                 .select(`
@@ -180,7 +176,6 @@ export const useQuizzes = () => {
 
     const fetchQuizzes = async () => {
         try {
-            console.log('📝 Fetching quizzes...');
 
             let data, error;
 
@@ -231,11 +226,9 @@ export const useQuizzes = () => {
 
     const fetchQuizResults = async () => {
         try {
-            console.log('📊 Fetching quiz results...');
 
             let data, error;
 
-            console.log("object" , profile)
 
             if (profile?.role === "student") {
                 // 🧠 Student: only fetch results for this student
@@ -274,7 +267,6 @@ export const useQuizzes = () => {
 
             if (error) throw error;
 
-            console.log('✅ Quiz results fetched:', data?.length || 0);
             setQuizResults(data || []);
         } catch (error) {
             console.error('❌ Error fetching quiz results:', error);
@@ -315,13 +307,11 @@ export const useQuizzes = () => {
 
     // Get subjects for a specific class using class-subject relationships
     const getSubjectsForClass = (selectedClass: string) => {
-        console.log('🎯 getSubjectsForClass called with class:', selectedClass);
 
         if (!selectedClass || selectedClass === 'all') {
             const subjectsWithQuizzes = subjects.filter(subject =>
                 quizzes.some(quiz => quiz.subject_id === subject.id)
             );
-            console.log('🎯 All classes selected - Available subjects:', subjectsWithQuizzes.map(s => s.name));
             return subjectsWithQuizzes;
         } else {
             // Get subjects assigned to the specific class from class-subject relationships
@@ -329,7 +319,6 @@ export const useQuizzes = () => {
                 String(cs.class_id) === String(selectedClass) && cs.is_active
             );
 
-            console.log('🎯 Class-subject relations for class:', selectedClass, classSubjectRelations.length);
 
             // Get subject IDs for this class
             const subjectIdsInClass = classSubjectRelations.map(cs => cs.subject_id);
@@ -339,7 +328,6 @@ export const useQuizzes = () => {
                 subjectIdsInClass.includes(subject.id)
             );
 
-            console.log('🎯 Class', selectedClass, 'assigned subjects:', subjectsInClass.map(s => s.name));
             return subjectsInClass;
         }
     };
@@ -437,7 +425,6 @@ export const useQuizzes = () => {
         instructions?: string;
     }) => {
         try {
-            console.log('➕ Creating quiz:', quizData.title);
 
             // Validate that the class-subject combination exists
             const validCombination = classesSubjects.some(cs =>
@@ -492,7 +479,6 @@ export const useQuizzes = () => {
                     .insert(resultEntries);
             }
 
-            console.log('✅ Quiz created successfully');
 
             // FORCE IMMEDIATE REFRESH - Don't rely only on real-time
             await fetchQuizzes();
@@ -516,7 +502,6 @@ export const useQuizzes = () => {
         isAbsent?: boolean
     ) => {
         try {
-            console.log('✏️ Marking quiz result:', resultId, { marks, isAbsent });
 
             const updateData: any = {
                 is_checked: true,
@@ -558,7 +543,6 @@ export const useQuizzes = () => {
                 }
             }
 
-            console.log('✅ Quiz result marked successfully');
 
             // FORCE IMMEDIATE REFRESH - Don't rely only on real-time
             if (profile?.role === 'teacher') {
@@ -577,7 +561,6 @@ export const useQuizzes = () => {
 
     const updateQuizStatus = async (quizId: string, status: Quiz['status']) => {
         try {
-            console.log('🔄 Updating quiz status:', quizId, status);
 
             // FIXED: Only update status field (no updated_by field)
             const { error } = await supabase
@@ -589,7 +572,6 @@ export const useQuizzes = () => {
 
             if (error) throw error;
 
-            console.log('✅ Quiz status updated');
 
             // FORCE IMMEDIATE REFRESH - Don't rely only on real-time
             await fetchQuizzes();
@@ -676,7 +658,6 @@ export const useQuizzes = () => {
         areAllResultsMarked,
         fetchStudentClassId,
         refetch: () => {
-            console.log('🔄 Manual refetch triggered');
             fetchQuizzes();
             fetchQuizResults();
             fetchSubjects();

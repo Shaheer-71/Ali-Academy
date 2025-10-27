@@ -48,14 +48,11 @@ export async function uploadToCloudinary(file: {
     formData.append('resource_type', 'raw');
 
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload`;
-    console.log('Upload URL:', uploadUrl);
 
     const response = await fetch(uploadUrl, {
       method: 'POST',
       body: formData,
     });
-
-    console.log('Response status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -71,8 +68,7 @@ export async function uploadToCloudinary(file: {
     }
 
     const data = await response.json();
-    console.log("HELLO DATA : ", data)
-    console.log('Upload successful:', data.secure_url);
+
 
     if (!data.secure_url) {
       throw new Error('No URL returned from Cloudinary');

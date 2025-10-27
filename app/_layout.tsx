@@ -27,8 +27,8 @@ function RootLayoutNav() {
     const inStudentGroup = segments[0] === '(student)';
     const inSettings = segments[0] === 'settings';
 
-    console.log('Current segments:', segments);
-    console.log('User profile:', profile?.role);
+    // console.log('Current segments:', segments);
+    // console.log('User profile:', profile?.role);
 
     if (!user || !profile) {
       // Redirect to auth if not authenticated
@@ -61,10 +61,10 @@ function RootLayoutNav() {
 
     // Only redirect to role groups if user is NOT in settings and NOT already in correct group
     if (profile.role === 'teacher' && !inTeacherGroup && !inSettings) {
-      console.log('Redirecting teacher to teacher group');
+      // console.log('Redirecting teacher to teacher group');
       router.replace('/(teacher)');
     } else if (profile.role === 'student' && !inStudentGroup && !inSettings) {
-      console.log('Redirecting student to student group');
+      // console.log('Redirecting student to student group');
       router.replace('/(student)');
     }
   }, [user, profile, loading, segments]);

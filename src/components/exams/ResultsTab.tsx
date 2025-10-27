@@ -50,7 +50,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
             setRefreshing(true);
             try {
                 await onRefresh();
-                console.log('✅ Results tab refreshed successfully');
+                // console.log('✅ Results tab refreshed successfully');
             } catch (error) {
                 console.error('❌ Error refreshing results:', error);
             } finally {
@@ -62,7 +62,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     // Only reset subject when class actually changes (not on every render)
     useEffect(() => {
         if (previousClassRef.current !== undefined && previousClassRef.current !== selectedClass) {
-            console.log('🔄 ResultsTab: Class changed from', previousClassRef.current, 'to:', selectedClass);
+            // console.log('🔄 ResultsTab: Class changed from', previousClassRef.current, 'to:', selectedClass);
             setRefreshKey(prev => prev + 1);
             setSelectedSubject('all');
         }

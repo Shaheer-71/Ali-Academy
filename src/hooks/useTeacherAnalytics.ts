@@ -34,11 +34,6 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                 setLoading(true);
                 setError(null);
 
-                console.log('=== Starting Teacher Analytics Fetch ===');
-                console.log('Profile ID:', profileId);
-                console.log('Selected Class:', selectedClass);
-
-                console.log('Step 1: Fetching classes...');
                 const { data: classesData, error: classesError } = await supabase
                     .from('classes')
                     .select('*')
@@ -51,11 +46,9 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                 }
 
                 const teacherClasses = (classesData || []) as Class[];
-                console.log('Teacher classes found:', teacherClasses);
                 setClasses(teacherClasses);
 
                 if (teacherClasses.length === 0) {
-                    console.log('No classes found for this teacher');
                     setError('No classes assigned to you yet.');
                     setStudentPerformances([]);
                     setClassAnalytics([]);
@@ -77,7 +70,6 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     }
                 }
 
-                console.log('Step 2: Class IDs to analyze:', classIds);
 
                 if (classIds.length === 0) {
                     setStudentPerformances([]);
@@ -87,7 +79,6 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                 }
 
                 // Step 3: Fetch students from selected classes - FIXED TYPE HANDLING
-                console.log('Step 3: Fetching students...');
                 const { data: studentsRaw, error: studentsError } = await supabase
                     .from('students')
                     .select(`
@@ -117,10 +108,8 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     }
                 })) || [] as StudentWithClass[];
 
-                console.log('Students found:', students.length, students);
 
                 if (students.length === 0) {
-                    console.log('No students found in selected classes');
                     setStudentPerformances([]);
                     setClassAnalytics([]);
                     setLoading(false);
@@ -128,11 +117,9 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                 }
 
                 // Step 4: Fetch performance data for each student
-                console.log('Step 4: Fetching performance data...');
                 const performanceData: StudentPerformance[] = [];
 
                 for (const student of students) {
-                    console.log(`Fetching data for student: ${student.full_name}`);
                     
                     try {
                         // Get attendance for this student
@@ -181,7 +168,6 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                         };
 
                         performanceData.push(studentPerformance);
-                        console.log(`Performance for ${student.full_name}:`, studentPerformance);
 
                     } catch (studentError) {
                         console.error(`Error fetching data for student ${student.full_name}:`, studentError);
@@ -199,11 +185,9 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     }
                 }
 
-                console.log('All performance data:', performanceData);
                 setStudentPerformances(performanceData);
 
                 // Step 5: Calculate class analytics
-                console.log('Step 5: Calculating class analytics...');
                 const analyticsData: ClassAnalytics[] = [];
 
                 for (const classId of classIds) {
@@ -234,13 +218,10 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     };
 
                     analyticsData.push(classAnalytic);
-                    console.log(`Analytics for ${className}:`, classAnalytic);
                 }
 
-                console.log('All class analytics:', analyticsData);
                 setClassAnalytics(analyticsData);
 
-                console.log('=== Teacher Analytics Fetch Complete ===');
 
             } catch (err) {
                 console.error('Error in fetchAllData:', err);

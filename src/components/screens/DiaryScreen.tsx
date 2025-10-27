@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -44,7 +45,7 @@ interface DiaryAssignment {
 }
 
 export default function DiaryScreen() {
-  const { profile } = useAuth();
+  const { profile, student } = useAuth();
   const { colors } = useTheme();
   const [assignments, setAssignments] = useState<DiaryAssignment[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -53,6 +54,7 @@ export default function DiaryScreen() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   // Form states
   const [newAssignment, setNewAssignment] = useState({
@@ -77,22 +79,26 @@ export default function DiaryScreen() {
       let query = supabase
         .from('diary_assignments')
         .select(`
-          *,
-          classes (name),
-          students (full_name)
-        `)
+        *,
+        classes (name),
+        students (full_name)
+      `)
         .order('created_at', { ascending: false });
-
-      // Filter based on user role
-      if (profile?.role !== 'teacher') {
-        // For students/parents, show only their assignments
-        // This would need additional logic to determine student's assignments
-      }
 
       const { data, error } = await query;
 
       if (error) throw error;
-      setAssignments(data || []);
+
+      let filteredData = data || [];
+
+      // 🧠 Filter for students
+      if (profile?.role === "student" && student?.class_id && student?.id) {
+        filteredData = filteredData.filter(item =>
+          item.class_id === student.class_id || item.student_id === student.id
+        );
+      }
+
+      setAssignments(filteredData);
     } catch (error) {
       console.error('Error fetching assignments:', error);
     } finally {
@@ -124,7 +130,7 @@ export default function DiaryScreen() {
 
       if (error) throw error;
       setStudents(data || []);
-      console.log("hello " , students)
+      console.log("hello ", students)
     } catch (error) {
       console.error('Error fetching students:', error);
     }
@@ -268,10 +274,24 @@ export default function DiaryScreen() {
     return new Date(dueDate) < new Date();
   };
 
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await fetchAssignments();
+      if (profile?.role === 'teacher') {
+        await fetchClasses();
+      }
+    } catch (error) {
+      console.error('Error refreshing:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TopSections />
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right' , 'bottom']}>
 
         <View style={styles.searchContainer}>
           <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -295,7 +315,23 @@ export default function DiaryScreen() {
         </View>
 
         {/* Assignments List */}
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 50 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+              title="Refreshing assignments..."
+              titleColor={colors.textSecondary}
+            />
+          }
+        >
+
+
           {loading ? (
             <View style={styles.loadingContainer}>
               <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading assignments...</Text>
@@ -339,14 +375,19 @@ export default function DiaryScreen() {
                         {assignment.class_id ? (
                           <View style={styles.detailItem}>
                             <Users size={14} color={colors.textSecondary} />
-                            <Text style={[styles.detailText, { color: colors.textSecondary }]}>{assignment.classes?.name}</Text>
+                            <Text style={[styles.detailText, { color: colors.textSecondary }]}>
+                              {assignment.classes?.name}
+                            </Text>
                           </View>
                         ) : (
                           <View style={styles.detailItem}>
                             <User size={14} color={colors.textSecondary} />
-                            <Text style={[styles.detailText, { color: colors.textSecondary }]}>{assignment.students?.full_name}</Text>
+                            <Text style={[styles.detailText, { color: colors.textSecondary }]}>
+                              {profile?.role === 'student' ? 'To You' : 'To You'}
+                            </Text>
                           </View>
                         )}
+
                       </View>
                     </View>
                   </View>
@@ -559,7 +600,7 @@ export default function DiaryScreen() {
           </Modal>
         )}
       </SafeAreaView>
-    </View>
+    </View >
   );
 }
 
@@ -585,7 +626,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft : 5
+    marginLeft: 5
   },
   scrollView: {
     flex: 1,

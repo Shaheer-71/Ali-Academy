@@ -153,7 +153,7 @@ export default function TopSection({ showNotifications = false }: TopSectionProp
 
             {/* Notifications Modal */}
             <Modal
-                animationType="slide"
+                animationType="fade"
                 transparent
                 visible={notificationsVisible}
                 onRequestClose={() => setNotificationsVisible(false)}

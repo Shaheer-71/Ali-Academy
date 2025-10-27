@@ -289,7 +289,6 @@ class LectureService {
 
         const subjectIds = mapping.map(m => m.subject_id);
 
-        console.log("Subject IDs:", subjectIds);
 
         // Step 2: fetch subjects by id
         const { data: subjects, error: subjectError } = await supabase
@@ -299,7 +298,6 @@ class LectureService {
 
         if (subjectError) throw subjectError;
 
-        console.log("Subjects:", subjects);
 
         return subjects || [];
     }

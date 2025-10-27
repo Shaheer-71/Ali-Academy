@@ -9,6 +9,20 @@ export interface UserProfile {
   contact_number?: string;
 }
 
+export interface StudentProfile {
+  id: string;
+  full_name: string;
+  roll_number: string;
+  class_id: string;
+  email?: string;
+  student_status?: 'active' | 'inactive' | null;
+  gender?: 'male' | 'female' | 'other' | null;
+  admission_date?: string | null;
+  date_of_birth?: string | null;
+  is_active?: boolean | null;
+}
+
+
 export const signIn = async (email: string, password: string) => {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -187,7 +201,6 @@ export const completeStudentRegistration = async (email: string, password: strin
       throw new Error('Failed to create user account');
     }
 
-    console.log('Auth user created:', authData.user.id);
 
     // Update student record to mark as registered and link to auth user
     const { error: updateError } = await supabase

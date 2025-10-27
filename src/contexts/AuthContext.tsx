@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
-import { UserProfile } from '@/src/lib/auth';
+import { UserProfile, StudentProfile } from '@/src/lib/auth';
 
 interface AuthContextType {
   user: any;
   profile: UserProfile | null;
+  student: StudentProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -23,8 +24,10 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [student, setStudent] = useState<StudentProfile | any>(null);
   const [loading, setLoading] = useState(true);
   const [profileFetched, setProfileFetched] = useState(false); // prevent infinite fetch
+  const [profileStudentFetched, setProfileStudentFetched] = useState(false); // prevent infinite fetch
 
   // Fetch user session on mount
   useEffect(() => {
@@ -73,6 +76,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchProfile();
   }, [user, profileFetched]);
 
+  useEffect(() => {
+    const fetchStudentInfo = async () => {
+
+      if (!profile) {
+        console.log('⏩ No profile found yet, skipping student fetch.');
+        return;
+      }
+
+      if (profile.role?.toLowerCase() !== 'student') {
+        console.log(`⏩ Role is not "student" (actual: ${profile.role}), skipping student fetch.`);
+        return;
+      }
+
+      if (profileStudentFetched) {
+        console.log('⏩ Student data already fetched once, skipping.');
+        return;
+      }
+
+      try {
+        setLoading(true);
+        
+        const { data, error } = await supabase
+          .from('students')
+          .select('*')
+          .eq('id', profile.id)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data) {
+          console.warn('⚠️ No student record found for email:', profile.email);
+        } else {
+          console.log('✅ Student data fetched:', data);
+        }
+
+        setStudent(data);
+        setProfileStudentFetched(true);
+      } catch (error) {
+        console.error('🔥 Error fetching student info:', error);
+        setStudent(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudentInfo();
+  }, [profile, profileStudentFetched]);
+
+
+
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
@@ -91,6 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         profile,
+        student,
         loading,
         signIn,
         signOut,

@@ -22,7 +22,7 @@ import UploadLectureModal from '@/src/components/lectures/UploadLectureModal';
 import TopSection from '../common/TopSections';
 
 export default function LecturesScreen() {
-  const { profile } = useAuth();
+  const { profile, student } = useAuth();
   const { colors } = useTheme();
 
   // State
@@ -41,28 +41,48 @@ export default function LecturesScreen() {
 
   // Filter lectures when search changes
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredLectures(lectures);
-      return;
+    if (!lectures.length) return;
+
+    let updatedLectures = [...lectures];
+
+    // 👩‍🎓 If student, only show lectures of their class
+    if (profile?.role === "student" && student?.class_id) {
+      updatedLectures = updatedLectures.filter(
+        item => item.class_id === student.class_id
+      );
     }
 
-    const query = searchQuery.toLowerCase();
-    const filtered = lectures.filter(lecture =>
-      lecture.title.toLowerCase().includes(query) ||
-      lecture.description?.toLowerCase().includes(query) ||
-      lecture.classes?.name.toLowerCase().includes(query) ||
-      lecture.subjects?.name.toLowerCase().includes(query)
-    );
-    setFilteredLectures(filtered);
-  }, [searchQuery, lectures]);
+    // 🔍 If search query is entered, filter further
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      updatedLectures = updatedLectures.filter(
+        lecture =>
+          lecture.title?.toLowerCase().includes(query) ||
+          lecture.description?.toLowerCase().includes(query) ||
+          lecture.classes?.name?.toLowerCase().includes(query) ||
+          lecture.subjects?.name?.toLowerCase().includes(query)
+      );
+      console.log("🔍 After search filter:", updatedLectures.length);
+    }
+
+    setFilteredLectures(updatedLectures);
+  }, [lectures, searchQuery, profile, student]);
 
   const loadLectures = async () => {
     if (!profile) return;
 
     try {
       const data = await lectureService.fetchLectures({ userId: profile.id });
-      setLectures(data);
-      setFilteredLectures(data);
+
+      let filteredData = data;
+
+      // 👩‍🎓 If student, only keep their class lectures
+      if (profile.role === "student" && student?.class_id) {
+        filteredData = data.filter(item => item.class_id === student.class_id);
+      }
+
+      setLectures(filteredData);
+      setFilteredLectures(filteredData);
     } catch (error) {
       Alert.alert('Error', 'Failed to load lectures');
     } finally {
@@ -75,9 +95,6 @@ export default function LecturesScreen() {
     setRefreshing(true);
     loadLectures();
   }, [profile]);
-
-  console.log("Hello : " , process.env.EXPO_CLOUD_NAME)
-  console.log("Hello : " , process.env.EXPO_UPLOAD_PRESET)
 
 
   const renderEmpty = () => (
@@ -99,82 +116,82 @@ export default function LecturesScreen() {
   );
 
   return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
       <TopSection />
 
-        <View style={styles.header}>
+      <View style={styles.header}>
 
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-              <Search size={20} color={colors.textSecondary} />
-              <TextInput
-                style={[styles.searchInput, { color: colors.text }]}
-                placeholder="Search lectures..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholderTextColor={colors.textSecondary}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <X size={20} color={colors.textSecondary} />
-                </TouchableOpacity>
-              )}
-            </View>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Search size={20} color={colors.textSecondary} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Search lectures..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor={colors.textSecondary}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
 
-            {/* <TouchableOpacity
+          {/* <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
             onPress={() => setFilterModalVisible(true)}
           >
             <Filter size={20} color={colors.primary} />
           </TouchableOpacity> */}
 
-            {profile?.role === 'teacher' && (
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.primary }]}
-                onPress={() => setUploadModalVisible(true)}
-              >
-                <Plus size={20} color="white" />
-              </TouchableOpacity>
-            )}
-          </View>
-
+          {profile?.role === 'teacher' && (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.primary }]}
+              onPress={() => setUploadModalVisible(true)}
+            >
+              <Plus size={20} color="white" />
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Lectures List */}
-        <FlatList
-          data={filteredLectures}
-          renderItem={renderLecture}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
-          // ListEmptyComponent={!loading ? renderEmpty : null}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-            />
-          }
-          showsVerticalScrollIndicator={false}
-        />
+      </View>
 
-        {/* Upload Button (Teachers Only) */}
-        {profile?.role === 'teacher' && (
-          <TouchableOpacity
-            style={[styles.fab, { backgroundColor: colors.primary }]}
-            onPress={() => setUploadModalVisible(true)}
-          >
-            <Plus size={24} color="white" />
-          </TouchableOpacity>
-        )}
+      {/* Lectures List */}
+      <FlatList
+        data={filteredLectures}
+        renderItem={renderLecture}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.listContent}
+        // ListEmptyComponent={!loading ? renderEmpty : null}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      />
 
-        {/* Upload Modal */}
-        <UploadLectureModal
-          visible={uploadModalVisible}
-          onClose={() => setUploadModalVisible(false)}
-          onSuccess={loadLectures}
-        />
-      </SafeAreaView>
+      {/* Upload Button (Teachers Only) */}
+      {profile?.role === 'teacher' && (
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={() => setUploadModalVisible(true)}
+        >
+          <Plus size={24} color="white" />
+        </TouchableOpacity>
+      )}
+
+      {/* Upload Modal */}
+      <UploadLectureModal
+        visible={uploadModalVisible}
+        onClose={() => setUploadModalVisible(false)}
+        onSuccess={loadLectures}
+      />
+    </SafeAreaView>
 
   );
 }

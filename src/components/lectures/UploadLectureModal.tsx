@@ -50,7 +50,6 @@ export default function UploadLectureModal({
     const [students, setStudents] = useState<Student[]>([]);
     const [isUploading, setIsUploading] = useState(false);
 
-    console.log("object : ", subjects)
 
     useEffect(() => {
         if (visible && profile) {
@@ -105,8 +104,6 @@ export default function UploadLectureModal({
                 console.error("Error fetching students:", err);
             }
 
-            console.log("SubjectsData:", subjectsData);
-            console.log("StudentsData:", studentsData);
 
             setSubjects(subjectsData);
             setStudents(studentsData);
@@ -216,7 +213,7 @@ export default function UploadLectureModal({
     };
 
     useEffect(() => {
-        console.log("Subjects state updated:", subjects);
+        // console.log("Subjects state updated:", subjects);
     }, [subjects]);
 
 

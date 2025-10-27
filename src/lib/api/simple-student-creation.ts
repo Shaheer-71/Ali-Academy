@@ -80,7 +80,6 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
             throw new Error('Student with this email already exists');
         }
 
-        console.log('Creating student record (NO auth user creation)...');
 
         // Create student record ONLY - no auth user
         const { data, error } = await supabase
@@ -115,7 +114,6 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
             throw new Error(`Failed to create student record: ${error.message}`);
         }
 
-        console.log('Student record created successfully (students table only)');
 
         return {
             success: true,

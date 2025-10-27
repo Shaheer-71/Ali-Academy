@@ -4,7 +4,6 @@ import { Database } from '@/src/types/database';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-console.log(supabaseUrl , supabaseKey)
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
 

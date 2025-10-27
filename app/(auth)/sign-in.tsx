@@ -107,7 +107,7 @@ export default function SignInScreen() {
 
     setLoading(true);
     try {
-      console.log('Attempting sign in with:', email);
+      // console.log('Attempting sign in with:', email);
       
       // Add try-catch specifically for signIn to catch parsing errors
       try {
@@ -166,26 +166,26 @@ export default function SignInScreen() {
       return;
     }
 
-    console.log('=== DEBUG SIGNIN START ===');
-    console.log('Email:', email);
-    console.log('Password length:', password.length);
+    // console.log('=== DEBUG SIGNIN START ===');
+    // console.log('Email:', email);
+    // console.log('Password length:', password.length);
     
     // First, check the Supabase URL
-    console.log('Supabase URL:', supabase.supabaseUrl);
-    console.log('Checking if URL is accessible...');
+    // console.log('Supabase URL:', supabase.supabaseUrl);
+    // console.log('Checking if URL is accessible...');
 
     try {
       // Test raw auth with better error handling
-      console.log('Testing raw auth...');
+      // console.log('Testing raw auth...');
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email.toLowerCase().trim(),
         password: password,
       });
 
       if (authError) {
-        console.log('AUTH ERROR:', authError);
-        console.log('Error type:', typeof authError);
-        console.log('Error details:', JSON.stringify(authError, null, 2));
+        // console.log('AUTH ERROR:', authError);
+        // console.log('Error type:', typeof authError);
+        // console.log('Error details:', JSON.stringify(authError, null, 2));
         Alert.alert('Auth Error', authError.message);
         return;
       }
@@ -201,22 +201,22 @@ export default function SignInScreen() {
         .single();
 
       if (profileError) {
-        console.log('PROFILE ERROR:', profileError);
+        // console.log('PROFILE ERROR:', profileError);
         Alert.alert('Profile Error', profileError.message);
         return;
       }
 
-      console.log('PROFILE SUCCESS:', profileData);
+      // console.log('PROFILE SUCCESS:', profileData);
       Alert.alert('Debug Success', `Auth and Profile working!\nUser: ${authData.user.email}\nRole: ${profileData.role}`);
 
       // Sign out after debug test
       await supabase.auth.signOut();
 
     } catch (error: any) {
-      console.log('DEBUG CATCH ERROR:', error);
-      console.log('Error name:', error.name);
-      console.log('Error message:', error.message);
-      console.log('Error stack:', error.stack);
+      // console.log('DEBUG CATCH ERROR:', error);
+      // console.log('Error name:', error.name);
+      // console.log('Error message:', error.message);
+      // console.log('Error stack:', error.stack);
       
       if (error.message && error.message.includes('JSON Parse error')) {
         Alert.alert(

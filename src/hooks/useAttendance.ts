@@ -108,7 +108,6 @@ export const useAttendance = (classId?: string) => {
     }
     
     try {
-      console.log('Fetching students for class:', classId);
       
       const { data, error } = await supabase
         .from('students')
@@ -125,7 +124,6 @@ export const useAttendance = (classId?: string) => {
 
       if (error) throw error;
       
-      console.log('Fetched students:', data);
       setStudents(data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
@@ -140,7 +138,6 @@ export const useAttendance = (classId?: string) => {
     }
 
     try {
-      console.log('Fetching attendance for date:', date, 'class:', classId);
       
       const { data, error } = await supabase
         .from('attendance')
@@ -157,8 +154,6 @@ export const useAttendance = (classId?: string) => {
 
       if (error) throw error;
 
-      console.log('Found attendance records:', data);
-
       // Convert array to object with student_id as key for easy lookup
       const todaysRecords: Record<string, AttendanceRecord> = {};
       data?.forEach(record => {
@@ -166,7 +161,6 @@ export const useAttendance = (classId?: string) => {
       });
 
       setTodaysAttendance(todaysRecords);
-      console.log('Todays attendance set:', todaysRecords);
     } catch (error) {
       console.error('Error fetching todays attendance:', error);
       setTodaysAttendance({});
@@ -509,7 +503,6 @@ export const useAttendance = (classId?: string) => {
   // Check if student has attendance marked for specific date
   const isStudentMarkedForDate = (studentId: string, date: string) => {
     const isMarked = !!todaysAttendance[studentId];
-    console.log(`Student ${studentId} marked for ${date}:`, isMarked);
     return isMarked;
   };
 

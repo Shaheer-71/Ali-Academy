@@ -167,7 +167,7 @@ export default function LectureCard({ lecture, onRefresh }: LectureCardProps) {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.background, borderColor: colors.border }]}
           onPress={handleDownload}
           disabled={isDownloading}
@@ -180,7 +180,7 @@ export default function LectureCard({ lecture, onRefresh }: LectureCardProps) {
           <Text style={[styles.actionText, { color: colors.primary }]}>
             {isDownloading ? null : lecture.has_downloaded ? 'Downloaded' : 'Download'}
           </Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <TouchableOpacity
           style={[
