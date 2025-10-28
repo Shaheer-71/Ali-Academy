@@ -1,3 +1,4 @@
+// src/components/layout/TopSection.tsx
 import React, { useState } from 'react';
 import {
     View,
@@ -6,119 +7,96 @@ import {
     TouchableOpacity,
     Modal,
     ScrollView,
+    RefreshControl,
+    ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute } from '@react-navigation/native';
-import { useRouter } from 'expo-router'; // Changed to expo-router for router.push to work
-import { Settings, Moon, Sun, Bell, X } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Settings, Moon, Sun, Bell, X, CheckCheck, Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useNotifications } from '@/src/contexts/NotificationContext';
 import { NotificationCard } from '@/src/components/common/NotificationCard';
-import { defaultTextProps } from '@/src/constants/Fonts';
-
-// Dummy notifications data
-const dummyNotifications = [
-    {
-        id: '1',
-        type: 'info' as const,
-        title: 'New Lecture Available',
-        message: 'Mathematics Chapter 5 has been uploaded to your class.',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        read: false,
-    },
-    {
-        id: '2',
-        type: 'warning' as const,
-        title: 'Assignment Due Soon',
-        message: "Physics homework is due tomorrow. Don't forget to submit!",
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-        read: false,
-    },
-    {
-        id: '3',
-        type: 'success' as const,
-        title: 'Attendance Marked',
-        message: 'Your attendance has been marked as present for today.',
-        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-        read: true,
-    },
-    {
-        id: '4',
-        type: 'info' as const,
-        title: 'Class Schedule Update',
-        message: "Tomorrow's chemistry class has been moved to 3:00 PM.",
-        timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-        read: true,
-    },
-];
 
 interface TopSectionProps {
     showNotifications?: boolean;
 }
 
-export default function TopSection({ showNotifications = false }: TopSectionProps) {
+export default function TopSection({ showNotifications = true }: TopSectionProps) {
     const route = useRoute();
     const router = useRouter();
     const { isDark, toggleTheme, colors } = useTheme();
+    const {
+        notifications,
+        unreadCount,
+        loading,
+        fetchNotifications,
+        markAsRead,
+        markAllAsRead,
+        deleteNotification,
+        clearAll,
+    } = useNotifications();
+
     const [notificationsVisible, setNotificationsVisible] = useState(false);
-    const [notifications, setNotifications] = useState(dummyNotifications);
+    const [refreshing, setRefreshing] = useState(false);
+    const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
     const screenName = route.name.charAt(0).toUpperCase() + route.name.slice(1);
-    const unreadCount = notifications.filter((n) => !n.read).length;
 
-    const handleNotificationPress = (notificationId: string) => {
-        setNotifications((prev) =>
-            prev.map((notification) =>
-                notification.id === notificationId
-                    ? { ...notification, read: true }
-                    : notification
-            )
-        );
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await fetchNotifications();
+        setRefreshing(false);
     };
 
-    const handleDismissNotification = (notificationId: string) => {
-        setNotifications((prev) =>
-            prev.filter((notification) => notification.id !== notificationId)
-        );
+    const handleNotificationPress = async (notificationId: string) => {
+        await markAsRead(notificationId);
+        // Navigate based on notification type if needed
+        const notification = notifications.find(n => n.id === notificationId);
+        if (notification?.entity_type && notification?.entity_id) {
+            setNotificationsVisible(false);
+            // Navigate to specific screen based on entity_type
+            switch (notification.entity_type) {
+                case 'lecture':
+                    router.push(`/lectures/${notification.entity_id}`);
+                    break;
+                case 'quiz':
+                    router.push(`/quizzes/${notification.entity_id}`);
+                    break;
+                case 'timetable':
+                    router.push('/timetable');
+                    break;
+                default:
+                    break;
+            }
+        }
     };
+
+    const filteredNotifications = filter === 'unread'
+        ? notifications.filter(n => !n.is_read)
+        : notifications;
 
     return (
         <SafeAreaView
             style={[styles.container, { backgroundColor: colors.background }]}
             edges={['top', 'left', 'right']}
         >
-            <View
-                style={[styles.content, { backgroundColor: colors.background }]}
-            >
+            <View style={[styles.content, { backgroundColor: colors.background }]}>
                 <Text style={[styles.title, { color: colors.text }]}>
-                    {screenName === 'Index'
-                        ? 'Home'
-                        : screenName === 'Dairy'
-                        ? 'Diary'
-                        : screenName || 'Untitled'}
+                    {screenName === 'Index' ? 'Home' : screenName === 'Dairy' ? 'Diary' : screenName || 'Untitled'}
                 </Text>
-                {/* Apply defaultTextProps to ensure consistent text rendering */}
-                {/* <Text {...defaultTextProps} style={[styles.title, { color: colors.text }]}>
-                    {screenName === 'Index'
-                        ? 'Home'
-                        : screenName === 'Dairy'
-                        ? 'Diary'
-                        : screenName || 'Untitled'}
-                </Text> */}
 
                 <View style={styles.rightSection}>
                     {showNotifications && (
                         <TouchableOpacity
-                            style={[
-                                styles.iconButton,
-                                { backgroundColor: colors.cardBackground },
-                            ]}
+                            style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
                             onPress={() => setNotificationsVisible(true)}
                         >
                             <Bell color={colors.primary} size={24} />
                             {unreadCount > 0 && (
                                 <View style={styles.notificationBadge}>
                                     <Text style={styles.badgeText}>
-                                        {unreadCount}
+                                        {unreadCount > 99 ? '99+' : unreadCount}
                                     </Text>
                                 </View>
                             )}
@@ -126,10 +104,7 @@ export default function TopSection({ showNotifications = false }: TopSectionProp
                     )}
 
                     <TouchableOpacity
-                        style={[
-                            styles.iconButton,
-                            { backgroundColor: colors.cardBackground },
-                        ]}
+                        style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
                         onPress={toggleTheme}
                     >
                         {isDark ? (
@@ -140,10 +115,7 @@ export default function TopSection({ showNotifications = false }: TopSectionProp
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={[
-                            styles.iconButton,
-                            { backgroundColor: colors.cardBackground },
-                        ]}
+                        style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
                         onPress={() => router.push('/settings')}
                     >
                         <Settings color={colors.primary} size={24} />
@@ -153,71 +125,113 @@ export default function TopSection({ showNotifications = false }: TopSectionProp
 
             {/* Notifications Modal */}
             <Modal
-                animationType="fade"
+                animationType="slide"
                 transparent
                 visible={notificationsVisible}
                 onRequestClose={() => setNotificationsVisible(false)}
             >
                 <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalContent,
-                            { backgroundColor: colors.background },
-                        ]}
-                    >
-                        <View
-                            style={[
-                                styles.modalHeader,
-                                { borderBottomColor: colors.border },
-                            ]}
-                        >
-                            <Text
-                                style={[
-                                    styles.modalTitle,
-                                    { color: colors.text },
-                                ]}
-                            >
+                    <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                        {/* Modal Header */}
+                        <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                            <Text style={[styles.modalTitle, { color: colors.text }]}>
                                 Notifications
                             </Text>
+                            <View style={styles.modalHeaderActions}>
+                                {notifications.length > 0 && (
+                                    <>
+                                        <TouchableOpacity
+                                            style={styles.headerActionButton}
+                                            onPress={markAllAsRead}
+                                        >
+                                            <CheckCheck size={20} color={colors.primary} />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={styles.headerActionButton}
+                                            onPress={clearAll}
+                                        >
+                                            <Trash2 size={20} color={colors.error} />
+                                        </TouchableOpacity>
+                                    </>
+                                )}
+                                <TouchableOpacity
+                                    style={styles.closeButton}
+                                    onPress={() => setNotificationsVisible(false)}
+                                >
+                                    <X size={24} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* Filter Tabs */}
+                        <View style={[styles.filterContainer, { backgroundColor: colors.cardBackground }]}>
                             <TouchableOpacity
-                                style={styles.closeButton}
-                                onPress={() => setNotificationsVisible(false)}
+                                style={[
+                                    styles.filterTab,
+                                    filter === 'all' && { backgroundColor: colors.primary }
+                                ]}
+                                onPress={() => setFilter('all')}
                             >
-                                <X size={24} color={colors.textSecondary} />
+                                <Text style={[
+                                    styles.filterText,
+                                    { color: filter === 'all' ? '#fff' : colors.textSecondary }
+                                ]}>
+                                    All
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.filterTab,
+                                    filter === 'unread' && { backgroundColor: colors.primary }
+                                ]}
+                                onPress={() => setFilter('unread')}
+                            >
+                                <Text style={[
+                                    styles.filterText,
+                                    { color: filter === 'unread' ? '#fff' : colors.textSecondary }
+                                ]}>
+                                    Unread ({unreadCount})
+                                </Text>
                             </TouchableOpacity>
                         </View>
 
-                        <ScrollView style={styles.notificationsList}>
-                            {notifications.length === 0 ? (
+                        {/* Notifications List */}
+                        <ScrollView
+                            style={styles.notificationsList}
+                            refreshControl={
+                                <RefreshControl
+                                    refreshing={refreshing}
+                                    onRefresh={handleRefresh}
+                                    colors={[colors.primary]}
+                                />
+                            }
+                            showsVerticalScrollIndicator={false}
+                        >
+                            {loading && !refreshing ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="large" color={colors.primary} />
+                                </View>
+                            ) : filteredNotifications.length === 0 ? (
                                 <View style={styles.emptyNotifications}>
-                                    <Bell
-                                        size={48}
-                                        color={colors.textSecondary}
-                                    />
-                                    <Text
-                                        style={[
-                                            styles.emptyText,
-                                            { color: colors.textSecondary },
-                                        ]}
-                                    >
-                                        No notifications
+                                    <Bell size={48} color={colors.textSecondary} />
+                                    <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                                        {filter === 'unread'
+                                            ? "You're all caught up!"
+                                            : "No notifications yet"}
+                                    </Text>
+                                    <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
+                                        {filter === 'unread'
+                                            ? "Check the 'All' tab for read notifications"
+                                            : "We'll notify you when something important happens"}
                                     </Text>
                                 </View>
                             ) : (
-                                notifications.map((notification) => (
+                                filteredNotifications.map((notification) => (
                                     <NotificationCard
                                         key={notification.id}
                                         notification={notification}
-                                        onPress={() =>
-                                            handleNotificationPress(
-                                                notification.id
-                                            )
-                                        }
-                                        onDismiss={() =>
-                                            handleDismissNotification(
-                                                notification.id
-                                            )
-                                        }
+                                        onPress={() => handleNotificationPress(notification.id)}
+                                        onDismiss={() => deleteNotification(notification.id)}
                                     />
                                 ))
                             )}
@@ -264,12 +278,13 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: -2,
         right: -2,
-        width: 18,
+        minWidth: 18,
         height: 18,
         backgroundColor: '#EF4444',
         borderRadius: 9,
         alignItems: 'center',
         justifyContent: 'center',
+        paddingHorizontal: 4,
     },
     badgeText: {
         fontSize: 10,
@@ -284,7 +299,8 @@ const styles = StyleSheet.create({
     modalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '80%',
+        maxHeight: '85%',
+        minHeight: '60%',
     },
     modalHeader: {
         flexDirection: 'row',
@@ -299,15 +315,49 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontFamily: 'Inter-SemiBold',
     },
+    modalHeaderActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    headerActionButton: {
+        width: 32,
+        height: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     closeButton: {
         width: 32,
         height: 32,
         alignItems: 'center',
         justifyContent: 'center',
     },
+    filterContainer: {
+        flexDirection: 'row',
+        padding: 4,
+        marginHorizontal: 24,
+        marginTop: 16,
+        marginBottom: 8,
+        borderRadius: 12,
+    },
+    filterTab: {
+        flex: 1,
+        paddingVertical: 8,
+        alignItems: 'center',
+        borderRadius: 8,
+    },
+    filterText: {
+        fontSize: 14,
+        fontFamily: 'Inter-Medium',
+    },
     notificationsList: {
         paddingHorizontal: 24,
         paddingVertical: 16,
+    },
+    loadingContainer: {
+        paddingVertical: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     emptyNotifications: {
         alignItems: 'center',
@@ -317,5 +367,12 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontFamily: 'Inter-Regular',
         marginTop: 16,
+    },
+    emptySubText: {
+        fontSize: 14,
+        fontFamily: 'Inter-Regular',
+        marginTop: 8,
+        textAlign: 'center',
+        paddingHorizontal: 32,
     },
 });

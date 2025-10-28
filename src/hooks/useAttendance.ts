@@ -365,6 +365,61 @@ export const useAttendance = (classId?: string) => {
 
       if (error) throw error;
 
+          // 2️⃣ Filter late or absent students
+    const affectedStudents = attendanceData.filter(
+      r => r.status === 'late' || r.status === 'absent'
+    );
+
+    // 3️⃣ Create notifications for each affected student
+    if (affectedStudents.length > 0) {
+      // Insert notifications and link recipients
+      for (const record of affectedStudents) {
+        const { data: notification, error: notifError } = await supabase
+          .from('notifications')
+          .upsert([
+            {
+              type: 'attendance_alert',
+              title:
+                record.status === 'late'
+                  ? 'Late Attendance Alert'
+                  : 'Absence Alert',
+              message:
+                record.status === 'late'
+                  ? `You were marked late on ${date}. Please be punctual next time.`
+                  : `You were marked absent on ${date}. Please contact your instructor.`,
+              entity_type: 'attendance',
+              entity_id: record.class_id,
+              created_by: profile!.id,
+              target_type: 'individual',
+              target_id: record.student_id,
+              priority: record.status === 'absent' ? 'high' : 'medium',
+            },
+          ])
+          .select('id')
+          .single();
+
+        if (notifError) {
+          console.error('Error creating notification:', notifError);
+          continue;
+        }
+
+        // 4️⃣ Link to notification_recipients
+        const { error: recipientError } = await supabase
+          .from('notification_recipients')
+          .upsert([
+            {
+              notification_id: notification.id,
+              user_id: record.student_id,
+              is_read: false,
+              is_deleted: false,
+            },
+          ]);
+
+        if (recipientError)
+          console.error('Error adding notification recipient:', recipientError);
+      }
+    }
+
       // Clear current attendance after posting
       setCurrentAttendance({});
       

@@ -12,6 +12,8 @@ import {
     StyleSheet
 } from 'react-native';
 import { X } from 'lucide-react-native';
+import { supabase } from '@/src/lib/supabase';
+import { useAuth } from '@/src/contexts/AuthContext';
 
 interface Subject {
     id: string;
@@ -58,6 +60,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
     getSubjectsForClass,
 }) => {
     const [creating, setCreating] = useState<boolean>(false);
+    const { profile } = useAuth();
     const [newQuiz, setNewQuiz] = useState({
         title: '',
         description: '',
@@ -116,14 +119,12 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
             return;
         }
 
-        // Validate date format
         const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (!dateRegex.test(newQuiz.scheduled_date)) {
             Alert.alert('Error', 'Please enter date in YYYY-MM-DD format');
             return;
         }
 
-        // Validate numeric fields
         const duration = parseInt(newQuiz.duration_minutes);
         const totalMarks = parseInt(newQuiz.total_marks);
         const passingMarks = parseInt(newQuiz.passing_marks);
@@ -150,21 +151,81 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                 duration_minutes: duration,
                 total_marks: totalMarks,
                 passing_marks: passingMarks,
-                quiz_type: 'quiz', // HARDCODED: Always set as 'quiz'
+                quiz_type: 'quiz',
             });
 
-            if (result.success) {
+            if (result.success && result.data) {
                 Alert.alert('Success', 'Quiz scheduled successfully');
                 setModalVisible(false);
+
+                // ✅ 1️⃣ Fetch all students in the class
+                const { data: students, error: studentError } = await supabase
+                    .from('students')
+                    .select('id')
+                    .eq('class_id', newQuiz.class_id);
+
+                if (studentError) {
+                    console.error('Error fetching students:', studentError);
+                    return;
+                }
+
+                if (!students || students.length === 0) {
+                    console.warn('No students found for class:', newQuiz.class_id);
+                    return;
+                }
+
+                // ✅ 2️⃣ Create one notification for this quiz
+                const { data: notification, error: notifError } = await supabase
+                    .from('notifications')
+                    .insert([
+                        {
+                            type: 'quiz_added',
+                            title: `${newQuiz.title} Scheduled`,
+                            message: `A new quiz has been scheduled for ${newQuiz.scheduled_date}. Prepare well!`,
+                            entity_type: 'quiz',
+                            entity_id: result.data.id, // quiz ID
+                            created_by: profile?.id, // teacher
+                            target_type: 'students',
+                            target_id: newQuiz.class_id,
+                            priority: 'high',
+                        },
+                    ])
+                    .select('id')
+                    .single();
+
+                if (notifError) {
+                    console.error('Error creating notification:', notifError);
+                    return;
+                }
+
+                // ✅ 3️⃣ Add all students as recipients
+                const recipientRows = students.map(s => ({
+                    notification_id: notification.id,
+                    user_id: s.id,
+                    is_read: false,
+                    is_deleted: false,
+                }));
+
+                const { error: recipientError } = await supabase
+                .from('notification_recipients')
+                    .insert(recipientRows);
+
+                if (recipientError) {
+                    console.error('Error adding recipients:', recipientError);
+                } else {
+                    console.log(`Notification sent to ${students.length} students`);
+                }
             } else {
                 Alert.alert('Error', result.error?.message || 'Failed to create quiz');
             }
         } catch (error: any) {
+            console.error('Error creating quiz:', error);
             Alert.alert('Error', error.message);
         } finally {
             setCreating(false);
         }
     };
+
 
     return (
         <Modal
@@ -246,8 +307,8 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                             <View style={styles.inputGroup}>
                                 <Text style={[styles.label, { color: colors.text }]}>Subject *</Text>
                                 <Text style={[styles.helperText, { color: colors.textSecondary }]}>
-                                    {newQuiz.subject_id 
-                                        ? `Selected: ${availableSubjects.find(s => s.id === newQuiz.subject_id)?.name}` 
+                                    {newQuiz.subject_id
+                                        ? `Selected: ${availableSubjects.find(s => s.id === newQuiz.subject_id)?.name}`
                                         : `Available subjects for ${classes.find(c => c.id === newQuiz.class_id)?.name}`
                                     }
                                 </Text>
@@ -355,7 +416,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
 
                         <TouchableOpacity
                             style={[
-                                styles.submitButton, 
+                                styles.submitButton,
                                 { backgroundColor: colors.primary },
                                 (!newQuiz.class_id || !newQuiz.subject_id) && { backgroundColor: colors.textSecondary }
                             ]}

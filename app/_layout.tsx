@@ -5,13 +5,11 @@ import { useFrameworkReady } from '@/src/hooks/useFrameworkReady';
 import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
 import { LoadingProvider } from '@/src/contexts/LoadingContext';
 import { ThemeProvider } from '@/src/contexts/ThemeContext';
+import { NotificationProvider } from '@/src/contexts/NotificationContext';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
-// Import text scaling configuration to ensure consistent text sizes across devices
 import '@/src/constants/TextScaling';
-// import '@/lib/globalTextOverride';
 
-// Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
@@ -100,13 +98,17 @@ export default function RootLayout() {
     return null;
   }
 
+  
+
   return (
     <ThemeProvider>
       <AuthProvider>
-        {/* <LoadingProvider> */}
-        <RootLayoutNav />
-        <StatusBar style="auto" />
-        {/* </LoadingProvider> */}
+        <NotificationProvider>
+          {/* <LoadingProvider> */}
+          <RootLayoutNav />
+          <StatusBar style="auto" />
+          {/* </LoadingProvider> */}
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );
