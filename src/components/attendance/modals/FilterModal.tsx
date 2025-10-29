@@ -35,7 +35,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
     return (
         <Modal
-            animationType="slide"
+            animationType="fade"
             transparent={true}
             visible={visible}
             onRequestClose={onClose}

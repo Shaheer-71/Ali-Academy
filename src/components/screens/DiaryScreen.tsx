@@ -946,7 +946,7 @@ const handleCreateAssignment = async () => {
           <Modal
             visible={modalVisible}
             transparent
-            animationType="slide"
+            animationType="fade"
             onRequestClose={() => setModalVisible(false)}
           >
             <View style={styles.modalOverlay}>
@@ -1169,7 +1169,7 @@ const handleCreateAssignment = async () => {
           <Modal
             visible={editModalVisible}
             transparent
-            animationType="slide"
+            animationType="fade"
             onRequestClose={() => setEditModalVisible(false)}
           >
             <View style={styles.modalOverlay}>

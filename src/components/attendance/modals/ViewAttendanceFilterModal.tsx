@@ -169,7 +169,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
     );
 
     return (
-        <Modal visible={visible} transparent animationType="slide">
+        <Modal visible={visible} transparent animationType="fade">
             <View style={styles.overlay}>
                 <View style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
                     {/* Header */}

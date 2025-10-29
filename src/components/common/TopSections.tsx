@@ -13,8 +13,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { Settings, Moon, Sun, Bell, X, CheckCheck, Trash2 } from 'lucide-react-native';
+import { Settings, Moon, Sun, Bell, X, CheckCheck, Trash2, DollarSign } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useAuth } from '@/src/contexts/AuthContext';
 import { useNotifications } from '@/src/contexts/NotificationContext';
 import { NotificationCard } from '@/src/components/common/NotificationCard';
 
@@ -26,6 +27,7 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
     const route = useRoute();
     const router = useRouter();
     const { isDark, toggleTheme, colors } = useTheme();
+    const { profile } = useAuth();
     const {
         notifications,
         unreadCount,
@@ -42,6 +44,9 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
     const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
     const screenName = route.name.charAt(0).toUpperCase() + route.name.slice(1);
+
+    const inSettings = route.name === 'settings';
+    const inFee = route.name === 'fee';
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -103,29 +108,46 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                         </TouchableOpacity>
                     )}
 
-                    <TouchableOpacity
-                        style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
-                        onPress={toggleTheme}
-                    >
-                        {isDark ? (
-                            <Sun color={colors.primary} size={24} />
-                        ) : (
-                            <Moon color={colors.primary} size={24} />
-                        )}
-                    </TouchableOpacity>
+                    
+                    {profile?.role === 'teacher' && !inFee && (
+                        <TouchableOpacity
+                            style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
+                            onPress={() => router.push('/fee')}
+                        >
+                            <DollarSign color={colors.primary} size={24} />
+                        </TouchableOpacity>
+                    )}
 
-                    <TouchableOpacity
-                        style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
-                        onPress={() => router.push('/settings')}
-                    >
-                        <Settings color={colors.primary} size={24} />
-                    </TouchableOpacity>
+                    {/* Show dark mode toggle only on settings page */}
+                    {inSettings && (
+                        <TouchableOpacity
+                            style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
+                            onPress={toggleTheme}
+                        >
+                            {isDark ? (
+                                <Sun color={colors.primary} size={24} />
+                            ) : (
+                                <Moon color={colors.primary} size={24} />
+                            )}
+                        </TouchableOpacity>
+                    )}
+
+                    {/* Hide settings gear if already in settings */}
+                    {!inSettings && (
+                        <TouchableOpacity
+                            style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
+                            onPress={() => router.push('/settings')}
+                        >
+                            <Settings color={colors.primary} size={24} />
+                        </TouchableOpacity>
+                    )}
+
                 </View>
             </View>
 
             {/* Notifications Modal */}
             <Modal
-                animationType="slide"
+                animationType="fade"
                 transparent
                 visible={notificationsVisible}
                 onRequestClose={() => setNotificationsVisible(false)}

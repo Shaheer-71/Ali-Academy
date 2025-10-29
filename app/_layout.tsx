@@ -24,6 +24,7 @@ function RootLayoutNav() {
     const inTeacherGroup = segments[0] === '(teacher)';
     const inStudentGroup = segments[0] === '(student)';
     const inSettings = segments[0] === 'settings';
+    const inFee = segments[0] === 'fee';
 
     // console.log('Current segments:', segments);
     // console.log('User profile:', profile?.role);
@@ -37,7 +38,8 @@ function RootLayoutNav() {
     }
 
     // Allow access to settings for authenticated users - STOP HERE
-    if (inSettings) {
+    // Allow access to settings or fee screen for authenticated users - STOP HERE
+    if (inSettings || inFee) {
       console.log('User is in settings, allowing access');
       return; // This will stop the redirect
     }
@@ -74,6 +76,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(student)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
+      <Stack.Screen name="fee" options={{ headerShown: false }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );

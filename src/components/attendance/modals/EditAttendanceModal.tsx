@@ -63,7 +63,7 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
 
     return (
         <Modal
-            animationType="slide"
+            animationType="fade"
             transparent={true}
             visible={visible}
             onRequestClose={onClose}

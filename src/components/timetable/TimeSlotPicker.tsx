@@ -44,7 +44,7 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
       </TouchableOpacity>
 
       <Modal
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}

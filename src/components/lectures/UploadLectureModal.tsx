@@ -218,7 +218,7 @@ export default function UploadLectureModal({
 
 
     return (
-        <Modal visible={visible} animationType="slide" transparent>
+        <Modal visible={visible} animationType="fade" transparent>
             <View style={styles.overlay}>
                 <View style={[styles.modal, { backgroundColor: colors.background }]}>
                     {/* Header */}

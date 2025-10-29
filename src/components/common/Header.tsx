@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { Bell, Menu } from 'lucide-react-native';
+import { Bell, Menu, DollarSign } from 'lucide-react-native';
 import { TitleText, CaptionText, SmallText } from '../ConsistentText';
 
 interface HeaderProps {
@@ -32,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
           <CaptionText color="#6B7280" style={{ marginTop: 2 }}>{profile?.full_name}</CaptionText>
         </View>
       </View>
-      
+
       <View style={styles.rightSection}>
         {rightComponent || (
           showNotifications && (
@@ -45,6 +45,19 @@ export const Header: React.FC<HeaderProps> = ({
           )
         )}
       </View>
+
+      <View style={styles.leftSection}>
+        {onMenuPress && (
+          <TouchableOpacity style={styles.menuButton} onPress={onMenuPress}>
+            <Menu size={24} color="#274d71" />
+          </TouchableOpacity>
+        )}
+        <View>
+          <TitleText>{title}</TitleText>
+          <CaptionText color="#6B7280" style={{ marginTop: 2 }}>{profile?.full_name}</CaptionText>
+        </View>
+      </View>
+
     </View>
   );
 };

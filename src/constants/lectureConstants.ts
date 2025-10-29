@@ -102,7 +102,7 @@ export const LECTURE_CONSTANTS = {
 
     // Animation durations
     ANIMATIONS: {
-        MODAL_SLIDE_DURATION: 300,
+        MODAL_fade_DURATION: 300,
         FADE_DURATION: 200,
         SCALE_DURATION: 150,
     } as const,
