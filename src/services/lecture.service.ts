@@ -90,6 +90,63 @@ class LectureService {
                 uploaderId
             );
 
+            const { data: students, error: studentError } = await supabase
+                .from('students')
+                .select('id')
+                .eq('class_id', formData.class_id);
+
+            if (studentError) {
+                console.error('Error fetching students for lecture notification:', studentError);
+                return lecture;
+            }
+
+            if (!students || students.length === 0) {
+                console.warn('No students found for class:', formData.class_id);
+                return lecture;
+            }
+
+            // 5️⃣ Create a notification for lecture upload
+            const { data: notification, error: notifError } = await supabase
+                .from('notifications')
+                .insert([
+                    {
+                        type: 'lecture_added',
+                        title: `${formData.title} Uploaded`,
+                        message: `A new lecture has been uploaded for your class. Check it out!`,
+                        entity_type: 'lecture',
+                        entity_id: lecture.id,
+                        created_by: uploaderId,
+                        target_type: 'students',
+                        target_id: formData.class_id,
+                        priority: 'medium',
+                    },
+                ])
+                .select('id')
+                .single();
+
+            if (notifError) {
+                console.error('Error creating lecture notification:', notifError);
+                return lecture;
+            }
+
+            // 6️⃣ Add all class students as recipients
+            const recipientRows = students.map((s) => ({
+                notification_id: notification.id,
+                user_id: s.id,
+                is_read: false,
+                is_deleted: false,
+            }));
+
+            const { error: recipientError } = await supabase
+                .from('notification_recipients')
+                .insert(recipientRows);
+
+            if (recipientError) {
+                console.error('Error adding lecture notification recipients:', recipientError);
+            } else {
+                console.log(`Lecture notification sent to ${students.length} students`);
+            }
+
             return lecture;
         } catch (error) {
             console.error('Upload error:', error);
