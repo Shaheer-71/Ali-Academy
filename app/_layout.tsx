@@ -10,12 +10,45 @@ import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '
 import * as SplashScreen from 'expo-splash-screen';
 import '@/src/constants/TextScaling';
 
+import { registerDeviceForNotifications, setupNotificationHandlers } from '@/src/lib/notifications';
+
+
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const { user, profile, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+
+  // Setup notification handlers ONCE on mount
+  useEffect(() => {
+    console.log('📱 Setting up notification handlers...');
+    setupNotificationHandlers();
+  }, []);
+
+  // Register device when user is loaded
+  useEffect(() => {
+    console.log('🔍 Checking user state:', { user: !!user, profile: !!profile, loading });
+
+    if (loading) {
+      console.log('⏳ Still loading, skipping device registration');
+      return;
+    }
+
+    if (!user) {
+      console.log('❌ No user found, skipping device registration');
+      return;
+    }
+
+    if (!user.id) {
+      console.log('❌ User ID is missing:', user);
+      return;
+    }
+
+    console.log('✅ Registering device for user:', user.id);
+    registerDeviceForNotifications(user.id);
+  }, [user?.id, loading]); // Only depend on user.id and loading
 
   useEffect(() => {
     if (loading) return;
@@ -25,6 +58,7 @@ function RootLayoutNav() {
     const inStudentGroup = segments[0] === '(student)';
     const inSettings = segments[0] === 'settings';
     const inFee = segments[0] === 'fee';
+
 
     // console.log('Current segments:', segments);
     // console.log('User profile:', profile?.role);
@@ -67,7 +101,9 @@ function RootLayoutNav() {
       // console.log('Redirecting student to student group');
       router.replace('/(student)');
     }
+
   }, [user, profile, loading, segments]);
+
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -101,7 +137,7 @@ export default function RootLayout() {
     return null;
   }
 
-  
+
 
   return (
     <ThemeProvider>

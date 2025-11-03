@@ -32,6 +32,9 @@ import { notificationService } from '@/src/services/feeService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/src/lib/supabase';
 
+
+
+
 const MONTHS = [
     'January',
     'February',
@@ -272,6 +275,8 @@ export default function FeeScreen() {
                 priority: 'medium',
             });
 
+
+
             const recipients = recipientList.map(s => ({
                 notification_id: notif.id,
                 user_id: s.id,
@@ -288,7 +293,6 @@ export default function FeeScreen() {
             Alert.alert('Error', error.message || 'Failed to send notifications');
         }
     };
-
 
     const handleRefresh = async () => {
         setRefreshing(true);
