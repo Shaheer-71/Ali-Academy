@@ -324,7 +324,7 @@ export default function UploadLectureModal({
                             </View>
                         )}
 
-                        {/* Access Type */}
+                        {/* Access Type
                         {students.length > 0 && (
                             <View style={styles.field}>
                                 <Text style={[styles.label, { color: colors.text }]}>Access Type *</Text>
@@ -366,7 +366,7 @@ export default function UploadLectureModal({
                                     </TouchableOpacity>
                                 </View>
                             </View>
-                        )}
+                        )} */}
 
                         {/* Student Selection */}
                         {formData.access_type === 'individual' && students.length > 0 && (

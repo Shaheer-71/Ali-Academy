@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { sendPushNotification } from '../lib/notifications';
 
 interface AttendanceRecord {
   id: string;
@@ -80,7 +81,7 @@ export const useAttendance = (classId?: string) => {
         absentDays: 0,
         attendanceRate: 0,
       });
-      
+
       if (classId) {
         setLoading(true);
         fetchStudents();
@@ -106,9 +107,9 @@ export const useAttendance = (classId?: string) => {
       setLoading(false);
       return;
     }
-    
+
     try {
-      
+
       const { data, error } = await supabase
         .from('students')
         .select(`
@@ -123,7 +124,7 @@ export const useAttendance = (classId?: string) => {
         .order('roll_number');
 
       if (error) throw error;
-      
+
       setStudents(data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
@@ -138,7 +139,7 @@ export const useAttendance = (classId?: string) => {
     }
 
     try {
-      
+
       const { data, error } = await supabase
         .from('attendance')
         .select(`
@@ -173,10 +174,10 @@ export const useAttendance = (classId?: string) => {
       setLoading(false);
       return;
     }
-    
+
     try {
       setLoading(true);
-      
+
       let query = supabase
         .from('attendance')
         .select(`
@@ -256,7 +257,7 @@ export const useAttendance = (classId?: string) => {
       setAttendanceSessions([]);
       return;
     }
-    
+
     try {
       let query = supabase
         .from('attendance_sessions')
@@ -306,7 +307,7 @@ export const useAttendance = (classId?: string) => {
     status: 'present' | 'late' | 'absent',
     arrivalTime?: string
   ) => {
-    const currentTime = arrivalTime || new Date().toLocaleTimeString('en-US', { 
+    const currentTime = arrivalTime || new Date().toLocaleTimeString('en-US', {
       hour12: false,
       hour: '2-digit',
       minute: '2-digit',
@@ -342,101 +343,133 @@ export const useAttendance = (classId?: string) => {
     }));
   };
 
-  const postAttendance = async (date: string = new Date().toISOString().split('T')[0]) => {
-    if (!classId || Object.keys(currentAttendance).length === 0) {
-      throw new Error('No attendance data to post');
-    }
+const postAttendance = async (date: string = new Date().toISOString().split('T')[0]) => {
+  if (!classId || Object.keys(currentAttendance).length === 0) {
+    throw new Error('No attendance data to post');
+  }
 
-    setPosting(true);
-    try {
-      const attendanceData = Object.values(currentAttendance).map(record => ({
-        student_id: record.student_id,
-        class_id: record.class_id,
-        date: date,
-        arrival_time: record.arrival_time,
-        status: record.status,
-        late_minutes: record.late_minutes,
-        marked_by: profile!.id,
-      }));
+  setPosting(true);
 
-      const { error } = await supabase
-        .from('attendance')
-        .upsert(attendanceData, { onConflict: 'student_id,date' });
+  try {
+    console.log("📅 Posting attendance for date:", date);
+    console.log("🧑‍🏫 Current attendance data:", currentAttendance);
 
-      if (error) throw error;
+    const attendanceData = Object.values(currentAttendance).map(record => ({
+      student_id: record.student_id,
+      class_id: record.class_id,
+      date,
+      arrival_time: record.arrival_time,
+      status: record.status,
+      late_minutes: record.late_minutes,
+      marked_by: profile!.id,
+    }));
 
-          // 2️⃣ Filter late or absent students
+    console.log("🟩 Prepared attendance data:", attendanceData);
+
+    const { error: attendanceError } = await supabase
+      .from('attendance')
+      .upsert(attendanceData, { onConflict: 'student_id,date' });
+
+    if (attendanceError) throw attendanceError;
+
+    console.log("✅ Attendance saved successfully");
+
+    // Late or absent
     const affectedStudents = attendanceData.filter(
       r => r.status === 'late' || r.status === 'absent'
     );
 
-    // 3️⃣ Create notifications for each affected student
-    if (affectedStudents.length > 0) {
-      // Insert notifications and link recipients
-      for (const record of affectedStudents) {
-        const { data: notification, error: notifError } = await supabase
-          .from('notifications')
-          .upsert([
-            {
-              type: 'attendance_alert',
-              title:
-                record.status === 'late'
-                  ? 'Late Attendance Alert'
-                  : 'Absence Alert',
-              message:
-                record.status === 'late'
-                  ? `You were marked late on ${date}. Please be punctual next time.`
-                  : `You were marked absent on ${date}. Please contact your instructor.`,
-              entity_type: 'attendance',
-              entity_id: record.class_id,
-              created_by: profile!.id,
-              target_type: 'individual',
-              target_id: record.student_id,
-              priority: record.status === 'absent' ? 'high' : 'medium',
-            },
-          ])
-          .select('id')
-          .single();
+    console.log("🟨 Affected students:", affectedStudents);
 
-        if (notifError) {
-          console.error('Error creating notification:', notifError);
-          continue;
-        }
+    if (affectedStudents.length === 0) {
+      console.log("ℹ️ No students to notify");
+      return;
+    }
 
-        // 4️⃣ Link to notification_recipients
-        const { error: recipientError } = await supabase
-          .from('notification_recipients')
-          .upsert([
-            {
-              notification_id: notification.id,
-              user_id: record.student_id,
-              is_read: false,
-              is_deleted: false,
-            },
-          ]);
+    // 🔁 Iterate one by one (keeps correct mapping)
+    for (const record of affectedStudents) {
+      const notificationPayload = {
+        type: 'attendance_alert',
+        title: record.status === 'late' ? 'Late Attendance Alert' : 'Absence Alert',
+        message:
+          record.status === 'late'
+            ? `You were marked late on ${date}. Please be punctual next time.`
+            : `You were marked absent on ${date}. Please contact your instructor.`,
+        entity_type: 'attendance',
+        entity_id: record.class_id,
+        created_by: profile!.id,
+        target_type: 'individual',
+        target_id: record.student_id,
+        priority: record.status === 'absent' ? 'high' : 'medium',
+      };
 
-        if (recipientError)
-          console.error('Error adding notification recipient:', recipientError);
+      console.log("🟩 Inserting notification for student:", record.student_id);
+
+      const { data: notification, error: notifError } = await supabase
+        .from('notifications')
+        .insert([notificationPayload])
+        .select('id, target_id')
+        .single();
+
+      if (notifError) {
+        console.error("❌ Error creating notification:", notifError);
+        continue;
       }
+
+      console.log("✅ Notification inserted:", notification);
+
+      const recipientPayload = {
+        notification_id: notification.id,
+        user_id: record.student_id,
+        is_read: false,
+        is_deleted: false,
+      };
+
+      console.log("🟦 Inserting recipient:", recipientPayload);
+
+      const { error: recipientError } = await supabase
+        .from('notification_recipients')
+        .insert([recipientPayload]);
+
+      if (recipientError) {
+        console.error("❌ Error inserting recipient:", recipientError);
+        continue;
+      }
+
+      console.log("✅ Recipient added successfully for:", record.student_id);
+
+      // 📨 Send push notification
+      await sendPushNotification({
+        userId: record.student_id,
+        title:
+          record.status === 'late'
+            ? '⏰ Late Attendance Alert'
+            : '❌ Absence Alert',
+        body:
+          record.status === 'late'
+            ? `You were marked late on ${date}. Please be punctual next time.`
+            : `You were marked absent on ${date}. Please contact your instructor.`,
+        data: {
+          type: 'attendance_alert',
+          status: record.status,
+          date,
+          classId: record.class_id,
+          studentId: record.student_id,
+          notificationId: notification.id,
+          lateMinutes: record.late_minutes || 0,
+        },
+      });
     }
 
-      // Clear current attendance after posting
-      setCurrentAttendance({});
-      
-      // Refresh today's attendance and other data
-      await Promise.all([
-        onRefresh(),
-        fetchTodaysAttendance(date)
-      ]);
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Error posting attendance:', error);
-      return { success: false, error };
-    } finally {
-      setPosting(false);
-    }
-  };
+    console.log("🚀 All notifications and recipients inserted successfully");
+  } catch (err) {
+    console.error("🔥 Error posting attendance:", err);
+  } finally {
+    setPosting(false);
+  }
+};
+
+
 
   const updateAttendance = async (
     attendanceId: string,
@@ -461,7 +494,7 @@ export const useAttendance = (classId?: string) => {
         onRefresh(),
         fetchTodaysAttendance(new Date().toISOString().split('T')[0])
       ]);
-      
+
       return { success: true };
     } catch (error) {
       console.error('Error updating attendance:', error);
@@ -473,7 +506,7 @@ export const useAttendance = (classId?: string) => {
   const onRefresh = async () => {
     setRefreshing(true);
     setLoading(true);
-    
+
     try {
       if (profile?.role === 'teacher' && classId) {
         // Clear all data first
@@ -482,16 +515,16 @@ export const useAttendance = (classId?: string) => {
         setAttendanceSessions([]);
         setCurrentAttendance({});
         setTodaysAttendance({});
-        
+
         const today = new Date().toISOString().split('T')[0];
-        
+
         // Fetch fresh data in parallel
         await Promise.all([
           fetchStudents(),
           fetchAttendanceSessions(),
           fetchTodaysAttendance(today),
         ]);
-        
+
         // Fetch fresh attendance data with recalculation
         const { data: freshAttendanceData, error } = await supabase
           .from('attendance')
@@ -514,7 +547,7 @@ export const useAttendance = (classId?: string) => {
       } else if (profile?.role === 'student') {
         // Clear student data first
         setAttendanceRecords([]);
-        
+
         // Refresh all student data
         const { data: studentAttendanceData, error } = await supabase
           .from('attendance')
@@ -527,7 +560,7 @@ export const useAttendance = (classId?: string) => {
           calculateStats(studentAttendanceData);
         }
       }
-      
+
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
@@ -568,7 +601,7 @@ export const useAttendance = (classId?: string) => {
 
   const checkAttendanceForDate = async (date: string) => {
     if (!classId) return [];
-    
+
     try {
       const { data, error } = await supabase
         .from('attendance')
@@ -592,18 +625,18 @@ export const useAttendance = (classId?: string) => {
   };
 
   const getAttendanceForDateRange = (startDate: string, endDate: string) => {
-    return attendanceRecords.filter(record => 
+    return attendanceRecords.filter(record =>
       record.date >= startDate && record.date <= endDate
     );
   };
 
   const getStudentAttendanceStats = (studentId: string, startDate?: string, endDate?: string) => {
     let records = attendanceRecords.filter(r => r.student_id === studentId);
-    
+
     if (startDate) {
       records = records.filter(r => r.date >= startDate);
     }
-    
+
     if (endDate) {
       records = records.filter(r => r.date <= endDate);
     }

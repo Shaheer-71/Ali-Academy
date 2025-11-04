@@ -6,6 +6,7 @@ import { Lecture, LectureFormData } from '@/src/types/lectures';
 import * as Linking from 'expo-linking';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { sendPushNotification } from '../lib/notifications';
 
 class LectureService {
     /**
@@ -146,6 +147,41 @@ class LectureService {
             } else {
                 console.log(`Lecture notification sent to ${students.length} students`);
             }
+
+            // 7️⃣ SEND PUSH NOTIFICATIONS (like fee reminder)
+        console.log(`📱 [LECTURE_UPLOAD] Sending push notifications to ${students.length} students...`);
+        let sentCount = 0;
+        let failedCount = 0;
+
+        for (let i = 0; i < students.length; i++) {
+            const student = students[i];
+            try {
+                console.log(`📤 [LECTURE_UPLOAD] Sending to student ${i + 1}/${students.length}: ${student.full_name}`);
+
+                await sendPushNotification({
+                    userId: student.id,
+                    title: `🎥 New Lecture Uploaded`,
+                    body: `The lecture "${formData.title}" has been uploaded. Check it now!`,
+                    data: {
+                        type: 'lecture_added',
+                        notificationId: notification.id,
+                        lectureId: lecture.id,
+                        classId: formData.class_id,
+                        subjectId: formData.subject_id,
+                        studentId: student.id,
+                        studentName: student.full_name,
+                        timestamp: new Date().toISOString(),
+                    },
+                });
+
+                console.log(`✅ [LECTURE_UPLOAD] Push sent to student ${i + 1}: ${student.full_name}`);
+                sentCount++;
+            } catch (pushError) {
+                console.error(`❌ [LECTURE_UPLOAD] Failed to send push to ${student.full_name}:`, pushError);
+                failedCount++;
+                continue;
+            }
+        }
 
             return lecture;
         } catch (error) {

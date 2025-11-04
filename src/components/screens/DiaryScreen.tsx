@@ -35,6 +35,7 @@ import {
   Trash2
 } from 'lucide-react-native';
 import TopSections from '@/src/components/common/TopSections';
+import { sendPushNotification } from '@/src/lib/notifications';
 
 interface DiaryAssignment {
   id: string;
@@ -53,14 +54,14 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = -100; // How far to swipe to reveal buttons
 
 // Swipeable Assignment Card Component
-const SwipeableAssignmentCard = ({ 
-  assignment, 
-  colors, 
-  isTeacher, 
-  onEdit, 
+const SwipeableAssignmentCard = ({
+  assignment,
+  colors,
+  isTeacher,
+  onEdit,
   onDelete,
   isOverdue,
-  formatDate 
+  formatDate
 }: any) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const [isSwipeOpen, setIsSwipeOpen] = useState(false);
@@ -120,7 +121,7 @@ const SwipeableAssignmentCard = ({
       {/* Background action buttons */}
       {isTeacher && (
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: '#fff' }]}
             onPress={() => {
               closeSwipe();
@@ -129,7 +130,7 @@ const SwipeableAssignmentCard = ({
           >
             <Edit3 size={20} color="#3B82F6" />
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: '#fff' }]}
             onPress={() => {
               closeSwipe();
@@ -145,7 +146,7 @@ const SwipeableAssignmentCard = ({
       <Animated.View
         style={[
           styles.assignmentCard,
-          { 
+          {
             backgroundColor: colors.cardBackground,
             borderColor: isOverdue(assignment.due_date) ? '#FEE2E2' : colors.border,
             transform: [{ translateX }],
@@ -434,305 +435,172 @@ export default function DiaryScreen() {
     }
   };
 
-// const handleCreateAssignment = async () => {
-//   if (!newAssignment.title || !newAssignment.description || !newAssignment.due_date) {
-//     Alert.alert('Error', 'Please fill in all required fields');
-//     return;
-//   }
 
-//   if (newAssignment.assignTo === 'class' && !newAssignment.class_id) {
-//     Alert.alert('Error', 'Please select a class');
-//     return;
-//   }
-
-//   if (newAssignment.assignTo === 'student' && !newAssignment.student_id) {
-//     Alert.alert('Error', 'Please select a student');
-//     return;
-//   }
-
-//   setUploading(true);
-//   try {
-//     let fileUrl: string | undefined;
-
-//     // 📁 Upload file if provided
-//     if (newAssignment.file) {
-//       const uploadResult = await uploadToCloudinary(newAssignment.file, 'raw');
-//       fileUrl = uploadResult.secure_url;
-//     }
-
-//     // 🧾 Create assignment
-//     const assignmentData = {
-//       title: newAssignment.title,
-//       description: newAssignment.description,
-//       due_date: newAssignment.due_date,
-//       file_url: fileUrl,
-//       class_id: newAssignment.assignTo === 'class' ? newAssignment.class_id : null,
-//       student_id: newAssignment.assignTo === 'student' ? newAssignment.student_id : null,
-//       assigned_by: profile!.id,
-//     };
-
-//     const { data: assignment, error } = await supabase
-//       .from('diary_assignments')
-//       .insert([assignmentData])
-//       .select()
-//       .single();
-
-//     if (error) throw error;
-
-//     // ✅ 🔔 Create notification(s)
-//     let notificationId: string | null = null;
-
-//     if (newAssignment.assignTo === 'class' && newAssignment.class_id) {
-//       // 1️⃣ Notify all students in that class
-//       const { data: students, error: studentError } = await supabase
-//         .from('students')
-//         .select('id')
-//         .eq('class_id', newAssignment.class_id);
-
-//       if (studentError) {
-//         console.error('Error fetching class students:', studentError);
-//       } else if (students && students.length > 0) {
-//         // Insert notification
-//         const { data: notif, error: notifError } = await supabase
-//           .from('notifications')
-//           .insert([
-//             {
-//               type: 'assignment_added',
-//               title: `New Assignment: ${newAssignment.title}`,
-//               message: `A new assignment has been added for your class. Due date: ${newAssignment.due_date}.`,
-//               entity_type: 'assignment',
-//               entity_id: assignment.id,
-//               created_by: profile!.id,
-//               target_type: 'class',
-//               target_id: newAssignment.class_id,
-//               priority: 'medium',
-//             },
-//           ])
-//           .select('id')
-//           .single();
-
-//         if (notifError) {
-//           console.error('Error creating assignment notification:', notifError);
-//         } else {
-//           notificationId = notif.id;
-
-//           // Add all class students to recipients
-//           const recipientRows = students.map((s) => ({
-//             notification_id: notif.id,
-//             user_id: s.id,
-//             is_read: false,
-//             is_deleted: false,
-//           }));
-
-//           const { error: recipientError } = await supabase
-//             .from('notification_recipients')
-//             .insert(recipientRows);
-
-//           if (recipientError) {
-//             console.error('Error adding assignment recipients:', recipientError);
-//           } else {
-//             console.log(`Assignment notification sent to ${students.length} students`);
-//           }
-//         }
-//       }
-//     } else if (newAssignment.assignTo === 'student' && newAssignment.student_id) {
-//       // 2️⃣ Notify only that one student
-//       const { data: notif, error: notifError } = await supabase
-//         .from('notifications')
-//         .insert([
-//           {
-//             type: 'assignment_added',
-//             title: `Assignment: ${newAssignment.title}`,
-//             message: `You have received a new assignment. Due date: ${newAssignment.due_date}.`,
-//             entity_type: 'assignment',
-//             entity_id: assignment.id,
-//             created_by: profile!.id,
-//             target_type: 'individual',
-//             target_id: newAssignment.student_id,
-//             priority: 'medium',
-//           },
-//         ])
-//         .select('id')
-//         .single();
-
-//       if (notifError) {
-//         console.error('Error creating individual assignment notification:', notifError);
-//       } else {
-//         notificationId = notif.id;
-
-//         const { error: recipientError } = await supabase
-//           .from('notification_recipients')
-//           .insert([
-//             {
-//               notification_id: notif.id,
-//               user_id: newAssignment.student_id,
-//               is_read: false,
-//               is_deleted: false,
-//             },
-//           ]);
-
-//         if (recipientError) {
-//           console.error('Error adding student recipient:', recipientError);
-//         } else {
-//           console.log(`Assignment notification sent to student ${newAssignment.student_id}`);
-//         }
-//       }
-//     }
-
-//     // ✅ 📱 WhatsApp sending logic (your existing code)
-//     if (newAssignment.assignTo === 'class' && newAssignment.class_id) {
-//       const { data: classStudents } = await supabase
-//         .from('students')
-//         .select('full_name, parent_contact')
-//         .eq('class_id', newAssignment.class_id);
-
-//       if (classStudents) {
-//         for (const student of classStudents) {
-//           if (student.parent_contact) {
-//             const message = formatDiaryMessage(
-//               newAssignment.title,
-//               student.full_name,
-//               newAssignment.due_date
-//             );
-
-//             await sendWhatsAppMessage({
-//               to: student.parent_contact,
-//               message,
-//               type: 'diary',
-//             });
-//           }
-//         }
-//       }
-//     } else if (newAssignment.assignTo === 'student' && newAssignment.student_id) {
-//       const { data: student } = await supabase
-//         .from('students')
-//         .select('full_name, parent_contact')
-//         .eq('id', newAssignment.student_id)
-//         .single();
-
-//       if (student && student.parent_contact) {
-//         const message = formatDiaryMessage(
-//           newAssignment.title,
-//           student.full_name,
-//           newAssignment.due_date
-//         );
-
-//         // await sendWhatsAppMessage({
-//         //   to: student.parent_contact,
-//         //   message,
-//         //   type: 'diary',
-//         // });
-//       }
-//     }
-
-//     Alert.alert('Success', 'Assignment created successfully');
-//     setModalVisible(false);
-//     setNewAssignment({
-//       title: '',
-//       description: '',
-//       due_date: '',
-//       class_id: '',
-//       student_id: '',
-//       assignTo: 'class',
-//       file: null,
-//     });
-//     fetchAssignments();
-//   } catch (error: any) {
-//     Alert.alert('Error', error.message);
-//   } finally {
-//     setUploading(false);
-//   }
-// };
-
-
-
-const handleCreateAssignment = async () => {
-  if (!newAssignment.title || !newAssignment.description || !newAssignment.due_date) {
-    Alert.alert('Error', 'Please fill in all required fields');
-    return;
-  }
-
-  if (newAssignment.assignTo === 'class' && !newAssignment.class_id) {
-    Alert.alert('Error', 'Please select a class');
-    return;
-  }
-
-  if (newAssignment.assignTo === 'student' && !newAssignment.student_id) {
-    Alert.alert('Error', 'Please select a student');
-    return;
-  }
-
-  setUploading(true);
-  try {
-    console.log('🟢 Starting assignment creation...');
-    let fileUrl: string | undefined;
-
-    // 📁 Upload file if provided
-    if (newAssignment.file) {
-      console.log('Uploading file to Cloudinary...');
-      const uploadResult = await uploadToCloudinary(newAssignment.file, 'raw');
-      fileUrl = uploadResult.secure_url;
-      console.log('✅ File uploaded:', fileUrl);
+  const handleCreateAssignment = async () => {
+    if (!newAssignment.title || !newAssignment.description || !newAssignment.due_date) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
     }
 
-    // 🧾 Create assignment
-    const assignmentData = {
-      title: newAssignment.title,
-      description: newAssignment.description,
-      due_date: newAssignment.due_date,
-      file_url: fileUrl,
-      class_id: newAssignment.assignTo === 'class' ? newAssignment.class_id : null,
-      student_id: newAssignment.assignTo === 'student' ? newAssignment.student_id : null,
-      assigned_by: profile!.id,
-    };
-
-    console.log('📦 Inserting assignment data:', assignmentData);
-
-    const { data: assignment, error } = await supabase
-      .from('diary_assignments')
-      .insert([assignmentData])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('❌ Assignment insert error:', error);
-      throw error;
+    if (newAssignment.assignTo === 'class' && !newAssignment.class_id) {
+      Alert.alert('Error', 'Please select a class');
+      return;
     }
 
-    console.log('✅ Assignment created:', assignment);
+    if (newAssignment.assignTo === 'student' && !newAssignment.student_id) {
+      Alert.alert('Error', 'Please select a student');
+      return;
+    }
 
-    // ✅ 🔔 Create notification(s)
-    let notificationId: string | null = null;
+    setUploading(true);
 
-    if (newAssignment.assignTo === 'class' && newAssignment.class_id) {
-      console.log('🔔 Creating class-wide notification for class:', newAssignment.class_id);
+    try {
+      console.log('🟢 Starting assignment creation...');
+      let fileUrl: string | undefined;
 
-      // 1️⃣ Notify all students in that class
-      const { data: students, error: studentError } = await supabase
-        .from('students')
-        .select('id')
-        .eq('class_id', newAssignment.class_id);
+      // 📁 Upload file if provided
+      if (newAssignment.file) {
+        console.log('Uploading file to Cloudinary...');
+        const uploadResult = await uploadToCloudinary(newAssignment.file, 'raw');
+        fileUrl = uploadResult.secure_url;
+        console.log('✅ File uploaded:', fileUrl);
+      }
 
-      if (studentError) {
-        console.error('❌ Error fetching class students:', studentError);
-      } else if (!students || students.length === 0) {
-        console.warn('⚠️ No students found for this class');
-      } else {
-        console.log(`✅ Found ${students.length} students:`, students);
+      // 🧾 Create assignment
+      const assignmentData = {
+        title: newAssignment.title,
+        description: newAssignment.description,
+        due_date: newAssignment.due_date,
+        file_url: fileUrl,
+        class_id: newAssignment.assignTo === 'class' ? newAssignment.class_id : null,
+        student_id: newAssignment.assignTo === 'student' ? newAssignment.student_id : null,
+        assigned_by: profile!.id,
+      };
 
-        // Insert notification
+      console.log('📦 Inserting assignment data:', assignmentData);
+
+      const { data: assignment, error } = await supabase
+        .from('diary_assignments')
+        .insert([assignmentData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Assignment created:', assignment);
+
+      let notificationId: string | null = null;
+
+      // 🧩 CASE 1: Class-wide assignment
+      if (newAssignment.assignTo === 'class' && newAssignment.class_id) {
+        console.log('🔔 Creating class-wide notification for class:', newAssignment.class_id);
+
+        const { data: students, error: studentError } = await supabase
+          .from('students')
+          .select('id, full_name')
+          .eq('class_id', newAssignment.class_id);
+
+        if (studentError) {
+          console.error('❌ Error fetching class students:', studentError);
+        } else if (!students || students.length === 0) {
+          console.warn('⚠️ No students found for this class');
+        } else {
+          console.log(`✅ Found ${students.length} students in class ${newAssignment.class_id}`);
+
+          // Create notification
+          const { data: notif, error: notifError } = await supabase
+            .from('notifications')
+            .insert([
+              {
+                type: 'assignment_added',
+                title: `New Assignment: ${newAssignment.title}`,
+                message: `A new assignment has been added for your class. Due date: ${newAssignment.due_date}.`,
+                entity_type: 'assignment',
+                entity_id: assignment.id,
+                created_by: profile!.id,
+                target_type: 'students',
+                target_id: newAssignment.class_id,
+                priority: 'medium',
+              },
+            ])
+            .select('id')
+            .single();
+
+          if (notifError) {
+            console.error('❌ Error creating class assignment notification:', notifError);
+          } else {
+            notificationId = notif.id;
+            console.log('✅ Notification created with ID:', notificationId);
+
+            const recipientRows = students.map((s) => ({
+              notification_id: notif.id,
+              user_id: s.id,
+              is_read: false,
+              is_deleted: false,
+            }));
+
+            const { error: recipientError } = await supabase
+              .from('notification_recipients')
+              .insert(recipientRows);
+
+            if (recipientError) {
+              console.error('❌ Error adding assignment recipients:', recipientError);
+            } else {
+              console.log(`✅ Added ${students.length} notification recipients`);
+            }
+
+            // 📱 SEND PUSH NOTIFICATIONS
+            console.log(`📱 [ASSIGNMENT] Sending push notifications to ${students.length} students...`);
+            let sentCount = 0;
+            let failedCount = 0;
+
+            for (let i = 0; i < students.length; i++) {
+              const student = students[i];
+              try {
+                console.log(`📤 Sending to student ${i + 1}/${students.length}: ${student.full_name}`);
+                await sendPushNotification({
+                  userId: student.id,
+                  title: `📝 New Assignment: ${newAssignment.title}`,
+                  body: `A new assignment has been added. Due date: ${newAssignment.due_date}.`,
+                  data: {
+                    type: 'assignment_added',
+                    notificationId: notif.id,
+                    assignmentId: assignment.id,
+                    classId: newAssignment.class_id,
+                    studentId: student.id,
+                    studentName: student.full_name,
+                    dueDate: newAssignment.due_date,
+                    timestamp: new Date().toISOString(),
+                  },
+                });
+                sentCount++;
+              } catch (pushError) {
+                console.error(`❌ Failed to send push to ${student.full_name}:`, pushError);
+                failedCount++;
+                continue;
+              }
+            }
+
+            console.log(`📊 Push Summary: Sent ${sentCount}, Failed ${failedCount}`);
+          }
+        }
+
+        // 🧩 CASE 2: Individual student
+      } else if (newAssignment.assignTo === 'student' && newAssignment.student_id) {
+        console.log('🔔 Creating individual notification for student:', newAssignment.student_id);
+
         const { data: notif, error: notifError } = await supabase
           .from('notifications')
           .insert([
             {
               type: 'assignment_added',
-              title: `New Assignment: ${newAssignment.title}`,
-              message: `A new assignment has been added for your class. Due date: ${newAssignment.due_date}.`,
+              title: `Assignment: ${newAssignment.title}`,
+              message: `You have received a new assignment. Due date: ${newAssignment.due_date}.`,
               entity_type: 'assignment',
               entity_id: assignment.id,
               created_by: profile!.id,
-              target_type: 'students',
-              target_id: newAssignment.class_id,
+              target_type: 'individual',
+              target_id: newAssignment.student_id,
               priority: 'medium',
             },
           ])
@@ -740,102 +608,74 @@ const handleCreateAssignment = async () => {
           .single();
 
         if (notifError) {
-          console.log('❌ Error creating assignment notification:', notifError);
+          console.error('❌ Error creating individual assignment notification:', notifError);
         } else {
           notificationId = notif.id;
-          console.log('✅ Notification created:', notificationId);
+          console.log('✅ Notification created for individual student:', notificationId);
 
-          // Add all class students to recipients
-          const recipientRows = students.map((s) => ({
+          const recipientRow = {
             notification_id: notif.id,
-            user_id: s.id,
+            user_id: newAssignment.student_id,
             is_read: false,
             is_deleted: false,
-          }));
-
-          console.log('📨 Adding recipients:', recipientRows);
+          };
 
           const { error: recipientError } = await supabase
             .from('notification_recipients')
-            .insert(recipientRows);
+            .insert([recipientRow]);
 
           if (recipientError) {
-            console.log('❌ Error adding assignment recipients:', recipientError);
+            console.error('❌ Error adding recipient:', recipientError);
           } else {
-            console.log(`✅ Assignment notification sent to ${students.length} students`);
+            console.log('✅ Added recipient for single student');
+
+            // 📱 SEND PUSH NOTIFICATION
+            try {
+              await sendPushNotification({
+                userId: newAssignment.student_id,
+                title: `📝 New Assignment: ${newAssignment.title}`,
+                body: `You have a new assignment due on ${newAssignment.due_date}.`,
+                data: {
+                  type: 'assignment_added',
+                  notificationId: notif.id,
+                  assignmentId: assignment.id,
+                  studentId: newAssignment.student_id,
+                  dueDate: newAssignment.due_date,
+                  timestamp: new Date().toISOString(),
+                },
+              });
+              console.log(`✅ Push sent to student ID: ${newAssignment.student_id}`);
+            } catch (pushError) {
+              console.error('❌ Failed to send push notification:', pushError);
+            }
           }
         }
       }
-    } else if (newAssignment.assignTo === 'student' && newAssignment.student_id) {
-      console.log('🔔 Creating individual notification for student:', newAssignment.student_id);
 
-      const { data: notif, error: notifError } = await supabase
-        .from('notifications')
-        .insert([
-          {
-            type: 'assignment_added',
-            title: `Assignment: ${newAssignment.title}`,
-            message: `You have received a new assignment. Due date: ${newAssignment.due_date}.`,
-            entity_type: 'assignment',
-            entity_id: assignment.id,
-            created_by: profile!.id,
-            target_type: 'individual',
-            target_id: newAssignment.student_id,
-            priority: 'medium',
-          },
-        ])
-        .select('id')
-        .single();
+      console.log('📱 WhatsApp logic running... (unchanged)');
+      // ... existing WhatsApp logic ...
 
-      if (notifError) {
-        console.log('❌ Error creating individual assignment notification:', notifError);
-      } else {
-        notificationId = notif.id;
-        console.log('✅ Individual notification created:', notificationId);
-
-        const { error: recipientError } = await supabase
-          .from('notification_recipients')
-          .insert([
-            {
-              notification_id: notif.id,
-              user_id: newAssignment.student_id,
-              is_read: false,
-              is_deleted: false,
-            },
-          ]);
-
-        if (recipientError) {
-          console.log('❌ Error adding student recipient:', recipientError);
-        } else {
-          console.log(`✅ Assignment notification sent to student ${newAssignment.student_id}`);
-        }
-      }
+      Alert.alert('Success', 'Assignment created successfully');
+      setModalVisible(false);
+      setNewAssignment({
+        title: '',
+        description: '',
+        due_date: '',
+        class_id: '',
+        student_id: '',
+        assignTo: 'class',
+        file: null,
+      });
+      fetchAssignments();
+    } catch (error: any) {
+      console.error('🔥 Fatal Error in handleCreateAssignment:', error);
+      Alert.alert('Error', error.message);
+    } finally {
+      console.log('🟡 Upload process finished');
+      setUploading(false);
     }
+  };
 
-    // ✅ WhatsApp logic (kept same, not the issue)
-    console.log('📱 WhatsApp logic running...');
-    // ... (unchanged WhatsApp code)
-
-    Alert.alert('Success', 'Assignment created successfully');
-    setModalVisible(false);
-    setNewAssignment({
-      title: '',
-      description: '',
-      due_date: '',
-      class_id: '',
-      student_id: '',
-      assignTo: 'class',
-      file: null,
-    });
-    fetchAssignments();
-  } catch (error: any) {
-    console.log('🔥 Fatal Error in handleCreateAssignment:', error);
-    Alert.alert('Error', error.message);
-  } finally {
-    console.log('🟡 Upload process finished');
-    setUploading(false);
-  }
-};
 
 
   const formatDate = (dateString: string) => {
@@ -864,7 +704,7 @@ const handleCreateAssignment = async () => {
     }
   };
 
-  const filteredAssignments = assignments.filter(assignment => 
+  const filteredAssignments = assignments.filter(assignment =>
     assignment.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     assignment.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -1005,7 +845,7 @@ const handleCreateAssignment = async () => {
                       <TouchableOpacity
                         style={[
                           styles.assignToButton,
-                          { 
+                          {
                             backgroundColor: newAssignment.assignTo === 'class' ? colors.primary : colors.cardBackground,
                             borderColor: colors.border,
                           }
@@ -1023,7 +863,7 @@ const handleCreateAssignment = async () => {
                       <TouchableOpacity
                         style={[
                           styles.assignToButton,
-                          { 
+                          {
                             backgroundColor: newAssignment.assignTo === 'student' ? colors.primary : colors.cardBackground,
                             borderColor: colors.border,
                           }
@@ -1051,7 +891,7 @@ const handleCreateAssignment = async () => {
                               key={cls.id}
                               style={[
                                 styles.option,
-                                { 
+                                {
                                   backgroundColor: newAssignment.class_id === cls.id ? colors.primary : colors.cardBackground,
                                   borderColor: colors.border,
                                 }
@@ -1082,7 +922,7 @@ const handleCreateAssignment = async () => {
                                 key={cls.id}
                                 style={[
                                   styles.option,
-                                  { 
+                                  {
                                     backgroundColor: newAssignment.class_id === cls.id ? colors.primary : colors.cardBackground,
                                     borderColor: colors.border,
                                   }
@@ -1114,7 +954,7 @@ const handleCreateAssignment = async () => {
                                   key={student.id}
                                   style={[
                                     styles.option,
-                                    { 
+                                    {
                                       backgroundColor: newAssignment.student_id === student.id ? colors.primary : colors.cardBackground,
                                       borderColor: colors.border,
                                     }
