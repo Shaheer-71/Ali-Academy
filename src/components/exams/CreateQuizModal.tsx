@@ -14,6 +14,7 @@ import {
 import { X } from 'lucide-react-native';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { sendPushNotification } from '@/src/lib/notifications';
 
 interface Subject {
     id: string;
@@ -207,8 +208,49 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                 }));
 
                 const { error: recipientError } = await supabase
-                .from('notification_recipients')
+                    .from('notification_recipients')
                     .insert(recipientRows);
+
+                // ✅ 4️⃣ SEND PUSH NOTIFICATIONS TO ALL STUDENTS
+                console.log(`📱 [QUIZ] Sending push notifications to ${students.length} students...`);
+                let sentCount = 0;
+                let failedCount = 0;
+
+                for (let i = 0; i < students.length; i++) {
+                    const student = students[i];
+                    try {
+                        console.log(`📤 [QUIZ] Sending notification to student ${i + 1}/${students.length}...`);
+
+                        await sendPushNotification({
+                            userId: student.id,
+                            title: `📝 ${newQuiz.title}`,
+                            body: `A new quiz has been scheduled for ${newQuiz.scheduled_date}. Total marks: ${totalMarks}. Prepare well!`,
+                            data: {
+                                type: 'quiz_added',
+                                quizId: result.data.id,
+                                className: newQuiz.class_id,
+                                scheduledDate: newQuiz.scheduled_date,
+                                totalMarks: totalMarks,
+                                duration: duration,
+                                notificationId: notification.id,
+                            },
+                        });
+
+                        console.log(`✅ [QUIZ] Push notification sent to student ${i + 1}`);
+                        sentCount++;
+                    } catch (studentError) {
+                        console.error(`❌ [QUIZ] Failed to send notification to student ${i + 1}:`, studentError);
+                        failedCount++;
+                        // Continue with next student instead of stopping
+                        continue;
+                    }
+                }
+
+                console.log(`📊 [QUIZ] Push notification summary: ${sentCount} sent, ${failedCount} failed out of ${students.length} students`);
+
+                if (sentCount > 0) {
+                    console.log(`✅ [QUIZ] Successfully notified ${sentCount} students`);
+                }
 
                 if (recipientError) {
                     console.error('Error adding recipients:', recipientError);
@@ -218,6 +260,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
             } else {
                 Alert.alert('Error', result.error?.message || 'Failed to create quiz');
             }
+
         } catch (error: any) {
             console.error('Error creating quiz:', error);
             Alert.alert('Error', error.message);

@@ -1,7 +1,6 @@
 // ============================================
-// lib/notifications.ts - COMPLETE FILE
+// lib/notifications.ts - COMPLETE NOTIFICATION SYSTEM
 // ============================================
-// Copy this entire file and replace your existing one
 
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -9,29 +8,59 @@ import { supabase } from './supabase';
 import { Platform } from 'react-native';
 
 // ============================================
-// 1. SETUP NOTIFICATION HANDLERS
+// 1. SETUP NOTIFICATION HANDLERS (Foreground + Background)
 // ============================================
 export function setupNotificationHandlers() {
+    console.log('📱 [SETUP] Starting notification handler setup...');
+
     // Handle notification when app is in foreground
     Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-            shouldShowAlert: true,
-            shouldPlaySound: true,
-            shouldSetBadge: false,
-        }),
+        handleNotification: async () => {
+            console.log('🔔 [HANDLER] Notification received in foreground');
+            return {
+                shouldShowAlert: true,      // Show popup
+                shouldPlaySound: true,       // Play sound
+                shouldSetBadge: false,       // Don't update badge
+            };
+        },
     });
 
-    // Handle when user receives notification (foreground)
-    Notifications.addNotificationReceivedListener((notification) => {
-        console.log('📨 Notification received:', notification);
-    });
+    // Handle when notification is received (foreground)
+    const foregroundListener = Notifications.addNotificationReceivedListener(
+        (notification) => {
+            console.log('📨 [FOREGROUND] Notification received:', {
+                title: notification.request.content.title,
+                body: notification.request.content.body,
+                data: notification.request.content.data,
+            });
+        }
+    );
 
-    // Handle when user taps notification
-    Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log('👆 User tapped notification:', response.notification.request.content);
-    });
+    // Handle when user taps notification (foreground)
+    const tapListener = Notifications.addNotificationResponseReceivedListener(
+        (response) => {
+            console.log('👆 [TAP] User tapped notification:', {
+                title: response.notification.request.content.title,
+                body: response.notification.request.content.body,
+                data: response.notification.request.content.data,
+            });
 
-    console.log('✅ Notification handlers setup complete');
+            // You can navigate or show modal here
+            const data = response.notification.request.content.data;
+            if (data?.type === 'fee') {
+                console.log('💰 [ACTION] Navigating to fee screen for:', data.feeId);
+                // router.push(`/fee/${data.feeId}`);
+            }
+        }
+    );
+
+    console.log('✅ [SETUP] Notification handlers registered');
+
+    // Return cleanup function if needed
+    return () => {
+        foregroundListener.remove();
+        tapListener.remove();
+    };
 }
 
 // ============================================
@@ -39,46 +68,68 @@ export function setupNotificationHandlers() {
 // ============================================
 export async function registerDeviceForNotifications(userId: string) {
     try {
+        console.log('🚀 [REGISTER] Starting device registration for user:', userId);
+
         // Request permission from user
+        console.log('🔔 [PERMISSION] Requesting notification permissions...');
         const { status } = await Notifications.requestPermissionsAsync();
+        console.log('📌 [PERMISSION] Permission status:', status);
+
         if (status !== 'granted') {
-            console.log('❌ Push notification permission denied');
+            console.log('❌ [PERMISSION] Push notification permission denied');
             return;
         }
 
         // Get Expo push token
+        console.log('🎫 [TOKEN] Getting Expo push token...');
+        console.log('📦 [TOKEN] Project ID:', Constants.expoConfig?.extra?.eas?.projectId);
+
         const tokenData = await Notifications.getExpoPushTokenAsync({
             projectId: Constants.expoConfig?.extra?.eas?.projectId,
         });
         const token = tokenData.data;
 
-        console.log('📱 Push Token:', token);
+        console.log('✨ [TOKEN] Expo Push Token received:', token);
+        console.log('📱 [TOKEN] Token length:', token?.length);
 
-        // Save token to Supabase
-        const { error } = await supabase.from('devices').upsert(
-            {
-                user_id: userId,
-                token: token,
-                platform: Platform.OS,
-            },
-            {
-                onConflict: 'user_id',
-            }
-        );
-
-        if (error) {
-            console.log('❌ Error storing token:', error);
+        if (!token) {
+            console.log('❌ [TOKEN] No token received from Expo');
             return;
         }
 
-        console.log('✅ Device registered successfully');
+        // Save token to Supabase
+        console.log('💾 [SUPABASE] Saving to devices table...');
+        console.log('📋 [SUPABASE] Data:', {
+            user_id: userId,
+            token: token,
+            platform: Platform.OS,
+        });
+
+        const { data: upsertData, error } = await supabase
+            .from('devices')
+            .upsert({
+                user_id: userId,
+                token: token,
+                platform: Platform.OS,
+                updated_at: new Date().toISOString(),
+            });
+
+        console.log('📊 [SUPABASE] Upsert response:', { data: upsertData, error });
+
+        if (error) {
+            console.log('❌ [SUPABASE] Error storing token:', error.message);
+            return;
+        }
+
+        console.log('✅ [REGISTER] Device registered successfully');
     } catch (error) {
-        console.log('❌ Error registering device:', error);
+        console.log('❌ [REGISTER] CATCH Error:', error);
+        console.log('❌ [REGISTER] Error details:', JSON.stringify(error));
     }
 }
 
 // ============================================
-// 3. SEND PUSH NOTIFICATION
+// 3. SEND PUSH NOTIFICATION TO USER (SINGLE OR MULTIPLE DEVICES)
 // ============================================
 export async function sendPushNotification({
     userId,
@@ -92,40 +143,124 @@ export async function sendPushNotification({
     data?: Record<string, any>;
 }) {
     try {
-        // Get device token from Supabase
+        console.log('📤 [SEND] Starting notification send...');
+        console.log('📤 [SEND] Details:', { userId, title, body, data });
+
+        // Get ALL device tokens for this user (not just one!)
+        console.log('🔍 [SEND] Fetching device tokens from Supabase...');
         const { data: devices, error: fetchError } = await supabase
             .from('devices')
-            .select('token')
+            .select('token, platform')
+            .eq('user_id', userId);
+
+        console.log('🔍 [SEND] Fetch response:', { deviceCount: devices?.length, error: fetchError });
+
+        if (fetchError) {
+            console.log('❌ [SEND] Error fetching devices:', fetchError.message);
+            return;
+        }
+
+        if (!devices || devices.length === 0) {
+            console.log('❌ [SEND] No devices found for user:', userId);
+            return;
+        }
+
+        console.log(`✨ [SEND] Found ${devices.length} device(s) for user ${userId}`);
+
+        // Send notification to ALL devices
+        let sentCount = 0;
+        let failedCount = 0;
+
+        for (let i = 0; i < devices.length; i++) {
+            const device = devices[i];
+            console.log(`📱 [SEND] Sending to device ${i + 1}/${devices.length}:`, {
+                platform: device.platform,
+                token: device.token.substring(0, 30) + '...',
+            });
+
+            try {
+                // Call Supabase Edge Function for each device
+                const { data: result, error } = await supabase.functions.invoke(
+                    'send-notification',
+                    {
+                        body: {
+                            token: device.token,
+                            title: title,
+                            body: body,
+                            data: data,
+                        },
+                    }
+                );
+
+                if (error) {
+                    console.log(`❌ [SEND] Device ${i + 1} failed:`, error.message);
+                    failedCount++;
+                    continue;
+                }
+
+                console.log(`✅ [SEND] Device ${i + 1} success:`, result);
+                sentCount++;
+            } catch (deviceError) {
+                console.log(`❌ [SEND] Device ${i + 1} error:`, deviceError);
+                failedCount++;
+            }
+        }
+
+        console.log(`📊 [SEND] Notification summary: ${sentCount} sent, ${failedCount} failed out of ${devices.length} devices`);
+
+        if (sentCount === 0) {
+            console.log('❌ [SEND] Failed to send notification to all devices');
+            return;
+        }
+
+        console.log('✅ [SEND] Notifications sent successfully');
+    } catch (error) {
+        console.log('❌ [SEND] CATCH Error:', error);
+        console.log('❌ [SEND] Error details:', JSON.stringify(error));
+    }
+}
+
+// ============================================
+// 4. SCHEDULE LOCAL NOTIFICATION (For Testing)
+// ============================================
+export async function scheduleTestNotification(
+    delaySeconds: number = 5
+) {
+    try {
+        console.log('⏰ [TEST] Scheduling test notification in', delaySeconds, 'seconds...');
+
+        await Notifications.scheduleNotificationAsync({
+            content: {
+                title: '🧪 Test Notification',
+                body: 'This is a test notification to verify setup',
+                data: { type: 'test', timestamp: new Date().toISOString() },
+            },
+            trigger: { seconds: delaySeconds },
+        });
+
+        console.log('✅ [TEST] Test notification scheduled');
+    } catch (error) {
+        console.log('❌ [TEST] Error scheduling test notification:', error);
+    }
+}
+
+// ============================================
+// 5. GET DEVICE INFO (For Debugging)
+// ============================================
+export async function getDeviceInfo(userId: string) {
+    try {
+        console.log('🔎 [DEBUG] Fetching device info for user:', userId);
+
+        const { data, error } = await supabase
+            .from('devices')
+            .select('*')
             .eq('user_id', userId)
             .single();
 
-        if (fetchError || !devices?.token) {
-            console.log('❌ No device found for user:', userId);
-            return;
-        }
-
-        const token = devices.token;
-
-        // Call Supabase Edge Function
-        const { data: result, error } = await supabase.functions.invoke(
-            'send-notification',
-            {
-                body: {
-                    token: token,
-                    title: title,
-                    body: body,
-                    data: data,
-                },
-            }
-        );
-
-        if (error) {
-            console.log('❌ Error sending notification:', error);
-            return;
-        }
-
-        console.log('✅ Notification sent:', result);
+        console.log('🔎 [DEBUG] Device info:', { data, error });
+        return data;
     } catch (error) {
-        console.log('❌ Error in sendPushNotification:', error);
+        console.log('❌ [DEBUG] Error fetching device info:', error);
+        return null;
     }
 }

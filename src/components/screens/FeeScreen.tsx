@@ -31,6 +31,7 @@ import { classService } from '@/src/services/feeService';
 import { notificationService } from '@/src/services/feeService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/src/lib/supabase';
+import { sendPushNotification } from '@/src/lib/notifications';
 
 
 
@@ -166,69 +167,6 @@ export default function FeeScreen() {
         );
     };
 
-    // const sendFeeNotification = async (
-    //     studentIds: string[],
-    //     type: 'single' | 'all'
-    // ) => {
-    //     try {
-    //         let recipientList: any[] = [];
-
-    //         if (type === 'single') {
-    //             recipientList = students.filter(s => studentIds.includes(s.id));
-    //         } else {
-    //             // get all students in the class
-    //             const { data: allStudents } = await supabase
-    //                 .from('students')
-    //                 .select('id, full_name, parent_contact')
-    //                 .eq('class_id', selectedClass);
-
-    //             // get paid students for month/year
-    //             const { data: paidStudents } = await supabase
-    //                 .from('fee_payments')
-    //                 .select('student_id')
-    //                 .eq('class_id', selectedClass)
-    //                 .eq('month', selectedMonth)
-    //                 .eq('year', selectedYear)
-    //                 .eq('payment_status', 'paid');
-
-    //             const paidIds = new Set(paidStudents?.map(p => p.student_id) || []);
-    //             recipientList = allStudents.filter(s => !paidIds.has(s.id));
-    //         }
-
-    //         if (!recipientList.length) {
-    //             Alert.alert('Info', 'No students to notify');
-    //             return;
-    //         }
-
-    //         // ✅ target_type fixed
-    //         const notif = await notificationService.createNotification({
-    //             type: 'fee_reminder',
-    //             title: `Fee Reminder for ${MONTHS[selectedMonth - 1]}`,
-    //             message: `Please pay the fee for ${MONTHS[selectedMonth - 1]} ${selectedYear}.`,
-    //             entity_type: 'fee_payment',
-    //             created_by: profile!.id,
-    //             target_type: type === 'single' ? 'individual' : 'class',
-    //             target_id: type === 'single' ? studentIds[0] : selectedClass,
-    //             priority: 'medium',
-    //         });
-
-    //         const recipients = recipientList.map(s => ({
-    //             notification_id: notif.id,
-    //             user_id: s.id,
-    //             is_read: false,
-    //             is_deleted: false,
-    //         }));
-
-    //         await notificationService.addNotificationRecipients(recipients);
-
-    //         Alert.alert('Success', `Fee reminder sent to ${recipientList.length} student(s)`);
-    //         await loadStudentsAndFees();
-    //     } catch (error: any) {
-    //         console.error('Error sending notifications:', error);
-    //         Alert.alert('Error', error.message || 'Failed to send notifications');
-    //     }
-    // };
-
     const sendFeeNotification = async (
         studentIds: string[],
         type: 'single' | 'all'
@@ -285,6 +223,42 @@ export default function FeeScreen() {
             }));
 
             await notificationService.addNotificationRecipients(recipients);
+
+            // 📱 SEND PUSH NOTIFICATIONS TO ALL STUDENTS
+            console.log(`📱 [FEE_REMINDER] Sending push notifications to ${recipientList.length} students...`);
+            let sentCount = 0;
+            let failedCount = 0;
+
+            for (let i = 0; i < recipientList.length; i++) {
+                const student = recipientList[i];
+                try {
+                    console.log(`📤 [FEE_REMINDER] Sending to student ${i + 1}/${recipientList.length}: ${student.full_name}`);
+
+                    await sendPushNotification({
+                        userId: student.id,
+                        title: `💰 Fee Reminder - ${MONTHS[selectedMonth - 1]}`,
+                        body: `Please pay the fee for ${MONTHS[selectedMonth - 1]} ${selectedYear} to avoid any penalties.`,
+                        data: {
+                            type: 'fee_reminder',
+                            notificationId: notif.id,
+                            month: selectedMonth,
+                            year: selectedYear,
+                            monthName: MONTHS[selectedMonth - 1],
+                            studentId: student.id,
+                            studentName: student.full_name,
+                            timestamp: new Date().toISOString(),
+                        },
+                    });
+
+                    console.log(`✅ [FEE_REMINDER] Push sent to student ${i + 1}: ${student.full_name}`);
+                    sentCount++;
+                } catch (pushError) {
+                    console.error(`❌ [FEE_REMINDER] Failed to send push to student ${i + 1} (${student.full_name}):`, pushError);
+                    failedCount++;
+                    // Continue with next student instead of stopping
+                    continue;
+                }
+            }
 
             Alert.alert('Success', `Fee reminder sent to ${recipientList.length} student(s)`);
             await loadStudentsAndFees();

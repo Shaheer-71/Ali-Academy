@@ -17,6 +17,7 @@ import { supabase } from '@/src/lib/supabase';
 import { Users, ClipboardCheck, BookOpen, NotebookPen, ChartBar as BarChart3, Calendar, Bell, Sparkles, TrendingUp } from 'lucide-react-native';
 import TopSections from '@/src/components/common/TopSections';
 import AnalyticsScreen from './AnalyticsScreen';
+import NotificationTestScreen from '@/src/screens/NotificationTestScreen';
 
 interface HomeStats {
   students: number;
