@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,6 @@ import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { supabase } from '@/src/lib/supabase';
 import { uploadToCloudinary } from '@/src/lib/cloudinary';
-import { sendWhatsAppMessage, formatDiaryMessage } from '@/src/lib/whatsapp';
 import * as DocumentPicker from 'expo-document-picker';
 import {
   Plus,
@@ -36,6 +35,9 @@ import {
 } from 'lucide-react-native';
 import TopSections from '@/src/components/common/TopSections';
 import { sendPushNotification } from '@/src/lib/notifications';
+import { useFocusEffect } from '@react-navigation/native';
+import SubjectFilter from '../common/SubjectFilter';
+
 
 interface DiaryAssignment {
   id: string;
@@ -45,6 +47,7 @@ interface DiaryAssignment {
   file_url?: string;
   class_id?: string;
   student_id?: string;
+  subject_id?: string;
   created_at: string;
   classes?: { name: string };
   students?: { full_name: string };
@@ -237,6 +240,8 @@ export default function DiaryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<DiaryAssignment | null>(null);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
   // Form states
   const [newAssignment, setNewAssignment] = useState({
@@ -247,7 +252,10 @@ export default function DiaryScreen() {
     student_id: '',
     assignTo: 'class' as 'class' | 'student',
     file: null as any,
+    subject_id: '',  // ← ADD THIS
   });
+
+  console.log("object", assignments)
 
   useEffect(() => {
     fetchAssignments();
@@ -255,6 +263,92 @@ export default function DiaryScreen() {
       fetchClasses();
     }
   }, [profile]);
+
+  useEffect(() => {
+    if (profile?.role === 'student' && student?.class_id) {
+      fetchSubjects();
+    } else if (profile?.role === 'teacher') {
+      fetchTeacherSubjects();
+    }
+  }, [profile, student?.class_id]);
+
+
+  const fetchTeacherSubjects = async () => {
+    try {
+      // Get all classes the teacher is associated with
+      // Option 1: Get subjects from all classes (showing all available subjects)
+      const { data, error } = await supabase
+        .from('classes_subjects')
+        .select(`
+        subjects (
+          id,
+          name
+        )
+      `)
+        .eq('class_id', student?.class_id)
+        .order('name', { foreignTable: 'subjects' });
+
+      if (error) throw error;
+
+      // Flatten and remove duplicates
+      const uniqueSubjects = Array.from(
+        new Map(
+          data
+            ?.flatMap(item => item.subjects)
+            .filter(Boolean)
+            .map(subject => [subject.id, subject]) || []
+        ).values()
+      );
+
+      console.log('Fetched subjects for teacher:', uniqueSubjects);
+      setSubjects(uniqueSubjects);
+    } catch (error) {
+      console.error('Error fetching teacher subjects:', error);
+      setSubjects([]);
+    }
+  };
+
+  // ADD THIS FUNCTION
+  const fetchSubjects = async () => {
+    try {
+      if (!student?.class_id) {
+        console.warn('No class_id found for student');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('classes_subjects')
+        .select(`
+        subjects (
+          id,
+          name
+        )
+      `)
+        .eq('class_id', student.class_id)
+        .order('name', { foreignTable: 'subjects' });
+
+      if (error) throw error;
+
+      // Flatten nested subjects into a simple array
+      const subjectsList = data
+        ?.map(item => item.subjects)
+        .filter(Boolean) || [];
+
+      console.log('Fetched subjects for student:', subjectsList);
+      setSubjects(subjectsList);
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+      setSubjects([]);
+    }
+  };
+
+  // Automatically refresh assignments when screen becomes active
+  useFocusEffect(
+    useCallback(() => {
+      handleRefresh();
+    }, [profile])
+  );
+
 
   const fetchAssignments = async () => {
     try {
@@ -345,6 +439,7 @@ export default function DiaryScreen() {
       student_id: assignment.student_id || '',
       assignTo: assignment.class_id ? 'class' : 'student',
       file: null,
+      subject_id: assignment.subject_id || '',  // ← ADD THIS
     });
     setEditModalVisible(true);
   };
@@ -406,6 +501,7 @@ export default function DiaryScreen() {
         file_url: fileUrl,
         class_id: newAssignment.assignTo === 'class' ? newAssignment.class_id : null,
         student_id: newAssignment.assignTo === 'student' ? newAssignment.student_id : null,
+        subject_id: newAssignment.subject_id || null,  // ← ADD THIS
       };
 
       const { error } = await supabase
@@ -426,6 +522,7 @@ export default function DiaryScreen() {
         student_id: '',
         assignTo: 'class',
         file: null,
+        subject_id: '',  // ← ADD THIS
       });
       fetchAssignments();
     } catch (error: any) {
@@ -434,7 +531,6 @@ export default function DiaryScreen() {
       setUploading(false);
     }
   };
-
 
   const handleCreateAssignment = async () => {
     if (!newAssignment.title || !newAssignment.description || !newAssignment.due_date) {
@@ -474,6 +570,7 @@ export default function DiaryScreen() {
         file_url: fileUrl,
         class_id: newAssignment.assignTo === 'class' ? newAssignment.class_id : null,
         student_id: newAssignment.assignTo === 'student' ? newAssignment.student_id : null,
+        subject_id: newAssignment.subject_id || null,  // ← ADD THIS
         assigned_by: profile!.id,
       };
 
@@ -665,6 +762,7 @@ export default function DiaryScreen() {
         student_id: '',
         assignTo: 'class',
         file: null,
+        subject_id: '',  // ← ADD THIS
       });
       fetchAssignments();
     } catch (error: any) {
@@ -675,8 +773,6 @@ export default function DiaryScreen() {
       setUploading(false);
     }
   };
-
-
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -704,10 +800,21 @@ export default function DiaryScreen() {
     }
   };
 
-  const filteredAssignments = assignments.filter(assignment =>
-    assignment.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    assignment.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAssignments = assignments.filter(assignment => {
+    // Search filter
+    const matchesSearch =
+      assignment.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      assignment.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    // Subject filter for students only
+    if (profile?.role === 'student' && selectedSubject) {
+      return assignment.subject_id === selectedSubject;
+    }
+
+    return true;
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -715,7 +822,7 @@ export default function DiaryScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
 
         <View style={styles.searchContainer}>
-          <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border, marginRight: 8 }]}>
             <Search size={20} color={colors.textSecondary} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
@@ -725,6 +832,17 @@ export default function DiaryScreen() {
               placeholderTextColor={colors.textSecondary}
             />
           </View>
+
+          {profile?.role === 'student' && (
+            <SubjectFilter
+              subjects={subjects}
+              selectedSubject={selectedSubject}
+              onSubjectSelect={setSelectedSubject}
+              colors={colors}
+              loading={false}
+            />
+          )}
+
           {profile?.role === 'teacher' && (
             <TouchableOpacity
               style={[styles.addButton, { backgroundColor: colors.primary }]}
@@ -976,7 +1094,42 @@ export default function DiaryScreen() {
                     </>
                   )}
 
+                  {/* Subject Selector */}
                   <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: colors.text }]}>Select Subject</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View style={styles.options}>
+                        {subjects && subjects.length > 0 ? (
+                          subjects.map((subject) => (
+                            <TouchableOpacity
+                              key={subject.id}  // ← ENSURE THIS IS UNIQUE
+                              style={[
+                                styles.option,
+                                {
+                                  backgroundColor: newAssignment.subject_id === subject.id ? colors.primary : colors.cardBackground,
+                                  borderColor: colors.border,
+                                }
+                              ]}
+                              onPress={() => setNewAssignment(prev => ({ ...prev, subject_id: subject.id }))}
+                            >
+                              <Text style={[
+                                styles.optionText,
+                                { color: newAssignment.subject_id === subject.id ? '#ffffff' : colors.text }
+                              ]}>
+                                {subject.name}
+                              </Text>
+                            </TouchableOpacity>
+                          ))
+                        ) : (
+                          <Text style={[styles.optionText, { color: colors.textSecondary }]}>
+                            No subjects available
+                          </Text>
+                        )}
+                      </View>
+                    </ScrollView>
+                  </View>
+
+                  {/* <View style={styles.inputGroup}>
                     <Text style={[styles.label, { color: colors.text }]}>Attachment (Optional)</Text>
                     <TouchableOpacity
                       style={[styles.filePickerButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
@@ -987,7 +1140,7 @@ export default function DiaryScreen() {
                         {newAssignment.file ? newAssignment.file.name : 'Select file (PDF, Image)'}
                       </Text>
                     </TouchableOpacity>
-                  </View>
+                  </View> */}
 
                   <TouchableOpacity
                     style={[styles.submitButton, { backgroundColor: colors.primary }, uploading && styles.submitButtonDisabled]}

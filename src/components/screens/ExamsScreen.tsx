@@ -1,5 +1,5 @@
 // ExamsScreen.tsx - Updated with comprehensive filter system
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -14,6 +14,8 @@ import CreateQuizModal from '../exams/CreateQuizModal';
 import MarkingModal from '../exams/MarkingModal';
 import { ComprehensiveExamsFilterModal } from '../exams/modals/ComprehensiveExamsFilterModal';
 import { supabase } from '@/src/lib/supabase';
+import { useFocusEffect } from '@react-navigation/native';
+
 
 interface ExamFilterData {
   selectedClass: string;
@@ -247,6 +249,14 @@ export default function ExamsScreen() {
     }
   };
 
+  // Automatically refresh whenever the screen becomes active
+  useFocusEffect(
+    useCallback(() => {
+      handleRefresh();
+    }, [profile])
+  );
+
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TopSections />
@@ -315,5 +325,6 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     paddingHorizontal: 24,
+    marginTop : -10
   },
 });
