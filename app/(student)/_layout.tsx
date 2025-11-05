@@ -72,16 +72,6 @@ export default function StudentLayout() {
                 />
 
                 <Tabs.Screen
-                    name="timetable"
-                    options={{
-                        title: 'Timetable',
-                        tabBarIcon: ({ size, color }) => (
-                            <Calendar size={size} color={color} />
-                        ),
-                    }}
-                />
-
-                <Tabs.Screen
                     name="lectures"
                     options={{
                         title: 'Lectures',
@@ -107,6 +97,17 @@ export default function StudentLayout() {
                         title: 'Analytics',
                         tabBarIcon: ({ size, color }) => (
                             <BarChart3 size={size} color={color} />
+                        ),
+                    }}
+                />
+
+
+                <Tabs.Screen
+                    name="timetable"
+                    options={{
+                        title: 'Timetable',
+                        tabBarIcon: ({ size, color }) => (
+                            <Calendar size={size} color={color} />
                         ),
                     }}
                 />

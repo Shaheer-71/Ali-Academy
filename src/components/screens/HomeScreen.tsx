@@ -1,5 +1,5 @@
 // screens/HomeScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,8 @@ import { supabase } from '@/src/lib/supabase';
 import { Users, ClipboardCheck, BookOpen, NotebookPen, ChartBar as BarChart3, Calendar, Bell, Sparkles, TrendingUp } from 'lucide-react-native';
 import TopSections from '@/src/components/common/TopSections';
 import AnalyticsScreen from './AnalyticsScreen';
-import NotificationTestScreen from '@/src/screens/NotificationTestScreen';
+import { useFocusEffect } from '@react-navigation/native';
+
 
 interface HomeStats {
   students: number;
@@ -210,13 +211,11 @@ export default function HomeScreen() {
 
       // Get total assignments completed
       const { data: assignmentData } = await supabase
-        .from('quiz_results')
+        .from('diary_assignments')
         .select(`
-          id,
-          quizzes!inner(class_id)
+          *
         `)
-        .eq('student_id', studentData.id)
-        .eq('quizzes.class_id', studentData.class_id);
+        .eq('class_id', studentData.class_id);
 
       // Get total lectures available
       const { data: lecturesData } = await supabase
@@ -301,6 +300,12 @@ export default function HomeScreen() {
     await fetchData();
     setRefreshing(false);
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      onRefresh();
+    }, [profile])
+  );
 
   useEffect(() => {
     fetchData();

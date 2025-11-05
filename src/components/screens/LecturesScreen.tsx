@@ -20,6 +20,10 @@ import { Lecture } from '@/src/types/lectures';
 import LectureCard from '@/src/components/lectures/LectureCard';
 import UploadLectureModal from '@/src/components/lectures/UploadLectureModal';
 import TopSection from '../common/TopSections';
+import { useFocusEffect } from '@react-navigation/native';
+import SubjectFilter from '../common/SubjectFilter';
+import { supabase } from '@/src/lib/supabase';
+
 
 export default function LecturesScreen() {
   const { profile, student } = useAuth();
@@ -33,11 +37,43 @@ export default function LecturesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
   // Initialize
   useEffect(() => {
     loadLectures();
   }, [profile]);
+
+  useEffect(() => {
+    fetchSubjects();
+  }, []);
+
+  const fetchSubjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('classes_subjects')
+        .select(`
+                        subjects (
+                        id,
+                        name
+                        )
+                    `)
+        .eq('class_id', student?.class_id)
+        .order('name', { foreignTable: 'subjects' }); // ✅ correct way to order by related table field
+
+      if (error) throw error;
+
+      // Flatten nested subjects into a simple array
+      const subjectsList = data
+        ?.map(item => item.subjects)
+        .filter(Boolean) || [];
+
+      setSubjects(subjectsList);
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+    }
+  };
 
   // Filter lectures when search changes
   useEffect(() => {
@@ -68,6 +104,14 @@ export default function LecturesScreen() {
     setFilteredLectures(updatedLectures);
   }, [lectures, searchQuery, profile, student]);
 
+  // 🔄 Automatically refresh when the screen becomes active
+  useFocusEffect(
+    useCallback(() => {
+      onRefresh();
+    }, [profile])
+  );
+
+
   const loadLectures = async () => {
     if (!profile) return;
 
@@ -95,6 +139,40 @@ export default function LecturesScreen() {
     setRefreshing(true);
     loadLectures();
   }, [profile]);
+
+  useEffect(() => {
+    if (!lectures.length) return;
+
+    let updatedLectures = [...lectures];
+
+    // If student, only show lectures of their class
+    if (profile?.role === "student" && student?.class_id) {
+      updatedLectures = updatedLectures.filter(
+        item => item.class_id === student.class_id
+      );
+    }
+
+    // Filter by selected subject (for students only)
+    if (profile?.role === "student" && selectedSubject) {
+      updatedLectures = updatedLectures.filter(
+        lecture => lecture.subject_id === selectedSubject
+      );
+    }
+
+    // If search query is entered, filter further
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      updatedLectures = updatedLectures.filter(
+        lecture =>
+          lecture.title?.toLowerCase().includes(query) ||
+          lecture.description?.toLowerCase().includes(query) ||
+          lecture.classes?.name?.toLowerCase().includes(query) ||
+          lecture.subjects?.name?.toLowerCase().includes(query)
+      );
+    }
+
+    setFilteredLectures(updatedLectures);
+  }, [lectures, searchQuery, selectedSubject, profile, student]);
 
 
   const renderEmpty = () => (
@@ -138,6 +216,16 @@ export default function LecturesScreen() {
               </TouchableOpacity>
             )}
           </View>
+
+          {profile?.role === 'student' && (
+            <SubjectFilter
+              subjects={subjects}
+              selectedSubject={selectedSubject}
+              onSubjectSelect={setSelectedSubject}
+              colors={colors}
+              loading={false}
+            />
+          )}
 
           {/* <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
@@ -202,6 +290,8 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
+    // borderWidth : 1,
+    marginTop: -12
     // borderWidth: 1
   },
   title: {

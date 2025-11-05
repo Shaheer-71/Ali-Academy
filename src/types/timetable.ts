@@ -85,6 +85,7 @@ export interface TimetableFilters {
     teacher_id?: string;
     day?: DayOfWeek;
     search_query?: string;
+    subject_id? : string
 }
 
 export interface TimetableConflict {

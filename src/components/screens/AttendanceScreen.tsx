@@ -1,5 +1,5 @@
 // screens/AttendanceScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Text, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar, Users } from 'lucide-react-native';
@@ -20,6 +20,7 @@ import { CustomTimeModal } from '@/src/components/attendance/modals/CustomTimeMo
 import { EditAttendanceModal } from '@/src/components/attendance/modals/EditAttendanceModal';
 import { ComprehensiveFilterModal } from '@/src/components/attendance/modals/ComprehensiveFilterModal';
 import { ViewAttendanceFilterModal } from '@/src/components/attendance/modals/ViewAttendanceFilterModal';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Class {
     id: string;
@@ -738,12 +739,19 @@ export default function AttendanceScreen() {
         }
     };
 
+    // 🔄 Automatically refresh attendance data when screen becomes active
+    useFocusEffect(
+        useCallback(() => {
+            handleRefresh();
+        }, [profile, viewMode, filters, viewFilters])
+    );
+
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <TopSections />
             <SafeAreaView
                 style={[styles.container, { backgroundColor: colors.background }]}
-                edges={['left', 'right' , 'bottom']}
+                edges={['left', 'right', 'bottom']}
             >
 
                 {

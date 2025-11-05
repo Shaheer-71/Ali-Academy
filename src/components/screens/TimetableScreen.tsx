@@ -1,5 +1,5 @@
 // TimetableScreen.tsx - FIXED TYPE ISSUES
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView, ScrollView, RefreshControl, StyleSheet, Alert, View } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
@@ -11,17 +11,21 @@ import DayRow from '@/src/components/timetable/DayRow';
 import TimetableEntryModal from '@/src/components/timetable/TimetableEntryModal';
 import ErrorState from '@/src/components/timetable/ErrorState';
 import { supabase } from '@/src/lib/supabase';
-import { 
-    Class, 
+import {
+    Class,
     Subject,
-    TimetableEntryWithDetails, 
-    CreateTimetableEntry, 
-    DAYS_ORDER, 
+    TimetableEntryWithDetails,
+    CreateTimetableEntry,
+    DAYS_ORDER,
     ThemeColors
 } from '@/src/types/timetable';
+import { useFocusEffect } from '@react-navigation/native';
+import SubjectFilter from '../common/SubjectFilter';
+
+
 
 export default function TimetableScreen() {
-    const { profile } = useAuth();
+    const { profile, student } = useAuth();
     const { colors } = useTheme() as { colors: ThemeColors };
     const {
         timetable,
@@ -43,6 +47,7 @@ export default function TimetableScreen() {
     const [currentWeek, setCurrentWeek] = useState(new Date());
     const [searchQuery, setSearchQuery] = useState('');
     const [refreshing, setRefreshing] = useState(false);
+    const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
     const [newEntry, setNewEntry] = useState<Partial<CreateTimetableEntry>>({
         day: undefined,
@@ -52,6 +57,7 @@ export default function TimetableScreen() {
         room_number: '',
         class_id: '',
         teacher_id: profile?.id || '',
+
     });
 
     // Early return if no profile - this prevents type issues
@@ -80,15 +86,27 @@ export default function TimetableScreen() {
             console.error('Error fetching classes:', error);
         }
     };
-
     const fetchSubjects = async () => {
         try {
             const { data, error } = await supabase
-                .from('subjects')
-                .select('id, name')
-                .order('name');
+                .from('classes_subjects')
+                .select(`
+                        subjects (
+                        id,
+                        name
+                        )
+                    `)
+                .eq('class_id', student?.class_id)
+                .order('name', { foreignTable: 'subjects' }); // ✅ correct way to order by related table field
+
             if (error) throw error;
-            setSubjects(data || []);
+
+            // Flatten nested subjects into a simple array
+            const subjectsList = data
+                ?.map(item => item.subjects)
+                .filter(Boolean) || [];
+
+            setSubjects(subjectsList);
         } catch (error) {
             console.error('Error fetching subjects:', error);
         }
@@ -98,7 +116,7 @@ export default function TimetableScreen() {
 
     const validateEntry = () => {
         return newEntry.day && newEntry.start_time && newEntry.end_time &&
-               newEntry.subject && newEntry.room_number && newEntry.class_id;
+            newEntry.subject && newEntry.room_number && newEntry.class_id;
     };
 
     const handleAddEntry = async () => {
@@ -198,7 +216,7 @@ export default function TimetableScreen() {
 
     const handleEditEntry = (entry: TimetableEntryWithDetails) => {
         setEditingEntry(entry);
-        
+
         const formatTimeForInput = (time: string) => time.substring(0, 5);
 
         setNewEntry({
@@ -217,6 +235,15 @@ export default function TimetableScreen() {
         return <ErrorState error={error} colors={colors} refreshTimetable={refreshTimetable} />;
     }
 
+
+    // Automatically refresh timetable when screen becomes active
+    useFocusEffect(
+        useCallback(() => {
+            onRefresh();
+        }, [profile])
+    );
+
+
     const weekDates = getCurrentWeekDates();
     const isTeacher = profile.role === 'teacher';
 
@@ -224,16 +251,64 @@ export default function TimetableScreen() {
         <>
             <TopSection />
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-                <Header
-                    profile={profile}
-                    colors={colors}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    setModalVisible={setModalVisible}
-                    resetForm={resetForm}
-                    setEditingEntry={setEditingEntry}
-                />
-                {isTeacher && ( 
+
+                {/* <View style={{ flexDirection: 'row', borderWidth: 1 }}>
+                    <View style={{ flex: 1, borderWidth: 1 }}>
+                        <Header
+                            profile={profile}
+                            colors={colors}
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
+                            setModalVisible={setModalVisible}
+                            resetForm={resetForm}
+                            setEditingEntry={setEditingEntry}
+                        />
+                    </View>
+
+                    <View style={{borderWidth: 1 }}>
+                        {profile.role === 'student' && (
+                            <View style={styles.filterContainer}>
+                                <SubjectFilter
+                                    subjects={subjects}
+                                    selectedSubject={selectedSubject}
+                                    onSubjectSelect={setSelectedSubject}
+                                    colors={colors}
+                                    loading={loading}
+                                />
+                            </View>
+                        )}
+                    </View>
+                </View> */}
+
+                {/* <View style={styles.headerRow}>
+                    <View style={styles.searchContainer}>
+                        <Header
+                            profile={profile}
+                            colors={colors}
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
+                            setModalVisible={setModalVisible}
+                            resetForm={resetForm}
+                            setEditingEntry={setEditingEntry}
+                        />
+                    </View>
+
+                    {profile.role === 'student' && (
+                        <View style={styles.filterWrapper}>
+                            <SubjectFilter
+                                subjects={subjects}
+                                selectedSubject={selectedSubject}
+                                onSubjectSelect={setSelectedSubject}
+                                colors={colors}
+                                loading={loading}
+                            />
+                        </View>
+                    )}
+                </View> */}
+
+
+
+                {isTeacher && (
                     <ClassFilter
                         classes={classes}
                         filters={filters}
@@ -291,6 +366,20 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 24,
+        paddingVertical: 8,
+        gap: 8, // small spacing between search bar & filter
+        marginTop: -12
+    },
+    searchContainer: {
+        flex: 1, // takes up all available width
+    },
+    filterWrapper: {
+        flexShrink: 0, // prevents filter from expanding, takes only needed space
+    },
     scrollView: {
         flex: 1,
         paddingHorizontal: 24,
@@ -298,4 +387,11 @@ const styles = StyleSheet.create({
     timetableContainer: {
         paddingBottom: 40,
     },
+    filterContainer: {
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(0,0,0,0.05)',
+    },
 });
+
