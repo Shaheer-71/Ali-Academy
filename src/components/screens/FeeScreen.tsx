@@ -73,7 +73,7 @@ export default function FeeScreen() {
 
     // Load classes on component mount
     useEffect(() => {
-        if (profile?.role === 'teacher') {
+        if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
             initializeClasses();
         }
     }, [profile]);
@@ -304,7 +304,7 @@ export default function FeeScreen() {
                 <View style={styles.filterSection}>
                     {/* Month Selection */}
                     <View style={styles.filterGroup}>
-                        <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>
+                        <Text allowFontScaling={false} style={[styles.filterLabel, { color: colors.textSecondary }]}>
                             Month
                         </Text>
                         <ScrollView
@@ -347,7 +347,7 @@ export default function FeeScreen() {
 
                     {/* Year Selection */}
                     <View style={styles.filterGroup}>
-                        <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>
+                        <Text allowFontScaling={false} style={[styles.filterLabel, { color: colors.textSecondary }]}>
                             Year
                         </Text>
                         <View style={styles.yearSelector}>
@@ -382,7 +382,7 @@ export default function FeeScreen() {
                     </View>
 
                     {/* Class Selection */}
-                    {profile?.role === 'teacher' && classes.length > 0 && (
+                    {(profile?.role === 'teacher' || profile?.role === 'admin') && classes.length > 0 && (
                         <View style={styles.filterGroup}>
                             <Text
                                 style={[
@@ -468,17 +468,17 @@ export default function FeeScreen() {
                 >
                     {loading ? (
                         <View style={styles.loadingContainer}>
-                            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>
                                 Loading fee records...
                             </Text>
                         </View>
                     ) : students.length === 0 ? (
                         <View style={styles.emptyContainer}>
                             <DollarSign size={48} color={colors.textSecondary} />
-                            <Text style={[styles.emptyText, { color: colors.text }]}>
+                            <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>
                                 No students found
                             </Text>
-                            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>
                                 Select a class to view fee records
                             </Text>
                         </View>
@@ -488,7 +488,7 @@ export default function FeeScreen() {
                                 key={student.id}
                                 student={student}
                                 colors={colors}
-                                isTeacher={profile?.role === 'teacher'}
+                                isTeacher={(profile?.role === 'teacher' || profile?.role === 'admin')}
                                 onSelect={handleSelectStudent}
                             />
                         ))
@@ -496,7 +496,7 @@ export default function FeeScreen() {
                 </ScrollView>
 
                 {/* Notify All Button */}
-                {profile?.role === 'teacher' && students.length > 0 && (
+                {(profile?.role === 'teacher' || profile?.role === 'admin') && students.length > 0 && (
                     <View style={styles.bottomButtonContainer}>
                         <TouchableOpacity
                             style={[styles.notifyAllButton, { backgroundColor: colors.primary }]}
@@ -515,7 +515,7 @@ export default function FeeScreen() {
                             }}
                         >
                             <Bell size={20} color="#ffffff" />
-                            <Text style={styles.notifyAllButtonText}>Notify Unpaid Students</Text>
+                            <Text allowFontScaling={false} style={styles.notifyAllButtonText}>Notify Unpaid Students</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -528,7 +528,7 @@ export default function FeeScreen() {
                     feeRecords={feeRecords}
                     classId={selectedClass}
                     colors={colors}
-                    isTeacher={profile?.role === 'teacher'}
+                    isTeacher={(profile?.role === 'teacher' || profile?.role === 'admin')}
                     months={MONTHS}
                     currentMonth={selectedMonth}
                     currentYear={selectedYear}
@@ -565,11 +565,11 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, value, colors }) => (
     >
         <View style={styles.statContent}>
             {icon}
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>
                 {label}
             </Text>
         </View>
-        <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+        <Text allowFontScaling={false} style={[styles.statValue, { color: colors.text }]}>{value}</Text>
     </View>
 );
 

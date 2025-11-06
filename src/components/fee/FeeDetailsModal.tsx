@@ -112,7 +112,7 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
                             { borderBottomColor: colors.border },
                         ]}
                     >
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>
+                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>
                             {studentName}
                         </Text>
                         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -144,7 +144,7 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
                                     {currentMonthPayment?.payment_status === 'paid' && (
                                         <View style={styles.paidBadge}>
                                             <CheckCircle2 size={16} color="#10B981" />
-                                            <Text style={styles.paidBadgeText}>Paid</Text>
+                                            <Text allowFontScaling={false} style={styles.paidBadgeText}>Paid</Text>
                                         </View>
                                     )}
                                 </View>
@@ -179,7 +179,7 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
                                         disabled={creatingPayment}
                                     >
                                         <CheckCircle2 size={18} color="#ffffff" />
-                                        <Text style={styles.markPaidButtonText}>
+                                        <Text allowFontScaling={false} style={styles.markPaidButtonText}>
                                             {creatingPayment ? 'Marking...' : 'Mark as Paid'}
                                         </Text>
                                     </TouchableOpacity>
@@ -239,7 +239,7 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
 
                             {feeRecords.length === 0 ? (
                                 <View style={styles.emptyModal}>
-                                    <Text style={[styles.emptyText, { color: colors.text }]}>
+                                    <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>
                                         No payment records
                                     </Text>
                                 </View>
@@ -392,7 +392,7 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
                                 onPress={() => onSendNotification(studentId)}
                             >
                                 <Bell size={20} color="#ffffff" />
-                                <Text style={styles.sendNotificationButtonText}>
+                                <Text allowFontScaling={false} style={styles.sendNotificationButtonText}>
                                     Send Fee Notification
                                 </Text>
                             </TouchableOpacity>

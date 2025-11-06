@@ -46,7 +46,7 @@ export default function TimetableEntryModal({
     handleDeleteEntry,
     resetForm
 }: TimetableEntryModalProps) {
-    const canDelete = profile?.role === 'teacher' && editingEntry?.teacher_id === profile?.id;
+    const canDelete = (profile?.role === 'teacher' || profile?.role === 'admin') && editingEntry?.teacher_id === profile?.id;
 
     const formatTimeForInput = (time: string) => time.substring(0, 5);
 
@@ -74,7 +74,7 @@ export default function TimetableEntryModal({
             <View style={styles.modalOverlay}>
                 <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                     <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>
+                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>
                             {editingEntry ? 'Edit Timetable Entry' : 'Add Timetable Entry'}
                         </Text>
                         <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
@@ -84,7 +84,7 @@ export default function TimetableEntryModal({
                     
                     <ScrollView style={styles.modalScrollView}>
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.text }]}>Day</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Day</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                 <View style={styles.dayOptions}>
                                     {DAYS_ORDER.map((day) => (
@@ -97,7 +97,7 @@ export default function TimetableEntryModal({
                                             ]}
                                             onPress={() => setNewEntry({ ...newEntry, day })}
                                         >
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={[
                                                 styles.dayOptionText,
                                                 { color: colors.text },
                                                 newEntry.day === day && { color: '#ffffff' },
@@ -112,7 +112,7 @@ export default function TimetableEntryModal({
                         
                         <View style={styles.timeRow}>
                             <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                <Text style={[styles.label, { color: colors.text }]}>Start Time</Text>
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Start Time</Text>
                                 <TextInput
                                     style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                     value={formatTimeForInput(newEntry.start_time || '')}
@@ -122,7 +122,7 @@ export default function TimetableEntryModal({
                                 />
                             </View>
                             <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                                <Text style={[styles.label, { color: colors.text }]}>End Time</Text>
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>End Time</Text>
                                 <TextInput
                                     style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                     value={formatTimeForInput(newEntry.end_time || '')}
@@ -134,7 +134,7 @@ export default function TimetableEntryModal({
                         </View>
                         
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.text }]}>Subject</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Subject</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                 <View style={styles.subjectOptions}>
                                     {subjects.map((subject) => (
@@ -147,7 +147,7 @@ export default function TimetableEntryModal({
                                             ]}
                                             onPress={() => setNewEntry({ ...newEntry, subject: subject.name })}
                                         >
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={[
                                                 styles.subjectOptionText,
                                                 { color: colors.text },
                                                 newEntry.subject === subject.name && { color: '#ffffff' },
@@ -161,7 +161,7 @@ export default function TimetableEntryModal({
                         </View>
                         
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.text }]}>Room Number</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Room Number</Text>
                             <TextInput
                                 style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                 value={newEntry.room_number || ''}
@@ -172,7 +172,7 @@ export default function TimetableEntryModal({
                         </View>
                         
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.text }]}>Class</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Class</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                 <View style={styles.classOptions}>
                                     {classes.map((classItem) => (
@@ -185,7 +185,7 @@ export default function TimetableEntryModal({
                                             ]}
                                             onPress={() => setNewEntry({ ...newEntry, class_id: classItem.id })}
                                         >
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={[
                                                 styles.classOptionText,
                                                 { color: colors.text },
                                                 newEntry.class_id === classItem.id && { color: '#ffffff' },
@@ -203,7 +203,7 @@ export default function TimetableEntryModal({
                                 style={[styles.submitButton, { backgroundColor: colors.primary }]}
                                 onPress={handleSubmit}
                             >
-                                <Text style={styles.submitButtonText}>
+                                <Text allowFontScaling={false} style={styles.submitButtonText}>
                                     {editingEntry ? 'Update Entry' : 'Add to Timetable'}
                                 </Text>
                             </TouchableOpacity>
@@ -213,7 +213,7 @@ export default function TimetableEntryModal({
                                     onPress={() => handleDeleteEntry(editingEntry)}
                                 >
                                     <Trash2 size={20} color="#ffffff" />
-                                    <Text style={styles.deleteButtonText}>Delete Entry</Text>
+                                    <Text allowFontScaling={false} style={styles.deleteButtonText}>Delete Entry</Text>
                                 </TouchableOpacity>
                             )}
                         </View>

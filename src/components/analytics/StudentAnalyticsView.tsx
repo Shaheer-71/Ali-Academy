@@ -39,7 +39,7 @@ export const StudentAnalyticsView = () => {
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>
                     Loading your analytics...
                 </Text>
             </View>
@@ -49,8 +49,8 @@ export const StudentAnalyticsView = () => {
     if (error) {
         return (
             <View style={styles.errorContainer}>
-                <Text style={[styles.errorText, { color: colors.text }]}>Error</Text>
-                <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>{error}</Text>
+                <Text allowFontScaling={false} style={[styles.errorText, { color: colors.text }]}>Error</Text>
+                <Text allowFontScaling={false} style={[styles.errorSubtext, { color: colors.textSecondary }]}>{error}</Text>
             </View>
         );
     }
@@ -58,8 +58,8 @@ export const StudentAnalyticsView = () => {
     if (!analytics) {
         return (
             <View style={styles.errorContainer}>
-                <Text style={[styles.errorText, { color: colors.text }]}>No Data</Text>
-                <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>
+                <Text allowFontScaling={false} style={[styles.errorText, { color: colors.text }]}>No Data</Text>
+                <Text allowFontScaling={false} style={[styles.errorSubtext, { color: colors.textSecondary }]}>
                     No analytics data available
                 </Text>
             </View>
@@ -72,13 +72,13 @@ export const StudentAnalyticsView = () => {
             <View style={styles.studentHeaderSection}>
                 <View style={styles.studentHeaderContent}>
                     <User size={24} color={colors.primary} />
-                    <Text style={[styles.studentTitle, { color: colors.text }]}>My Performance</Text>
+                    <Text allowFontScaling={false} style={[styles.studentTitle, { color: colors.text }]}>My Performance</Text>
                 </View>
                 <View style={styles.rankContainer}>
-                    <Text style={[styles.rankNumber, { color: colors.primary }]}>
+                    <Text allowFontScaling={false} style={[styles.rankNumber, { color: colors.primary }]}>
                         #{analytics.rank_in_class}
                     </Text>
-                    <Text style={[styles.rankLabel, { color: colors.textSecondary }]}>
+                    <Text allowFontScaling={false} style={[styles.rankLabel, { color: colors.textSecondary }]}>
                         of {analytics.total_students}
                     </Text>
                 </View>
@@ -92,10 +92,10 @@ export const StudentAnalyticsView = () => {
                             <View style={[styles.overviewIcon, { backgroundColor: '#10B98120' }]}>
                                 <ClipboardCheck size={20} color="#10B981" />
                             </View>
-                            <Text style={[styles.overviewValue, { color: colors.text }]}>
+                            <Text allowFontScaling={false} style={[styles.overviewValue, { color: colors.text }]}>
                                 {analytics.attendance_rate}%
                             </Text>
-                            <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.overviewLabel, { color: colors.textSecondary }]}>
                                 Attendance
                             </Text>
                         </View>
@@ -104,10 +104,10 @@ export const StudentAnalyticsView = () => {
                             <View style={[styles.overviewIcon, { backgroundColor: `${colors.primary}20` }]}>
                                 <Award size={20} color={colors.primary} />
                             </View>
-                            <Text style={[styles.overviewValue, { color: colors.text }]}>
+                            <Text allowFontScaling={false} style={[styles.overviewValue, { color: colors.text }]}>
                                 {analytics.average_grade}%
                             </Text>
-                            <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.overviewLabel, { color: colors.textSecondary }]}>
                                 Avg Grade
                             </Text>
                         </View>
@@ -116,10 +116,10 @@ export const StudentAnalyticsView = () => {
                             <View style={[styles.overviewIcon, { backgroundColor: `${colors.secondary}20` }]}>
                                 <BookOpen size={20} color={colors.secondary} />
                             </View>
-                            <Text style={[styles.overviewValue, { color: colors.text }]}>
+                            <Text allowFontScaling={false} style={[styles.overviewValue, { color: colors.text }]}>
                                 {analytics.assignments_completed}/{analytics.total_assignments}
                             </Text>
-                            <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.overviewLabel, { color: colors.textSecondary }]}>
                                 Quizzes
                             </Text>
                         </View>
@@ -129,23 +129,23 @@ export const StudentAnalyticsView = () => {
                 {/* Performance Trend */}
                 <View style={[styles.trendCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                     <View style={styles.trendHeader}>
-                        <Text style={[styles.trendTitle, { color: colors.text }]}>Performance Trend</Text>
+                        <Text allowFontScaling={false} style={[styles.trendTitle, { color: colors.text }]}>Performance Trend</Text>
                         <View style={styles.trendIndicator}>
                             {getTrendIcon(analytics.improvement_trend)}
-                            <Text style={[styles.trendText, { color: getTrendColor(analytics.improvement_trend) }]}>
+                            <Text allowFontScaling={false} style={[styles.trendText, { color: getTrendColor(analytics.improvement_trend) }]}>
                                 {analytics.improvement_trend === 'up' ? 'Improving' :
                                  analytics.improvement_trend === 'down' ? 'Declining' : 'Stable'}
                             </Text>
                         </View>
                     </View>
                     <View style={styles.recentGrades}>
-                        <Text style={[styles.recentGradesLabel, { color: colors.textSecondary }]}>
+                        <Text allowFontScaling={false} style={[styles.recentGradesLabel, { color: colors.textSecondary }]}>
                             Recent Grades
                         </Text>
                         <View style={styles.gradesContainer}>
                             {analytics.recent_grades.map((grade, index) => (
                                 <View key={index} style={[styles.gradeChip, { backgroundColor: colors.primary }]}>
-                                    <Text style={styles.gradeChipText}>{grade}%</Text>
+                                    <Text allowFontScaling={false} style={styles.gradeChipText}>{grade}%</Text>
                                 </View>
                             ))}
                         </View>
@@ -154,19 +154,19 @@ export const StudentAnalyticsView = () => {
 
                 {/* Subject Performance */}
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Subject Performance</Text>
+                    <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Subject Performance</Text>
                     {analytics.subjects.map((subject, index) => (
                         <View key={index} style={[styles.subjectCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                             <View style={styles.subjectHeader}>
-                                <Text style={[styles.subjectName, { color: colors.text }]}>
+                                <Text allowFontScaling={false} style={[styles.subjectName, { color: colors.text }]}>
                                     {subject.name}
                                 </Text>
-                                <Text style={[styles.subjectGrade, { color: colors.primary }]}>
+                                <Text allowFontScaling={false} style={[styles.subjectGrade, { color: colors.primary }]}>
                                     {subject.grade}%
                                 </Text>
                             </View>
                             <View style={styles.subjectMetrics}>
-                                <Text style={[styles.assignmentCount, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.assignmentCount, { color: colors.textSecondary }]}>
                                     {subject.assignments_completed}/{subject.total_assignments} quizzes completed
                                 </Text>
                                 {renderProgressBar(

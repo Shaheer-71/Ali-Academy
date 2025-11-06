@@ -68,7 +68,7 @@ export const useAttendance = (classId?: string) => {
 
   // Clear all data when classId changes
   useEffect(() => {
-    if (profile?.role === 'teacher') {
+    if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
       setStudents([]);
       setAttendanceRecords([]);
       setAttendanceSessions([]);
@@ -169,7 +169,7 @@ export const useAttendance = (classId?: string) => {
   };
 
   const fetchAttendanceData = async (startDate?: string, endDate?: string) => {
-    if (!classId && profile?.role === 'teacher') {
+    if (!classId && (profile?.role === 'teacher' || profile?.role === 'admin')) {
       setAttendanceRecords([]);
       setLoading(false);
       return;
@@ -190,7 +190,7 @@ export const useAttendance = (classId?: string) => {
         `)
         .order('date', { ascending: false });
 
-      if (classId && profile?.role === 'teacher') {
+      if (classId && (profile?.role === 'teacher' || profile?.role === 'admin')) {
         query = query.eq('class_id', classId);
       }
 
@@ -213,7 +213,7 @@ export const useAttendance = (classId?: string) => {
       calculateStats(data || []);
 
       // Fetch attendance sessions for teachers
-      if (profile?.role === 'teacher' && classId) {
+      if ((profile?.role === 'teacher' || profile?.role === 'admin') && classId) {
         await fetchAttendanceSessions(startDate, endDate);
       }
     } catch (error) {
@@ -508,7 +508,7 @@ const postAttendance = async (date: string = new Date().toISOString().split('T')
     setLoading(true);
 
     try {
-      if (profile?.role === 'teacher' && classId) {
+      if ((profile?.role === 'teacher' || profile?.role === 'admin') && classId) {
         // Clear all data first
         setStudents([]);
         setAttendanceRecords([]);

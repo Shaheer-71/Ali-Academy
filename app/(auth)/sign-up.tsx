@@ -125,15 +125,15 @@ export default function SignUpScreen() {
         <View style={styles.stepContainer}>
             <View style={styles.stepHeader}>
                 <GraduationCap size={32} color="#274d71" />
-                <Text style={styles.stepTitle}>Student Registration</Text>
-                <Text style={styles.stepDescription}>
+                <Text allowFontScaling={false} style={styles.stepTitle}>Student Registration</Text>
+                <Text allowFontScaling={false} style={styles.stepDescription}>
                     Enter the email address provided by your teacher
                 </Text>
             </View>
 
             <View style={styles.inputContainer}>
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Email Address</Text>
+                    <Text allowFontScaling={false} style={styles.label}>Email Address</Text>
                     <TextInput
                         style={styles.input}
                         value={email}
@@ -157,7 +157,7 @@ export default function SignUpScreen() {
                 {loading ? (
                     <ActivityIndicator color="#ffffff" />
                 ) : (
-                    <Text style={styles.buttonText}>Continue</Text>
+                    <Text allowFontScaling={false} style={styles.buttonText}>Continue</Text>
                 )}
             </TouchableOpacity>
         </View>
@@ -167,8 +167,8 @@ export default function SignUpScreen() {
         <View style={styles.stepContainer}>
             <View style={styles.stepHeader}>
                 <CheckCircle size={32} color="#10B981" />
-                <Text style={styles.stepTitle}>Set Your Password</Text>
-                <Text style={styles.stepDescription}>
+                <Text allowFontScaling={false} style={styles.stepTitle}>Set Your Password</Text>
+                <Text allowFontScaling={false} style={styles.stepDescription}>
                     Create a secure password for your account
                 </Text>
             </View>
@@ -178,19 +178,19 @@ export default function SignUpScreen() {
                 <View style={styles.studentInfoCard}>
                     <View style={styles.studentInfoHeader}>
                         <User size={20} color="#274d71" />
-                        <Text style={styles.studentInfoTitle}>Student Information</Text>
+                        <Text allowFontScaling={false} style={styles.studentInfoTitle}>Student Information</Text>
                     </View>
-                    <Text style={styles.studentName}>{studentData.full_name}</Text>
-                    <Text style={styles.studentDetails}>
+                    <Text allowFontScaling={false} style={styles.studentName}>{studentData.full_name}</Text>
+                    <Text allowFontScaling={false} style={styles.studentDetails}>
                         Roll: {studentData.roll_number} • Class: {studentData.classes.name}
                     </Text>
-                    <Text style={styles.studentEmail}>{studentData.email}</Text>
+                    <Text allowFontScaling={false} style={styles.studentEmail}>{studentData.email}</Text>
                 </View>
             )}
 
             <View style={styles.inputContainer}>
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Password</Text>
+                    <Text allowFontScaling={false} style={styles.label}>Password</Text>
                     <View style={styles.passwordContainer}>
                         <TextInput
                             style={styles.passwordInput}
@@ -216,7 +216,7 @@ export default function SignUpScreen() {
                 </View>
 
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Confirm Password</Text>
+                    <Text allowFontScaling={false} style={styles.label}>Confirm Password</Text>
                     <View style={styles.passwordContainer}>
                         <TextInput
                             style={styles.passwordInput}
@@ -244,9 +244,9 @@ export default function SignUpScreen() {
             </View>
 
             <View style={styles.passwordRequirements}>
-                <Text style={styles.requirementsTitle}>Password Requirements:</Text>
-                <Text style={styles.requirementItem}>• At least 6 characters long</Text>
-                <Text style={styles.requirementItem}>• Should be easy to remember</Text>
+                <Text allowFontScaling={false} style={styles.requirementsTitle}>Password Requirements:</Text>
+                <Text allowFontScaling={false} style={styles.requirementItem}>• At least 6 characters long</Text>
+                <Text allowFontScaling={false} style={styles.requirementItem}>• Should be easy to remember</Text>
             </View>
 
             <View style={styles.buttonContainer}>
@@ -254,7 +254,7 @@ export default function SignUpScreen() {
                     style={styles.secondaryButton}
                     onPress={() => setStep(1)}
                 >
-                    <Text style={styles.secondaryButtonText}>Back</Text>
+                    <Text allowFontScaling={false} style={styles.secondaryButtonText}>Back</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -265,7 +265,7 @@ export default function SignUpScreen() {
                     {loading ? (
                         <ActivityIndicator color="#ffffff" />
                     ) : (
-                        <Text style={styles.buttonText}>Set Password</Text>
+                        <Text allowFontScaling={false} style={styles.buttonText}>Set Password</Text>
                     )}
                 </TouchableOpacity>
             </View>
@@ -276,8 +276,8 @@ export default function SignUpScreen() {
         <View style={styles.stepContainer}>
             <View style={styles.stepHeader}>
                 <CheckCircle size={48} color="#10B981" />
-                <Text style={styles.stepTitle}>Registration Complete!</Text>
-                <Text style={styles.stepDescription}>
+                <Text allowFontScaling={false} style={styles.stepTitle}>Registration Complete!</Text>
+                <Text allowFontScaling={false} style={styles.stepDescription}>
                     Your account has been set up successfully
                 </Text>
             </View>
@@ -285,8 +285,8 @@ export default function SignUpScreen() {
             {studentData && (
                 <View style={styles.successCard}>
                     <BookOpen size={32} color="#274d71" />
-                    <Text style={styles.successName}>Welcome, {studentData.full_name}!</Text>
-                    <Text style={styles.successDetails}>
+                    <Text allowFontScaling={false} style={styles.successName}>Welcome, {studentData.full_name}!</Text>
+                    <Text allowFontScaling={false} style={styles.successDetails}>
                         You can now access your student portal
                     </Text>
                 </View>
@@ -296,14 +296,14 @@ export default function SignUpScreen() {
                 style={styles.button}
                 onPress={handleSignIn}
             >
-                <Text style={styles.buttonText}>Sign In Now</Text>
+                <Text allowFontScaling={false} style={styles.buttonText}>Sign In Now</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
                 style={styles.secondaryButton}
                 onPress={resetForm}
             >
-                <Text style={styles.secondaryButtonText}>Register Another Student</Text>
+                <Text allowFontScaling={false} style={styles.secondaryButtonText}>Register Another Student</Text>
             </TouchableOpacity>
         </View>
     );
@@ -322,7 +322,7 @@ export default function SignUpScreen() {
                                 styles.progressStep,
                                 { backgroundColor: step >= 1 ? '#274d71' : '#E5E7EB' }
                             ]}>
-                                <Text style={[
+                                <Text allowFontScaling={false} style={[
                                     styles.progressStepText,
                                     { color: step >= 1 ? '#ffffff' : '#9CA3AF' }
                                 ]}>1</Text>
@@ -335,7 +335,7 @@ export default function SignUpScreen() {
                                 styles.progressStep,
                                 { backgroundColor: step >= 2 ? '#274d71' : '#E5E7EB' }
                             ]}>
-                                <Text style={[
+                                <Text allowFontScaling={false} style={[
                                     styles.progressStepText,
                                     { color: step >= 2 ? '#ffffff' : '#9CA3AF' }
                                 ]}>2</Text>
@@ -348,16 +348,16 @@ export default function SignUpScreen() {
                                 styles.progressStep,
                                 { backgroundColor: step >= 3 ? '#274d71' : '#E5E7EB' }
                             ]}>
-                                <Text style={[
+                                <Text allowFontScaling={false} style={[
                                     styles.progressStepText,
                                     { color: step >= 3 ? '#ffffff' : '#9CA3AF' }
                                 ]}>3</Text>
                             </View>
                         </View>
                         <View style={styles.progressLabels}>
-                            <Text style={styles.progressLabel}>Email</Text>
-                            <Text style={styles.progressLabel}>Password</Text>
-                            <Text style={styles.progressLabel}>Complete</Text>
+                            <Text allowFontScaling={false} style={styles.progressLabel}>Email</Text>
+                            <Text allowFontScaling={false} style={styles.progressLabel}>Password</Text>
+                            <Text allowFontScaling={false} style={styles.progressLabel}>Complete</Text>
                         </View>
                     </View>
 

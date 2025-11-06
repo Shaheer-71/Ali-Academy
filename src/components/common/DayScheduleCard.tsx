@@ -32,13 +32,13 @@ export const DayScheduleCard: React.FC<DayScheduleCardProps> = ({
     <View style={styles.container}>
       {/* Day Header */}
       <View style={[styles.dayHeader, isToday && styles.todayHeader]}>
-        <Text style={[styles.dayName, isToday && styles.todayText]}>
+        <Text allowFontScaling={false} style={[styles.dayName, isToday && styles.todayText]}>
           {day}
         </Text>
-        <Text style={[styles.dayDate, isToday && styles.todayDateText]}>
+        <Text allowFontScaling={false} style={[styles.dayDate, isToday && styles.todayDateText]}>
           {date.getDate()}
         </Text>
-        <Text style={[styles.dayMonth, isToday && styles.todayText]}>
+        <Text allowFontScaling={false} style={[styles.dayMonth, isToday && styles.todayText]}>
           {date.toLocaleDateString('en-US', { month: 'short' })}
         </Text>
       </View>
@@ -48,11 +48,11 @@ export const DayScheduleCard: React.FC<DayScheduleCardProps> = ({
         {entries.length === 0 ? (
           <View style={styles.emptySchedule}>
             <Calendar size={32} color="#9CA3AF" />
-            <Text style={styles.emptyText}>No classes</Text>
-            <Text style={styles.emptySubtext}>scheduled for today</Text>
+            <Text allowFontScaling={false} style={styles.emptyText}>No classes</Text>
+            <Text allowFontScaling={false} style={styles.emptySubtext}>scheduled for today</Text>
             {canEdit && onAddEntry && (
               <TouchableOpacity style={styles.addButton} onPress={onAddEntry}>
-                <Text style={styles.addButtonText}>Add Class</Text>
+                <Text allowFontScaling={false} style={styles.addButtonText}>Add Class</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -67,22 +67,22 @@ export const DayScheduleCard: React.FC<DayScheduleCardProps> = ({
                 <View style={styles.entryHeader}>
                   <View style={styles.timeContainer}>
                     <Clock size={12} color="#274d71" />
-                    <Text style={styles.timeText}>
+                    <Text allowFontScaling={false} style={styles.timeText}>
                       {entry.start_time} - {entry.end_time}
                     </Text>
                   </View>
                   <View style={styles.roomBadge}>
                     <MapPin size={8} color="#274d71" />
-                    <Text style={styles.roomText}>{entry.room_number}</Text>
+                    <Text allowFontScaling={false} style={styles.roomText}>{entry.room_number}</Text>
                   </View>
                 </View>
                 
-                <Text style={styles.subjectText}>{entry.subject}</Text>
+                <Text allowFontScaling={false} style={styles.subjectText}>{entry.subject}</Text>
                 
                 {entry.teacher_name && (
                   <View style={styles.teacherContainer}>
                     <User size={10} color="#6B7280" />
-                    <Text style={styles.teacherText}>{entry.teacher_name}</Text>
+                    <Text allowFontScaling={false} style={styles.teacherText}>{entry.teacher_name}</Text>
                   </View>
                 )}
               </View>
@@ -90,7 +90,7 @@ export const DayScheduleCard: React.FC<DayScheduleCardProps> = ({
             
             {canEdit && onAddEntry && entries.length < 3 && (
               <TouchableOpacity style={styles.addEntryButton} onPress={onAddEntry}>
-                <Text style={styles.addEntryText}>+ Add Class</Text>
+                <Text allowFontScaling={false} style={styles.addEntryText}>+ Add Class</Text>
               </TouchableOpacity>
             )}
           </View>

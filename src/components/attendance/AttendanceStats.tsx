@@ -17,24 +17,24 @@ export const AttendanceStats: React.FC<AttendanceStatsProps> = ({ stats }) => {
             <View style={styles.statsContainer}>
                 <View style={[styles.statCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                     <CheckCircle size={24} color="#10B981" />
-                    <Text style={[styles.statNumber, { color: colors.text }]}>{stats.presentDays}</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Present</Text>
+                    <Text allowFontScaling={false} style={[styles.statNumber, { color: colors.text }]}>{stats.presentDays}</Text>
+                    <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Present</Text>
                 </View>
                 <View style={[styles.statCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                     <AlertCircle size={24} color="#F59E0B" />
-                    <Text style={[styles.statNumber, { color: colors.text }]}>{stats.lateDays}</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Late</Text>
+                    <Text allowFontScaling={false} style={[styles.statNumber, { color: colors.text }]}>{stats.lateDays}</Text>
+                    <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Late</Text>
                 </View>
                 <View style={[styles.statCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                     <XCircle size={24} color="#EF4444" />
-                    <Text style={[styles.statNumber, { color: colors.text }]}>{stats.absentDays}</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Absent</Text>
+                    <Text allowFontScaling={false} style={[styles.statNumber, { color: colors.text }]}>{stats.absentDays}</Text>
+                    <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Absent</Text>
                 </View>
             </View>
 
             <View style={[styles.attendanceRateCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                <Text style={[styles.attendanceRateTitle, { color: colors.text }]}>Overall Attendance Rate</Text>
-                <Text style={[styles.attendanceRateValue, { color: colors.primary }]}>{stats.attendanceRate}%</Text>
+                <Text allowFontScaling={false} style={[styles.attendanceRateTitle, { color: colors.text }]}>Overall Attendance Rate</Text>
+                <Text allowFontScaling={false} style={[styles.attendanceRateValue, { color: colors.primary }]}>{stats.attendanceRate}%</Text>
                 <View style={[styles.progressBarContainer, { backgroundColor: colors.border }]}>
                     <View
                         style={[
@@ -43,7 +43,7 @@ export const AttendanceStats: React.FC<AttendanceStatsProps> = ({ stats }) => {
                         ]}
                     />
                 </View>
-                <Text style={[styles.attendanceRateSubtext, { color: colors.textSecondary }]}>
+                <Text allowFontScaling={false} style={[styles.attendanceRateSubtext, { color: colors.textSecondary }]}>
                     {stats.presentDays + stats.lateDays} out of {stats.totalDays} days
                 </Text>
             </View>

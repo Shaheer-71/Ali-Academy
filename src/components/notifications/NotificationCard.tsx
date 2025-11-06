@@ -136,22 +136,22 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
 
                     <View style={styles.content}>
                         <View style={styles.headerRow}>
-                            <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+                            <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]} numberOfLines={1}>
                                 {notification.title}
                             </Text>
                             {notification.is_read && (
                                 <CheckCircle size={16} color={colors.success} />
                             )}
                         </View>
-                        <Text style={[styles.message, { color: colors.textSecondary }]} numberOfLines={2}>
+                        <Text allowFontScaling={false} style={[styles.message, { color: colors.textSecondary }]} numberOfLines={2}>
                             {notification.message}
                         </Text>
                         <View style={styles.footer}>
-                            <Text style={[styles.timestamp, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.timestamp, { color: colors.textSecondary }]}>
                                 {formatTimestamp(notification.created_at)}
                             </Text>
                             {notification.creator?.name && (
-                                <Text style={[styles.creator, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.creator, { color: colors.textSecondary }]}>
                                     by {notification.creator.name}
                                 </Text>
                             )}

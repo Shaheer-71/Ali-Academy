@@ -32,49 +32,49 @@ export const TeacherAnalyticsView = () => {
         <View style={[styles.performanceCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.studentHeader}>
                 <View style={[styles.studentAvatar, { backgroundColor: colors.primary }]}>
-                    <Text style={styles.studentInitial}>
+                    <Text allowFontScaling={false} style={styles.studentInitial}>
                         {student.full_name.charAt(0).toUpperCase()}
                     </Text>
                 </View>
                 <View style={styles.studentInfo}>
-                    <Text style={[styles.studentName, { color: colors.text }]}>
+                    <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]}>
                         {student.full_name}
                     </Text>
-                    <Text style={[styles.rollNumber, { color: colors.textSecondary }]}>
+                    <Text allowFontScaling={false} style={[styles.rollNumber, { color: colors.textSecondary }]}>
                         {student.roll_number} • {student.class_name}
                     </Text>
                 </View>
                 <View style={[styles.gradeContainer, { backgroundColor: colors.primary }]}>
-                    <Text style={styles.gradeText}>{student.average_grade}%</Text>
+                    <Text allowFontScaling={false} style={styles.gradeText}>{student.average_grade}%</Text>
                 </View>
             </View>
 
             <View style={styles.metricsContainer}>
                 <View style={styles.metric}>
-                    <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Attendance</Text>
+                    <Text allowFontScaling={false} style={[styles.metricLabel, { color: colors.textSecondary }]}>Attendance</Text>
                     <View style={styles.metricBar}>
                         {renderProgressBar(student.attendance_rate, '#10B981')}
-                        <Text style={[styles.metricValue, { color: colors.text }]}>
+                        <Text allowFontScaling={false} style={[styles.metricValue, { color: colors.text }]}>
                             {student.attendance_rate}%
                         </Text>
                     </View>
                 </View>
 
                 <View style={styles.metric}>
-                    <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Quizzes</Text>
+                    <Text allowFontScaling={false} style={[styles.metricLabel, { color: colors.textSecondary }]}>Quizzes</Text>
                     <View style={styles.metricBar}>
                         {renderProgressBar((student.assignments_completed / student.total_assignments) * 100, colors.secondary)}
-                        <Text style={[styles.metricValue, { color: colors.text }]}>
+                        <Text allowFontScaling={false} style={[styles.metricValue, { color: colors.text }]}>
                             {student.assignments_completed}/{student.total_assignments}
                         </Text>
                     </View>
                 </View>
 
                 <View style={styles.metric}>
-                    <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Overall Grade</Text>
+                    <Text allowFontScaling={false} style={[styles.metricLabel, { color: colors.textSecondary }]}>Overall Grade</Text>
                     <View style={styles.metricBar}>
                         {renderProgressBar(student.average_grade, colors.primary)}
-                        <Text style={[styles.metricValue, { color: colors.text }]}>
+                        <Text allowFontScaling={false} style={[styles.metricValue, { color: colors.text }]}>
                             {student.average_grade}%
                         </Text>
                     </View>
@@ -86,7 +86,7 @@ export const TeacherAnalyticsView = () => {
     // if (loading) {
     //     return (
     //         <View style={styles.loadingContainer}>
-    //             <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+    //             <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>
     //                 Loading analytics...
     //             </Text>
     //         </View>
@@ -96,8 +96,8 @@ export const TeacherAnalyticsView = () => {
     if (error) {
         return (
             <View style={styles.errorContainer}>
-                <Text style={[styles.errorText, { color: colors.text }]}>Error</Text>
-                <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>{error}</Text>
+                <Text allowFontScaling={false} style={[styles.errorText, { color: colors.text }]}>Error</Text>
+                <Text allowFontScaling={false} style={[styles.errorSubtext, { color: colors.textSecondary }]}>{error}</Text>
             </View>
         );
     }
@@ -108,7 +108,7 @@ export const TeacherAnalyticsView = () => {
             <View style={[styles.filterContainer, { marginTop: 20 }]}>
                 <View style={[styles.studentHeaderContent, { marginBottom: 10 }]}>
                     <User size={24} color={colors.primary} />
-                    <Text style={[styles.studentTitle, { color: colors.text }]}>Class Analytics</Text>
+                    <Text allowFontScaling={false} style={[styles.studentTitle, { color: colors.text }]}>Class Analytics</Text>
                 </View>
 
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} refreshControl={
@@ -130,7 +130,7 @@ export const TeacherAnalyticsView = () => {
                             ]}
                             onPress={() => setSelectedClass('all')}
                         >
-                            <Text style={[
+                            <Text allowFontScaling={false} style={[
                                 styles.filterButtonText,
                                 { color: colors.text },
                                 selectedClass === 'all' && { color: '#ffffff' },
@@ -148,7 +148,7 @@ export const TeacherAnalyticsView = () => {
                                 ]}
                                 onPress={() => setSelectedClass(classItem.id)}
                             >
-                                <Text style={[
+                                <Text allowFontScaling={false} style={[
                                     styles.filterButtonText,
                                     { color: colors.text },
                                     selectedClass === classItem.id && { color: '#ffffff' },
@@ -168,30 +168,30 @@ export const TeacherAnalyticsView = () => {
                         <View style={[styles.overviewIcon, { backgroundColor: '#10B98120' }]}>
                             <Users size={24} color="#10B981" />
                         </View>
-                        <Text style={[styles.overviewValue, { color: colors.text }]}>
+                        <Text allowFontScaling={false} style={[styles.overviewValue, { color: colors.text }]}>
                             {classAnalytics.reduce((sum, c) => sum + c.total_students, 0)}
                         </Text>
-                        <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>Total Students</Text>
+                        <Text allowFontScaling={false} style={[styles.overviewLabel, { color: colors.textSecondary }]}>Total Students</Text>
                     </View>
 
                     <View style={[styles.overviewCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                         <View style={[styles.overviewIcon, { backgroundColor: `${colors.secondary}20` }]}>
                             <ClipboardCheck size={24} color={colors.secondary} />
                         </View>
-                        <Text style={[styles.overviewValue, { color: colors.text }]}>
+                        <Text allowFontScaling={false} style={[styles.overviewValue, { color: colors.text }]}>
                             {Math.round(classAnalytics.reduce((sum, c) => sum + c.average_attendance, 0) / classAnalytics.length || 0)}%
                         </Text>
-                        <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>Avg Attendance</Text>
+                        <Text allowFontScaling={false} style={[styles.overviewLabel, { color: colors.textSecondary }]}>Avg Attendance</Text>
                     </View>
 
                     <View style={[styles.overviewCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                         <View style={[styles.overviewIcon, { backgroundColor: `${colors.primary}20` }]}>
                             <Award size={24} color={colors.primary} />
                         </View>
-                        <Text style={[styles.overviewValue, { color: colors.text }]}>
+                        <Text allowFontScaling={false} style={[styles.overviewValue, { color: colors.text }]}>
                             {Math.round(classAnalytics.reduce((sum, c) => sum + c.average_grade, 0) / classAnalytics.length || 0)}%
                         </Text>
-                        <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>Avg Grade</Text>
+                        <Text allowFontScaling={false} style={[styles.overviewLabel, { color: colors.textSecondary }]}>Avg Grade</Text>
                     </View>
                 </View>
             </View>
@@ -199,7 +199,7 @@ export const TeacherAnalyticsView = () => {
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
                 {/* Student Performance - Horizontal Scroll */}
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Student Performance</Text>
+                    <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Student Performance</Text>
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -215,15 +215,15 @@ export const TeacherAnalyticsView = () => {
 
                 {/* Class Comparison */}
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Class Comparison</Text>
+                    <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Class Comparison</Text>
                     {classAnalytics.map((classData) => (
                         <View key={classData.class_id} style={[styles.classCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                             <View style={styles.classHeader}>
-                                <Text style={[styles.className, { color: colors.text }]}>
+                                <Text allowFontScaling={false} style={[styles.className, { color: colors.text }]}>
                                     {classData.class_name}
                                 </Text>
                                 <View style={[styles.studentCount, { backgroundColor: colors.primary }]}>
-                                    <Text style={styles.studentCountText}>
+                                    <Text allowFontScaling={false} style={styles.studentCountText}>
                                         {classData.total_students} students
                                     </Text>
                                 </View>
@@ -231,24 +231,24 @@ export const TeacherAnalyticsView = () => {
 
                             <View style={styles.classMetrics}>
                                 <View style={styles.classMetric}>
-                                    <Text style={[styles.classMetricValue, { color: colors.primary }]}>
+                                    <Text allowFontScaling={false} style={[styles.classMetricValue, { color: colors.primary }]}>
                                         {classData.average_attendance}%
                                     </Text>
-                                    <Text style={[styles.classMetricLabel, { color: colors.textSecondary }]}>
+                                    <Text allowFontScaling={false} style={[styles.classMetricLabel, { color: colors.textSecondary }]}>
                                         Attendance
                                     </Text>
                                 </View>
                                 <View style={styles.classMetric}>
-                                    <Text style={[styles.classMetricValue, { color: colors.secondary }]}>
+                                    <Text allowFontScaling={false} style={[styles.classMetricValue, { color: colors.secondary }]}>
                                         {classData.average_grade}%
                                     </Text>
-                                    <Text style={[styles.classMetricLabel, { color: colors.textSecondary }]}>
+                                    <Text allowFontScaling={false} style={[styles.classMetricLabel, { color: colors.textSecondary }]}>
                                         Avg Grade
                                     </Text>
                                 </View>
                                 <View style={styles.classMetric}>
                                     <Award size={16} color="#10B981" />
-                                    <Text style={[styles.topPerformer, { color: colors.text }]}>
+                                    <Text allowFontScaling={false} style={[styles.topPerformer, { color: colors.text }]}>
                                         {classData.top_performer}
                                     </Text>
                                 </View>

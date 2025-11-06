@@ -31,13 +31,13 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text allowFontScaling={false} style={styles.label}>{label}</Text>
       <TouchableOpacity
         style={styles.timeButton}
         onPress={() => setModalVisible(true)}
       >
         <Clock size={16} color="#6B7280" />
-        <Text style={[styles.timeText, !value && styles.placeholderText]}>
+        <Text allowFontScaling={false} style={[styles.timeText, !value && styles.placeholderText]}>
           {value || placeholder}
         </Text>
         <ChevronDown size={16} color="#6B7280" />
@@ -52,12 +52,12 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select {label}</Text>
+              <Text allowFontScaling={false} style={styles.modalTitle}>Select {label}</Text>
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.closeButtonText}>Cancel</Text>
+                <Text allowFontScaling={false} style={styles.closeButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
 
@@ -72,7 +72,7 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
                   onPress={() => handleTimeSelect(time)}
                 >
                   <Clock size={16} color={value === time ? "#ffffff" : "#274d71"} />
-                  <Text style={[
+                  <Text allowFontScaling={false} style={[
                     styles.timeOptionText,
                     value === time && styles.selectedTimeOptionText,
                   ]}>

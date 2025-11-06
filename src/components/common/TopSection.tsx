@@ -18,7 +18,7 @@ export default function TopSection() {
     return (
         <SafeAreaView style={{ backgroundColor: "#fff" }} edges={['top', 'left', 'right']}>
             <View style={{ paddingHorizontal: 12, marginHorizontal: 12, justifyContent: "space-between", flexDirection: "row", paddingVertical: 5, marginVertical: 5, marginRight: "5%" }}>
-                <Text style={{ fontWeight: "bold", color: "#274d71", fontSize: 28, fontFamily: 'Inter-SemiBold' }}>{screenName === "Index" ? "Home" : screenName || 'Untitled'}</Text>
+                <Text allowFontScaling={false} style={{ fontWeight: "bold", color: "#274d71", fontSize: 28, fontFamily: 'Inter-SemiBold' }}>{screenName === "Index" ? "Home" : screenName || 'Untitled'}</Text>
                 {/* <TouchableOpacity>
                     <CircleEllipsis color="#274d71" size={24} />
                 </TouchableOpacity> */}

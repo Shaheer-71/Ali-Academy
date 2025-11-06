@@ -93,7 +93,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
     };
 
     const handleMarkQuizzes = (quiz: any) => {
-        if (profile?.role === 'teacher') {
+        if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
             Alert.alert(
                 'Mark Quiz Results',
                 `Go to Results tab to mark individual student results for "${quiz.title}"`,
@@ -145,7 +145,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
             {/* Filter info banner - showing current filters */}
             {(statusFilter !== 'all' || selectedClass !== 'all') && (
                 <View style={[styles.filterBanner, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text style={[styles.filterText, { color: colors.textSecondary }]}>
+                    <Text allowFontScaling={false} style={[styles.filterText, { color: colors.textSecondary }]}>
                         Active Filters:
                         {statusFilter !== 'all' && ` Status: ${statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}`}
                         {selectedClass !== 'all' && ` • Class: Selected`}
@@ -170,9 +170,9 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 {filteredQuizzes.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <Calendar size={48} color={colors.textSecondary} />
-                        <Text style={[styles.emptyText, { color: colors.text }]}>No quizzes found</Text>
-                        <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                            {profile?.role === 'teacher' ? 'Schedule your first quiz or adjust filters using the Filter button' : 'Check back later for quiz schedules or adjust filters'}
+                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>No quizzes found</Text>
+                        <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+                            {(profile?.role === 'teacher' || profile?.role === 'admin') ? 'Schedule your first quiz or adjust filters using the Filter button' : 'Check back later for quiz schedules or adjust filters'}
                         </Text>
                     </View>
                 ) : (
@@ -187,36 +187,36 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                                         <GraduationCap size={20} color="#ffffff" />
                                     </View>
                                     <View style={styles.quizInfo}>
-                                        <Text style={[styles.quizTitle, { color: colors.text }]}>{quiz.title}</Text>
-                                        <Text style={[styles.quizSubject, { color: colors.textSecondary }]}>
+                                        <Text allowFontScaling={false} style={[styles.quizTitle, { color: colors.text }]}>{quiz.title}</Text>
+                                        <Text allowFontScaling={false} style={[styles.quizSubject, { color: colors.textSecondary }]}>
                                             {quiz.subjects?.name} • {quiz.classes?.name}
                                         </Text>
                                     </View>
                                     <View style={[styles.statusBadge, { backgroundColor: getStatusColor(quiz.status) }]}>
-                                        <Text style={styles.statusText}>{quiz.status.toUpperCase()}</Text>
+                                        <Text allowFontScaling={false} style={styles.statusText}>{quiz.status.toUpperCase()}</Text>
                                     </View>
                                 </View>
 
                                 {quiz.description && (
-                                    <Text style={[styles.quizDescription, { color: colors.text }]}>{quiz.description}</Text>
+                                    <Text allowFontScaling={false} style={[styles.quizDescription, { color: colors.text }]}>{quiz.description}</Text>
                                 )}
 
                                 <View style={styles.quizDetails}>
                                     <View style={styles.quizDetail}>
                                         <Calendar size={16} color={colors.textSecondary} />
-                                        <Text style={[styles.quizDetailText, { color: colors.text }]}>
+                                        <Text allowFontScaling={false} style={[styles.quizDetailText, { color: colors.text }]}>
                                             {formatDate(quiz.scheduled_date)}
                                         </Text>
                                     </View>
                                     <View style={styles.quizDetail}>
                                         <Clock size={16} color={colors.textSecondary} />
-                                        <Text style={[styles.quizDetailText, { color: colors.text }]}>
+                                        <Text allowFontScaling={false} style={[styles.quizDetailText, { color: colors.text }]}>
                                             {quiz.duration_minutes} minutes
                                         </Text>
                                     </View>
                                     <View style={styles.quizDetail}>
                                         <Target size={16} color={colors.textSecondary} />
-                                        <Text style={[styles.quizDetailText, { color: colors.text }]}>
+                                        <Text allowFontScaling={false} style={[styles.quizDetailText, { color: colors.text }]}>
                                             {quiz.total_marks} marks
                                         </Text>
                                     </View>
@@ -224,18 +224,18 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
                                 {quiz.instructions && (
                                     <View style={[styles.instructionsContainer, { backgroundColor: colors.background }]}>
-                                        <Text style={[styles.instructionsLabel, { color: colors.textSecondary }]}>Instructions:</Text>
-                                        <Text style={[styles.instructionsText, { color: colors.text }]}>{quiz.instructions}</Text>
+                                        <Text allowFontScaling={false} style={[styles.instructionsLabel, { color: colors.textSecondary }]}>Instructions:</Text>
+                                        <Text allowFontScaling={false} style={[styles.instructionsText, { color: colors.text }]}>{quiz.instructions}</Text>
                                     </View>
                                 )}
 
                                 {/* Quiz Type Badge */}
                                 <View style={styles.quizTypeBadge}>
                                     <View style={[styles.typeBadge, { backgroundColor: getQuizTypeColor(quiz.quiz_type) }]}>
-                                        <Text style={styles.typeBadgeText}>{quiz.quiz_type.toUpperCase()}</Text>
+                                        <Text allowFontScaling={false} style={styles.typeBadgeText}>{quiz.quiz_type.toUpperCase()}</Text>
                                     </View>
                                     {quiz.passing_marks && (
-                                        <Text style={[styles.passingMarks, { color: colors.textSecondary }]}>
+                                        <Text allowFontScaling={false} style={[styles.passingMarks, { color: colors.textSecondary }]}>
                                             Passing: {quiz.passing_marks} marks
                                         </Text>
                                     )}
@@ -246,17 +246,17 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                                     <View style={[styles.resultsSummary, { backgroundColor: colors.background }]}>
                                         <View style={styles.resultsRow}>
                                             <Users size={14} color={colors.textSecondary} />
-                                            <Text style={[styles.resultsText, { color: colors.textSecondary }]}>
+                                            <Text allowFontScaling={false} style={[styles.resultsText, { color: colors.textSecondary }]}>
                                                 {resultCounts.marked}/{resultCounts.total} students marked
                                             </Text>
                                             {resultCounts.pending > 0 && (
                                                 <View style={[styles.pendingBadge, { backgroundColor: '#F59E0B' }]}>
-                                                    <Text style={styles.pendingBadgeText}>{resultCounts.pending} pending</Text>
+                                                    <Text allowFontScaling={false} style={styles.pendingBadgeText}>{resultCounts.pending} pending</Text>
                                                 </View>
                                             )}
                                             {resultCounts.marked === resultCounts.total && (
                                                 <View style={[styles.completeBadge, { backgroundColor: '#10B981' }]}>
-                                                    <Text style={styles.completeBadgeText}>✓ All Marked</Text>
+                                                    <Text allowFontScaling={false} style={styles.completeBadgeText}>✓ All Marked</Text>
                                                 </View>
                                             )}
                                         </View>
@@ -264,7 +264,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                                 )}
 
                                 {/* Teacher Actions - ENHANCED LOGIC WITH AUTO-COMPLETE */}
-                                {profile?.role === 'teacher' && (
+                                {(profile?.role === 'teacher' || profile?.role === 'admin') && (
                                     <View style={styles.teacherActions}>
                                         {/* Show Start Quiz button for scheduled quizzes (only if no marks entered) */}
                                         {quiz.status === 'scheduled' && resultCounts.marked === 0 && (
@@ -273,7 +273,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                                                 onPress={() => handleStartQuiz(quiz)}
                                             >
                                                 <Play size={16} color="#ffffff" />
-                                                <Text style={[styles.actionButtonText, { color: '#ffffff' }]}>Start Quiz</Text>
+                                                <Text allowFontScaling={false} style={[styles.actionButtonText, { color: '#ffffff' }]}>Start Quiz</Text>
                                             </TouchableOpacity>
                                         )}
 
@@ -284,7 +284,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                                                 onPress={() => handleEndQuiz(quiz)}
                                             >
                                                 <Square size={16} color="#ffffff" />
-                                                <Text style={[styles.actionButtonText, { color: '#ffffff' }]}>Complete Quiz</Text>
+                                                <Text allowFontScaling={false} style={[styles.actionButtonText, { color: '#ffffff' }]}>Complete Quiz</Text>
                                             </TouchableOpacity>
                                         )}
 
@@ -297,7 +297,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                                                 onPress={() => handleMarkQuizzes(quiz)}
                                             >
                                                 <Edit3 size={16} color="#ffffff" />
-                                                <Text style={styles.markingButtonText}>
+                                                <Text allowFontScaling={false} style={styles.markingButtonText}>
                                                     {resultCounts.marked === 0 ? 'Start Marking' : 'Continue Marking'}
                                                 </Text>
                                             </TouchableOpacity>
@@ -306,7 +306,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                                         {/* Auto-complete info for scheduled quizzes with marks */}
                                         {quiz.status === 'scheduled' && resultCounts.marked > 0 && (
                                             <View style={[styles.autoCompleteInfo, { backgroundColor: '#E0F2FE', borderColor: '#0EA5E9' }]}>
-                                                <Text style={[styles.autoCompleteText, { color: '#0369A1' }]}>
+                                                <Text allowFontScaling={false} style={[styles.autoCompleteText, { color: '#0369A1' }]}>
                                                     ℹ️ Quiz will auto-complete when you start marking
                                                 </Text>
                                             </View>
@@ -315,7 +315,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                                         {/* Show completion message for fully marked quizzes */}
                                         {allMarked && (
                                             <View style={[styles.completedBadge, { backgroundColor: '#10B981' }]}>
-                                                <Text style={styles.completedBadgeText}>✓ All Students Marked</Text>
+                                                <Text allowFontScaling={false} style={styles.completedBadgeText}>✓ All Students Marked</Text>
                                             </View>
                                         )}
                                     </View>

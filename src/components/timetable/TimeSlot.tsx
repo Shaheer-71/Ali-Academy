@@ -22,7 +22,7 @@ export default function TimeSlot({
     isFirst,
     isLast
 }: TimeSlotProps) {
-    const canPress = profile?.role === 'teacher' && entry.teacher_id === profile.id;
+    const canPress = (profile?.role === 'teacher' || profile?.role === 'admin') && entry.teacher_id === profile.id;
     const formatTime = (time: string) => time.substring(0, 5);
 
     return (
@@ -40,24 +40,24 @@ export default function TimeSlot({
                 <View style={styles.timeSlotHeader}>
                     <View style={styles.timeInfo}>
                         <Clock size={14} color={colors.primary} />
-                        <Text style={[styles.timeText, { color: colors.primary }]}>
+                        <Text allowFontScaling={false} style={[styles.timeText, { color: colors.primary }]}>
                             {formatTime(entry.start_time)} - {formatTime(entry.end_time)}
                         </Text>
                     </View>
                     <View style={[styles.roomBadge, { backgroundColor: colors.secondary }]}>
                         <MapPin size={10} color="#274d71" />
-                        <Text style={styles.roomText}>{entry.room_number}</Text>
+                        <Text allowFontScaling={false} style={styles.roomText}>{entry.room_number}</Text>
                     </View>
                 </View>
-                <Text style={[styles.subjectText, { color: colors.text }]}>{entry.subject_name}</Text>
+                <Text allowFontScaling={false} style={[styles.subjectText, { color: colors.text }]}>{entry.subject_name}</Text>
                 <View style={styles.entryDetails}>
                     <View style={styles.teacherInfo}>
                         <User size={12} color={colors.textSecondary} />
-                        <Text style={[styles.teacherText, { color: colors.textSecondary }]}>{entry.teacher_name}</Text>
+                        <Text allowFontScaling={false} style={[styles.teacherText, { color: colors.textSecondary }]}>{entry.teacher_name}</Text>
                     </View>
                     <View style={styles.classInfo}>
                         <BookOpen size={12} color={colors.textSecondary} />
-                        <Text style={[styles.classText, { color: colors.textSecondary }]}>{entry.class_name}</Text>
+                        <Text allowFontScaling={false} style={[styles.classText, { color: colors.textSecondary }]}>{entry.class_name}</Text>
                     </View>
                 </View>
             </View>

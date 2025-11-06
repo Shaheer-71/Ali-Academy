@@ -36,7 +36,7 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
                 onPress={setToday}
             >
                 <Calendar size={16} color={colors.primary} />
-                <Text style={[styles.changeDateText, { color: colors.primary }]}>Today</Text>
+                <Text allowFontScaling={false} style={[styles.changeDateText, { color: colors.primary }]}>Today</Text>
             </TouchableOpacity>
         </View>
     );

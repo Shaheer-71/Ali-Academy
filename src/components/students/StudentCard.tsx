@@ -27,20 +27,20 @@ export const StudentCard: React.FC<StudentCardProps> = ({
     <TouchableOpacity style={styles.container} onPress={onPress}>
       <View style={styles.header}>
         <View style={styles.avatar}>
-          <Text style={styles.initial}>
+          <Text allowFontScaling={false} style={styles.initial}>
             {student.full_name.charAt(0).toUpperCase()}
           </Text>
         </View>
         <View style={styles.info}>
-          <Text style={styles.name}>{student.full_name}</Text>
+          <Text allowFontScaling={false} style={styles.name}>{student.full_name}</Text>
           <View style={styles.details}>
             <View style={styles.detailItem}>
               <Hash size={12} color="#6B7280" />
-              <Text style={styles.detailText}>{student.roll_number}</Text>
+              <Text allowFontScaling={false} style={styles.detailText}>{student.roll_number}</Text>
             </View>
             <View style={styles.detailItem}>
               <BookOpen size={12} color="#6B7280" />
-              <Text style={styles.detailText}>{student.classes?.name}</Text>
+              <Text allowFontScaling={false} style={styles.detailText}>{student.classes?.name}</Text>
             </View>
           </View>
         </View>
@@ -53,7 +53,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
       
       <View style={styles.contact}>
         <Phone size={14} color="#6B7280" />
-        <Text style={styles.contactText}>{student.parent_contact}</Text>
+        <Text allowFontScaling={false} style={styles.contactText}>{student.parent_contact}</Text>
       </View>
     </TouchableOpacity>
   );

@@ -43,7 +43,7 @@ export const PostAttendanceButton: React.FC<PostAttendanceButtonProps> = ({
                 ) : (
                     <>
                         <Send size={20} color="#ffffff" />
-                        <Text style={styles.buttonText}>
+                        <Text allowFontScaling={false} style={styles.buttonText}>
                             Post Attendance ({markedCount}/{totalCount})
                         </Text>
                     </>

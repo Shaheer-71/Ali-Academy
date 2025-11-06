@@ -72,7 +72,7 @@ export default function StudentsScreen() {
     });
 
     useEffect(() => {
-        if (profile?.role === 'teacher') {
+        if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
             fetchClasses();
             fetchStudentsPasswordStatus();
         }
@@ -208,8 +208,8 @@ export default function StudentsScreen() {
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
                     <View style={styles.errorContainer}>
-                        <Text style={[styles.errorText, { color: colors.text }]}>Access Denied</Text>
-                        <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>
+                        <Text allowFontScaling={false} style={[styles.errorText, { color: colors.text }]}>Access Denied</Text>
+                        <Text allowFontScaling={false} style={[styles.errorSubtext, { color: colors.textSecondary }]}>
                             This section is only available for teachers and administrators.
                         </Text>
                     </View>
@@ -253,10 +253,10 @@ export default function StudentsScreen() {
                                 onPress={() => setPasswordStatusModalVisible(true)}
                             >
                                 <AlertCircle size={20} color="#F59E0B" />
-                                <Text style={[styles.alertText, { color: '#92400E' }]}>
+                                <Text allowFontScaling={false} style={[styles.alertText, { color: '#92400E' }]}>
                                     {studentsWithoutPasswords.length} student(s) pending registration
                                 </Text>
-                                <Text style={[styles.alertAction, { color: '#F59E0B' }]}>View Details</Text>
+                                <Text allowFontScaling={false} style={[styles.alertAction, { color: '#F59E0B' }]}>View Details</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -271,13 +271,13 @@ export default function StudentsScreen() {
                         {loading ? (
                             <View style={styles.loadingContainer}>
                                 <ActivityIndicator size="large" color={colors.primary} />
-                                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading students...</Text>
+                                <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>Loading students...</Text>
                             </View>
                         ) : filteredStudents.length === 0 ? (
                             <View style={styles.emptyContainer}>
                                 <Users size={48} color={colors.textSecondary} />
-                                <Text style={[styles.emptyText, { color: colors.text }]}>No students found</Text>
-                                <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>No students found</Text>
+                                <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>
                                     {searchQuery ? 'Try adjusting your search' : 'Add your first student to get started'}
                                 </Text>
                             </View>
@@ -290,18 +290,18 @@ export default function StudentsScreen() {
                                 >
                                     <View style={styles.studentHeader}>
                                         <View style={[styles.studentAvatar, { backgroundColor: colors.primary }]}>
-                                            <Text style={styles.studentInitial}>{student.full_name.charAt(0).toUpperCase()}</Text>
+                                            <Text allowFontScaling={false} style={styles.studentInitial}>{student.full_name.charAt(0).toUpperCase()}</Text>
                                         </View>
                                         <View style={styles.studentInfo}>
-                                            <Text style={[styles.studentName, { color: colors.text }]}>{student.full_name}</Text>
+                                            <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]}>{student.full_name}</Text>
                                             <View style={styles.studentDetails}>
                                                 <View style={styles.detailItem}>
                                                     <Hash size={14} color={colors.textSecondary} />
-                                                    <Text style={[styles.detailText, { color: colors.textSecondary }]}>{student.roll_number}</Text>
+                                                    <Text allowFontScaling={false} style={[styles.detailText, { color: colors.textSecondary }]}>{student.roll_number}</Text>
                                                 </View>
                                                 <View style={styles.detailItem}>
                                                     <BookOpen size={14} color={colors.textSecondary} />
-                                                    <Text style={[styles.detailText, { color: colors.textSecondary }]}>{student.classes?.name}</Text>
+                                                    <Text allowFontScaling={false} style={[styles.detailText, { color: colors.textSecondary }]}>{student.classes?.name}</Text>
                                                 </View>
                                             </View>
                                         </View>
@@ -309,11 +309,11 @@ export default function StudentsScreen() {
                                     <View style={[styles.contactInfo, { borderTopColor: colors.border }]}>
                                         <View style={styles.contactRow}>
                                             <Phone size={16} color={colors.textSecondary} />
-                                            <Text style={[styles.contactText, { color: colors.text }]}>{student.phone_number || 'N/A'}</Text>
+                                            <Text allowFontScaling={false} style={[styles.contactText, { color: colors.text }]}>{student.phone_number || 'N/A'}</Text>
                                         </View>
                                         <View style={styles.contactRow}>
                                             <Phone size={16} color={colors.textSecondary} />
-                                            <Text style={[styles.contactText, { color: colors.text }]}>Parent: {student.parent_contact}</Text>
+                                            <Text allowFontScaling={false} style={[styles.contactText, { color: colors.text }]}>Parent: {student.parent_contact}</Text>
                                         </View>
                                     </View>
                                 </TouchableOpacity>
@@ -331,7 +331,7 @@ export default function StudentsScreen() {
                         <View style={styles.modalOverlay}>
                             <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                                 <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                                    <Text style={[styles.modalTitle, { color: colors.text }]}>Add New Student</Text>
+                                    <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Add New Student</Text>
                                     <TouchableOpacity
                                         style={styles.closeButton}
                                         onPress={() => setModalVisible(false)}
@@ -341,10 +341,10 @@ export default function StudentsScreen() {
                                 </View>
 
                                 <ScrollView style={styles.modalScrollView}>
-                                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Student Information</Text>
+                                    <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Student Information</Text>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={[styles.label, { color: colors.text }]}>Full Name *</Text>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Full Name *</Text>
                                         <TextInput
                                             style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                             value={newStudent.full_name}
@@ -355,7 +355,7 @@ export default function StudentsScreen() {
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={[styles.label, { color: colors.text }]}>Roll Number *</Text>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Roll Number *</Text>
                                         <TextInput
                                             style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                             value={newStudent.roll_number}
@@ -363,13 +363,13 @@ export default function StudentsScreen() {
                                             placeholder="Enter roll number"
                                             placeholderTextColor={colors.textSecondary}
                                         />
-                                        <Text style={[styles.helpText, { color: colors.textSecondary }]}>
+                                        <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary }]}>
                                             Email will be: {newStudent.roll_number.toLowerCase()}@aliacademy.edu
                                         </Text>
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={[styles.label, { color: colors.text }]}>Phone Number *</Text>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Phone Number *</Text>
                                         <TextInput
                                             style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                             value={newStudent.phone_number}
@@ -381,9 +381,9 @@ export default function StudentsScreen() {
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={[styles.label, { color: colors.text }]}>Class *</Text>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Class *</Text>
                                         {classes.length === 0 ? (
-                                            <Text style={[styles.label, { color: colors.textSecondary }]}>No classes available</Text>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.textSecondary }]}>No classes available</Text>
                                         ) : (
                                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                                 <View style={styles.classOptions}>
@@ -414,7 +414,7 @@ export default function StudentsScreen() {
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={[styles.label, { color: colors.text }]}>Parent Contact *</Text>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Parent Contact *</Text>
                                         <TextInput
                                             style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                             value={newStudent.parent_contact}
@@ -426,7 +426,7 @@ export default function StudentsScreen() {
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={[styles.label, { color: colors.text }]}>Gender *</Text>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Gender *</Text>
                                         <View style={styles.genderOptions}>
                                             {[
                                                 { value: 'male', label: 'Male' },
@@ -457,7 +457,7 @@ export default function StudentsScreen() {
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={[styles.label, { color: colors.text }]}>Address *</Text>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Address *</Text>
                                         <TextInput
                                             style={[styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                             value={newStudent.address}
@@ -470,7 +470,7 @@ export default function StudentsScreen() {
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={[styles.label, { color: colors.text }]}>Admission Date *</Text>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Admission Date *</Text>
                                         <TextInput
                                             style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                             value={newStudent.admission_date}
@@ -480,10 +480,10 @@ export default function StudentsScreen() {
                                         />
                                     </View>
 
-                                    <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>Additional Information (Optional)</Text>
+                                    <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>Additional Information (Optional)</Text>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={[styles.label, { color: colors.text }]}>Date of Birth</Text>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Date of Birth</Text>
                                         <TextInput
                                             style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                             value={newStudent.date_of_birth}
@@ -494,7 +494,7 @@ export default function StudentsScreen() {
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={[styles.label, { color: colors.text }]}>Emergency Contact</Text>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Emergency Contact</Text>
                                         <TextInput
                                             style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                             value={newStudent.emergency_contact}
@@ -506,7 +506,7 @@ export default function StudentsScreen() {
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={[styles.label, { color: colors.text }]}>Parent/Guardian Name</Text>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Parent/Guardian Name</Text>
                                         <TextInput
                                             style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                             value={newStudent.parent_name}
@@ -517,7 +517,7 @@ export default function StudentsScreen() {
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={[styles.label, { color: colors.text }]}>Medical Conditions</Text>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Medical Conditions</Text>
                                         <TextInput
                                             style={[styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                             value={newStudent.medical_conditions}
@@ -530,7 +530,7 @@ export default function StudentsScreen() {
                                     </View>
 
                                     <View style={styles.inputGroup}>
-                                        <Text style={[styles.label, { color: colors.text }]}>Notes</Text>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Notes</Text>
                                         <TextInput
                                             style={[styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                             value={newStudent.notes}
@@ -544,8 +544,8 @@ export default function StudentsScreen() {
 
                                     {/* Info box about workflow */}
                                     <View style={[styles.infoBox, { backgroundColor: '#EBF8FF', borderColor: '#3182CE' }]}>
-                                        <Text style={[styles.infoTitle, { color: '#2C5282' }]}>How it works:</Text>
-                                        <Text style={[styles.infoText, { color: '#2A4A6B' }]}>
+                                        <Text allowFontScaling={false} style={[styles.infoTitle, { color: '#2C5282' }]}>How it works:</Text>
+                                        <Text allowFontScaling={false} style={[styles.infoText, { color: '#2A4A6B' }]}>
                                             1. Student record is created with email: {newStudent.roll_number.toLowerCase()}@aliacademy.edu{'\n'}
                                             2. Student uses this email in the registration screen{'\n'}
                                             3. Student sets their own password{'\n'}
@@ -561,7 +561,7 @@ export default function StudentsScreen() {
                                         {creating ? (
                                             <ActivityIndicator color="#ffffff" />
                                         ) : (
-                                            <Text style={styles.submitButtonText}>Create Student (No Password)</Text>
+                                            <Text allowFontScaling={false} style={styles.submitButtonText}>Create Student (No Password)</Text>
                                         )}
                                     </TouchableOpacity>
                                 </ScrollView>
@@ -579,7 +579,7 @@ export default function StudentsScreen() {
                         <View style={styles.modalOverlay}>
                             <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                                 <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                                    <Text style={[styles.modalTitle, { color: colors.text }]}>Students Pending Registration</Text>
+                                    <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Students Pending Registration</Text>
                                     <TouchableOpacity
                                         style={styles.closeButton}
                                         onPress={() => setPasswordStatusModalVisible(false)}
@@ -588,7 +588,7 @@ export default function StudentsScreen() {
                                     </TouchableOpacity>
                                 </View>
                                 <ScrollView style={styles.modalScrollView}>
-                                    <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>
+                                    <Text allowFontScaling={false} style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>
                                         These students need to use their email to register and set their password.
                                     </Text>
                                     {studentsWithoutPasswords.map((student) => (
@@ -597,16 +597,16 @@ export default function StudentsScreen() {
                                             style={[styles.pendingStudentCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
                                         >
                                             <View style={styles.pendingStudentInfo}>
-                                                <Text style={[styles.pendingStudentName, { color: colors.text }]}>
+                                                <Text allowFontScaling={false} style={[styles.pendingStudentName, { color: colors.text }]}>
                                                     {student.full_name}
                                                 </Text>
-                                                <Text style={[styles.pendingStudentDetails, { color: colors.textSecondary }]}>
+                                                <Text allowFontScaling={false} style={[styles.pendingStudentDetails, { color: colors.textSecondary }]}>
                                                     Roll: {student.roll_number} | Class: {student.classes.name}
                                                 </Text>
-                                                <Text style={[styles.pendingStudentEmail, { color: colors.primary }]}>
+                                                <Text allowFontScaling={false} style={[styles.pendingStudentEmail, { color: colors.primary }]}>
                                                     📧 {student.email}
                                                 </Text>
-                                                <Text style={[styles.pendingStudentStatus, { color: '#F59E0B' }]}>
+                                                <Text allowFontScaling={false} style={[styles.pendingStudentStatus, { color: '#F59E0B' }]}>
                                                     ⏳ Waiting for registration
                                                 </Text>
                                             </View>

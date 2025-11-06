@@ -289,7 +289,7 @@ export default function ExamsScreen() {
           getSubjectsWithAll={getSubjectsWithAll}
         />
 
-        {profile?.role === 'teacher' && (
+        {(profile?.role === 'teacher' || profile?.role === 'admin') && (
           <>
             <CreateQuizModal
               colors={colors}

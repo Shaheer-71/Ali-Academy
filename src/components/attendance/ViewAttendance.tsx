@@ -253,8 +253,8 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
                         <>
                             <Users size={24} color={colors.primary} />
                             <View>
-                                <Text style={[styles.viewTypeTitle, { color: colors.text }]}>Class View</Text>
-                                <Text style={[styles.viewTypeSubtitle, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.viewTypeTitle, { color: colors.text }]}>Class View</Text>
+                                <Text allowFontScaling={false} style={[styles.viewTypeSubtitle, { color: colors.textSecondary }]}>
                                     {selectedClass?.name} ({getClassStudents().length} students)
                                 </Text>
                             </View>
@@ -263,8 +263,8 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
                         <>
                             <User size={24} color={colors.primary} />
                             <View>
-                                <Text style={[styles.viewTypeTitle, { color: colors.text }]}>Individual View</Text>
-                                <Text style={[styles.viewTypeSubtitle, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.viewTypeTitle, { color: colors.text }]}>Individual View</Text>
+                                <Text allowFontScaling={false} style={[styles.viewTypeSubtitle, { color: colors.textSecondary }]}>
                                     {selectedStudent ? `${selectedStudent.full_name} (${selectedStudent.roll_number})` : 'No student selected'}
                                 </Text>
                             </View>
@@ -276,7 +276,7 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
                     style={[styles.filterButton, { backgroundColor: colors.primary }]}
                     onPress={() => setFilterModalVisible(true)}
                 >
-                    <Text style={styles.filterButtonText}>Filter</Text>
+                    <Text allowFontScaling={false} style={styles.filterButtonText}>Filter</Text>
                     {hasActiveFilters() && <View style={styles.activeFilterDot} />}
                 </TouchableOpacity>
             </View>
@@ -288,11 +288,11 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
 
         return (
             <View style={[styles.activeFiltersContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                <Text style={[styles.activeFiltersTitle, { color: colors.text }]}>Active Filters:</Text>
+                <Text allowFontScaling={false} style={[styles.activeFiltersTitle, { color: colors.text }]}>Active Filters:</Text>
                 <View style={styles.filterTagsContainer}>
                     {filters.dateRange !== 'today' && (
                         <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                            <Text style={[styles.filterTagText, { color: colors.primary }]}>
+                            <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>
                                 {filters.dateRange === 'week' ? 'Last 7 days' : 
                                  filters.dateRange === 'month' ? 'Last 30 days' : 'Custom range'}
                             </Text>
@@ -300,14 +300,14 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
                     )}
                     {filters.status !== 'all' && (
                         <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                            <Text style={[styles.filterTagText, { color: colors.primary }]}>
+                            <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>
                                 {filters.status.charAt(0).toUpperCase() + filters.status.slice(1)}
                             </Text>
                         </View>
                     )}
                     {filters.viewType === 'student' && (
                         <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                            <Text style={[styles.filterTagText, { color: colors.primary }]}>Individual</Text>
+                            <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>Individual</Text>
                         </View>
                     )}
                 </View>
@@ -323,27 +323,27 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
             return (
                 <View style={styles.statsContainer}>
                     <View style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                        <Text style={[styles.statsCardTitle, { color: colors.text }]}>Class Overview</Text>
+                        <Text allowFontScaling={false} style={[styles.statsCardTitle, { color: colors.text }]}>Class Overview</Text>
                         <View style={styles.statsGrid}>
                             <View style={styles.statItem}>
                                 <CheckCircle size={20} color="#10B981" />
-                                <Text style={[styles.statValue, { color: '#10B981' }]}>{stats.presentCount}</Text>
-                                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Present</Text>
+                                <Text allowFontScaling={false} style={[styles.statValue, { color: '#10B981' }]}>{stats.presentCount}</Text>
+                                <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Present</Text>
                             </View>
                             <View style={styles.statItem}>
                                 <AlertCircle size={20} color="#F59E0B" />
-                                <Text style={[styles.statValue, { color: '#F59E0B' }]}>{stats.lateCount}</Text>
-                                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Late</Text>
+                                <Text allowFontScaling={false} style={[styles.statValue, { color: '#F59E0B' }]}>{stats.lateCount}</Text>
+                                <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Late</Text>
                             </View>
                             <View style={styles.statItem}>
                                 <XCircle size={20} color="#EF4444" />
-                                <Text style={[styles.statValue, { color: '#EF4444' }]}>{stats.absentCount}</Text>
-                                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Absent</Text>
+                                <Text allowFontScaling={false} style={[styles.statValue, { color: '#EF4444' }]}>{stats.absentCount}</Text>
+                                <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Absent</Text>
                             </View>
                             <View style={styles.statItem}>
                                 <TrendingUp size={20} color={colors.primary} />
-                                <Text style={[styles.statValue, { color: colors.primary }]}>{stats.attendanceRate}%</Text>
-                                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Rate</Text>
+                                <Text allowFontScaling={false} style={[styles.statValue, { color: colors.primary }]}>{stats.attendanceRate}%</Text>
+                                <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Rate</Text>
                             </View>
                         </View>
                     </View>
@@ -363,29 +363,29 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
             return (
                 <View style={styles.statsContainer}>
                     <View style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                        <Text style={[styles.statsCardTitle, { color: colors.text }]}>
+                        <Text allowFontScaling={false} style={[styles.statsCardTitle, { color: colors.text }]}>
                             {selectedStudent.full_name}'s Attendance
                         </Text>
                         <View style={styles.statsGrid}>
                             <View style={styles.statItem}>
                                 <Calendar size={20} color={colors.textSecondary} />
-                                <Text style={[styles.statValue, { color: colors.textSecondary }]}>{studentStats.totalDays}</Text>
-                                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Days</Text>
+                                <Text allowFontScaling={false} style={[styles.statValue, { color: colors.textSecondary }]}>{studentStats.totalDays}</Text>
+                                <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Total Days</Text>
                             </View>
                             <View style={styles.statItem}>
                                 <CheckCircle size={20} color="#10B981" />
-                                <Text style={[styles.statValue, { color: '#10B981' }]}>{studentStats.presentDays}</Text>
-                                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Present</Text>
+                                <Text allowFontScaling={false} style={[styles.statValue, { color: '#10B981' }]}>{studentStats.presentDays}</Text>
+                                <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Present</Text>
                             </View>
                             <View style={styles.statItem}>
                                 <AlertCircle size={20} color="#F59E0B" />
-                                <Text style={[styles.statValue, { color: '#F59E0B' }]}>{studentStats.lateDays}</Text>
-                                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Late</Text>
+                                <Text allowFontScaling={false} style={[styles.statValue, { color: '#F59E0B' }]}>{studentStats.lateDays}</Text>
+                                <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Late</Text>
                             </View>
                             <View style={styles.statItem}>
                                 <TrendingUp size={20} color={colors.primary} />
-                                <Text style={[styles.statValue, { color: colors.primary }]}>{studentStats.attendanceRate}%</Text>
-                                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Rate</Text>
+                                <Text allowFontScaling={false} style={[styles.statValue, { color: colors.primary }]}>{studentStats.attendanceRate}%</Text>
+                                <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Rate</Text>
                             </View>
                         </View>
                     </View>
@@ -411,7 +411,7 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
 
         return (
             <View style={styles.recordsContainer}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>
                     Attendance Records ({attendanceData.length})
                 </Text>
                 {attendanceData.map((record) => (

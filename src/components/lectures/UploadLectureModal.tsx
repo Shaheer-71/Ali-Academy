@@ -68,7 +68,7 @@ export default function UploadLectureModal({
     const loadClasses = async () => {
         try {
             const data = await lectureService.fetchClasses(
-                profile?.role === 'teacher' ? profile.id : undefined
+                (profile?.role === 'teacher' || profile?.role === 'admin') ? profile.id : undefined
             );
 
             setClasses(data);
@@ -223,7 +223,7 @@ export default function UploadLectureModal({
                 <View style={[styles.modal, { backgroundColor: colors.background }]}>
                     {/* Header */}
                     <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                        <Text style={[styles.title, { color: colors.text }]}>Upload Lecture</Text>
+                        <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>Upload Lecture</Text>
                         <TouchableOpacity onPress={onClose} disabled={isUploading}>
                             <X size={24} color={colors.text} />
                         </TouchableOpacity>
@@ -232,7 +232,7 @@ export default function UploadLectureModal({
                     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                         {/* Title */}
                         <View style={styles.field}>
-                            <Text style={[styles.label, { color: colors.text }]}>Title *</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Title *</Text>
                             <TextInput
                                 style={[styles.input, { backgroundColor: colors.cardBackground, color: colors.text }]}
                                 placeholder="Enter lecture title"
@@ -244,7 +244,7 @@ export default function UploadLectureModal({
 
                         {/* Description */}
                         <View style={styles.field}>
-                            <Text style={[styles.label, { color: colors.text }]}>Description</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Description</Text>
                             <TextInput
                                 style={[styles.input, styles.textArea, { backgroundColor: colors.cardBackground, color: colors.text }]}
                                 placeholder="Enter description (optional)"
@@ -258,7 +258,7 @@ export default function UploadLectureModal({
 
                         {/* YouTube Link */}
                         <View style={styles.field}>
-                            <Text style={[styles.label, { color: colors.text }]}>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
                                 <Youtube size={16} color={colors.text} /> YouTube Link (Optional)
                             </Text>
                             <TextInput
@@ -272,7 +272,7 @@ export default function UploadLectureModal({
 
                         {/* Class Selection */}
                         <View style={styles.field}>
-                            <Text style={[styles.label, { color: colors.text }]}>Select Class *</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Select Class *</Text>
                             <View style={styles.options}>
                                 {classes.map(cls => (
                                     <TouchableOpacity
@@ -284,7 +284,7 @@ export default function UploadLectureModal({
                                         ]}
                                         onPress={() => setFormData(prev => ({ ...prev, class_id: cls.id, subject_id: '' }))}
                                     >
-                                        <Text style={[
+                                        <Text allowFontScaling={false} style={[
                                             styles.optionText,
                                             { color: colors.text },
                                             formData.class_id === cls.id && { color: 'white' }
@@ -299,7 +299,7 @@ export default function UploadLectureModal({
                         {/* Subject Selection */}
                         {subjects.length > 0 && (
                             <View style={styles.field}>
-                                <Text style={[styles.label, { color: colors.text }]}>Select Subject *</Text>
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Select Subject *</Text>
                                 <View style={styles.options}>
                                     {subjects.map(subject => (
                                         <TouchableOpacity
@@ -311,7 +311,7 @@ export default function UploadLectureModal({
                                             ]}
                                             onPress={() => setFormData(prev => ({ ...prev, subject_id: subject.id }))}
                                         >
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={[
                                                 styles.optionText,
                                                 { color: colors.text },
                                                 formData.subject_id === subject.id && { color: 'white' }
@@ -327,7 +327,7 @@ export default function UploadLectureModal({
                         {/* Access Type
                         {students.length > 0 && (
                             <View style={styles.field}>
-                                <Text style={[styles.label, { color: colors.text }]}>Access Type *</Text>
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Access Type *</Text>
                                 <View style={styles.accessTypes}>
                                     <TouchableOpacity
                                         style={[
@@ -338,7 +338,7 @@ export default function UploadLectureModal({
                                         onPress={() => setFormData(prev => ({ ...prev, access_type: 'class', selected_students: [] }))}
                                     >
                                         <Users size={18} color={formData.access_type === 'class' ? 'white' : colors.text} />
-                                        <Text style={[
+                                        <Text allowFontScaling={false} style={[
                                             styles.accessTypeText,
                                             { color: colors.text },
                                             formData.access_type === 'class' && { color: 'white' }
@@ -356,7 +356,7 @@ export default function UploadLectureModal({
                                         onPress={() => setFormData(prev => ({ ...prev, access_type: 'individual' }))}
                                     >
                                         <User size={18} color={formData.access_type === 'individual' ? 'white' : colors.text} />
-                                        <Text style={[
+                                        <Text allowFontScaling={false} style={[
                                             styles.accessTypeText,
                                             { color: colors.text },
                                             formData.access_type === 'individual' && { color: 'white' }
@@ -371,7 +371,7 @@ export default function UploadLectureModal({
                         {/* Student Selection */}
                         {formData.access_type === 'individual' && students.length > 0 && (
                             <View style={styles.field}>
-                                <Text style={[styles.label, { color: colors.text }]}>
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
                                     Select Students ({formData.selected_students.length}/{students.length})
                                 </Text>
                                 <ScrollView style={styles.studentList} nestedScrollEnabled>
@@ -388,7 +388,7 @@ export default function UploadLectureModal({
                                             ]}
                                             onPress={() => toggleStudent(student.user_id)}
                                         >
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={[
                                                 styles.studentName,
                                                 { color: colors.text }
                                             ]}>
@@ -402,18 +402,18 @@ export default function UploadLectureModal({
 
                         {/* File Picker */}
                         <View style={styles.field}>
-                            <Text style={[styles.label, { color: colors.text }]}>Select File *</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Select File *</Text>
                             <TouchableOpacity
                                 style={[styles.filePicker, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
                                 onPress={pickFile}
                             >
                                 <Upload size={20} color={colors.primary} />
-                                <Text style={[styles.fileText, { color: formData.file ? colors.text : colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.fileText, { color: formData.file ? colors.text : colors.textSecondary }]}>
                                     {formData.file ? formData.file.name : 'Tap to select file (PDF, Image, Video)'}
                                 </Text>
                             </TouchableOpacity>
                             {formData.file && (
-                                <Text style={[styles.fileSize, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.fileSize, { color: colors.textSecondary }]}>
                                     Size: {((formData.file.size || 0) / (1024 * 1024)).toFixed(1)} MB
                                 </Text>
                             )}
@@ -433,7 +433,7 @@ export default function UploadLectureModal({
                             ) : (
                                 <>
                                     <Upload size={20} color="white" />
-                                    <Text style={styles.uploadButtonText}>Upload Lecture</Text>
+                                    <Text allowFontScaling={false} style={styles.uploadButtonText}>Upload Lecture</Text>
                                 </>
                             )}
                         </TouchableOpacity>

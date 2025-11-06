@@ -288,7 +288,7 @@ export default function HomeScreen() {
   };
 
   const fetchData = async () => {
-    if (profile?.role === 'teacher') {
+    if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
       await fetchTeacherStats();
     } else {
       await fetchStudentStats();
@@ -312,7 +312,7 @@ export default function HomeScreen() {
   }, [profile]);
 
   const getRoleBasedQuickActions = () => {
-    if (profile?.role === 'teacher') {
+    if (profile?.role === 'teacher' || profile?.role === 'admin') {
       return [
         {
           title: 'Mark Attendance',
@@ -347,7 +347,6 @@ export default function HomeScreen() {
         icon: Calendar,
         color: '#b6d509',
         onPress: () => router.push('/attendance')
-        // onPress: () => Alert.alert('Coming Soon', 'Attendance view will be available soon')
       },
       {
         title: 'Latest Lectures',
@@ -371,7 +370,7 @@ export default function HomeScreen() {
   };
 
   const getStatsLabels = () => {
-    if (profile?.role === 'teacher') {
+    if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
       return ['Students', 'Classes', 'Lectures'];
     } else {
       return ['Attendance', 'Dairy', 'Lectures'];
@@ -379,7 +378,7 @@ export default function HomeScreen() {
   };
 
   const getStatsValues = () => {
-    if (profile?.role === 'teacher') {
+    if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
       return [stats.students, stats.classes, stats.lectures];
     } else {
       return [
@@ -434,9 +433,9 @@ export default function HomeScreen() {
               {/* Header */}
               <View style={[styles.header, { backgroundColor: colors.cardBackground }]}>
                 <View>
-                  <Text style={[styles.greeting, { color: colors.textSecondary }]}>{getGreeting()}</Text>
-                  <Text style={[styles.username, { color: colors.text }]}>{profile?.full_name}</Text>
-                  <Text style={[styles.role, { backgroundColor: colors.primary }]}>{profile?.role?.toUpperCase()}</Text>
+                  <Text allowFontScaling={false} style={[styles.greeting, { color: colors.textSecondary }]}>{getGreeting()}</Text>
+                  <Text allowFontScaling={false} style={[styles.username, { color: colors.text }]}>{profile?.full_name}</Text>
+                  <Text allowFontScaling={false} style={[styles.role, { backgroundColor: colors.primary }]}>{profile?.role?.toUpperCase()}</Text>
                 </View>
               </View>
 
@@ -444,8 +443,8 @@ export default function HomeScreen() {
               <View style={[styles.statsContainer, { backgroundColor: colors.cardBackground }]}>
                 {statsValues.map((value, index) => (
                   <View key={index} style={[styles.statsCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text style={[styles.statsNumber, { color: colors.primary }]}>{value}</Text>
-                    <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
+                    <Text allowFontScaling={false} style={[styles.statsNumber, { color: colors.primary }]}>{value}</Text>
+                    <Text allowFontScaling={false} style={[styles.statsLabel, { color: colors.textSecondary }]}>
                       {statsLabels[index]}
                     </Text>
                   </View>
@@ -456,7 +455,7 @@ export default function HomeScreen() {
             {/* Quick Actions */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
+                <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
                 <View style={[styles.sectionIcon, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                   <Sparkles size={16} color={colors.secondary} />
                 </View>
@@ -473,7 +472,7 @@ export default function HomeScreen() {
                     <View style={[styles.actionIcon, { backgroundColor: `${action.color}20` }]}>
                       <action.icon size={24} color={action.color} />
                     </View>
-                    <Text style={[styles.actionTitle, { color: colors.text }]}>{action.title}</Text>
+                    <Text allowFontScaling={false} style={[styles.actionTitle, { color: colors.text }]}>{action.title}</Text>
                     <View style={[styles.actionIndicator, { backgroundColor: action.color }]} />
                   </TouchableOpacity>
                 ))}
@@ -488,7 +487,7 @@ export default function HomeScreen() {
             {/* Dynamic Recent Activity */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Activity</Text>
+                <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Recent Activity</Text>
                 <View style={[styles.sectionIcon, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                   <TrendingUp size={16} color={colors.primary} />
                 </View>
@@ -499,8 +498,8 @@ export default function HomeScreen() {
                     <View key={activity.id} style={[styles.activityItem, index === recentActivities.length - 1 && { marginBottom: 0 }]}>
                       <View style={[styles.activityDot, getActivityDotStyle(activity.type)]} />
                       <View style={styles.activityContent}>
-                        <Text style={[styles.activityTitle, { color: colors.text }]}>{activity.title}</Text>
-                        <Text style={[styles.activityTime, { color: colors.textSecondary }]}>{activity.description} • {activity.time}</Text>
+                        <Text allowFontScaling={false} style={[styles.activityTitle, { color: colors.text }]}>{activity.title}</Text>
+                        <Text allowFontScaling={false} style={[styles.activityTime, { color: colors.textSecondary }]}>{activity.description} • {activity.time}</Text>
                       </View>
                     </View>
                   ))
@@ -508,8 +507,8 @@ export default function HomeScreen() {
                   <View style={styles.activityItem}>
                     <View style={[styles.activityDot, styles.activityDotInfo]} />
                     <View style={styles.activityContent}>
-                      <Text style={[styles.activityTitle, { color: colors.text }]}>Welcome!</Text>
-                      <Text style={[styles.activityTime, { color: colors.textSecondary }]}>Start using the app to see your recent activity</Text>
+                      <Text allowFontScaling={false} style={[styles.activityTitle, { color: colors.text }]}>Welcome!</Text>
+                      <Text allowFontScaling={false} style={[styles.activityTime, { color: colors.textSecondary }]}>Start using the app to see your recent activity</Text>
                     </View>
                   </View>
                 )}
@@ -540,16 +539,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   greeting: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Inter-Regular',
   },
   username: {
-    fontSize: 24,
+    fontSize: 20,
     fontFamily: 'Inter-SemiBold',
     marginTop: 4,
   },
   role: {
-    fontSize: 12,
+    fontSize: 10,
     fontFamily: 'Inter-Medium',
     color: '#b6d509',
     paddingHorizontal: 8,
@@ -574,12 +573,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statsNumber: {
-    fontSize: 20,
+    fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     marginBottom: 4,
   },
   statsLabel: {
-    fontSize: 10,
+    fontSize: 6,
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
   },
@@ -593,7 +592,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontFamily: 'Inter-SemiBold',
   },
   sectionIcon: {
@@ -630,7 +629,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   actionTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: 'Inter-Medium',
     textAlign: 'center',
   },
@@ -670,12 +669,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   activityTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: 'Inter-Medium',
     marginBottom: 2,
   },
   activityTime: {
-    fontSize: 12,
+    fontSize: 10,
     fontFamily: 'Inter-Regular',
   },
   activityDotSuccess: {

@@ -20,7 +20,7 @@ export const ClassSelector: React.FC<ClassSelectorProps> = ({
 
     return (
         <View style={styles.classSelection}>
-            <Text style={[styles.sectionLabel, { color: colors.text }]}>Select Class</Text>
+            <Text allowFontScaling={false} style={[styles.sectionLabel, { color: colors.text }]}>Select Class</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.classButtons}>
                     {classes.map((classItem) => (
@@ -34,7 +34,7 @@ export const ClassSelector: React.FC<ClassSelectorProps> = ({
                             onPress={() => onClassSelect(classItem.id)}
                         >
                             <Users size={16} color={selectedClass === classItem.id ? '#ffffff' : colors.text} />
-                            <Text style={[
+                            <Text allowFontScaling={false} style={[
                                 styles.classButtonText,
                                 { color: colors.text },
                                 selectedClass === classItem.id && { color: '#ffffff' },

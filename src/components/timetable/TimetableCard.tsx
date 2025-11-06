@@ -38,29 +38,29 @@ export const TimetableCard: React.FC<TimetableCardProps> = ({
       <View style={styles.header}>
         <View style={styles.timeContainer}>
           <Clock size={14} color="#274d71" />
-          <Text style={styles.timeText}>
+          <Text allowFontScaling={false} style={styles.timeText}>
             {entry.start_time} - {entry.end_time}
           </Text>
         </View>
         <View style={styles.roomBadge}>
           <MapPin size={10} color="#274d71" />
-          <Text style={styles.roomText}>{entry.room_number}</Text>
+          <Text allowFontScaling={false} style={styles.roomText}>{entry.room_number}</Text>
         </View>
       </View>
       
-      <Text style={styles.subject}>{entry.subject}</Text>
+      <Text allowFontScaling={false} style={styles.subject}>{entry.subject}</Text>
       
       {entry.teacher_name && (
         <View style={styles.teacherContainer}>
           <User size={12} color="#6B7280" />
-          <Text style={styles.teacherText}>{entry.teacher_name}</Text>
+          <Text allowFontScaling={false} style={styles.teacherText}>{entry.teacher_name}</Text>
         </View>
       )}
 
       {entry.class_name && (
         <View style={styles.classContainer}>
           <BookOpen size={12} color="#6B7280" />
-          <Text style={styles.classText}>{entry.class_name}</Text>
+          <Text allowFontScaling={false} style={styles.classText}>{entry.class_name}</Text>
         </View>
       )}
     </TouchableOpacity>

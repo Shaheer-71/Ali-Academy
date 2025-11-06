@@ -29,7 +29,7 @@ const ClassFilter: React.FC<ClassFilterProps> = ({
                             ]}
                             onPress={() => setSelectedClass(classItem.id)}
                         >
-                            <Text style={[
+                            <Text allowFontScaling={false} style={[
                                 styles.classButtonText,
                                 { color: colors.text },
                                 selectedClass === classItem.id && { color: '#274d71' },

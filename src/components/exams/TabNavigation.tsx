@@ -52,7 +52,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
         >
             {icon && icon}
             {!isIconOnly && (
-                <Text style={[
+                <Text allowFontScaling={false} style={[
                     styles.headerButtonText,
                     { color: isActive ? '#ffffff' : colors.text }
                 ]}>
@@ -97,7 +97,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
                     />
 
                     {/* Add Button (only for teachers) */}
-                    {profile?.role === 'teacher' && (
+                    {(profile?.role === 'teacher' || profile?.role === 'admin') && (
                         <TabButton
                             title="Add"
                             isActive={isModalVisible}

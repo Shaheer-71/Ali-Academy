@@ -80,15 +80,15 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
 
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+          <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]} numberOfLines={1}>
             {notification.title}
           </Text>
-          <Text style={styles.timestamp}>
+          <Text allowFontScaling={false} style={styles.timestamp}>
             {getTimeAgo(notification.timestamp)}
           </Text>
         </View>
 
-        <Text style={styles.message} numberOfLines={2}>
+        <Text allowFontScaling={false} style={styles.message} numberOfLines={2}>
           {notification.message}
         </Text>
 

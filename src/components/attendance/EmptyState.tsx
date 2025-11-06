@@ -18,8 +18,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     return (
         <View style={styles.emptyContainer}>
             {icon}
-            <Text style={[styles.emptyText, { color: colors.text }]}>{title}</Text>
-            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>{subtitle}</Text>
+            <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>{title}</Text>
+            <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>{subtitle}</Text>
         </View>
     );
 };

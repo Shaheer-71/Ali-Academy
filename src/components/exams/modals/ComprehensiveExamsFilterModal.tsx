@@ -93,7 +93,7 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
         <View style={[styles.section, { borderColor: colors.border }]}>
             <View style={styles.sectionHeader}>
                 {icon}
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+                <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
             </View>
             {children}
         </View>
@@ -142,7 +142,7 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                     <View style={[styles.header, { borderBottomColor: colors.border }]}>
                         <View style={styles.headerLeft}>
                             <Filter size={24} color={colors.primary} />
-                            <Text style={[styles.title, { color: colors.text }]}>Exam Filters</Text>
+                            <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>Exam Filters</Text>
                         </View>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                             <X size={24} color={colors.textSecondary} />
@@ -165,7 +165,7 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                                             }))}
                                             style={styles.classButton}
                                         >
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={[
                                                 styles.optionText, 
                                                 { color: filters.selectedClass === classItem.id ? colors.primary : colors.text }
                                             ]}>
@@ -187,7 +187,7 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                                         onPress={() => setFilters(prev => ({ ...prev, selectedSubject: subject.id }))}
                                         style={styles.subjectButton}
                                     >
-                                        <Text style={[
+                                        <Text allowFontScaling={false} style={[
                                             styles.optionText, 
                                             { color: filters.selectedSubject === subject.id ? colors.primary : colors.text }
                                         ]}>
@@ -209,8 +209,8 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                                             onPress={() => setFilters(prev => ({ ...prev, statusFilter: option.value }))}
                                             style={styles.statusButton}
                                         >
-                                            <Text style={styles.statusIcon}>{option.icon}</Text>
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={styles.statusIcon}>{option.icon}</Text>
+                                            <Text allowFontScaling={false} style={[
                                                 styles.optionText, 
                                                 { color: filters.statusFilter === option.value ? colors.primary : colors.text }
                                             ]}>
@@ -233,8 +233,8 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                                             onPress={() => setFilters(prev => ({ ...prev, checkedFilter: option.value }))}
                                             style={styles.statusButton}
                                         >
-                                            <Text style={styles.statusIcon}>{option.icon}</Text>
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={styles.statusIcon}>{option.icon}</Text>
+                                            <Text allowFontScaling={false} style={[
                                                 styles.optionText, 
                                                 { color: filters.checkedFilter === option.value ? colors.primary : colors.text }
                                             ]}>
@@ -248,31 +248,31 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
 
                         {/* Applied Filters Summary */}
                         <View style={[styles.summarySection, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                            <Text style={[styles.summaryTitle, { color: colors.text }]}>Current Filters:</Text>
+                            <Text allowFontScaling={false} style={[styles.summaryTitle, { color: colors.text }]}>Current Filters:</Text>
                             
                             {userRole === 'teacher' && (
-                                <Text style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                     • Class: {getClassesWithAll().find(c => c.id === filters.selectedClass)?.name || 'All Classes'}
                                 </Text>
                             )}
                             
-                            <Text style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                 • Subject: {getAvailableSubjects().find(s => s.id === filters.selectedSubject)?.name || 'All Subjects'}
                             </Text>
                             
                             {(activeTab === 'schedule' || activeTab === 'reports') && (
-                                <Text style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                     • Status: {statusOptions.find(s => s.value === filters.statusFilter)?.label}
                                 </Text>
                             )}
                             
                             {activeTab === 'results' && userRole === 'teacher' && (
-                                <Text style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                     • Evaluation: {evaluationOptions.find(e => e.value === filters.checkedFilter)?.label}
                                 </Text>
                             )}
 
-                            <Text style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                 • Active Tab: {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
                             </Text>
                         </View>
@@ -285,7 +285,7 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                             onPress={handleReset}
                         >
                             <RotateCcw size={16} color={colors.textSecondary} />
-                            <Text style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset & Apply</Text>
+                            <Text allowFontScaling={false} style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset & Apply</Text>
                         </TouchableOpacity>
                         
                         <View style={styles.mainActions}>
@@ -293,14 +293,14 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                                 style={[styles.button, styles.cancelButton, { backgroundColor: colors.background, borderColor: colors.border }]}
                                 onPress={onClose}
                             >
-                                <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
+                                <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
                             </TouchableOpacity>
                             
                             <TouchableOpacity
                                 style={[styles.button, styles.applyButton, { backgroundColor: colors.primary }]}
                                 onPress={handleApply}
                             >
-                                <Text style={styles.applyButtonText}>Apply Filters</Text>
+                                <Text allowFontScaling={false} style={styles.applyButtonText}>Apply Filters</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

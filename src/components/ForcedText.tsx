@@ -5,7 +5,7 @@ import { Text, TextInput, TextProps, TextInputProps } from 'react-native';
 // Use these instead of regular Text/TextInput to ensure device text size never affects your app
 
 export const ForcedText: React.FC<TextProps> = (props) => {
-  return <Text {...props} allowFontScaling={false} />;
+  return <Text allowFontScaling={false} {...props} allowFontScaling={false} />;
 };
 
 export const ForcedTextInput: React.FC<TextInputProps> = (props) => {

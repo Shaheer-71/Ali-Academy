@@ -245,14 +245,14 @@ export default function SignInScreen() {
             <View style={styles.iconContainer}>
               <GraduationCap size={48} color="#b6d509" />
             </View>
-            <Text style={styles.title}>Academy Management</Text>
-            <Text style={styles.subtitle}>Sign in to your account</Text>
+            <Text allowFontScaling={false}  style={styles.title}>Academy Management</Text>
+            <Text allowFontScaling={false}  style={styles.subtitle}>Sign in to your account</Text>
           </View>
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
+              <Text allowFontScaling={false}  style={styles.label}>Email</Text>
+              <TextInput allowFontScaling={false} 
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
@@ -265,8 +265,8 @@ export default function SignInScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
+              <Text allowFontScaling={false}  style={styles.label}>Password</Text>
+              <TextInput allowFontScaling={false} 
                 style={styles.input}
                 value={password}
                 onChangeText={setPassword}
@@ -285,7 +285,7 @@ export default function SignInScreen() {
               {loading ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
+                <Text allowFontScaling={false}  style={styles.buttonText}>Sign In</Text>
               )}
             </TouchableOpacity>
 
@@ -295,20 +295,20 @@ export default function SignInScreen() {
                 style={[styles.debugButton]}
                 onPress={debugSignIn}
               >
-                <Text style={styles.debugButtonText}>🐛 Debug Auth</Text>
+                <Text allowFontScaling={false}  style={styles.debugButtonText}>🐛 Debug Auth</Text>
               </TouchableOpacity>
             )} */}
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>New Student?</Text>
+            <Text allowFontScaling={false}  style={styles.footerText}>New Student?</Text>
             <View style={styles.footerButtonRow}>
-              <Text style={styles.demoText}>Click Here to</Text>
+              <Text allowFontScaling={false}  style={styles.demoText}>Click Here to</Text>
               <TouchableOpacity
                 onPress={() => router.push("/sign-up")}
                 style={styles.registerButton}
               >
-                <Text style={styles.registerButtonText}> Register Now</Text>
+                <Text allowFontScaling={false}  style={styles.registerButtonText}> Register Now</Text>
               </TouchableOpacity>
             </View>
           </View>

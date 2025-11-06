@@ -41,7 +41,7 @@ export const CustomTimeModal: React.FC<CustomTimeModalProps> = ({
             <View style={styles.modalOverlay}>
                 <View style={[styles.timeModalContent, { backgroundColor: colors.background }]}>
                     <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>Enter Arrival Time</Text>
+                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Enter Arrival Time</Text>
                         <TouchableOpacity onPress={onClose}>
                             <X size={24} color={colors.textSecondary} />
                         </TouchableOpacity>
@@ -61,13 +61,13 @@ export const CustomTimeModal: React.FC<CustomTimeModalProps> = ({
                                 style={[styles.cancelButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
                                 onPress={onClose}
                             >
-                                <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancel</Text>
+                                <Text allowFontScaling={false} style={[styles.cancelButtonText, { color: colors.text }]}>Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.confirmButton, { backgroundColor: colors.primary }]}
                                 onPress={handleConfirm}
                             >
-                                <Text style={styles.confirmButtonText}>Mark Present</Text>
+                                <Text allowFontScaling={false} style={styles.confirmButtonText}>Mark Present</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
