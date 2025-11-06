@@ -106,7 +106,7 @@ const MarkingModal: React.FC<MarkingModalProps> = ({
             >
                 <View style={[styles.markingModalContent, { backgroundColor: colors.background }]}>
                     <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>Mark Quiz</Text>
+                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Mark Quiz</Text>
                         <TouchableOpacity
                             style={styles.closeButton}
                             onPress={handleClose}
@@ -118,19 +118,19 @@ const MarkingModal: React.FC<MarkingModalProps> = ({
                     {selectedResult && (
                         <ScrollView style={styles.markingContent} contentContainerStyle={styles.markingScrollContent}>
                             <View style={[styles.quizInfoCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                                <Text style={[styles.quizInfoTitle, { color: colors.text }]}>
+                                <Text allowFontScaling={false} style={[styles.quizInfoTitle, { color: colors.text }]}>
                                     {selectedResult.quizzes?.title}
                                 </Text>
-                                <Text style={[styles.quizInfoStudent, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.quizInfoStudent, { color: colors.textSecondary }]}>
                                     Student: {selectedResult.students?.full_name} ({selectedResult.students?.roll_number})
                                 </Text>
-                                <Text style={[styles.quizInfoMarks, { color: colors.primary }]}>
+                                <Text allowFontScaling={false} style={[styles.quizInfoMarks, { color: colors.primary }]}>
                                     Total Marks: {selectedResult.total_marks}
                                 </Text>
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={[styles.label, { color: colors.text }]}>Marks Obtained</Text>
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Marks Obtained</Text>
                                 <TextInput
                                     style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                     value={markingData.marks}
@@ -144,7 +144,7 @@ const MarkingModal: React.FC<MarkingModalProps> = ({
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={[styles.label, { color: colors.text }]}>Remarks (Optional)</Text>
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Remarks (Optional)</Text>
                                 <TextInput
                                     style={[styles.input, styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                     value={markingData.remarks}
@@ -168,7 +168,7 @@ const MarkingModal: React.FC<MarkingModalProps> = ({
                                 ) : (
                                     <>
                                         <Save size={16} color="#ffffff" />
-                                        <Text style={styles.submitButtonText}>Save Marks</Text>
+                                        <Text allowFontScaling={false} style={styles.submitButtonText}>Save Marks</Text>
                                     </>
                                 )}
                             </TouchableOpacity>

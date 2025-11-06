@@ -56,17 +56,17 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text allowFontScaling={false} style={styles.label}>{label}</Text>
       
       {selectedFile ? (
         <View style={styles.selectedFileContainer}>
           <View style={styles.fileInfo}>
             {getFileIcon()}
             <View style={styles.fileDetails}>
-              <Text style={styles.fileName} numberOfLines={1}>
+              <Text allowFontScaling={false} style={styles.fileName} numberOfLines={1}>
                 {selectedFile.name}
               </Text>
-              <Text style={styles.fileSize}>
+              <Text allowFontScaling={false} style={styles.fileSize}>
                 {getFileSize(selectedFile.size)}
               </Text>
             </View>
@@ -85,13 +85,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
           disabled={uploading}
         >
           <Upload size={20} color="#274d71" />
-          <Text style={styles.uploadText}>
+          <Text allowFontScaling={false} style={styles.uploadText}>
             {uploading ? 'Selecting...' : 'Select File'}
           </Text>
         </TouchableOpacity>
       )}
       
-      <Text style={styles.supportedFormats}>
+      <Text allowFontScaling={false} style={styles.supportedFormats}>
         Supported: PDF, Images, Videos
       </Text>
     </View>

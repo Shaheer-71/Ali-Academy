@@ -47,10 +47,10 @@ export default function NotificationCenter() {
     const EmptyState = () => (
         <View style={styles.emptyContainer}>
             <Bell size={64} color={colors.textSecondary} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            <Text allowFontScaling={false} style={[styles.emptyTitle, { color: colors.text }]}>
                 No notifications
             </Text>
-            <Text style={[styles.emptyMessage, { color: colors.textSecondary }]}>
+            <Text allowFontScaling={false} style={[styles.emptyMessage, { color: colors.textSecondary }]}>
                 {filter === 'unread'
                     ? "You're all caught up!"
                     : "You don't have any notifications yet"}
@@ -62,7 +62,7 @@ export default function NotificationCenter() {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>
+                <Text allowFontScaling={false} style={[styles.headerTitle, { color: colors.text }]}>
                     Notifications
                 </Text>
                 <TouchableOpacity
@@ -70,7 +70,7 @@ export default function NotificationCenter() {
                     onPress={markAllAsRead}
                 >
                     <CheckCheck size={20} color="#fff" />
-                    <Text style={styles.markAllText}>Mark all read</Text>
+                    <Text allowFontScaling={false} style={styles.markAllText}>Mark all read</Text>
                 </TouchableOpacity>
             </View>
 

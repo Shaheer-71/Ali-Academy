@@ -71,7 +71,7 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
             <View style={styles.modalOverlay}>
                 <View style={[styles.editModalContent, { backgroundColor: colors.background }]}>
                     <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Attendance</Text>
+                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Edit Attendance</Text>
                         <TouchableOpacity onPress={onClose}>
                             <X size={24} color={colors.textSecondary} />
                         </TouchableOpacity>
@@ -79,16 +79,16 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
 
                     <ScrollView style={styles.editModalBody}>
                         <View style={[styles.studentInfoCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                            <Text style={[styles.editStudentName, { color: colors.text }]}>
+                            <Text allowFontScaling={false} style={[styles.editStudentName, { color: colors.text }]}>
                                 {editedRecord.students?.full_name}
                             </Text>
-                            <Text style={[styles.editStudentDetails, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.editStudentDetails, { color: colors.textSecondary }]}>
                                 {editedRecord.students?.roll_number} • {formatDate(editedRecord.date)}
                             </Text>
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.text }]}>Status</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Status</Text>
                             <View style={styles.statusOptions}>
                                 {[
                                     { value: 'present', label: 'Present', icon: CheckCircle, color: '#10B981' },
@@ -105,7 +105,7 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
                                         onPress={() => setEditedRecord({ ...editedRecord, status: option.value as any })}
                                     >
                                         <option.icon size={16} color={editedRecord.status === option.value ? '#ffffff' : option.color} />
-                                        <Text style={[
+                                        <Text allowFontScaling={false} style={[
                                             styles.statusOptionText,
                                             { color: colors.text },
                                             editedRecord.status === option.value && { color: '#ffffff' },
@@ -119,7 +119,7 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
 
                         {editedRecord.status !== 'absent' && (
                             <View style={styles.inputGroup}>
-                                <Text style={[styles.label, { color: colors.text }]}>Arrival Time</Text>
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Arrival Time</Text>
                                 <TextInput
                                     style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                     value={editedRecord.arrival_time || ''}
@@ -134,7 +134,7 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
                             style={[styles.saveButton, { backgroundColor: colors.primary }]}
                             onPress={handleSave}
                         >
-                            <Text style={styles.saveButtonText}>Save Changes</Text>
+                            <Text allowFontScaling={false} style={styles.saveButtonText}>Save Changes</Text>
                         </TouchableOpacity>
                     </ScrollView>
                 </View>

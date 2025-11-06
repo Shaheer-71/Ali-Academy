@@ -9,7 +9,6 @@ import { NotificationProvider } from '@/src/contexts/NotificationContext';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import '@/src/constants/TextScaling';
-
 import { registerDeviceForNotifications, setupNotificationHandlers } from '@/src/lib/notifications';
 
 
@@ -58,10 +57,8 @@ function RootLayoutNav() {
     const inStudentGroup = segments[0] === '(student)';
     const inSettings = segments[0] === 'settings';
     const inFee = segments[0] === 'fee';
+  const inNotifications = segments[0] === 'notifications';
 
-
-    // console.log('Current segments:', segments);
-    // console.log('User profile:', profile?.role);
 
     if (!user || !profile) {
       // Redirect to auth if not authenticated
@@ -71,10 +68,9 @@ function RootLayoutNav() {
       return;
     }
 
-    // Allow access to settings for authenticated users - STOP HERE
-    // Allow access to settings or fee screen for authenticated users - STOP HERE
-    if (inSettings || inFee) {
-      console.log('User is in settings, allowing access');
+    // Allow access to settings/fee/notifications for authenticated users - STOP HERE
+    if (inSettings || inFee || inNotifications) {
+      console.log('User is in settings/fee/notifications, allowing access');
       return; // This will stop the redirect
     }
 
@@ -94,7 +90,7 @@ function RootLayoutNav() {
     }
 
     // Only redirect to role groups if user is NOT in settings and NOT already in correct group
-    if (profile.role === 'teacher' && !inTeacherGroup && !inSettings) {
+    if (profile.role === 'teacher' && !inTeacherGroup && !inSettings && !inNotifications) {
       // console.log('Redirecting teacher to teacher group');
       router.replace('/(teacher)');
     } else if (profile.role === 'student' && !inStudentGroup && !inSettings) {
@@ -107,7 +103,7 @@ function RootLayoutNav() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen name="(auth)" options={{ headerShown: false}} />
       <Stack.Screen name="(teacher)" options={{ headerShown: false }} />
       <Stack.Screen name="(student)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

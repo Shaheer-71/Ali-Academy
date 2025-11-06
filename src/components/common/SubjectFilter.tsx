@@ -68,7 +68,7 @@ export default function SubjectFilter({
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                         <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                            <Text style={[styles.modalTitle, { color: colors.text }]}>
+                            <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>
                                 Filter by Subject
                             </Text>
                             <TouchableOpacity
@@ -112,11 +112,11 @@ export default function SubjectFilter({
 
                             {/* Subject Options */}
                             {loading ? (
-                                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>
                                     Loading subjects...
                                 </Text>
                             ) : subjects.length === 0 ? (
-                                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
                                     No subjects available
                                 </Text>
                             ) : (

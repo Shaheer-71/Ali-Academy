@@ -133,7 +133,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
         <View style={[styles.section, { borderColor: colors.border }]}>
             <View style={styles.sectionHeader}>
                 {icon}
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+                <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
             </View>
             {children}
         </View>
@@ -176,7 +176,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                     <View style={[styles.header, { borderBottomColor: colors.border }]}>
                         <View style={styles.headerLeft}>
                             <Filter size={24} color={colors.primary} />
-                            <Text style={[styles.title, { color: colors.text }]}>View Attendance Filters</Text>
+                            <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>View Attendance Filters</Text>
                         </View>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                             <X size={24} color={colors.textSecondary} />
@@ -198,15 +198,15 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                         }))}
                                         style={styles.viewTypeButton}
                                     >
-                                        <Text style={styles.viewTypeIcon}>{option.icon}</Text>
+                                        <Text allowFontScaling={false} style={styles.viewTypeIcon}>{option.icon}</Text>
                                         <View style={styles.viewTypeText}>
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={[
                                                 styles.optionText, 
                                                 { color: filters.viewType === option.value ? colors.primary : colors.text }
                                             ]}>
                                                 {option.label}
                                             </Text>
-                                            <Text style={[styles.optionDescription, { color: colors.textSecondary }]}>
+                                            <Text allowFontScaling={false} style={[styles.optionDescription, { color: colors.textSecondary }]}>
                                                 {option.description}
                                             </Text>
                                         </View>
@@ -229,7 +229,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                         }))}
                                         style={styles.classButton}
                                     >
-                                        <Text style={[
+                                        <Text allowFontScaling={false} style={[
                                             styles.optionText, 
                                             { color: filters.selectedClass === classItem.id ? colors.primary : colors.text }
                                         ]}>
@@ -245,7 +245,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                             <FilterSection title="Select Student" icon={<Users size={20} color={colors.primary} />}>
                                 <ScrollView style={styles.studentScrollContainer} nestedScrollEnabled>
                                     {filteredStudents.length === 0 ? (
-                                        <Text style={[styles.noStudentsText, { color: colors.textSecondary }]}>
+                                        <Text allowFontScaling={false} style={[styles.noStudentsText, { color: colors.textSecondary }]}>
                                             {filters.selectedClass ? 'No students in selected class' : 'Please select a class first'}
                                         </Text>
                                     ) : (
@@ -257,13 +257,13 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                                 style={styles.studentButton}
                                             >
                                                 <View style={styles.studentInfo}>
-                                                    <Text style={[
+                                                    <Text allowFontScaling={false} style={[
                                                         styles.studentName, 
                                                         { color: filters.selectedStudent === student.id ? colors.primary : colors.text }
                                                     ]}>
                                                         {student.full_name}
                                                     </Text>
-                                                    <Text style={[styles.studentRoll, { color: colors.textSecondary }]}>
+                                                    <Text allowFontScaling={false} style={[styles.studentRoll, { color: colors.textSecondary }]}>
                                                         Roll: {student.roll_number}
                                                     </Text>
                                                 </View>
@@ -285,13 +285,13 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                         style={styles.dateRangeButton}
                                     >
                                         <View>
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={[
                                                 styles.optionText, 
                                                 { color: filters.dateRange === option.value ? colors.primary : colors.text }
                                             ]}>
                                                 {option.label}
                                             </Text>
-                                            <Text style={[styles.optionDescription, { color: colors.textSecondary }]}>
+                                            <Text allowFontScaling={false} style={[styles.optionDescription, { color: colors.textSecondary }]}>
                                                 {option.description}
                                             </Text>
                                         </View>
@@ -303,7 +303,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                             {filters.dateRange === 'custom' && (
                                 <View style={[styles.customDateContainer, { backgroundColor: colors.background }]}>
                                     <View style={styles.dateInputGroup}>
-                                        <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>From Date:</Text>
+                                        <Text allowFontScaling={false} style={[styles.dateLabel, { color: colors.textSecondary }]}>From Date:</Text>
                                         <TextInput
                                             style={[styles.dateInput, { backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.border }]}
                                             value={filters.startDate}
@@ -313,7 +313,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                         />
                                     </View>
                                     <View style={styles.dateInputGroup}>
-                                        <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>To Date:</Text>
+                                        <Text allowFontScaling={false} style={[styles.dateLabel, { color: colors.textSecondary }]}>To Date:</Text>
                                         <TextInput
                                             style={[styles.dateInput, { backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.border }]}
                                             value={filters.endDate}
@@ -328,7 +328,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                             {/* Current Date Range Display */}
                             <View style={[styles.currentRangeDisplay, { backgroundColor: colors.background }]}>
                                 <Clock size={16} color={colors.textSecondary} />
-                                <Text style={[styles.currentRangeText, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.currentRangeText, { color: colors.textSecondary }]}>
                                     {new Date(filters.startDate).toLocaleDateString()} - {new Date(filters.endDate).toLocaleDateString()}
                                 </Text>
                             </View>
@@ -344,8 +344,8 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                         onPress={() => setFilters(prev => ({ ...prev, status: option.value }))}
                                         style={styles.statusButton}
                                     >
-                                        <Text style={styles.statusIcon}>{option.icon}</Text>
-                                        <Text style={[
+                                        <Text allowFontScaling={false} style={styles.statusIcon}>{option.icon}</Text>
+                                        <Text allowFontScaling={false} style={[
                                             styles.optionText, 
                                             { color: filters.status === option.value ? colors.primary : colors.text }
                                         ]}>
@@ -358,27 +358,27 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
 
                         {/* Applied Filters Summary */}
                         <View style={[styles.summarySection, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                            <Text style={[styles.summaryTitle, { color: colors.text }]}>Current Filters:</Text>
+                            <Text allowFontScaling={false} style={[styles.summaryTitle, { color: colors.text }]}>Current Filters:</Text>
                             
-                            <Text style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                 • View: {viewTypeOptions.find(v => v.value === filters.viewType)?.label}
                             </Text>
                             
-                            <Text style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                 • Class: {classes.find(c => c.id === filters.selectedClass)?.name || 'None selected'}
                             </Text>
                             
                             {filters.viewType === 'student' && filters.selectedStudent && (
-                                <Text style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                     • Student: {filteredStudents.find(s => s.id === filters.selectedStudent)?.full_name || 'None selected'}
                                 </Text>
                             )}
                             
-                            <Text style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                 • Date: {dateRangeOptions.find(d => d.value === filters.dateRange)?.label}
                             </Text>
                             
-                            <Text style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                 • Status: {statusOptions.find(s => s.value === filters.status)?.label}
                             </Text>
                         </View>
@@ -391,7 +391,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                             onPress={handleReset}
                         >
                             <RotateCcw size={16} color={colors.textSecondary} />
-                            <Text style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset</Text>
+                            <Text allowFontScaling={false} style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset</Text>
                         </TouchableOpacity>
                         
                         <View style={styles.mainActions}>
@@ -399,14 +399,14 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                 style={[styles.button, styles.cancelButton, { backgroundColor: colors.background, borderColor: colors.border }]}
                                 onPress={onClose}
                             >
-                                <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
+                                <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
                             </TouchableOpacity>
                             
                             <TouchableOpacity
                                 style={[styles.button, styles.applyButton, { backgroundColor: colors.primary }]}
                                 onPress={handleApply}
                             >
-                                <Text style={styles.applyButtonText}>Apply Filters</Text>
+                                <Text allowFontScaling={false} style={styles.applyButtonText}>Apply Filters</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

@@ -42,6 +42,7 @@ import {
   Wifi,
   Download,
   Trash2,
+  Send,
 } from 'lucide-react-native';
 import TopSections from '@/src/components/common/TopSections';
 import { useRouter } from 'expo-router';
@@ -49,7 +50,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
   const { profile, signOut, updateProfile } = useAuth();
-  const { colors, isDarkMode, toggleTheme } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
 
   // Settings States
@@ -138,28 +139,30 @@ export default function SettingsScreen() {
   };
 
   const checkNotificationPermissions = async () => {
-    const { status } = await Notifications.getPermissionsAsync();
-    if (status !== 'granted') {
-      setNotificationsEnabled(false);
-    }
+    // Mock check - replace with actual notification permission check
+    // const { status } = await Notifications.getPermissionsAsync();
+    // if (status !== 'granted') {
+    //   setNotificationsEnabled(false);
+    // }
   };
 
   const handleNotificationToggle = async (value) => {
     if (value) {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status === 'granted') {
+      // Mock permission request - replace with actual implementation
+      // const { status } = await Notifications.requestPermissionsAsync();
+      // if (status === 'granted') {
         setNotificationsEnabled(true);
         await saveSettings();
-      } else {
-        Alert.alert(
-          'Permission Required',
-          'Please enable notifications in your device settings to receive updates.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
-          ]
-        );
-      }
+      // } else {
+      //   Alert.alert(
+      //     'Permission Required',
+      //     'Please enable notifications in your device settings to receive updates.',
+      //     [
+      //       { text: 'Cancel', style: 'cancel' },
+      //       { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      //     ]
+      //   );
+      // }
     } else {
       setNotificationsEnabled(false);
       await saveSettings();
@@ -226,6 +229,22 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleNavigateToNotifications = () => {
+    try {
+      console.log('Navigating to /notifications from Settings');
+      // cast to any to avoid expo-router typed path union issues at compile time
+      (router as any).push('/notifications');
+    } catch (err) {
+      console.error('Navigation to /notifications failed:', err);
+      // fallback: try replace
+      try {
+        (router as any).replace('/notifications');
+      } catch (err2) {
+        console.error('Fallback replace to /notifications also failed:', err2);
+      }
+    }
+  };
+
   const handleClearCache = () => {
     Alert.alert(
       'Clear Cache',
@@ -284,13 +303,6 @@ export default function SettingsScreen() {
     {
       title: 'Account',
       items: [
-        // {
-        //   title: 'Edit Profile',
-        //   subtitle: 'Update your personal information',
-        //   icon: User,
-        //   onPress: () => setProfileModalVisible(true),
-        //   showArrow: true,
-        // },
         {
           title: 'Change Password',
           subtitle: 'Update your password',
@@ -300,88 +312,6 @@ export default function SettingsScreen() {
         },
       ],
     },
-    // {
-    //   title: 'Preferences',
-    //   items: [
-    //     {
-    //       title: 'Dark Mode',
-    //       subtitle: 'Toggle dark/light theme',
-    //       icon: isDarkMode ? Moon : Sun,
-    //       hasSwitch: true,
-    //       switchValue: isDarkMode,
-    //       onToggle: toggleTheme,
-    //     }
-    //   ],
-    // },
-    {
-      title: 'Notifications',
-      items: [
-        // {
-        //   title: 'Push Notifications',
-        //   subtitle: 'Receive push notifications',
-        //   icon: Bell,
-        //   hasSwitch: true,
-        //   switchValue: notificationsEnabled,
-        //   onToggle: handleNotificationToggle,
-        // },
-        {
-          title: 'Sound',
-          subtitle: 'Play sound for notifications',
-          icon: Volume2,
-          hasSwitch: true,
-          switchValue: soundEnabled,
-          onToggle: handleSoundToggle,
-        },
-        // {
-        //   title: 'Notification Settings',
-        //   subtitle: 'Customize notification types',
-        //   icon: Bell,
-        //   onPress: () => setNotificationModalVisible(true),
-        //   showArrow: true,
-        // },
-      ],
-    },
-    // {
-    //   title: 'Privacy & Security',
-    //   items: [
-    //     {
-    //       title: 'Privacy Settings',
-    //       subtitle: 'Manage your privacy preferences',
-    //       icon: Shield,
-    //       onPress: () => setPrivacyModalVisible(true),
-    //       showArrow: true,
-    //     },
-    //     {
-    //       title: 'Two-Factor Authentication',
-    //       subtitle: 'Not enabled',
-    //       icon: Shield,
-    //       onPress: () => {
-    //         Alert.alert('Coming Soon', '2FA will be available soon for enhanced security');
-    //       },
-    //       showArrow: true,
-    //     },
-    //   ],
-    // },
-    // {
-    //   title: 'Data & Storage',
-    //   items: [
-    //     {
-    //       title: 'Auto-Download Media',
-    //       subtitle: 'Download media automatically',
-    //       icon: Download,
-    //       hasSwitch: true,
-    //       switchValue: autoDownload,
-    //       onToggle: handleAutoDownloadToggle,
-    //     },
-    //     {
-    //       title: 'Clear Cache',
-    //       subtitle: 'Free up storage space',
-    //       icon: Trash2,
-    //       onPress: handleClearCache,
-    //       showArrow: true,
-    //     },
-    //   ],
-    // },
     {
       title: 'Support',
       items: [
@@ -392,32 +322,6 @@ export default function SettingsScreen() {
           onPress: handleSupport,
           showArrow: true,
         },
-        // {
-        //   title: 'Terms of Service',
-        //   subtitle: 'Read our terms',
-        //   icon: FileText,
-        //   onPress: () => Linking.openURL('https://aliacademy.com/terms'),
-        //   showArrow: true,
-        // },
-        // {
-        //   title: 'Privacy Policy',
-        //   subtitle: 'Read our privacy policy',
-        //   icon: Shield,
-        //   onPress: () => Linking.openURL('https://aliacademy.com/privacy'),
-        //   showArrow: true,
-        // },
-        // {
-        //   title: 'About',
-        //   subtitle: 'App version and information',
-        //   icon: Info,
-        //   onPress: () => {
-        //     Alert.alert(
-        //       'Ali Academy App',
-        //       'Version 1.0.0\n\nBuilt with React Native & Supabase\n\n© 2024 Ali Academy\nPowered by QHASH TECH SOLUTIONS'
-        //     );
-        //   },
-        //   showArrow: true,
-        // },
       ],
     },
   ];
@@ -436,7 +340,7 @@ export default function SettingsScreen() {
       >
         <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Profile</Text>
+            <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Edit Profile</Text>
             <TouchableOpacity onPress={() => setProfileModalVisible(false)}>
               <X size={24} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -444,7 +348,7 @@ export default function SettingsScreen() {
 
           <View style={styles.modalBody}>
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Full Name</Text>
+              <Text allowFontScaling={false} style={[styles.inputLabel, { color: colors.text }]}>Full Name</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
                 value={editedProfile.full_name}
@@ -455,7 +359,7 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Email</Text>
+              <Text allowFontScaling={false} style={[styles.inputLabel, { color: colors.text }]}>Email</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
                 value={editedProfile.email}
@@ -468,7 +372,7 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Contact Number</Text>
+              <Text allowFontScaling={false} style={[styles.inputLabel, { color: colors.text }]}>Contact Number</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
                 value={editedProfile.contact_number}
@@ -485,7 +389,7 @@ export default function SettingsScreen() {
               style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.background }]}
               onPress={() => setProfileModalVisible(false)}
             >
-              <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
+              <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.primary }]}
@@ -495,7 +399,7 @@ export default function SettingsScreen() {
               {isLoading ? (
                 <ActivityIndicator color="#b6d509" />
               ) : (
-                <Text style={[styles.buttonText, { color: '#b6d509' }]}>Save Changes</Text>
+                <Text allowFontScaling={false} style={[styles.buttonText, { color: '#b6d509' }]}>Save Changes</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -518,7 +422,7 @@ export default function SettingsScreen() {
       >
         <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Change Password</Text>
+            <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Change Password</Text>
             <TouchableOpacity onPress={() => setPasswordModalVisible(false)}>
               <X size={24} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -526,7 +430,7 @@ export default function SettingsScreen() {
 
           <View style={styles.modalBody}>
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Current Password</Text>
+              <Text allowFontScaling={false} style={[styles.inputLabel, { color: colors.text }]}>Current Password</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
                 value={passwordData.currentPassword}
@@ -538,7 +442,7 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>New Password</Text>
+              <Text allowFontScaling={false} style={[styles.inputLabel, { color: colors.text }]}>New Password</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
                 value={passwordData.newPassword}
@@ -550,7 +454,7 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Confirm New Password</Text>
+              <Text allowFontScaling={false} style={[styles.inputLabel, { color: colors.text }]}>Confirm New Password</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
                 value={passwordData.confirmPassword}
@@ -567,7 +471,7 @@ export default function SettingsScreen() {
               style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.background }]}
               onPress={() => setPasswordModalVisible(false)}
             >
-              <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
+              <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.primary }]}
@@ -577,7 +481,7 @@ export default function SettingsScreen() {
               {isLoading ? (
                 <ActivityIndicator color="#b6d509" />
               ) : (
-                <Text style={[styles.buttonText, { color: '#b6d509' }]}>Change Password</Text>
+                <Text allowFontScaling={false} style={[styles.buttonText, { color: '#b6d509' }]}>Change Password</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -597,7 +501,7 @@ export default function SettingsScreen() {
       <View style={styles.modalContainer}>
         <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Notification Settings</Text>
+            <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Notification Settings</Text>
             <TouchableOpacity onPress={() => setNotificationModalVisible(false)}>
               <X size={24} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -607,10 +511,10 @@ export default function SettingsScreen() {
             {Object.entries(notificationSettings).map(([key, value]) => (
               <View key={key} style={styles.notificationItem}>
                 <View style={styles.notificationInfo}>
-                  <Text style={[styles.notificationTitle, { color: colors.text }]}>
+                  <Text allowFontScaling={false} style={[styles.notificationTitle, { color: colors.text }]}>
                     {key.charAt(0).toUpperCase() + key.slice(1)}
                   </Text>
-                  <Text style={[styles.notificationSubtitle, { color: colors.textSecondary }]}>
+                  <Text allowFontScaling={false} style={[styles.notificationSubtitle, { color: colors.textSecondary }]}>
                     Receive notifications for {key}
                   </Text>
                 </View>
@@ -635,7 +539,7 @@ export default function SettingsScreen() {
                 setNotificationModalVisible(false);
               }}
             >
-              <Text style={[styles.buttonText, { color: '#b6d509' }]}>Done</Text>
+              <Text allowFontScaling={false} style={[styles.buttonText, { color: '#b6d509' }]}>Done</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -654,7 +558,7 @@ export default function SettingsScreen() {
       <View style={styles.modalContainer}>
         <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Privacy Settings</Text>
+            <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Privacy Settings</Text>
             <TouchableOpacity onPress={() => setPrivacyModalVisible(false)}>
               <X size={24} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -662,7 +566,7 @@ export default function SettingsScreen() {
 
           <ScrollView style={styles.modalBody}>
             <View style={styles.privacySection}>
-              <Text style={[styles.privacySectionTitle, { color: colors.text }]}>Profile Visibility</Text>
+              <Text allowFontScaling={false} style={[styles.privacySectionTitle, { color: colors.text }]}>Profile Visibility</Text>
               {['everyone', 'teachers', 'nobody'].map((option) => (
                 <TouchableOpacity
                   key={option}
@@ -677,7 +581,7 @@ export default function SettingsScreen() {
                       <View style={[styles.radioInner, { backgroundColor: colors.primary }]} />
                     )}
                   </View>
-                  <Text style={[styles.radioLabel, { color: colors.text }]}>
+                  <Text allowFontScaling={false} style={[styles.radioLabel, { color: colors.text }]}>
                     {option.charAt(0).toUpperCase() + option.slice(1)}
                   </Text>
                 </TouchableOpacity>
@@ -685,12 +589,12 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.privacySection}>
-              <Text style={[styles.privacySectionTitle, { color: colors.text }]}>Contact Information</Text>
+              <Text allowFontScaling={false} style={[styles.privacySectionTitle, { color: colors.text }]}>Contact Information</Text>
               
               <View style={styles.privacyItem}>
                 <View style={styles.privacyInfo}>
-                  <Text style={[styles.privacyTitle, { color: colors.text }]}>Show Email</Text>
-                  <Text style={[styles.privacySubtitle, { color: colors.textSecondary }]}>
+                  <Text allowFontScaling={false} style={[styles.privacyTitle, { color: colors.text }]}>Show Email</Text>
+                  <Text allowFontScaling={false} style={[styles.privacySubtitle, { color: colors.textSecondary }]}>
                     Allow others to see your email
                   </Text>
                 </View>
@@ -707,8 +611,8 @@ export default function SettingsScreen() {
 
               <View style={styles.privacyItem}>
                 <View style={styles.privacyInfo}>
-                  <Text style={[styles.privacyTitle, { color: colors.text }]}>Show Phone</Text>
-                  <Text style={[styles.privacySubtitle, { color: colors.textSecondary }]}>
+                  <Text allowFontScaling={false} style={[styles.privacyTitle, { color: colors.text }]}>Show Phone</Text>
+                  <Text allowFontScaling={false} style={[styles.privacySubtitle, { color: colors.textSecondary }]}>
                     Allow others to see your phone number
                   </Text>
                 </View>
@@ -725,8 +629,8 @@ export default function SettingsScreen() {
 
               <View style={styles.privacyItem}>
                 <View style={styles.privacyInfo}>
-                  <Text style={[styles.privacyTitle, { color: colors.text }]}>Allow Messages</Text>
-                  <Text style={[styles.privacySubtitle, { color: colors.textSecondary }]}>
+                  <Text allowFontScaling={false} style={[styles.privacyTitle, { color: colors.text }]}>Allow Messages</Text>
+                  <Text allowFontScaling={false} style={[styles.privacySubtitle, { color: colors.textSecondary }]}>
                     Receive messages from other users
                   </Text>
                 </View>
@@ -751,7 +655,7 @@ export default function SettingsScreen() {
                 setPrivacyModalVisible(false);
               }}
             >
-              <Text style={[styles.buttonText, { color: '#b6d509' }]}>Done</Text>
+              <Text allowFontScaling={false} style={[styles.buttonText, { color: '#b6d509' }]}>Done</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -772,39 +676,60 @@ export default function SettingsScreen() {
           <View style={styles.section}>
             <View style={[styles.profileCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
               <View style={[styles.profileAvatar, { backgroundColor: colors.primary }]}>
-                <Text style={styles.profileInitial}>
+                <Text allowFontScaling={false} style={styles.profileInitial}>
                   {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
                 </Text>
               </View>
               <View style={styles.profileInfo}>
-                <Text style={[styles.profileName, { color: colors.text }]}>{profile?.full_name || 'User'}</Text>
+                <Text allowFontScaling={false} style={[styles.profileName, { color: colors.text }]}>{profile?.full_name || 'User'}</Text>
                 <View style={styles.profileDetails}>
                   <View style={styles.profileDetail}>
                     <Mail size={14} color={colors.textSecondary} />
-                    <Text style={[styles.profileDetailText, { color: colors.textSecondary }]}>
+                    <Text allowFontScaling={false} style={[styles.profileDetailText, { color: colors.textSecondary }]}>
                       {profile?.email || 'No email'}
                     </Text>
                   </View>
                   {profile?.contact_number && (
                     <View style={styles.profileDetail}>
                       <Phone size={14} color={colors.textSecondary} />
-                      <Text style={[styles.profileDetailText, { color: colors.textSecondary }]}>
+                      <Text allowFontScaling={false} style={[styles.profileDetailText, { color: colors.textSecondary }]}>
                         {profile.contact_number}
                       </Text>
                     </View>
                   )}
                 </View>
                 <View style={[styles.roleContainer, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.roleText}>{profile?.role?.toUpperCase() || 'STUDENT'}</Text>
+                  <Text allowFontScaling={false} style={styles.roleText}>{profile?.role?.toUpperCase() || 'STUDENT'}</Text>
                 </View>
               </View>
             </View>
           </View>
 
+          {/* Create Notification Button - Visible only to superadmins */}
+          {(profile?.role === 'teacher' && profile?.email === 'rafeh@aliacademy.edu') && (
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={[styles.createNotificationButton, { backgroundColor: colors.primary }]}
+                onPress={handleNavigateToNotifications}
+              >
+                <Send size={20} color="#b6d509" />
+                <View style={styles.buttonContent}>
+                  <Text allowFontScaling={false} style={[styles.createNotificationTitle, { color: '#b6d509' }]}>
+                    Create Notification
+                  </Text>
+                  <Text allowFontScaling={false} style={[styles.createNotificationSubtitle, { color: '#b6d509' }]}>
+                    Send notifications to users
+                  </Text>
+                </View>
+                <ChevronRight size={20} color="#b6d509" />
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Settings Sections */}
           {settingsOptions.map((section, sectionIndex) => (
             <View key={sectionIndex} style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{section.title}</Text>
+              <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.textSecondary }]}>{section.title}</Text>
               {section.items.map((item, itemIndex) => (
                 <TouchableOpacity
                   key={itemIndex}
@@ -816,8 +741,8 @@ export default function SettingsScreen() {
                     <item.icon size={20} color={colors.primary} />
                   </View>
                   <View style={styles.settingInfo}>
-                    <Text style={[styles.settingTitle, { color: colors.text }]}>{item.title}</Text>
-                    <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>{item.subtitle}</Text>
+                    <Text allowFontScaling={false} style={[styles.settingTitle, { color: colors.text }]}>{item.title}</Text>
+                    <Text allowFontScaling={false} style={[styles.settingSubtitle, { color: colors.textSecondary }]}>{item.subtitle}</Text>
                   </View>
                   {item.hasSwitch ? (
                     <Switch
@@ -841,14 +766,14 @@ export default function SettingsScreen() {
               onPress={handleSignOut}
             >
               <LogOut size={20} color="#EF4444" />
-              <Text style={styles.signOutText}>Sign Out</Text>
+              <Text allowFontScaling={false} style={styles.signOutText}>Sign Out</Text>
             </TouchableOpacity>
           </View>
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: colors.textSecondary }]}>Ali Academy App v1.0.0</Text>
-            <Text style={[styles.footerSubtext, { color: colors.textSecondary }]}>
+            <Text allowFontScaling={false} style={[styles.footerText, { color: colors.textSecondary }]}>Ali Academy App v1.0.0</Text>
+            <Text allowFontScaling={false} style={[styles.footerSubtext, { color: colors.textSecondary }]}>
               Powered By QHASH TECH SOLUTIONS
             </Text>
           </View>
@@ -937,6 +862,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter-SemiBold',
     color: '#b6d509',
+  },
+  createNotificationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  buttonContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  createNotificationTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 2,
+  },
+  createNotificationSubtitle: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    opacity: 0.9,
   },
   settingItem: {
     flexDirection: 'row',

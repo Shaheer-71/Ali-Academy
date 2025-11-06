@@ -62,25 +62,25 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
           <NotebookPen size={20} color={overdue ? "#EF4444" : "#274d71"} />
         </View>
         <View style={styles.info}>
-          <Text style={styles.title} numberOfLines={2}>
+          <Text allowFontScaling={false} style={styles.title} numberOfLines={2}>
             {assignment.title}
           </Text>
           <View style={styles.metadata}>
             <View style={styles.metadataItem}>
               <Calendar size={12} color="#6B7280" />
-              <Text style={[styles.metadataText, overdue && styles.overdueText]}>
+              <Text allowFontScaling={false} style={[styles.metadataText, overdue && styles.overdueText]}>
                 Due: {formatDate(assignment.due_date)}
               </Text>
             </View>
             {assignment.class_id ? (
               <View style={styles.metadataItem}>
                 <Users size={12} color="#6B7280" />
-                <Text style={styles.metadataText}>{assignment.classes?.name}</Text>
+                <Text allowFontScaling={false} style={styles.metadataText}>{assignment.classes?.name}</Text>
               </View>
             ) : (
               <View style={styles.metadataItem}>
                 <User size={12} color="#6B7280" />
-                <Text style={styles.metadataText}>{assignment.students?.full_name}</Text>
+                <Text allowFontScaling={false} style={styles.metadataText}>{assignment.students?.full_name}</Text>
               </View>
             )}
           </View>
@@ -92,14 +92,14 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
         )}
       </View>
 
-      <Text style={styles.description} numberOfLines={3}>
+      <Text allowFontScaling={false} style={styles.description} numberOfLines={3}>
         {assignment.description}
       </Text>
 
       <View style={styles.footer}>
         <View style={styles.dueInfo}>
           <Clock size={14} color={overdue ? "#EF4444" : "#6B7280"} />
-          <Text style={[styles.dueText, overdue && styles.overdueText]}>
+          <Text allowFontScaling={false} style={[styles.dueText, overdue && styles.overdueText]}>
             {getDaysUntilDue()}
           </Text>
         </View>
@@ -107,7 +107,7 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
         {assignment.file_url && (
           <TouchableOpacity style={styles.attachmentButton} onPress={onViewAttachment}>
             <FileText size={14} color="#274d71" />
-            <Text style={styles.attachmentText}>Attachment</Text>
+            <Text allowFontScaling={false} style={styles.attachmentText}>Attachment</Text>
           </TouchableOpacity>
         )}
       </View>

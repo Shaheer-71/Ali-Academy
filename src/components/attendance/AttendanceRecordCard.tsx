@@ -51,11 +51,11 @@ export const AttendanceRecordCard: React.FC<AttendanceRecordCardProps> = ({
             <View style={styles.attendanceHeader}>
                 <View style={styles.attendanceDate}>
                     <Calendar size={16} color={colors.textSecondary} />
-                    <Text style={[styles.dateText, { color: colors.text }]}>{formatDate(record.date)}</Text>
+                    <Text allowFontScaling={false} style={[styles.dateText, { color: colors.text }]}>{formatDate(record.date)}</Text>
                 </View>
                 <View style={styles.statusBadge}>
                     {getStatusIcon(record.status)}
-                    <Text style={[styles.statusText, { color: getStatusColor(record.status) }]}>
+                    <Text allowFontScaling={false} style={[styles.statusText, { color: getStatusColor(record.status) }]}>
                         {record.status.toUpperCase()}
                     </Text>
                 </View>
@@ -68,8 +68,8 @@ export const AttendanceRecordCard: React.FC<AttendanceRecordCardProps> = ({
 
             {showStudentInfo && record.students && (
                 <View style={styles.studentInfo}>
-                    <Text style={[styles.studentName, { color: colors.text }]}>{record.students.full_name}</Text>
-                    <Text style={[styles.rollNumber, { color: colors.textSecondary }]}>
+                    <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]}>{record.students.full_name}</Text>
+                    <Text allowFontScaling={false} style={[styles.rollNumber, { color: colors.textSecondary }]}>
                         Roll: {record.students.roll_number}
                     </Text>
                 </View>
@@ -78,7 +78,7 @@ export const AttendanceRecordCard: React.FC<AttendanceRecordCardProps> = ({
             {record.arrival_time && (
                 <View style={[styles.timeInfo, { borderTopColor: colors.border }]}>
                     <Clock size={14} color={colors.textSecondary} />
-                    <Text style={[styles.timeText, { color: colors.textSecondary }]}>
+                    <Text allowFontScaling={false} style={[styles.timeText, { color: colors.textSecondary }]}>
                         Arrived at {record.arrival_time}
                         {record.late_minutes && record.late_minutes > 0 && ` (${record.late_minutes} min late)`}
                     </Text>

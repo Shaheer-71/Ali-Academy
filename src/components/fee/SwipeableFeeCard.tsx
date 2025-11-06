@@ -137,7 +137,7 @@ export const SwipeableFeeCard: React.FC<SwipeableFeeCardProps> = ({
                         </View>
 
                         <View style={styles.studentInfo}>
-                            <Text style={[styles.studentName, { color: colors.text }]}>
+                            <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]}>
                                 {student.full_name}
                             </Text>
                             <View style={styles.feeStatusRow}>
@@ -156,7 +156,7 @@ export const SwipeableFeeCard: React.FC<SwipeableFeeCardProps> = ({
                                     </Text>
                                 </View>
                                 {student.current_month_amount && (
-                                    <Text style={[styles.amountText, { color: colors.text }]}>
+                                    <Text allowFontScaling={false} style={[styles.amountText, { color: colors.text }]}>
                                         Rs {student.current_month_amount}
                                     </Text>
                                 )}

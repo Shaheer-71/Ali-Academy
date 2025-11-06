@@ -80,7 +80,7 @@ export const useQuizzes = () => {
         fetchSubjects();
         fetchClassesSubjects();
         fetchQuizzes();
-        if (profile?.role === 'teacher') {
+        if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
             fetchQuizResults();
         } else if (profile?.role === 'student') {
             fetchStudentResults();
@@ -126,7 +126,7 @@ export const useQuizzes = () => {
                 },
                 (payload) => {
                     console.log('🔔 Quiz result change detected:', payload);
-                    if (profile?.role === 'teacher') {
+                    if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
                         fetchQuizResults();
                     } else if (profile?.role === 'student') {
                         fetchStudentResults();
@@ -482,7 +482,7 @@ export const useQuizzes = () => {
 
             // FORCE IMMEDIATE REFRESH - Don't rely only on real-time
             await fetchQuizzes();
-            if (profile?.role === 'teacher') {
+            if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
                 await fetchQuizResults();
             } else if (profile?.role === 'student') {
                 await fetchStudentResults();
@@ -545,7 +545,7 @@ export const useQuizzes = () => {
 
 
             // FORCE IMMEDIATE REFRESH - Don't rely only on real-time
-            if (profile?.role === 'teacher') {
+            if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
                 await fetchQuizResults();
                 await fetchQuizzes(); // Also refresh quizzes to get updated status
             } else if (profile?.role === 'student') {

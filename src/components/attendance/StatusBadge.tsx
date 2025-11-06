@@ -73,7 +73,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
         paddingVertical: sizeStyles[size].paddingVertical,
       }
     ]}>
-      <Text style={[
+      <Text allowFontScaling={false} style={[
         styles.text,
         { color: config.textColor, fontSize: sizeStyles[size].fontSize }
       ]}>

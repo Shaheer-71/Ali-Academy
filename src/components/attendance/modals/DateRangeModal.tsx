@@ -57,14 +57,14 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
             <View style={styles.overlay}>
                 <View style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
                     <View style={styles.header}>
-                        <Text style={[styles.title, { color: colors.text }]}>Select Date Range</Text>
+                        <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>Select Date Range</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                             <X size={24} color={colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
 
                     <View style={styles.content}>
-                        <Text style={[styles.label, { color: colors.text }]}>Quick Select:</Text>
+                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Quick Select:</Text>
                         <View style={styles.presetContainer}>
                             {presetRanges.map((preset, index) => (
                                 <TouchableOpacity
@@ -72,22 +72,22 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
                                     style={[styles.presetButton, { backgroundColor: colors.background, borderColor: colors.border }]}
                                     onPress={() => handlePresetRange(preset)}
                                 >
-                                    <Text style={[styles.presetText, { color: colors.text }]}>{preset.label}</Text>
+                                    <Text allowFontScaling={false} style={[styles.presetText, { color: colors.text }]}>{preset.label}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
 
-                        <Text style={[styles.label, { color: colors.text }]}>Custom Range:</Text>
+                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Custom Range:</Text>
                         <View style={styles.dateInputs}>
                             <View style={styles.dateInput}>
-                                <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>From:</Text>
-                                <Text style={[styles.dateValue, { color: colors.text }]}>
+                                <Text allowFontScaling={false} style={[styles.dateLabel, { color: colors.textSecondary }]}>From:</Text>
+                                <Text allowFontScaling={false} style={[styles.dateValue, { color: colors.text }]}>
                                     {new Date(tempStartDate).toLocaleDateString()}
                                 </Text>
                             </View>
                             <View style={styles.dateInput}>
-                                <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>To:</Text>
-                                <Text style={[styles.dateValue, { color: colors.text }]}>
+                                <Text allowFontScaling={false} style={[styles.dateLabel, { color: colors.textSecondary }]}>To:</Text>
+                                <Text allowFontScaling={false} style={[styles.dateValue, { color: colors.text }]}>
                                     {new Date(tempEndDate).toLocaleDateString()}
                                 </Text>
                             </View>
@@ -99,13 +99,13 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
                             style={[styles.button, styles.cancelButton, { backgroundColor: colors.background }]}
                             onPress={onClose}
                         >
-                            <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
+                            <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.button, styles.applyButton, { backgroundColor: colors.primary }]}
                             onPress={handleApply}
                         >
-                            <Text style={styles.applyButtonText}>Apply Filter</Text>
+                            <Text allowFontScaling={false} style={styles.applyButtonText}>Apply Filter</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -147,7 +147,7 @@ export const StatusFilterModal: React.FC<StatusFilterModalProps> = ({
             <View style={styles.overlay}>
                 <View style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
                     <View style={styles.header}>
-                        <Text style={[styles.title, { color: colors.text }]}>Filter by Status</Text>
+                        <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>Filter by Status</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                             <X size={24} color={colors.textSecondary} />
                         </TouchableOpacity>
@@ -164,8 +164,8 @@ export const StatusFilterModal: React.FC<StatusFilterModalProps> = ({
                                 ]}
                                 onPress={() => setTempStatus(option.value)}
                             >
-                                <Text style={styles.statusIcon}>{option.icon}</Text>
-                                <Text style={[styles.statusLabel, { color: colors.text }]}>{option.label}</Text>
+                                <Text allowFontScaling={false} style={styles.statusIcon}>{option.icon}</Text>
+                                <Text allowFontScaling={false} style={[styles.statusLabel, { color: colors.text }]}>{option.label}</Text>
                                 {tempStatus === option.value && (
                                     <View style={[styles.selectedIndicator, { backgroundColor: colors.primary }]} />
                                 )}
@@ -178,13 +178,13 @@ export const StatusFilterModal: React.FC<StatusFilterModalProps> = ({
                             style={[styles.button, styles.cancelButton, { backgroundColor: colors.background }]}
                             onPress={onClose}
                         >
-                            <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
+                            <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.button, styles.applyButton, { backgroundColor: colors.primary }]}
                             onPress={handleApply}
                         >
-                            <Text style={styles.applyButtonText}>Apply Filter</Text>
+                            <Text allowFontScaling={false} style={styles.applyButtonText}>Apply Filter</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -227,26 +227,26 @@ export const StatsModal: React.FC<StatsModalProps> = ({
             <View style={styles.overlay}>
                 <View style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
                     <View style={styles.header}>
-                        <Text style={[styles.title, { color: colors.text }]}>Attendance Statistics</Text>
+                        <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>Attendance Statistics</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                             <X size={24} color={colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
 
                     <View style={styles.content}>
-                        <Text style={[styles.className, { color: colors.textSecondary }]}>{className}</Text>
+                        <Text allowFontScaling={false} style={[styles.className, { color: colors.textSecondary }]}>{className}</Text>
                         
                         <View style={[styles.attendanceRateCard, { backgroundColor: colors.primary }]}>
-                            <Text style={styles.attendanceRateText}>Overall Attendance Rate</Text>
-                            <Text style={styles.attendanceRateValue}>{stats.attendanceRate}%</Text>
+                            <Text allowFontScaling={false} style={styles.attendanceRateText}>Overall Attendance Rate</Text>
+                            <Text allowFontScaling={false} style={styles.attendanceRateValue}>{stats.attendanceRate}%</Text>
                         </View>
 
                         <View style={styles.statsGrid}>
                             {statItems.map((item, index) => (
                                 <View key={index} style={[styles.statCard, { backgroundColor: colors.background }]}>
-                                    <Text style={styles.statIcon}>{item.icon}</Text>
-                                    <Text style={[styles.statValue, { color: item.color }]}>{item.value}</Text>
-                                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{item.label}</Text>
+                                    <Text allowFontScaling={false} style={styles.statIcon}>{item.icon}</Text>
+                                    <Text allowFontScaling={false} style={[styles.statValue, { color: item.color }]}>{item.value}</Text>
+                                    <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>{item.label}</Text>
                                 </View>
                             ))}
                         </View>
@@ -257,7 +257,7 @@ export const StatsModal: React.FC<StatsModalProps> = ({
                             style={[styles.button, styles.applyButton, { backgroundColor: colors.primary }]}
                             onPress={onClose}
                         >
-                            <Text style={styles.applyButtonText}>Close</Text>
+                            <Text allowFontScaling={false} style={styles.applyButtonText}>Close</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

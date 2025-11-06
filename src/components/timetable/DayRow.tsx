@@ -36,14 +36,14 @@ export default function DayRow({
                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
                 isToday && { backgroundColor: colors.primary, borderColor: colors.primary }
             ]}>
-                <Text style={[
+                <Text allowFontScaling={false} style={[
                     styles.dayName,
                     { color: colors.text },
                     isToday && { color: '#ffffff' }
                 ]}>
                     {DAYS_SHORT[day]}
                 </Text>
-                <Text style={[
+                <Text allowFontScaling={false} style={[
                     styles.dayDate,
                     { color: colors.primary },
                     isToday && { color: '#b6d509' }
@@ -55,7 +55,7 @@ export default function DayRow({
                 {dayEntries.length === 0 ? (
                     <View style={[styles.emptyDay, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                         <Calendar size={24} color={colors.textSecondary} />
-                        <Text style={[styles.emptyDayText, { color: colors.textSecondary }]}>No classes scheduled</Text>
+                        <Text allowFontScaling={false} style={[styles.emptyDayText, { color: colors.textSecondary }]}>No classes scheduled</Text>
                     </View>
                 ) : (
                     dayEntries.slice(0, 3).map((entry, index) => (

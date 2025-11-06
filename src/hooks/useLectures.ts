@@ -98,7 +98,7 @@ export function useClasses() {
                 let query = supabase.from('classes').select('*').order('name');
 
                 // If teacher, get only their classes
-                if (profile?.role === 'teacher') {
+                if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
                     query = query.eq('teacher_id', profile.id);
                 }
 

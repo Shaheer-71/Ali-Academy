@@ -49,7 +49,7 @@ export const AttendanceHeader: React.FC<AttendanceHeaderProps> = ({
         >
             {icon && icon}
             {!isIconOnly && (
-                <Text style={[
+                <Text allowFontScaling={false} style={[
                     styles.headerButtonText,
                     { color: isActive ? '#ffffff' : colors.text }
                 ]}>

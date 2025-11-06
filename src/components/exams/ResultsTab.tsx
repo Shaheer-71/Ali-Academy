@@ -98,7 +98,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     };
 
     const handleResultPress = (result: any) => {
-        if (profile?.role === 'teacher') {
+        if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
             const fullQuiz = quizzes.find(quiz => quiz.id === result.quiz_id);
 
             const enrichedResult = {
@@ -132,28 +132,28 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                     { backgroundColor: colors.cardBackground, borderColor: colors.border },
                     !isChecked && !isAbsent && { borderColor: '#F59E0B', backgroundColor: '#FEF3C7' },
                     isAbsent && { borderColor: '#EF4444', backgroundColor: '#FEE2E2' },
-                    profile?.role === 'teacher' && { opacity: 1 },
+                    (profile?.role === 'teacher' || profile?.role === 'admin') && { opacity: 1 },
                 ]}
                 onPress={() => handleResultPress(result)}
                 disabled={profile?.role !== 'teacher'}
             >
                 <View style={styles.resultHeader}>
                     <View style={styles.resultInfo}>
-                        <Text style={[styles.resultTitle, { color: colors.text }]}>
+                        <Text allowFontScaling={false} style={[styles.resultTitle, { color: colors.text }]}>
                             {fullQuiz?.title || 'Unknown Quiz'}
                         </Text>
                         {selectedSubject === 'all' && (
-                            <Text style={[styles.resultSubject, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.resultSubject, { color: colors.textSecondary }]}>
                                 {subject?.name || 'Unknown Subject'}
                             </Text>
                         )}
                         {selectedClass === 'all' && (
-                            <Text style={[styles.resultClass, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.resultClass, { color: colors.textSecondary }]}>
                                 {classes.find(c => c.id === fullQuiz?.class_id)?.name || 'Unknown Class'}
                             </Text>
                         )}
-                        {profile?.role === 'teacher' && (
-                            <Text style={[styles.studentName, { color: colors.textSecondary }]}>
+                        {(profile?.role === 'teacher' || profile?.role === 'admin') && (
+                            <Text allowFontScaling={false} style={[styles.studentName, { color: colors.textSecondary }]}>
                                 {result.students?.full_name} ({result.students?.roll_number})
                             </Text>
                         )}
@@ -171,11 +171,11 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
 
                 {isAbsent ? (
                     <View style={styles.absentResult}>
-                        <Text style={[styles.absentText, { color: '#EF4444' }]}>
+                        <Text allowFontScaling={false} style={[styles.absentText, { color: '#EF4444' }]}>
                             Student was absent
                         </Text>
                         {result.remarks && (
-                            <Text style={[styles.absentReason, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.absentReason, { color: colors.textSecondary }]}>
                                 Reason: {result.remarks}
                             </Text>
                         )}
@@ -183,23 +183,23 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                 ) : isChecked && result.marks_obtained !== null ? (
                     <View style={styles.resultDetails}>
                         <View style={styles.resultDetail}>
-                            <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>Marks</Text>
-                            <Text style={[styles.resultValue, { color: colors.text }]}>
+                            <Text allowFontScaling={false} style={[styles.resultLabel, { color: colors.textSecondary }]}>Marks</Text>
+                            <Text allowFontScaling={false} style={[styles.resultValue, { color: colors.text }]}>
                                 {result.marks_obtained}/{result.total_marks}
                             </Text>
                         </View>
                         <View style={styles.resultDetail}>
-                            <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>Percentage</Text>
-                            <Text style={[styles.resultValue, { color: colors.text }]}>
+                            <Text allowFontScaling={false} style={[styles.resultLabel, { color: colors.textSecondary }]}>Percentage</Text>
+                            <Text allowFontScaling={false} style={[styles.resultValue, { color: colors.text }]}>
                                 {result.percentage?.toFixed(1) || ((result.marks_obtained / result.total_marks) * 100).toFixed(1)}%
                             </Text>
                         </View>
                         <View style={styles.resultDetail}>
-                            <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>Grade</Text>
+                            <Text allowFontScaling={false} style={[styles.resultLabel, { color: colors.textSecondary }]}>Grade</Text>
                             <View style={[styles.gradeContainer, { backgroundColor: getGradeColor(
                                 result.grade || calculateGrade(result.percentage || ((result.marks_obtained / result.total_marks) * 100))
                             ) }]}>
-                                <Text style={styles.gradeText}>
+                                <Text allowFontScaling={false} style={styles.gradeText}>
                                     {result.grade || calculateGrade(result.percentage || ((result.marks_obtained / result.total_marks) * 100))}
                                 </Text>
                             </View>
@@ -207,16 +207,16 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                     </View>
                 ) : (
                     <View style={styles.pendingResult}>
-                        <Text style={[styles.pendingText, { color: '#F59E0B' }]}>
-                            {profile?.role === 'teacher' ? 'Tap to mark this quiz' : 'Pending evaluation'}
+                        <Text allowFontScaling={false} style={[styles.pendingText, { color: '#F59E0B' }]}>
+                            {(profile?.role === 'teacher' || profile?.role === 'admin') ? 'Tap to mark this quiz' : 'Pending evaluation'}
                         </Text>
                     </View>
                 )}
 
                 {/* Teacher edit hint for checked results */}
-                {profile?.role === 'teacher' && isChecked && !isAbsent && (
+                {(profile?.role === 'teacher' || profile?.role === 'admin') && isChecked && !isAbsent && (
                     <View style={[styles.editHintContainer, { backgroundColor: colors.background }]}>
-                        <Text style={[styles.editHintText, { color: colors.textSecondary }]}>
+                        <Text allowFontScaling={false} style={[styles.editHintText, { color: colors.textSecondary }]}>
                             💡 Tap to edit marks
                         </Text>
                     </View>
@@ -224,8 +224,8 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
 
                 {result.remarks && isChecked && !isAbsent && (
                     <View style={[styles.remarksContainer, { backgroundColor: colors.background }]}>
-                        <Text style={[styles.remarksLabel, { color: colors.textSecondary }]}>Remarks:</Text>
-                        <Text style={[styles.remarksText, { color: colors.text }]}>{result.remarks}</Text>
+                        <Text allowFontScaling={false} style={[styles.remarksLabel, { color: colors.textSecondary }]}>Remarks:</Text>
+                        <Text allowFontScaling={false} style={[styles.remarksText, { color: colors.text }]}>{result.remarks}</Text>
                     </View>
                 )}
             </TouchableOpacity>
@@ -256,10 +256,10 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         <View style={styles.resultsContainer} key={refreshKey}>
             {/* Filter Summary Banner */}
             <View style={[styles.filterSummary, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                <Text style={[styles.filterSummaryText, { color: colors.textSecondary }]}>
+                <Text allowFontScaling={false} style={[styles.filterSummaryText, { color: colors.textSecondary }]}>
                     {getFilterSummary()}
                 </Text>
-                <Text style={[styles.resultCount, { color: colors.primary }]}>
+                <Text allowFontScaling={false} style={[styles.resultCount, { color: colors.primary }]}>
                     {filteredResults.length} result{filteredResults.length !== 1 ? 's' : ''}
                 </Text>
             </View>
@@ -283,21 +283,21 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                 {filteredResults.length === 0 ? (
                     <View style={styles.emptyResults}>
                         <BookOpen size={48} color={colors.textSecondary} />
-                        <Text style={[styles.emptyText, { color: colors.text }]}>No quiz results found</Text>
-                        <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>No quiz results found</Text>
+                        <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>
                             No results match your current filters. Use the Filter button to adjust your search criteria.
                         </Text>
                         
                         {/* Helpful suggestions */}
                         <View style={[styles.suggestionsContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                            <Text style={[styles.suggestionsTitle, { color: colors.text }]}>Try:</Text>
-                            <Text style={[styles.suggestionText, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.suggestionsTitle, { color: colors.text }]}>Try:</Text>
+                            <Text allowFontScaling={false} style={[styles.suggestionText, { color: colors.textSecondary }]}>
                                 • Using the Filter button to adjust class/subject selection
                             </Text>
-                            <Text style={[styles.suggestionText, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.suggestionText, { color: colors.textSecondary }]}>
                                 • Selecting "All Classes" or "All Subjects"
                             </Text>
-                            <Text style={[styles.suggestionText, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.suggestionText, { color: colors.textSecondary }]}>
                                 • Changing the evaluation status filter
                             </Text>
                         </View>

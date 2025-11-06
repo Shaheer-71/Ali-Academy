@@ -120,7 +120,7 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
         <View style={[styles.section, { borderColor: colors.border }]}>
             <View style={styles.sectionHeader}>
                 {icon}
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+                <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
             </View>
             {children}
         </View>
@@ -158,7 +158,7 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                     <View style={[styles.header, { borderBottomColor: colors.border }]}>
                         <View style={styles.headerLeft}>
                             <Filter size={24} color={colors.primary} />
-                            <Text style={[styles.title, { color: colors.text }]}>Filter Options</Text>
+                            <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>Filter Options</Text>
                         </View>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                             <X size={24} color={colors.textSecondary} />
@@ -177,7 +177,7 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                                             onPress={() => setFilters(prev => ({ ...prev, selectedClass: classItem.id }))}
                                             style={styles.classButton}
                                         >
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={[
                                                 styles.optionText,
                                                 { color: filters.selectedClass === classItem.id ? colors.primary : colors.text }
                                             ]}>
@@ -200,13 +200,13 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                                         style={styles.dateRangeButton}
                                     >
                                         <View>
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={[
                                                 styles.optionText,
                                                 { color: filters.dateRange === option.value ? colors.primary : colors.text }
                                             ]}>
                                                 {option.label}
                                             </Text>
-                                            <Text style={[styles.optionDescription, { color: colors.textSecondary }]}>
+                                            <Text allowFontScaling={false} style={[styles.optionDescription, { color: colors.textSecondary }]}>
                                                 {option.description}
                                             </Text>
                                         </View>
@@ -218,7 +218,7 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                             {filters.dateRange === 'custom' && (
                                 <View style={[styles.customDateContainer, { backgroundColor: colors.background }]}>
                                     <View style={styles.dateInputGroup}>
-                                        <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>From Date:</Text>
+                                        <Text allowFontScaling={false} style={[styles.dateLabel, { color: colors.textSecondary }]}>From Date:</Text>
                                         <TextInput
                                             style={[styles.dateInput, { backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.border }]}
                                             value={filters.startDate}
@@ -228,7 +228,7 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                                         />
                                     </View>
                                     <View style={styles.dateInputGroup}>
-                                        <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>To Date:</Text>
+                                        <Text allowFontScaling={false} style={[styles.dateLabel, { color: colors.textSecondary }]}>To Date:</Text>
                                         <TextInput
                                             style={[styles.dateInput, { backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.border }]}
                                             value={filters.endDate}
@@ -243,7 +243,7 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                             {/* Current Date Range Display */}
                             <View style={[styles.currentRangeDisplay, { backgroundColor: colors.background }]}>
                                 <Clock size={16} color={colors.textSecondary} />
-                                <Text style={[styles.currentRangeText, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.currentRangeText, { color: colors.textSecondary }]}>
                                     {new Date(filters.startDate).toLocaleDateString()} - {new Date(filters.endDate).toLocaleDateString()}
                                 </Text>
                             </View>
@@ -260,8 +260,8 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                                             onPress={() => setFilters(prev => ({ ...prev, status: option.value }))}
                                             style={styles.statusButton}
                                         >
-                                            <Text style={styles.statusIcon}>{option.icon}</Text>
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={styles.statusIcon}>{option.icon}</Text>
+                                            <Text allowFontScaling={false} style={[
                                                 styles.optionText,
                                                 { color: filters.status === option.value ? colors.primary : colors.text }
                                             ]}>
@@ -275,20 +275,20 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
 
                         {/* Applied Filters Summary */}
                         <View style={[styles.summarySection, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                            <Text style={[styles.summaryTitle, { color: colors.text }]}>Current Filters:</Text>
+                            <Text allowFontScaling={false} style={[styles.summaryTitle, { color: colors.text }]}>Current Filters:</Text>
 
                             {userRole === 'teacher' && (
-                                <Text style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                     • Class: {classes.find(c => c.id === filters.selectedClass)?.name || 'None selected'}
                                 </Text>
                             )}
 
-                            <Text style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                 • Date: {dateRangeOptions.find(d => d.value === filters.dateRange)?.label}
                             </Text>
 
                             {viewMode === 'view' && (
-                                <Text style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                     • Status: {statusOptions.find(s => s.value === filters.status)?.label}
                                 </Text>
                             )}
@@ -302,7 +302,7 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                             onPress={handleReset}
                         >
                             <RotateCcw size={16} color={colors.textSecondary} />
-                            <Text style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset</Text>
+                            <Text allowFontScaling={false} style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset</Text>
                         </TouchableOpacity>
 
                         <View style={styles.mainActions}>
@@ -310,14 +310,14 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                                 style={[styles.button, styles.cancelButton, { backgroundColor: colors.background, borderColor: colors.border }]}
                                 onPress={onClose}
                             >
-                                <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
+                                <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
                                 style={[styles.button, styles.applyButton, { backgroundColor: colors.primary }]}
                                 onPress={handleApply}
                             >
-                                <Text style={styles.applyButtonText}>Apply Filters</Text>
+                                <Text allowFontScaling={false} style={styles.applyButtonText}>Apply Filters</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

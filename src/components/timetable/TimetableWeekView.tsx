@@ -72,7 +72,7 @@ export const TimetableWeekView: React.FC<TimetableWeekViewProps> = ({
                     <ChevronLeft size={20} color="#274d71" />
                 </TouchableOpacity>
 
-                <Text style={styles.weekText}>
+                <Text allowFontScaling={false} style={styles.weekText}>
                     {weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {' '}
                     {weekDates[5].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </Text>

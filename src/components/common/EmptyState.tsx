@@ -22,11 +22,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <View style={styles.iconContainer}>
         <Icon size={48} color="#9CA3AF" />
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
+      <Text allowFontScaling={false} style={styles.title}>{title}</Text>
+      <Text allowFontScaling={false} style={styles.subtitle}>{subtitle}</Text>
       {actionText && onAction && (
         <TouchableOpacity style={styles.actionButton} onPress={onAction}>
-          <Text style={styles.actionButtonText}>{actionText}</Text>
+          <Text allowFontScaling={false} style={styles.actionButtonText}>{actionText}</Text>
         </TouchableOpacity>
       )}
     </View>

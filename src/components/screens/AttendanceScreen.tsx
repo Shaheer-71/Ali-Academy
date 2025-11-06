@@ -146,7 +146,7 @@ export default function AttendanceScreen() {
     } = useAttendance(filters.selectedClass);
 
     useEffect(() => {
-        if (profile?.role === 'teacher') {
+        if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
             fetchClasses();
             fetchAllStudents();
         }
@@ -436,7 +436,7 @@ export default function AttendanceScreen() {
             }
         >
             <AttendanceStats stats={attendanceStats} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Attendance History</Text>
+            <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Attendance History</Text>
             {loading ? (
                 <LoadingState message="Loading attendance..." />
             ) : filteredAttendanceRecords.length === 0 ? (
@@ -536,7 +536,7 @@ export default function AttendanceScreen() {
             {/* Statistics Card */}
             <View style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <View style={styles.statsHeader}>
-                    <Text style={[styles.statsTitle, { color: colors.text }]}>
+                    <Text allowFontScaling={false} style={[styles.statsTitle, { color: colors.text }]}>
                         {viewFilters.viewType === 'student'
                             ? `${allStudents.find(s => s.id === viewFilters.selectedStudent)?.full_name || 'Student'} - Attendance Stats`
                             : `${classes.find(c => c.id === viewFilters.selectedClass)?.name || 'Class'} - Overview`
@@ -546,51 +546,51 @@ export default function AttendanceScreen() {
 
                 <View style={styles.statsGrid}>
                     <View style={styles.statItem}>
-                        <Text style={[styles.statValue, { color: colors.textSecondary }]}>{viewAttendanceStats.totalDays}</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Days</Text>
+                        <Text allowFontScaling={false} style={[styles.statValue, { color: colors.textSecondary }]}>{viewAttendanceStats.totalDays}</Text>
+                        <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Total Days</Text>
                     </View>
                     <View style={styles.statItem}>
-                        <Text style={[styles.statValue, { color: '#10B981' }]}>{viewAttendanceStats.presentDays}</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Present</Text>
+                        <Text allowFontScaling={false} style={[styles.statValue, { color: '#10B981' }]}>{viewAttendanceStats.presentDays}</Text>
+                        <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Present</Text>
                     </View>
                     <View style={styles.statItem}>
-                        <Text style={[styles.statValue, { color: '#F59E0B' }]}>{viewAttendanceStats.lateDays}</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Late</Text>
+                        <Text allowFontScaling={false} style={[styles.statValue, { color: '#F59E0B' }]}>{viewAttendanceStats.lateDays}</Text>
+                        <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Late</Text>
                     </View>
                     <View style={styles.statItem}>
-                        <Text style={[styles.statValue, { color: '#EF4444' }]}>{viewAttendanceStats.absentDays}</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Absent</Text>
+                        <Text allowFontScaling={false} style={[styles.statValue, { color: '#EF4444' }]}>{viewAttendanceStats.absentDays}</Text>
+                        <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Absent</Text>
                     </View>
                 </View>
 
                 <View style={[styles.attendanceRateContainer, { backgroundColor: colors.primary }]}>
-                    <Text style={styles.attendanceRateLabel}>Overall Attendance Rate</Text>
-                    <Text style={styles.attendanceRateValue}>{viewAttendanceStats.attendanceRate}%</Text>
+                    <Text allowFontScaling={false} style={styles.attendanceRateLabel}>Overall Attendance Rate</Text>
+                    <Text allowFontScaling={false} style={styles.attendanceRateValue}>{viewAttendanceStats.attendanceRate}%</Text>
                 </View>
             </View>
 
             {/* Active Filters Display */}
             {hasActiveViewFilters() && (
                 <View style={[styles.activeFiltersCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text style={[styles.activeFiltersTitle, { color: colors.text }]}>Active Filters:</Text>
+                    <Text allowFontScaling={false} style={[styles.activeFiltersTitle, { color: colors.text }]}>Active Filters:</Text>
                     <View style={styles.activeFiltersList}>
                         {viewFilters.viewType === 'student' && viewFilters.selectedStudent && (
                             <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                                <Text style={[styles.filterTagText, { color: colors.primary }]}>
+                                <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>
                                     Student: {allStudents.find(s => s.id === viewFilters.selectedStudent)?.full_name || 'Unknown'}
                                 </Text>
                             </View>
                         )}
                         {viewFilters.status !== 'all' && (
                             <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                                <Text style={[styles.filterTagText, { color: colors.primary }]}>
+                                <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>
                                     Status: {viewFilters.status.charAt(0).toUpperCase() + viewFilters.status.slice(1)}
                                 </Text>
                             </View>
                         )}
                         {viewFilters.dateRange !== 'today' && (
                             <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                                <Text style={[styles.filterTagText, { color: colors.primary }]}>
+                                <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>
                                     Range: {viewFilters.dateRange === 'week' ? 'Last 7 days' : viewFilters.dateRange === 'month' ? 'Last 30 days' : 'Custom'}
                                 </Text>
                             </View>
@@ -599,7 +599,7 @@ export default function AttendanceScreen() {
                 </View>
             )}
 
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>
                 Attendance Records ({viewAttendanceRecords.length})
             </Text>
 
@@ -653,25 +653,25 @@ export default function AttendanceScreen() {
             }
         >
             <View style={[styles.classStatsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                <Text style={[styles.classStatsTitle, { color: colors.text }]}>
+                <Text allowFontScaling={false} style={[styles.classStatsTitle, { color: colors.text }]}>
                     {classes.find(c => c.id === filters.selectedClass)?.name} - Attendance Overview
                 </Text>
                 <View style={styles.statsGrid}>
                     <View style={styles.statItem}>
-                        <Text style={[styles.statValue, { color: '#10B981' }]}>{attendanceStats.presentDays}</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Present</Text>
+                        <Text allowFontScaling={false} style={[styles.statValue, { color: '#10B981' }]}>{attendanceStats.presentDays}</Text>
+                        <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Present</Text>
                     </View>
                     <View style={styles.statItem}>
-                        <Text style={[styles.statValue, { color: '#F59E0B' }]}>{attendanceStats.lateDays}</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Late</Text>
+                        <Text allowFontScaling={false} style={[styles.statValue, { color: '#F59E0B' }]}>{attendanceStats.lateDays}</Text>
+                        <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Late</Text>
                     </View>
                     <View style={styles.statItem}>
-                        <Text style={[styles.statValue, { color: '#EF4444' }]}>{attendanceStats.absentDays}</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Absent</Text>
+                        <Text allowFontScaling={false} style={[styles.statValue, { color: '#EF4444' }]}>{attendanceStats.absentDays}</Text>
+                        <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Absent</Text>
                     </View>
                     <View style={styles.statItem}>
-                        <Text style={[styles.statValue, { color: colors.primary }]}>{attendanceStats.attendanceRate}%</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Rate</Text>
+                        <Text allowFontScaling={false} style={[styles.statValue, { color: colors.primary }]}>{attendanceStats.attendanceRate}%</Text>
+                        <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Rate</Text>
                     </View>
                 </View>
             </View>
@@ -679,18 +679,18 @@ export default function AttendanceScreen() {
             {/* Active Filters Display */}
             {(filters.status !== 'all' || filters.dateRange !== 'today') && (
                 <View style={[styles.activeFiltersCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text style={[styles.activeFiltersTitle, { color: colors.text }]}>Active Filters:</Text>
+                    <Text allowFontScaling={false} style={[styles.activeFiltersTitle, { color: colors.text }]}>Active Filters:</Text>
                     <View style={styles.activeFiltersList}>
                         {filters.status !== 'all' && (
                             <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                                <Text style={[styles.filterTagText, { color: colors.primary }]}>
+                                <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>
                                     Status: {filters.status.charAt(0).toUpperCase() + filters.status.slice(1)}
                                 </Text>
                             </View>
                         )}
                         {filters.dateRange !== 'today' && (
                             <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                                <Text style={[styles.filterTagText, { color: colors.primary }]}>
+                                <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>
                                     Range: {filters.dateRange === 'week' ? 'Last 7 days' : filters.dateRange === 'month' ? 'Last 30 days' : 'Custom'}
                                 </Text>
                             </View>
@@ -699,7 +699,7 @@ export default function AttendanceScreen() {
                 </View>
             )}
 
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Attendance Records</Text>
+            <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Attendance Records</Text>
             {loading ? (
                 <LoadingState message="Loading attendance reports..." />
             ) : filteredAttendanceRecords.length === 0 ? (

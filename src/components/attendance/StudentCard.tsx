@@ -90,16 +90,16 @@ export const StudentCard: React.FC<StudentCardProps> = ({
         ]}>
             <View style={styles.studentCardHeader}>
                 <View style={[styles.studentAvatar, { backgroundColor: colors.primary }]}>
-                    <Text style={styles.studentInitial}>{student.full_name.charAt(0).toUpperCase()}</Text>
+                    <Text allowFontScaling={false} style={styles.studentInitial}>{student.full_name.charAt(0).toUpperCase()}</Text>
                 </View>
                 <View style={styles.studentInfo}>
-                    <Text style={[styles.studentName, { color: colors.text }]}>{student.full_name}</Text>
-                    <Text style={[styles.rollNumber, { color: colors.textSecondary }]}>Roll: {student.roll_number}</Text>
+                    <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]}>{student.full_name}</Text>
+                    <Text allowFontScaling={false} style={[styles.rollNumber, { color: colors.textSecondary }]}>Roll: {student.roll_number}</Text>
                 </View>
                 <View style={styles.statusIndicator}>
                     {getStatusIcon(displayRecord?.status)}
                     {displayRecord && (
-                        <Text style={[styles.statusText, { color: getStatusColor(displayRecord.status) }]}>
+                        <Text allowFontScaling={false} style={[styles.statusText, { color: getStatusColor(displayRecord.status) }]}>
                             {displayRecord.status?.toUpperCase()}
                         </Text>
                     )}
@@ -110,7 +110,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
             {displayRecord?.arrival_time && (
                 <View style={[styles.timeInfo, { backgroundColor: colors.background }]}>
                     <Clock size={14} color={colors.textSecondary} />
-                    <Text style={[styles.timeText, { color: colors.textSecondary }]}>
+                    <Text allowFontScaling={false} style={[styles.timeText, { color: colors.textSecondary }]}>
                         Arrived at {displayRecord.arrival_time}
                         {displayRecord.late_minutes && displayRecord.late_minutes > 0 && ` (${displayRecord.late_minutes} min late)`}
                     </Text>
@@ -120,7 +120,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
             {/* Status information based on record source */}
             {recordSource === 'temporary' && (
                 <View style={[styles.temporaryInfo, { backgroundColor: '#FEF3C7' }]}>
-                    <Text style={[styles.temporaryText, { color: '#92400E' }]}>
+                    <Text allowFontScaling={false} style={[styles.temporaryText, { color: '#92400E' }]}>
                         📝 Marked as {getStatusText(record?.status)} (Not posted yet)
                     </Text>
                 </View>
@@ -128,7 +128,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
 
             {recordSource === 'database' && (
                 <View style={[styles.databaseInfo, { backgroundColor: colors.primary }]}>
-                    <Text style={styles.databaseText}>
+                    <Text allowFontScaling={false} style={styles.databaseText}>
                         ✅ Attendance recorded for {new Date(selectedDate).toLocaleDateString()}
                     </Text>
                 </View>
@@ -136,7 +136,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
 
             {recordSource === 'none' && (
                 <View style={[styles.noRecordInfo, { backgroundColor: '#F3F4F6' }]}>
-                    <Text style={[styles.noRecordText, { color: colors.textSecondary }]}>
+                    <Text allowFontScaling={false} style={[styles.noRecordText, { color: colors.textSecondary }]}>
                         ⏳ No attendance marked for {new Date(selectedDate).toLocaleDateString()}
                     </Text>
                 </View>
@@ -155,7 +155,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
                     activeOpacity={buttonsDisabled ? 1 : 0.7}
                 >
                     <CheckCircle size={16} color={buttonsDisabled ? "#999999" : "#ffffff"} />
-                    <Text style={[
+                    <Text allowFontScaling={false} style={[
                         styles.actionButtonText,
                         buttonsDisabled && styles.disabledButtonText
                     ]}>
@@ -174,7 +174,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
                     activeOpacity={buttonsDisabled ? 1 : 0.7}
                 >
                     <Clock size={16} color={buttonsDisabled ? "#999999" : "#ffffff"} />
-                    <Text style={[
+                    <Text allowFontScaling={false} style={[
                         styles.actionButtonText,
                         buttonsDisabled && styles.disabledButtonText
                     ]}>
@@ -193,7 +193,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
                     activeOpacity={buttonsDisabled ? 1 : 0.7}
                 >
                     <XCircle size={16} color={buttonsDisabled ? "#999999" : "#ffffff"} />
-                    <Text style={[
+                    <Text allowFontScaling={false} style={[
                         styles.actionButtonText,
                         buttonsDisabled && styles.disabledButtonText
                     ]}>
@@ -210,7 +210,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
                         onPress={() => onEdit(dbRecord)}
                     >
                         <Edit3 size={16} color={colors.primary} />
-                        <Text style={[styles.editButtonText, { color: colors.primary }]}>
+                        <Text allowFontScaling={false} style={[styles.editButtonText, { color: colors.primary }]}>
                             Edit Database Record
                         </Text>
                     </TouchableOpacity>
@@ -220,7 +220,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
             {/* Helper text for disabled buttons */}
             {buttonsDisabled && (
                 <View style={[styles.disabledInfo, { backgroundColor: '#FEF2F2' }]}>
-                    <Text style={[styles.disabledInfoText, { color: '#991B1B' }]}>
+                    <Text allowFontScaling={false} style={[styles.disabledInfoText, { color: '#991B1B' }]}>
                         🔒 Buttons disabled - attendance already recorded in database
                     </Text>
                 </View>

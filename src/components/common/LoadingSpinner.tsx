@@ -11,7 +11,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.spinner} />
-      <Text style={styles.message}>{message}</Text>
+      <Text allowFontScaling={false} style={styles.message}>{message}</Text>
     </View>
   );
 };

@@ -43,7 +43,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             <View style={styles.modalOverlay}>
                 <View style={[styles.filterModalContent, { backgroundColor: colors.background }]}>
                     <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>Filter Attendance Records</Text>
+                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Filter Attendance Records</Text>
                         <TouchableOpacity onPress={onClose}>
                             <X size={24} color={colors.textSecondary} />
                         </TouchableOpacity>
@@ -51,7 +51,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
                     <View style={styles.filterContent}>
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.text }]}>From Date</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>From Date</Text>
                             <TextInput
                                 style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                 value={startDate}
@@ -62,7 +62,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.text }]}>To Date</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>To Date</Text>
                             <TextInput
                                 style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                 value={endDate}
@@ -73,7 +73,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                         </View>
 
                         <View style={styles.quickFilters}>
-                            <Text style={[styles.quickFiltersLabel, { color: colors.text }]}>Quick Filters</Text>
+                            <Text allowFontScaling={false} style={[styles.quickFiltersLabel, { color: colors.text }]}>Quick Filters</Text>
                             <View style={styles.quickFilterButtons}>
                                 {[
                                     { label: 'Today', days: 0 },
@@ -85,7 +85,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                                         style={[styles.quickFilterButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
                                         onPress={() => setQuickFilter(filter.days)}
                                     >
-                                        <Text style={[styles.quickFilterText, { color: colors.text }]}>{filter.label}</Text>
+                                        <Text allowFontScaling={false} style={[styles.quickFilterText, { color: colors.text }]}>{filter.label}</Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>
@@ -95,7 +95,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                             style={[styles.applyFilterButton, { backgroundColor: colors.primary }]}
                             onPress={onApply}
                         >
-                            <Text style={styles.applyFilterButtonText}>Apply Filter</Text>
+                            <Text allowFontScaling={false} style={styles.applyFilterButtonText}>Apply Filter</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

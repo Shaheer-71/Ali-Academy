@@ -25,7 +25,7 @@ export default function ClassFilter({ classes, filters, setFilters, colors, load
                         ]}
                         onPress={() => setFilters({ class_id: undefined })}
                     >
-                        <Text style={[
+                        <Text allowFontScaling={false} style={[
                             styles.classButtonText,
                             { color: colors.text },
                             isAllClassesSelected && { color: '#ffffff' },
@@ -45,7 +45,7 @@ export default function ClassFilter({ classes, filters, setFilters, colors, load
                                 ]}
                                 onPress={() => setFilters({ class_id: classItem.id })}
                             >
-                                <Text style={[
+                                <Text allowFontScaling={false} style={[
                                     styles.classButtonText,
                                     { color: colors.text },
                                     isSelected && { color: '#ffffff' },

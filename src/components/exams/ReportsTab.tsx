@@ -175,25 +175,25 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
             <View style={[styles.contextCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <View style={styles.contextHeader}>
                     <Users size={20} color={colors.primary} />
-                    <Text style={[styles.contextTitle, { color: colors.text }]}>
+                    <Text allowFontScaling={false} style={[styles.contextTitle, { color: colors.text }]}>
                         Performance Report
                     </Text>
                 </View>
-                <Text style={[styles.contextSubtitle, { color: colors.textSecondary }]}>
+                <Text allowFontScaling={false} style={[styles.contextSubtitle, { color: colors.textSecondary }]}>
                     {selectedClassName} • {profile?.role === 'student' ? 'Your Performance' : 'Class Overview'}
                 </Text>
             </View>
 
             {/* Overall Performance Card */}
             <View style={[styles.reportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                <Text style={[styles.reportTitle, { color: colors.text }]}>
+                <Text allowFontScaling={false} style={[styles.reportTitle, { color: colors.text }]}>
                     Overall Performance Summary
                 </Text>
 
                 {overallStats.totalQuizzes === 0 ? (
                     <View style={styles.noDataContainer}>
                         <BookOpen size={48} color={colors.textSecondary} />
-                        <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
+                        <Text allowFontScaling={false} style={[styles.noDataText, { color: colors.textSecondary }]}>
                             No quiz data available for {selectedClassName}
                         </Text>
                     </View>
@@ -201,27 +201,27 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                     <>
                         <View style={styles.statsGrid}>
                             <View style={styles.statItem}>
-                                <Text style={[styles.statValue, { color: colors.primary }]}>{overallStats.totalQuizzes}</Text>
-                                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Quizzes</Text>
+                                <Text allowFontScaling={false} style={[styles.statValue, { color: colors.primary }]}>{overallStats.totalQuizzes}</Text>
+                                <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Total Quizzes</Text>
                             </View>
                             <View style={styles.statItem}>
-                                <Text style={[styles.statValue, { color: '#10B981' }]}>{overallStats.checkedQuizzes}</Text>
-                                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Evaluated</Text>
+                                <Text allowFontScaling={false} style={[styles.statValue, { color: '#10B981' }]}>{overallStats.checkedQuizzes}</Text>
+                                <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Evaluated</Text>
                             </View>
                             <View style={styles.statItem}>
-                                <Text style={[styles.statValue, { color: '#F59E0B' }]}>{overallStats.uncheckedQuizzes}</Text>
-                                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Pending</Text>
+                                <Text allowFontScaling={false} style={[styles.statValue, { color: '#F59E0B' }]}>{overallStats.uncheckedQuizzes}</Text>
+                                <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Pending</Text>
                             </View>
                             <View style={styles.statItem}>
-                                <Text style={[styles.statValue, { color: '#EF4444' }]}>{overallStats.absentQuizzes}</Text>
-                                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Absent</Text>
+                                <Text allowFontScaling={false} style={[styles.statValue, { color: '#EF4444' }]}>{overallStats.absentQuizzes}</Text>
+                                <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>Absent</Text>
                             </View>
                         </View>
 
                         {overallStats.checkedQuizzes > 0 && (
                             <>
                                 <View style={styles.progressSection}>
-                                    <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>
+                                    <Text allowFontScaling={false} style={[styles.progressLabel, { color: colors.textSecondary }]}>
                                         Average Performance: {overallStats.averagePercentage}%
                                     </Text>
                                     <View style={[styles.progressBarContainer, { backgroundColor: colors.border }]}>
@@ -235,18 +235,18 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                                             ]}
                                         />
                                     </View>
-                                    <Text style={[styles.progressText, { color: colors.text }]}>
+                                    <Text allowFontScaling={false} style={[styles.progressText, { color: colors.text }]}>
                                         {overallStats.totalMarks}/{overallStats.totalPossible} total marks
                                     </Text>
                                 </View>
 
                                 <View style={styles.gradeSection}>
-                                    <Text style={[styles.gradeLabel, { color: colors.textSecondary }]}>Current Grade</Text>
+                                    <Text allowFontScaling={false} style={[styles.gradeLabel, { color: colors.textSecondary }]}>Current Grade</Text>
                                     <View style={[
                                         styles.gradeBadge, 
                                         { backgroundColor: getGradeColor(calculateGrade(overallStats.averagePercentage)) }
                                     ]}>
-                                        <Text style={styles.gradeBadgeText}>
+                                        <Text allowFontScaling={false} style={styles.gradeBadgeText}>
                                             {calculateGrade(overallStats.averagePercentage)}
                                         </Text>
                                     </View>
@@ -259,13 +259,13 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
 
             {/* Subject-wise Performance */}
             <View style={[styles.reportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                <Text style={[styles.reportTitle, { color: colors.text }]}>
+                <Text allowFontScaling={false} style={[styles.reportTitle, { color: colors.text }]}>
                     Subject-wise Performance
                 </Text>
 
                 {subjectWisePerformance.length === 0 ? (
                     <View style={styles.emptySubjects}>
-                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
                             No subjects with quiz data found for {selectedClassName}
                         </Text>
                     </View>
@@ -273,13 +273,13 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                     subjectWisePerformance.map((subject) => (
                         <View key={subject.id} style={[styles.subjectReport, { borderBottomColor: colors.border }]}>
                             <View style={styles.subjectHeader}>
-                                <Text style={[styles.subjectName, { color: colors.text }]}>{subject.name}</Text>
+                                <Text allowFontScaling={false} style={[styles.subjectName, { color: colors.text }]}>{subject.name}</Text>
                                 {subject.checkedQuizzes > 0 ? (
-                                    <Text style={[styles.subjectPercentage, { color: getGradeColor(calculateGrade(subject.percentage)) }]}>
+                                    <Text allowFontScaling={false} style={[styles.subjectPercentage, { color: getGradeColor(calculateGrade(subject.percentage)) }]}>
                                         {subject.percentage.toFixed(1)}%
                                     </Text>
                                 ) : (
-                                    <Text style={[styles.noDataBadge, { color: colors.textSecondary }]}>No data</Text>
+                                    <Text allowFontScaling={false} style={[styles.noDataBadge, { color: colors.textSecondary }]}>No data</Text>
                                 )}
                             </View>
                             
@@ -296,12 +296,12 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                                             ]}
                                         />
                                     </View>
-                                    <Text style={[styles.subjectStats, { color: colors.textSecondary }]}>
+                                    <Text allowFontScaling={false} style={[styles.subjectStats, { color: colors.textSecondary }]}>
                                         {subject.checkedQuizzes}/{subject.totalQuizzes} quizzes evaluated • {subject.totalMarks}/{subject.totalPossible} marks
                                     </Text>
                                 </>
                             ) : (
-                                <Text style={[styles.subjectStats, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.subjectStats, { color: colors.textSecondary }]}>
                                     {subject.totalQuizzes} quizzes available • No evaluated results yet
                                 </Text>
                             )}
@@ -313,15 +313,15 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
             {/* Performance Analysis */}
             {overallStats.checkedQuizzes > 0 && (
                 <View style={[styles.reportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                    <Text style={[styles.reportTitle, { color: colors.text }]}>Performance Analysis</Text>
+                    <Text allowFontScaling={false} style={[styles.reportTitle, { color: colors.text }]}>Performance Analysis</Text>
 
                     <View style={styles.analysisGrid}>
                         <View style={styles.analysisItem}>
                             <View style={[styles.analysisIcon, { backgroundColor: getGradeColor(calculateGrade(overallStats.averagePercentage)) }]}>
                                 <TrendingUp size={20} color="#ffffff" />
                             </View>
-                            <Text style={[styles.analysisLabel, { color: colors.textSecondary }]}>Performance Level</Text>
-                            <Text style={[styles.analysisValue, { color: colors.text }]}>
+                            <Text allowFontScaling={false} style={[styles.analysisLabel, { color: colors.textSecondary }]}>Performance Level</Text>
+                            <Text allowFontScaling={false} style={[styles.analysisValue, { color: colors.text }]}>
                                 {overallStats.averagePercentage >= 90 ? 'Excellent' :
                                     overallStats.averagePercentage >= 80 ? 'Very Good' :
                                         overallStats.averagePercentage >= 70 ? 'Good' :
@@ -334,15 +334,15 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                             <View style={[styles.analysisIcon, { backgroundColor: colors.primary }]}>
                                 <Target size={20} color="#ffffff" />
                             </View>
-                            <Text style={[styles.analysisLabel, { color: colors.textSecondary }]}>Completion Rate</Text>
-                            <Text style={[styles.analysisValue, { color: colors.text }]}>
+                            <Text allowFontScaling={false} style={[styles.analysisLabel, { color: colors.textSecondary }]}>Completion Rate</Text>
+                            <Text allowFontScaling={false} style={[styles.analysisValue, { color: colors.text }]}>
                                 {Math.round((overallStats.checkedQuizzes / overallStats.totalQuizzes) * 100)}%
                             </Text>
                         </View>
                     </View>
 
                     <View style={[styles.summaryContainer, { backgroundColor: colors.background }]}>
-                        <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
+                        <Text allowFontScaling={false} style={[styles.summaryText, { color: colors.textSecondary }]}>
                             {profile?.role === 'student' 
                                 ? `You have completed ${overallStats.checkedQuizzes} out of ${overallStats.totalQuizzes} quizzes in ${selectedClassName} with an average score of ${overallStats.averagePercentage}%.`
                                 : `Students in ${selectedClassName} have completed ${overallStats.checkedQuizzes} out of ${overallStats.totalQuizzes} total quiz attempts with an average performance of ${overallStats.averagePercentage}%.`

@@ -105,26 +105,26 @@ export default function LectureCard({ lecture, onRefresh }: LectureCardProps) {
         </View>
 
         <View style={styles.info}>
-          <Text style={[styles.title, { color: colors.text }]}>{lecture.title}</Text>
+          <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>{lecture.title}</Text>
 
           {/* Meta Info */}
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
               <BookOpen size={12} color={colors.textSecondary} />
-              <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+              <Text allowFontScaling={false} style={[styles.metaText, { color: colors.textSecondary }]}>
                 {lecture.classes?.name}
               </Text>
             </View>
 
             <View style={styles.metaItem}>
               <FileText size={12} color={colors.textSecondary} />
-              <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+              <Text allowFontScaling={false} style={[styles.metaText, { color: colors.textSecondary }]}>
                 {lecture.subjects?.name}
               </Text>
             </View>
 
             {lecture.file_size && (
-              <Text style={[styles.sizeText, { color: colors.textSecondary }]}>
+              <Text allowFontScaling={false} style={[styles.sizeText, { color: colors.textSecondary }]}>
                 {formatFileSize(lecture.file_size)}
               </Text>
             )}
@@ -142,12 +142,12 @@ export default function LectureCard({ lecture, onRefresh }: LectureCardProps) {
 
           {/* Upload Info */}
           <View style={styles.uploadInfo}>
-            <Text style={[styles.uploadedBy, { color: colors.textSecondary }]}>
+            <Text allowFontScaling={false} style={[styles.uploadedBy, { color: colors.textSecondary }]}>
               By {lecture.profiles?.full_name}
             </Text>
             <View style={styles.metaItem}>
               <Calendar size={10} color={colors.textSecondary} />
-              <Text style={[styles.dateText, { color: colors.textSecondary }]}>
+              <Text allowFontScaling={false} style={[styles.dateText, { color: colors.textSecondary }]}>
                 {new Date(lecture.created_at).toLocaleDateString()}
               </Text>
             </View>
@@ -162,7 +162,7 @@ export default function LectureCard({ lecture, onRefresh }: LectureCardProps) {
           onPress={handleView}
         >
           <Eye size={13} color={lecture.has_viewed ? colors.success : colors.primary} />
-          <Text style={[styles.actionText, { color: colors.primary }]}>
+          <Text allowFontScaling={false} style={[styles.actionText, { color: colors.primary }]}>
             {lecture.has_viewed ? 'Viewed' : 'View'}
           </Text>
         </TouchableOpacity>
@@ -177,7 +177,7 @@ export default function LectureCard({ lecture, onRefresh }: LectureCardProps) {
           ) : (
             <Download size={13} color={lecture.has_downloaded ? colors.success : colors.primary} />
           )}
-          <Text style={[styles.actionText, { color: colors.primary }]}>
+          <Text allowFontScaling={false} style={[styles.actionText, { color: colors.primary }]}>
             {isDownloading ? null : lecture.has_downloaded ? 'Downloaded' : 'Download'}
           </Text>
         </TouchableOpacity> */}
@@ -195,7 +195,7 @@ export default function LectureCard({ lecture, onRefresh }: LectureCardProps) {
           disabled={!lecture.youtube_link}
         >
           <Youtube size={13} color={lecture.youtube_link ? '#FF0000' : colors.textSecondary} />
-          <Text style={[styles.actionText, { color: lecture.youtube_link ? colors.text : colors.textSecondary }]}>
+          <Text allowFontScaling={false} style={[styles.actionText, { color: lecture.youtube_link ? colors.text : colors.textSecondary }]}>
             YouTube
           </Text>
         </TouchableOpacity>
@@ -205,7 +205,7 @@ export default function LectureCard({ lecture, onRefresh }: LectureCardProps) {
           onPress={handleShare}
         >
           <Share2 size={13} color={colors.primary} />
-          <Text style={[styles.actionText, { color: colors.primary }]}>Share</Text>
+          <Text allowFontScaling={false} style={[styles.actionText, { color: colors.primary }]}>Share</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -56,13 +56,13 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 styles.dayHeader,
                                 isToday && styles.todayHeader
                             ]}>
-                                <Text style={[
+                                <Text allowFontScaling={false} style={[
                                     styles.dayName,
                                     isToday && styles.todayText
                                 ]}>
                                     {day}
                                 </Text>
-                                <Text style={[
+                                <Text allowFontScaling={false} style={[
                                     styles.dayDate,
                                     isToday && styles.todayDateText
                                 ]}>
@@ -75,14 +75,14 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 {dayEntries.length === 0 ? (
                                     <View style={styles.emptyDay}>
                                         <Calendar size={20} color="#9CA3AF" />
-                                        <Text style={styles.emptyDayText}>No classes</Text>
+                                        <Text allowFontScaling={false} style={styles.emptyDayText}>No classes</Text>
                                         {canEdit && onAddEntry && (
                                             <TouchableOpacity
                                                 style={styles.addClassButton}
                                                 onPress={() => onAddEntry(day)}
                                             >
                                                 <Plus size={12} color="#274d71" />
-                                                <Text style={styles.addClassText}>Add</Text>
+                                                <Text allowFontScaling={false} style={styles.addClassText}>Add</Text>
                                             </TouchableOpacity>
                                         )}
                                     </View>
@@ -109,7 +109,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                 onPress={() => onAddEntry(day)}
                                             >
                                                 <Plus size={20} color="#274d71" />
-                                                <Text style={styles.addSlotText}>Add Class</Text>
+                                                <Text allowFontScaling={false} style={styles.addSlotText}>Add Class</Text>
                                             </TouchableOpacity>
                                         )}
                                     </ScrollView>

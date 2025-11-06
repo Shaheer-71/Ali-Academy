@@ -178,11 +178,11 @@ export default function LecturesScreen() {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <BookOpen size={48} color={colors.textSecondary} />
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
+      <Text allowFontScaling={false} style={[styles.emptyTitle, { color: colors.text }]}>
         {searchQuery ? 'No lectures found' : 'No lectures available'}
       </Text>
-      <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-        {profile?.role === 'teacher' && !searchQuery
+      <Text allowFontScaling={false} style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+        {(profile?.role === 'teacher' || profile?.role === 'admin') && !searchQuery
           ? 'Tap the + button to upload your first lecture'
           : 'Check back later for new content'}
       </Text>
@@ -234,7 +234,7 @@ export default function LecturesScreen() {
             <Filter size={20} color={colors.primary} />
           </TouchableOpacity> */}
 
-          {profile?.role === 'teacher' && (
+          {(profile?.role === 'teacher' || profile?.role === 'admin') && (
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.primary }]}
               onPress={() => setUploadModalVisible(true)}
@@ -264,7 +264,7 @@ export default function LecturesScreen() {
       />
 
       {/* Upload Button (Teachers Only) */}
-      {profile?.role === 'teacher' && (
+      {(profile?.role === 'teacher' || profile?.role === 'admin') && (
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: colors.primary }]}
           onPress={() => setUploadModalVisible(true)}

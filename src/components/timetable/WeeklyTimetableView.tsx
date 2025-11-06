@@ -51,13 +51,13 @@ export const WeeklyTimetableView: React.FC<WeeklyTimetableViewProps> = ({
               styles.dayHeader,
               isToday && styles.todayHeader
             ]}>
-              <Text style={[
+              <Text allowFontScaling={false} style={[
                 styles.dayName,
                 isToday && styles.todayText
               ]}>
                 {day}
               </Text>
-              <Text style={[
+              <Text allowFontScaling={false} style={[
                 styles.dayDate,
                 isToday && styles.todayDateText
               ]}>
@@ -70,7 +70,7 @@ export const WeeklyTimetableView: React.FC<WeeklyTimetableViewProps> = ({
               {dayEntries.length === 0 ? (
                 <View style={styles.emptyDay}>
                   <Calendar size={20} color="#9CA3AF" />
-                  <Text style={styles.emptyDayText}>No classes</Text>
+                  <Text allowFontScaling={false} style={styles.emptyDayText}>No classes</Text>
                 </View>
               ) : (
                 <ScrollView 

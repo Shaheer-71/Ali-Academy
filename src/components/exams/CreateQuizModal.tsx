@@ -280,7 +280,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
             <View style={styles.modalOverlay}>
                 <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                     <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>Schedule Quiz</Text>
+                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Schedule Quiz</Text>
                         <TouchableOpacity
                             style={styles.closeButton}
                             onPress={() => setModalVisible(false)}
@@ -291,7 +291,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
 
                     <ScrollView style={styles.modalScrollView} contentContainerStyle={styles.modalScrollViewContent}>
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.text }]}>Quiz Title *</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Quiz Title *</Text>
                             <TextInput
                                 style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                 value={newQuiz.title}
@@ -302,7 +302,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.text }]}>Description</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Description</Text>
                             <TextInput
                                 style={[styles.input, styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                 value={newQuiz.description}
@@ -316,8 +316,8 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
 
                         {/* STEP 1: Select Class First */}
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.text }]}>Class *</Text>
-                            <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Class *</Text>
+                            <Text allowFontScaling={false} style={[styles.helperText, { color: colors.textSecondary }]}>
                                 {newQuiz.class_id ? `Selected: ${classes.find(c => c.id === newQuiz.class_id)?.name}` : 'Please select a class first'}
                             </Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -332,7 +332,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                                             ]}
                                             onPress={() => setNewQuiz({ ...newQuiz, class_id: classItem.id })}
                                         >
-                                            <Text style={[
+                                            <Text allowFontScaling={false} style={[
                                                 styles.optionText,
                                                 { color: colors.text },
                                                 newQuiz.class_id === classItem.id && { color: '#ffffff' },
@@ -348,8 +348,8 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                         {/* STEP 2: Select Subject (only after class is selected) */}
                         {newQuiz.class_id && (
                             <View style={styles.inputGroup}>
-                                <Text style={[styles.label, { color: colors.text }]}>Subject *</Text>
-                                <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Subject *</Text>
+                                <Text allowFontScaling={false} style={[styles.helperText, { color: colors.textSecondary }]}>
                                     {newQuiz.subject_id
                                         ? `Selected: ${availableSubjects.find(s => s.id === newQuiz.subject_id)?.name}`
                                         : `Available subjects for ${classes.find(c => c.id === newQuiz.class_id)?.name}`
@@ -368,7 +368,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                                                     ]}
                                                     onPress={() => setNewQuiz({ ...newQuiz, subject_id: subject.id })}
                                                 >
-                                                    <Text style={[
+                                                    <Text allowFontScaling={false} style={[
                                                         styles.optionText,
                                                         { color: colors.text },
                                                         newQuiz.subject_id === subject.id && { color: '#ffffff' },
@@ -381,7 +381,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                                     </ScrollView>
                                 ) : (
                                     <View style={[styles.noSubjectsContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                                        <Text style={[styles.noSubjectsText, { color: colors.textSecondary }]}>
+                                        <Text allowFontScaling={false} style={[styles.noSubjectsText, { color: colors.textSecondary }]}>
                                             No subjects assigned to this class. Please contact admin to assign subjects.
                                         </Text>
                                     </View>
@@ -390,7 +390,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                         )}
 
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.text }]}>Scheduled Date *</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Scheduled Date *</Text>
                             <TextInput
                                 style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                 value={newQuiz.scheduled_date}
@@ -402,7 +402,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
 
                         <View style={styles.rowInputs}>
                             <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                <Text style={[styles.label, { color: colors.text }]}>Duration (min)</Text>
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Duration (min)</Text>
                                 <TextInput
                                     style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                     value={newQuiz.duration_minutes}
@@ -413,7 +413,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                                 />
                             </View>
                             <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                                <Text style={[styles.label, { color: colors.text }]}>Total Marks</Text>
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Total Marks</Text>
                                 <TextInput
                                     style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                     value={newQuiz.total_marks}
@@ -426,7 +426,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.text }]}>Passing Marks</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Passing Marks</Text>
                             <TextInput
                                 style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                 value={newQuiz.passing_marks}
@@ -438,7 +438,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.text }]}>Instructions</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Instructions</Text>
                             <TextInput
                                 style={[styles.input, styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                 value={newQuiz.instructions}
@@ -452,8 +452,8 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
 
                         {/* Quiz Type Info (hardcoded) */}
                         <View style={[styles.infoContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-                                ℹ️ Quiz Type: <Text style={[styles.infoValue, { color: colors.text }]}>Quiz</Text>
+                            <Text allowFontScaling={false} style={[styles.infoText, { color: colors.textSecondary }]}>
+                                ℹ️ Quiz Type: <Text allowFontScaling={false} style={[styles.infoValue, { color: colors.text }]}>Quiz</Text>
                             </Text>
                         </View>
 
@@ -469,7 +469,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                             {creating ? (
                                 <ActivityIndicator color="#ffffff" />
                             ) : (
-                                <Text style={styles.submitButtonText}>Schedule Quiz</Text>
+                                <Text allowFontScaling={false} style={styles.submitButtonText}>Schedule Quiz</Text>
                             )}
                         </TouchableOpacity>
                     </ScrollView>

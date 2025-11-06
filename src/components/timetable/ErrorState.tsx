@@ -18,12 +18,12 @@ export default function ErrorState({ error, colors, refreshTimetable }: ErrorSta
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
                 <View style={styles.errorContainer}>
                     <AlertCircle size={48} color={colors.error} />
-                    <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+                    <Text allowFontScaling={false} style={[styles.errorText, { color: colors.error }]}>{error}</Text>
                     <TouchableOpacity
                         style={[styles.retryButton, { backgroundColor: colors.primary }]}
                         onPress={refreshTimetable}
                     >
-                        <Text style={styles.retryButtonText}>Retry</Text>
+                        <Text allowFontScaling={false} style={styles.retryButtonText}>Retry</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>

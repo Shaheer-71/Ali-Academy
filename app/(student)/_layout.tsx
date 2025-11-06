@@ -41,13 +41,13 @@ export default function StudentLayout() {
                         backgroundColor: colors.background,
                         borderTopWidth: 1,
                         borderTopColor: colors.border,
-                        paddingTop: 4,
+                        paddingTop: 8,
                         position: 'absolute',
                     },
                     tabBarLabelStyle: {
                         fontSize: 8,
                         fontFamily: 'Inter-Medium',
-                        marginTop: 4,
+
                     },
                 }}>
 
@@ -55,6 +55,7 @@ export default function StudentLayout() {
                     name="index"
                     options={{
                         title: 'Home',
+                        tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <Home size={size} color={color} />
                         ),
@@ -65,6 +66,7 @@ export default function StudentLayout() {
                     name="exams"
                     options={{
                         title: 'Exams',
+                        tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <GraduationCap size={size} color={color} />
                         ),
@@ -75,6 +77,7 @@ export default function StudentLayout() {
                     name="lectures"
                     options={{
                         title: 'Lectures',
+                        tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <BookOpen size={size} color={color} />
                         ),
@@ -85,6 +88,7 @@ export default function StudentLayout() {
                     name="dairy"
                     options={{
                         title: 'Diary',
+                        tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <NotepadText size={size} color={color} />
                         ),
@@ -95,6 +99,7 @@ export default function StudentLayout() {
                     name="analytics"
                     options={{
                         title: 'Analytics',
+                        tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <BarChart3 size={size} color={color} />
                         ),
@@ -106,6 +111,7 @@ export default function StudentLayout() {
                     name="timetable"
                     options={{
                         title: 'Timetable',
+                        tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <Calendar size={size} color={color} />
                         ),
@@ -116,6 +122,7 @@ export default function StudentLayout() {
                     name="attendance"
                     options={{
                         title: 'Attendance',
+                        tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <ClipboardCheck size={size} color={color} />
                         ),

@@ -87,7 +87,7 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
             edges={['top', 'left', 'right']}
         >
             <View style={[styles.content, { backgroundColor: colors.background }]}>
-                <Text style={[styles.title, { color: colors.text }]}>
+                <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>
                     {screenName === 'Index' ? 'Home' : screenName === 'Dairy' ? 'Diary' : screenName || 'Untitled'}
                 </Text>
 
@@ -100,7 +100,7 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                             <Bell color={colors.primary} size={24} />
                             {unreadCount > 0 && (
                                 <View style={styles.notificationBadge}>
-                                    <Text style={styles.badgeText}>
+                                    <Text allowFontScaling={false} style={styles.badgeText}>
                                         {unreadCount > 99 ? '99+' : unreadCount}
                                     </Text>
                                 </View>
@@ -109,7 +109,7 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                     )}
 
                     
-                    {profile?.role === 'teacher' && !inFee && (
+                    {(profile?.role === 'teacher' && profile?.email === 'rafeh@aliacademy.edu') && !inFee && (
                         <TouchableOpacity
                             style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
                             onPress={() => router.push('/fee')}
@@ -156,7 +156,7 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                     <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                         {/* Modal Header */}
                         <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                            <Text style={[styles.modalTitle, { color: colors.text }]}>
+                            <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>
                                 Notifications
                             </Text>
                             <View style={styles.modalHeaderActions}>
@@ -194,7 +194,7 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                                 ]}
                                 onPress={() => setFilter('all')}
                             >
-                                <Text style={[
+                                <Text allowFontScaling={false} style={[
                                     styles.filterText,
                                     { color: filter === 'all' ? '#fff' : colors.textSecondary }
                                 ]}>
@@ -208,7 +208,7 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                                 ]}
                                 onPress={() => setFilter('unread')}
                             >
-                                <Text style={[
+                                <Text allowFontScaling={false} style={[
                                     styles.filterText,
                                     { color: filter === 'unread' ? '#fff' : colors.textSecondary }
                                 ]}>
@@ -236,12 +236,12 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                             ) : filteredNotifications.length === 0 ? (
                                 <View style={styles.emptyNotifications}>
                                     <Bell size={48} color={colors.textSecondary} />
-                                    <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                                    <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
                                         {filter === 'unread'
                                             ? "You're all caught up!"
                                             : "No notifications yet"}
                                     </Text>
-                                    <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
+                                    <Text allowFontScaling={false} style={[styles.emptySubText, { color: colors.textSecondary }]}>
                                         {filter === 'unread'
                                             ? "Check the 'All' tab for read notifications"
                                             : "We'll notify you when something important happens"}
