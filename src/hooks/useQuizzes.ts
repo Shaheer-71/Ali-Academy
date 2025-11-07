@@ -159,11 +159,25 @@ export const useQuizzes = () => {
 
     const fetchSubjects = async () => {
         try {
+
+            const { data: classesIDData, error: classesIDError } = await supabase
+                .from('student_subject_enrollments')
+                .select('subject_id, class_id')
+                .eq('teacher_id', profile?.id);
+
+            if (classesIDError) {
+                console.error('Enrollments fetch error:', classesIDError);
+                throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+            }
+
+            let subject_id = classesIDData?.map(item => item.subject_id) || [];
+
             console.log('📚 Fetching ALL subjects...');
             const { data, error } = await supabase
                 .from('subjects')
                 .select('*')
                 .eq('is_active', true)
+                .in('id', subject_id)
                 .order('name');
 
             if (error) throw error;
@@ -178,6 +192,23 @@ export const useQuizzes = () => {
         try {
 
             let data, error;
+            let subjectIDs: string[] = [];
+
+            const { data: classesIDData, error: classesIDError } = await supabase
+                .from('student_subject_enrollments')
+                .select('subject_id, class_id')
+                .eq('teacher_id', profile?.id);
+
+            if (classesIDError) {
+                console.error('Enrollments fetch error:', classesIDError);
+                throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+            }
+
+            subjectIDs = [
+                ...new Set(classesIDData?.map(item => item.subject_id).filter(Boolean))
+            ];
+
+            console.log('🎯 Student subject IDs:', subjectIDs);
 
             if (profile?.role === "student") {
                 // 1️⃣ Get the student’s class ID
@@ -193,10 +224,10 @@ export const useQuizzes = () => {
                 ({ data, error } = await supabase
                     .from('quizzes')
                     .select(`
-          *,
-          subjects (id, name),
-          classes (name)
-        `)
+                            *,
+                            subjects (id, name),
+                            classes (name)
+                            `)
                     .eq('class_id', class_id)
                     .order('scheduled_date', { ascending: false }));
             }
@@ -209,9 +240,11 @@ export const useQuizzes = () => {
           subjects (id, name),
           classes (name)
         `)
+                    .in('subject_id', subjectIDs)
                     .order('scheduled_date', { ascending: false }));
             }
 
+            // console.log('📋 Quizzes : : :', data);
             // 4️⃣ Error handling
             if (error) throw error;
 

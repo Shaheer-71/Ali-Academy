@@ -34,10 +34,26 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                 setLoading(true);
                 setError(null);
 
+                const { data: classesIDData, error: classesIDError } = await supabase
+                    .from('student_subject_enrollments')
+                    .select('student_id, class_id')
+                    .eq('teacher_id', profileId)
+                
+                if (classesIDError) {
+                    console.error('Enrollments fetch error:', classesIDError);
+                    throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+                }
+
+                let classIDs = classesIDData?.map(item => item.class_id) || [];
+                let studentsenrolledId = classesIDData?.map(item => item.student_id) || [];
+
+                console.log('Fetched class IDs from enrollments:', classIDs);
+                console.log('Fetched student IDs from enrollments:', studentsenrolledId);
+
                 const { data: classesData, error: classesError } = await supabase
                     .from('classes')
                     .select('*')
-                    .eq('teacher_id', profileId)
+                    .in('id', classIDs)
                     .order('name');
 
                 if (classesError) {
@@ -89,6 +105,7 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                         classes!inner(id, name)
                     `)
                     .in('class_id', classIds)
+                    .in('id', studentsenrolledId)
                     .eq('is_deleted', false);
 
                 if (studentsError) {
