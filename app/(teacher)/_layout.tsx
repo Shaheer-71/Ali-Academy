@@ -55,7 +55,7 @@ export default function TeacherLayout() {
                     name="index"
                     options={{
                         title: 'Home',
-                        tabBarShowLabel: false,
+                        // tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <Home size={size} color={color} />
                         ),
@@ -68,7 +68,7 @@ export default function TeacherLayout() {
                     name="attendance"
                     options={{
                         title: 'Attendance',
-                        tabBarShowLabel: false,
+                        // tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <ClipboardCheck size={size} color={color} />
                         ),
@@ -79,7 +79,7 @@ export default function TeacherLayout() {
                     name="exams"
                     options={{
                         title: 'Exams',
-                        tabBarShowLabel: false,
+                        // tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <GraduationCap size={size} color={color} />
                         ),
@@ -90,7 +90,7 @@ export default function TeacherLayout() {
                     name="timetable"
                     options={{
                         title: 'Timetable',
-                        tabBarShowLabel: false,
+                        // tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <Calendar size={size} color={color} />
                         ),
@@ -101,7 +101,7 @@ export default function TeacherLayout() {
                     name="lectures"
                     options={{
                         title: 'Lectures',
-                        tabBarShowLabel: false,
+                        // tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <BookOpen size={size} color={color} />
                         ),
@@ -112,7 +112,7 @@ export default function TeacherLayout() {
                     name="dairy"
                     options={{
                         title: 'Diary',
-                        tabBarShowLabel: false,
+                        // tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <NotepadText size={size} color={color} />
                         ),
@@ -123,7 +123,7 @@ export default function TeacherLayout() {
                     name="analytics"
                     options={{
                         title: 'Analytics',
-                        tabBarShowLabel: false,
+                        // tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <BarChart3 size={size} color={color} />
                         ),
@@ -134,7 +134,7 @@ export default function TeacherLayout() {
                     name="students"
                     options={{
                         title: 'Students',
-                        tabBarShowLabel: false,
+                        // tabBarShowLabel: false,
                         tabBarIcon: ({ size, color }) => (
                             <Users size={size} color={color} />
                         ),

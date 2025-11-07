@@ -82,9 +82,23 @@ export default function ExamsScreen() {
 
   const fetchClasses = async () => {
     try {
+
+      const { data: classesIDData, error: classesIDError } = await supabase
+        .from('student_subject_enrollments')
+        .select('student_id, class_id')
+        .eq('teacher_id', profile?.id);
+
+      if (classesIDError) {
+        console.error('Enrollments fetch error:', classesIDError);
+        throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+      }
+
+      let classIDs = classesIDData?.map(item => item.class_id) || [];
+
       const { data, error } = await supabase
         .from('classes')
         .select('*')
+        .in('id', classIDs)
         .order('name');
 
       if (error) throw error;
@@ -325,6 +339,6 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     paddingHorizontal: 24,
-    marginTop : -10
+    marginTop: -10
   },
 });

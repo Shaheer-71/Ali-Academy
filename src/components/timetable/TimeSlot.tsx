@@ -22,7 +22,7 @@ export default function TimeSlot({
     isFirst,
     isLast
 }: TimeSlotProps) {
-    const canPress = (profile?.role === 'teacher' || profile?.role === 'admin') && entry.teacher_id === profile.id;
+    const canPress = (profile?.role === 'teacher') && entry.teacher_id === profile.id;
     const formatTime = (time: string) => time.substring(0, 5);
 
     return (

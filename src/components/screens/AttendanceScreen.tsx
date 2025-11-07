@@ -175,9 +175,23 @@ export default function AttendanceScreen() {
 
     const fetchClasses = async () => {
         try {
+
+            const { data: classesIDData, error: classesIDError } = await supabase
+                .from('student_subject_enrollments')
+                .select('class_id')
+                .eq('teacher_id', profile?.id)
+
+            if (classesIDError) {
+                console.error('Enrollments fetch error:', classesIDError);
+                throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+            }
+            let enrolledClasses = classesIDData?.map(item => item.class_id) || [];
+            console.log("📚 Fetched enrollments:", enrolledClasses);
+
             const { data, error } = await supabase
                 .from('classes')
                 .select('id, name')
+                .in('id', enrolledClasses)
                 .order('name');
 
             if (error) throw error;
@@ -194,11 +208,26 @@ export default function AttendanceScreen() {
 
     const fetchAllStudents = async () => {
         try {
+            const { data: classesIDData, error: classesIDError } = await supabase
+                .from('student_subject_enrollments')
+                .select('student_id')
+                .eq('teacher_id', profile?.id)
+
+            if (classesIDError) {
+                console.error('Enrollments fetch error:', classesIDError);
+                throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+            }
+            let studentsEnrolledIds = classesIDData?.map(item => item.student_id) || [];
+            console.log("📚 Fetched enrollments:", studentsEnrolledIds);
+
             const { data, error } = await supabase
                 .from('students')
                 .select('id, full_name, roll_number, parent_contact, class_id')
                 .eq('is_deleted', false)
+                .in('id', studentsEnrolledIds)
                 .order('roll_number');
+
+            console.log("Fetched students:", data);
 
             if (error) throw error;
             setAllStudents(data || []);

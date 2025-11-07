@@ -76,9 +76,23 @@ export default function TimetableScreen() {
 
     const fetchClasses = async () => {
         try {
+
+            const { data: classesIDData, error: classesIDError } = await supabase
+                .from('student_subject_enrollments')
+                .select('class_id')
+                .eq('teacher_id', profile?.id)
+
+            if (classesIDError) {
+                console.error('Error fetch classes in timetable', classesIDError);
+                throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+            }
+            let classEnrolledIds = classesIDData?.map(item => item.class_id) || [];
+            console.log("📚 Fetched enrollments:", classEnrolledIds);
+
             const { data, error } = await supabase
                 .from('classes')
                 .select('id, name')
+                .in('id', classEnrolledIds)
                 .order('name');
             if (error) throw error;
             setClasses(data || []);
@@ -86,8 +100,22 @@ export default function TimetableScreen() {
             console.error('Error fetching classes:', error);
         }
     };
+    
     const fetchSubjects = async () => {
         try {
+
+            const { data: classesIDData, error: classesIDError } = await supabase
+                .from('student_subject_enrollments')
+                .select('subject_id')
+                .eq('teacher_id', profile?.id)
+
+            if (classesIDError) {
+                console.error('Error fetch subjects in timetable', classesIDError);
+                throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+            }
+            let subjectsEnrolledIds = classesIDData?.map(item => item.subject_id) || [];
+
+
             const { data, error } = await supabase
                 .from('classes_subjects')
                 .select(`
@@ -97,7 +125,6 @@ export default function TimetableScreen() {
                         )
                     `)
                 .eq('class_id', student?.class_id)
-                .order('name', { foreignTable: 'subjects' }); // ✅ correct way to order by related table field
 
             if (error) throw error;
 
