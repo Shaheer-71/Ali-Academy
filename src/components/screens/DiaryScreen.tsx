@@ -111,65 +111,113 @@ export default function DiaryScreen() {
     }, [profile])
   );
 
-  // API Functions
   const fetchTeacherSubjects = async () => {
     try {
       const { data, error } = await supabase
-        .from('classes_subjects')
+        .from('student_subject_enrollments')
         .select(`
         subjects (
           id,
           name
         )
       `)
-        .eq('class_id', student?.class_id)
-        .order('name', { foreignTable: 'subjects' });
+        .eq('teacher_id', profile?.id)
+        .eq('is_active', true);
 
       if (error) throw error;
+
+      console.log("📚 Raw subjects data:", data);
+
+      // Extract unique subjects
+      const uniqueSubjects = Array.from(
+        new Map(
+          data
+            ?.flatMap(item => item.subjects)
+            .filter(Boolean)
+            .map(subject => [subject.id, subject])
+        ).values()
+      );
+
+      console.log("✅ Unique subjects:", uniqueSubjects);
+      setSubjects(uniqueSubjects);
+    } catch (error) {
+      console.error('❌ Error fetching teacher subjects:', error);
+      setSubjects([]);
+    }
+  };
+
+  // ADD THIS NEW FUNCTION to fetch subjects based on selected class
+  const fetchSubjectsForClass = async (classId: string) => {
+    try {
+      if (!classId) {
+        console.warn('⚠️ No class selected');
+        setSubjects([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('student_subject_enrollments')
+        .select(`
+        subjects (
+          id,
+          name
+        )
+      `)
+        .eq('teacher_id', profile?.id)
+        .eq('class_id', classId)
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      console.log("📚 Subjects for class:", data);
 
       const uniqueSubjects = Array.from(
         new Map(
           data
             ?.flatMap(item => item.subjects)
             .filter(Boolean)
-            .map(subject => [subject.id, subject]) || []
+            .map(subject => [subject.id, subject])
         ).values()
       );
 
+      console.log("✅ Filtered subjects for class:", uniqueSubjects);
       setSubjects(uniqueSubjects);
     } catch (error) {
-      console.error('Error fetching teacher subjects:', error);
+      console.error('❌ Error fetching subjects for class:', error);
       setSubjects([]);
     }
   };
 
   const fetchSubjects = async () => {
     try {
-      if (!student?.class_id) {
-        console.warn('No class_id found for student');
+      if (!student?.id) {
+        console.warn('No student ID found');
         return;
       }
 
       const { data, error } = await supabase
-        .from('classes_subjects')
+        .from('student_subject_enrollments')
         .select(`
-        subjects (
-          id,
-          name
-        )
-      `)
-        .eq('class_id', student.class_id)
-        .order('name', { foreignTable: 'subjects' });
+                subjects (
+                    id,
+                    name
+                )
+            `)
+        .eq('student_id', student.id)
+        .eq('is_active', true);
 
       if (error) throw error;
 
+      console.log("📚 Student subjects:", data);
+
       const subjectsList = data
-        ?.map(item => item.subjects)
+        ?.flatMap(item => item.subjects)
         .filter(Boolean) || [];
 
+      console.log("✅ Subjects list:", subjectsList);
       setSubjects(subjectsList);
     } catch (error) {
-      console.error('Error fetching subjects:', error);
+      console.error('❌ Error fetching subjects:', error);
       setSubjects([]);
     }
   };
@@ -177,29 +225,79 @@ export default function DiaryScreen() {
   const fetchClasses = async () => {
     try {
       const { data, error } = await supabase
-        .from('classes')
-        .select('*')
-        .order('name');
+        .from('student_subject_enrollments')
+        .select(`
+                classes (
+                    id,
+                    name
+                )
+            `)
+        .eq('teacher_id', profile?.id)
+        .eq('is_active', true);
 
       if (error) throw error;
-      setClasses(data || []);
+
+      console.log("🏫 Raw classes:", data);
+
+      const uniqueClasses = Array.from(
+        new Map(
+          data
+            ?.flatMap(item => item.classes)
+            .filter(Boolean)
+            .map(cls => [cls.id, cls])
+        ).values()
+      );
+
+      console.log("✅ Unique classes:", uniqueClasses);
+      setClasses(uniqueClasses);
     } catch (error) {
-      console.error('Error fetching classes:', error);
+      console.error('❌ Error fetching classes:', error);
+      setClasses([]);
     }
   };
 
   const fetchStudents = async (classId: string) => {
     try {
+      if (!newAssignment.subject_id) {
+        console.warn('⚠️ No subject selected');
+        setStudents([]);
+        return;
+      }
+
+      // Same pattern as attendance: get enrolled student IDs first
+      const { data: enrollmentsData, error: enrollError } = await supabase
+        .from('student_subject_enrollments')
+        .select('student_id')
+        .eq('class_id', classId)
+        .eq('subject_id', newAssignment.subject_id)
+        .eq('teacher_id', profile?.id)
+        .eq('is_active', true);
+
+      if (enrollError) throw enrollError;
+
+      const studentIds = enrollmentsData?.map(e => e.student_id) || [];
+      console.log("👥 Enrolled student IDs:", studentIds);
+
+      if (studentIds.length === 0) {
+        setStudents([]);
+        return;
+      }
+
+      // Then fetch student details
       const { data, error } = await supabase
         .from('students')
-        .select('*')
-        .eq('class_id', classId)
-        .order('full_name');
+        .select('id, full_name, roll_number')
+        .in('id', studentIds)
+        .eq('is_deleted', false)
+        .order('roll_number');
 
       if (error) throw error;
+
+      console.log("✅ Students:", data);
       setStudents(data || []);
     } catch (error) {
-      console.error('Error fetching students:', error);
+      console.error('❌ Error fetching students:', error);
+      setStudents([]);
     }
   };
 
@@ -297,6 +395,56 @@ export default function DiaryScreen() {
     return new Date(dueDate) < new Date();
   };
 
+  const handleCreateAssignment = async () => {
+    if (!newAssignment.title || !newAssignment.description || !newAssignment.due_date) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    if (newAssignment.assignTo === 'class' && !newAssignment.class_id) {
+      alert('Please select a class');
+      return;
+    }
+
+    if (newAssignment.assignTo === 'student' && !newAssignment.student_id) {
+      alert('Please select a student');
+      return;
+    }
+
+    try {
+      let fileUrl: string | undefined;
+
+      if (newAssignment.file) {
+        const uploadResult = await uploadToCloudinary(newAssignment.file, 'raw');
+        fileUrl = uploadResult.secure_url;
+      }
+
+      const assignmentData = {
+        title: newAssignment.title,
+        description: newAssignment.description,
+        due_date: newAssignment.due_date,
+        file_url: fileUrl,
+        class_id: newAssignment.assignTo === 'class' ? newAssignment.class_id : null,
+        student_id: newAssignment.assignTo === 'student' ? newAssignment.student_id : null,
+        subject_id: newAssignment.subject_id || null,
+        assigned_by: profile?.id,
+      };
+
+      const { error } = await supabase
+        .from('diary_assignments')
+        .insert([assignmentData]);
+
+      if (error) throw error;
+
+      alert('Assignment created successfully');
+      setModalVisible(false);
+      resetForm();
+      fetchAssignments();
+    } catch (error: any) {
+      alert(error.message);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TopSections />
@@ -325,7 +473,7 @@ export default function DiaryScreen() {
             />
           )}
 
-          {(profile?.role === 'teacher' || profile?.role === 'admin') && (
+          {(profile?.role === 'teacher') && (
             <TouchableOpacity
               style={[styles.addButton, { backgroundColor: colors.primary }]}
               onPress={() => setModalVisible(true)}
@@ -372,7 +520,7 @@ export default function DiaryScreen() {
                 key={assignment.id}
                 assignment={assignment}
                 colors={colors}
-                isTeacher={(profile?.role === 'teacher' || profile?.role === 'admin')}
+                isTeacher={(profile?.role === 'teacher')}
                 onEdit={handleEditAssignment}
                 onDelete={deleteAssignment}
                 onPress={handleDetailPress}
@@ -384,37 +532,43 @@ export default function DiaryScreen() {
         </ScrollView>
 
         {/* Create Assignment Modal */}
-        {(profile?.role === 'teacher' || profile?.role === 'admin') && (
-          <Modal
+        {profile?.role === 'teacher' && (
+          <CreateAssignmentModal
             visible={modalVisible}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setModalVisible(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-                {/* Modal content remains identical to original */}
-                {/* ... [Include the original modal JSX here] ... */}
-              </View>
-            </View>
-          </Modal>
+            onClose={() => {
+              setModalVisible(false);
+              resetForm();
+            }}
+            colors={colors}
+            newAssignment={newAssignment}
+            setNewAssignment={setNewAssignment}
+            classes={classes}
+            students={students}
+            subjects={subjects}
+            uploading={uploading}
+            onSubmit={handleCreateAssignment}
+            pickDocument={pickDocument}
+            fetchStudents={fetchStudents}
+            fetchSubjectsForClass={fetchSubjectsForClass}
+          />
         )}
 
         {/* Edit Assignment Modal */}
-        {(profile?.role === 'teacher' || profile?.role === 'admin') && (
-          <Modal
+        {(profile?.role === 'teacher') && (
+          <EditAssignmentModal
             visible={editModalVisible}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setEditModalVisible(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-                {/* Modal content remains identical to original */}
-                {/* ... [Include the original modal JSX here] ... */}
-              </View>
-            </View>
-          </Modal>
+            onClose={() => {
+              setEditModalVisible(false);
+              setEditingAssignment(null);
+              resetForm();
+            }}
+            colors={colors}
+            newAssignment={newAssignment}
+            setNewAssignment={setNewAssignment}
+            uploading={uploading}
+            onSubmit={handleUpdateAssignment}
+            pickDocument={pickDocument}
+          />
         )}
 
         {/* Assignment Detail Modal */}
@@ -429,7 +583,7 @@ export default function DiaryScreen() {
           isOverdue={isOverdue}
           formatDate={formatDate}
         />
-        
+
       </SafeAreaView>
     </View>
   );

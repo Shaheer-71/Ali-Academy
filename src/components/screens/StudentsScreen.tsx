@@ -34,6 +34,11 @@ interface Class {
     name: string;
 }
 
+interface Subject {
+    id: string;
+    name: string;
+}
+
 interface StudentsWithoutPasswords {
     id: string;
     full_name: string;
@@ -54,6 +59,9 @@ export default function StudentsScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [passwordStatusModalVisible, setPasswordStatusModalVisible] = useState(false);
     const [creating, setCreating] = useState(false);
+    const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+    const [loadingSubjects, setLoadingSubjects] = useState(false);
 
     const [newStudent, setNewStudent] = useState({
         full_name: '',
@@ -61,6 +69,7 @@ export default function StudentsScreen() {
         phone_number: '',
         parent_contact: '',
         class_id: '',
+        subject_ids: [] as string[],
         gender: '' as 'male' | 'female' | 'other' | '',
         address: '',
         admission_date: new Date().toISOString().split('T')[0],
@@ -86,12 +95,71 @@ export default function StudentsScreen() {
                 .order('name');
             if (error) throw error;
             setClasses(data || []);
+            console.log("Feth Classes in Student Creation : ", data);
             if (data && data.length > 0) {
                 setNewStudent((prev) => ({ ...prev, class_id: data[0].id }));
             }
         } catch (error) {
             console.error('Error fetching classes:', error);
             Alert.alert('Error', 'Failed to load classes');
+        }
+    };
+
+    const fetchSubjectsForClass = async (classId: string) => {
+        if (!classId) {
+            setSubjects([]);
+            setSelectedSubjects([]);
+            return;
+        }
+
+        setLoadingSubjects(true);
+        try {
+            console.log('🔍 Fetching subjects for class:', classId);
+
+            // Get subjects from teacher_subject_enrollments (subjects that have teachers assigned)
+            const { data: teacherEnrollments, error: enrollmentError } = await supabase
+                .from('teacher_subject_enrollments')
+                .select('subject_id')
+                .eq('class_id', classId)
+                .eq('is_active', true);
+
+            if (enrollmentError) throw enrollmentError;
+
+            if (!teacherEnrollments || teacherEnrollments.length === 0) {
+                console.log('⚠️ No subjects with assigned teachers found for this class');
+                setSubjects([]);
+                setSelectedSubjects([]);
+                Alert.alert(
+                    'No Subjects Available',
+                    'No teachers are assigned to subjects in this class. Please assign teachers first.'
+                );
+                return;
+            }
+
+            // Get unique subject IDs
+            const subjectIds = [...new Set(teacherEnrollments.map(e => e.subject_id))];
+
+            console.log('📚 Subject IDs with teachers:', subjectIds);
+
+            // Fetch subject details
+            const { data: subjectsData, error: subjectsError } = await supabase
+                .from('subjects')
+                .select('id, name')
+                .in('id', subjectIds)
+                .eq('is_active', true)
+                .order('name');
+
+            if (subjectsError) throw subjectsError;
+
+            console.log(`✅ Fetched ${subjectsData?.length || 0} subjects`);
+            setSubjects(subjectsData || []);
+            setSelectedSubjects([]); // Reset selection when class changes
+        } catch (error) {
+            console.error('Error fetching subjects:', error);
+            Alert.alert('Error', 'Failed to load subjects for selected class');
+            setSubjects([]);
+        } finally {
+            setLoadingSubjects(false);
         }
     };
 
@@ -111,6 +179,7 @@ export default function StudentsScreen() {
             phone_number: '',
             parent_contact: '',
             class_id: classes.length > 0 ? classes[0].id : '',
+            subject_ids: [], // ✅ Reset subjects
             gender: '' as 'male' | 'female' | 'other' | '',
             address: '',
             admission_date: new Date().toISOString().split('T')[0],
@@ -120,6 +189,8 @@ export default function StudentsScreen() {
             medical_conditions: '',
             notes: '',
         });
+        setSelectedSubjects([]); // ✅ Reset selected subjects
+        setSubjects([]); // ✅ Clear subjects
     };
 
     const handleAddStudent = async () => {
@@ -156,6 +227,10 @@ export default function StudentsScreen() {
             Alert.alert('Error', 'Admission date is required');
             return;
         }
+        if (!newStudent.subject_ids || newStudent.subject_ids.length === 0) {
+            Alert.alert('Error', 'Please select at least one subject');
+            return;
+        }
 
         setCreating(true);
         try {
@@ -171,6 +246,7 @@ export default function StudentsScreen() {
                 });
 
                 const studentEmail = result.data?.email;
+                const enrolledCount = result.data?.enrolledSubjects || 0;
 
                 Alert.alert(
                     'Success',
@@ -181,8 +257,8 @@ export default function StudentsScreen() {
                             onPress: () => {
                                 setModalVisible(false);
                                 resetForm();
-                                fetchStudentsPasswordStatus(); // Refresh pending list
-                                refetch(); // Refresh students list
+                                fetchStudentsPasswordStatus();
+                                refetch();
                             },
                         },
                     ]
@@ -202,6 +278,22 @@ export default function StudentsScreen() {
             student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             student.roll_number.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const toggleSubject = (subjectId: string) => {
+        setSelectedSubjects(prev => {
+            const newSelection = prev.includes(subjectId)
+                ? prev.filter(id => id !== subjectId)
+                : [...prev, subjectId];
+
+            // Update newStudent state
+            setNewStudent(prevStudent => ({
+                ...prevStudent,
+                subject_ids: newSelection
+            }));
+
+            return newSelection;
+        });
+    };
 
     if (profile?.role !== 'teacher') {
         return (
@@ -395,8 +487,12 @@ export default function StudentsScreen() {
                                                                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
                                                                 newStudent.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                                                             ]}
-                                                            onPress={() => setNewStudent({ ...newStudent, class_id: classItem.id })}
-                                                        >
+                                                            onPress={
+                                                                () => {
+                                                                    setNewStudent({ ...newStudent, class_id: classItem.id })
+                                                                    fetchSubjectsForClass(classItem.id);
+                                                                }
+                                                            }>
                                                             <Text
                                                                 style={[
                                                                     styles.classOptionText,
@@ -412,6 +508,68 @@ export default function StudentsScreen() {
                                             </ScrollView>
                                         )}
                                     </View>
+
+                                    <View style={styles.inputGroup}>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
+                                            Subjects * {selectedSubjects.length > 0 && `(${selectedSubjects.length} selected)`}
+                                        </Text>
+
+                                        {!newStudent.class_id ? (
+                                            <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary }]}>
+                                                Please select a class first
+                                            </Text>
+                                        ) : loadingSubjects ? (
+                                            <View style={styles.loadingContainer}>
+                                                <ActivityIndicator size="small" color={colors.primary} />
+                                                <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>
+                                                    Loading subjects...
+                                                </Text>
+                                            </View>
+                                        ) : subjects.length === 0 ? (
+                                            <Text allowFontScaling={false} style={[styles.helpText, { color: colors.error || '#EF4444' }]}>
+                                                No subjects available for this class. Please assign teachers to subjects first.
+                                            </Text>
+                                        ) : (
+                                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                                <View style={styles.classOptions}>
+                                                    {subjects.map((subject) => (
+                                                        <TouchableOpacity
+                                                            key={subject.id}
+                                                            style={[
+                                                                styles.classOption,
+                                                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                                                selectedSubjects.includes(subject.id) && {
+                                                                    backgroundColor: colors.primary,
+                                                                    borderColor: colors.primary
+                                                                },
+                                                            ]}
+                                                            onPress={() => toggleSubject(subject.id)}
+                                                        >
+                                                            <Text
+                                                                style={[
+                                                                    styles.classOptionText,
+                                                                    { color: colors.text },
+                                                                    selectedSubjects.includes(subject.id) && { color: '#ffffff' },
+                                                                ]}
+                                                            >
+                                                                {subject.name}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            </ScrollView>
+                                        )}
+
+                                        {selectedSubjects.length > 0 && (
+                                            <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary, marginTop: 8 }]}>
+                                                Selected: {subjects
+                                                    .filter(s => selectedSubjects.includes(s.id))
+                                                    .map(s => s.name)
+                                                    .join(', ')}
+                                            </Text>
+                                        )}
+                                    </View>
+
 
                                     <View style={styles.inputGroup}>
                                         <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Parent Contact *</Text>

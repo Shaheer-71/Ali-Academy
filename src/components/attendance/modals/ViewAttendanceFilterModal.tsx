@@ -1,10 +1,15 @@
 // components/attendance/modals/ViewAttendanceFilterModal.tsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 'react-native';
-import { Filter, X, Calendar, Users, Building, Clock, RotateCcw, User } from 'lucide-react-native';
+import { Filter, X, Calendar, Users, Building, BookOpen, Eye, RotateCcw } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 
 interface Class {
+    id: string;
+    name: string;
+}
+
+interface Subject {
     id: string;
     name: string;
 }
@@ -13,23 +18,25 @@ interface Student {
     id: string;
     full_name: string;
     roll_number: string;
-    parent_contact: string;
+    class_id: string;
 }
 
 interface ViewFilterData {
     selectedClass: string;
+    selectedSubject: string;
     startDate: string;
     endDate: string;
     status: 'all' | 'present' | 'late' | 'absent';
     dateRange: 'today' | 'week' | 'month' | 'custom';
-    viewType: 'class' | 'student'; // New: view by class or individual student
-    selectedStudent: string; // New: selected student for individual view
+    viewType: 'class' | 'student';
+    selectedStudent: string;
 }
 
 interface ViewAttendanceFilterModalProps {
     visible: boolean;
     onClose: () => void;
     classes: Class[];
+    subjects: Subject[];
     students: Student[];
     currentFilters: ViewFilterData;
     onApplyFilters: (filters: ViewFilterData) => void;
@@ -39,6 +46,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
     visible,
     onClose,
     classes,
+    subjects,
     students,
     currentFilters,
     onApplyFilters,
@@ -51,6 +59,15 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
     }, [currentFilters, visible]);
 
     const handleApply = () => {
+        // Validate selections
+        if (!filters.selectedClass || !filters.selectedSubject) {
+            alert('Please select both class and subject');
+            return;
+        }
+        if (filters.viewType === 'student' && !filters.selectedStudent) {
+            alert('Please select a student for individual view');
+            return;
+        }
         onApplyFilters(filters);
         onClose();
     };
@@ -59,6 +76,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
         const today = new Date().toISOString().split('T')[0];
         const resetFilters: ViewFilterData = {
             selectedClass: classes.length > 0 ? classes[0].id : '',
+            selectedSubject: subjects.length > 0 ? subjects[0].id : '',
             startDate: today,
             endDate: today,
             status: 'all',
@@ -102,33 +120,17 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
         }));
     };
 
-    const statusOptions = [
-        { value: 'all' as const, label: 'All Records', icon: '📊', color: colors.textSecondary },
-        { value: 'present' as const, label: 'Present Only', icon: '✅', color: '#10B981' },
-        { value: 'late' as const, label: 'Late Only', icon: '⏰', color: '#F59E0B' },
-        { value: 'absent' as const, label: 'Absent Only', icon: '❌', color: '#EF4444' },
-    ];
+    // Get students for selected class
+    const classStudents = students.filter(s => s.class_id === filters.selectedClass);
 
-    const dateRangeOptions = [
-        { value: 'today' as const, label: 'Today', description: 'Current day only' },
-        { value: 'week' as const, label: 'Last 7 Days', description: 'Past week' },
-        { value: 'month' as const, label: 'Last 30 Days', description: 'Past month' },
-        { value: 'custom' as const, label: 'Custom Range', description: 'Select specific dates' },
-    ];
-
-    const viewTypeOptions = [
-        { value: 'class' as const, label: 'Class View', description: 'View all students in class', icon: '👥' },
-        { value: 'student' as const, label: 'Individual Student', description: 'View single student records', icon: '👤' },
-    ];
-
-    const FilterSection = ({ 
-        title, 
-        icon, 
-        children 
-    }: { 
-        title: string; 
-        icon: React.ReactNode; 
-        children: React.ReactNode; 
+    const FilterSection = ({
+        title,
+        icon,
+        children
+    }: {
+        title: string;
+        icon: React.ReactNode;
+        children: React.ReactNode;
     }) => (
         <View style={[styles.section, { borderColor: colors.border }]}>
             <View style={styles.sectionHeader}>
@@ -139,34 +141,32 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
         </View>
     );
 
-    const OptionButton = ({ 
-        selected, 
-        onPress, 
-        children, 
-        style = {} 
-    }: { 
-        selected: boolean; 
-        onPress: () => void; 
-        children: React.ReactNode; 
-        style?: any; 
+    const OptionButton = ({
+        selected,
+        onPress,
+        children,
+        style = {},
+        disabled = false
+    }: {
+        selected: boolean;
+        onPress: () => void;
+        children: React.ReactNode;
+        style?: any;
+        disabled?: boolean;
     }) => (
         <TouchableOpacity
             style={[
                 styles.optionButton,
                 { backgroundColor: colors.background, borderColor: colors.border },
                 selected && { borderColor: colors.primary, backgroundColor: colors.primary + '10' },
+                disabled && { opacity: 0.5 },
                 style
             ]}
             onPress={onPress}
+            disabled={disabled}
         >
             {children}
         </TouchableOpacity>
-    );
-
-    console.log(students , "HELLO")
-    // Filter students based on selected class
-    const filteredStudents = students.filter(student => 
-        !filters.selectedClass || student?.class_id === filters.selectedClass
     );
 
     return (
@@ -186,37 +186,49 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
 
                     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                         {/* View Type Selection */}
-                        <FilterSection title="View Type" icon={<User size={20} color={colors.primary} />}>
+                        <FilterSection title="View Type" icon={<Eye size={20} color={colors.primary} />}>
                             <View style={styles.viewTypeContainer}>
-                                {viewTypeOptions.map((option) => (
-                                    <OptionButton
-                                        key={option.value}
-                                        selected={filters.viewType === option.value}
-                                        onPress={() => setFilters(prev => ({ 
-                                            ...prev, 
-                                            viewType: option.value,
-                                            selectedStudent: option.value === 'class' ? '' : prev.selectedStudent
-                                        }))}
-                                        style={styles.viewTypeButton}
-                                    >
-                                        <Text allowFontScaling={false} style={styles.viewTypeIcon}>{option.icon}</Text>
-                                        <View style={styles.viewTypeText}>
-                                            <Text allowFontScaling={false} style={[
-                                                styles.optionText, 
-                                                { color: filters.viewType === option.value ? colors.primary : colors.text }
-                                            ]}>
-                                                {option.label}
-                                            </Text>
-                                            <Text allowFontScaling={false} style={[styles.optionDescription, { color: colors.textSecondary }]}>
-                                                {option.description}
-                                            </Text>
-                                        </View>
-                                    </OptionButton>
-                                ))}
+                                <OptionButton
+                                    selected={filters.viewType === 'class'}
+                                    onPress={() => setFilters(prev => ({ ...prev, viewType: 'class', selectedStudent: '' }))}
+                                    style={styles.viewTypeButton}
+                                >
+                                    <Building size={20} color={filters.viewType === 'class' ? colors.primary : colors.text} />
+                                    <View>
+                                        <Text allowFontScaling={false} style={[
+                                            styles.viewTypeTitle,
+                                            { color: filters.viewType === 'class' ? colors.primary : colors.text }
+                                        ]}>
+                                            Class View
+                                        </Text>
+                                        <Text allowFontScaling={false} style={[styles.viewTypeDesc, { color: colors.textSecondary }]}>
+                                            View all students in class
+                                        </Text>
+                                    </View>
+                                </OptionButton>
+
+                                <OptionButton
+                                    selected={filters.viewType === 'student'}
+                                    onPress={() => setFilters(prev => ({ ...prev, viewType: 'student' }))}
+                                    style={styles.viewTypeButton}
+                                >
+                                    <Users size={20} color={filters.viewType === 'student' ? colors.primary : colors.text} />
+                                    <View>
+                                        <Text allowFontScaling={false} style={[
+                                            styles.viewTypeTitle,
+                                            { color: filters.viewType === 'student' ? colors.primary : colors.text }
+                                        ]}>
+                                            Student View
+                                        </Text>
+                                        <Text allowFontScaling={false} style={[styles.viewTypeDesc, { color: colors.textSecondary }]}>
+                                            View individual student
+                                        </Text>
+                                    </View>
+                                </OptionButton>
                             </View>
                         </FilterSection>
 
-                        {/* Class Filter */}
+                        {/* Class Selection */}
                         <FilterSection title="Select Class" icon={<Building size={20} color={colors.primary} />}>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
                                 {classes.map((classItem) => (
@@ -231,7 +243,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                         style={styles.classButton}
                                     >
                                         <Text allowFontScaling={false} style={[
-                                            styles.optionText, 
+                                            styles.optionText,
                                             { color: filters.selectedClass === classItem.id ? colors.primary : colors.text }
                                         ]}>
                                             {classItem.name}
@@ -241,16 +253,47 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                             </ScrollView>
                         </FilterSection>
 
-                        {/* Student Selection - Only show if individual view is selected */}
+                        {/* Subject Selection */}
+                        <FilterSection title="Select Subject" icon={<BookOpen size={20} color={colors.primary} />}>
+                            {subjects.length === 0 ? (
+                                <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
+                                    <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
+                                        Please select a class first
+                                    </Text>
+                                </View>
+                            ) : (
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                                    {subjects.map((subject) => (
+                                        <OptionButton
+                                            key={subject.id}
+                                            selected={filters.selectedSubject === subject.id}
+                                            onPress={() => setFilters(prev => ({ ...prev, selectedSubject: subject.id }))}
+                                            style={styles.classButton}
+                                        >
+                                            <Text allowFontScaling={false} style={[
+                                                styles.optionText,
+                                                { color: filters.selectedSubject === subject.id ? colors.primary : colors.text }
+                                            ]}>
+                                                {subject.name}
+                                            </Text>
+                                        </OptionButton>
+                                    ))}
+                                </ScrollView>
+                            )}
+                        </FilterSection>
+
+                        {/* Student Selection - Only show if viewType is 'student' */}
                         {filters.viewType === 'student' && (
                             <FilterSection title="Select Student" icon={<Users size={20} color={colors.primary} />}>
-                                <ScrollView style={styles.studentScrollContainer} nestedScrollEnabled>
-                                    {filteredStudents.length === 0 ? (
-                                        <Text allowFontScaling={false} style={[styles.noStudentsText, { color: colors.textSecondary }]}>
-                                            {filters.selectedClass ? 'No students in selected class' : 'Please select a class first'}
+                                {classStudents.length === 0 ? (
+                                    <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
+                                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
+                                            No students in selected class
                                         </Text>
-                                    ) : (
-                                        filteredStudents.map((student) => (
+                                    </View>
+                                ) : (
+                                    <View style={styles.studentListContainer}>
+                                        {classStudents.map((student) => (
                                             <OptionButton
                                                 key={student.id}
                                                 selected={filters.selectedStudent === student.id}
@@ -259,7 +302,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                             >
                                                 <View style={styles.studentInfo}>
                                                     <Text allowFontScaling={false} style={[
-                                                        styles.studentName, 
+                                                        styles.studentName,
                                                         { color: filters.selectedStudent === student.id ? colors.primary : colors.text }
                                                     ]}>
                                                         {student.full_name}
@@ -269,42 +312,64 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                                     </Text>
                                                 </View>
                                             </OptionButton>
-                                        ))
-                                    )}
-                                </ScrollView>
+                                        ))}
+                                    </View>
+                                )}
                             </FilterSection>
                         )}
 
-                        {/* Date Range Filter */}
+                        {/* Date Range */}
                         <FilterSection title="Date Range" icon={<Calendar size={20} color={colors.primary} />}>
-                            <View style={styles.dateRangeContainer}>
-                                {dateRangeOptions.map((option) => (
-                                    <OptionButton
-                                        key={option.value}
-                                        selected={filters.dateRange === option.value}
-                                        onPress={() => handleDateRangeChange(option.value)}
-                                        style={styles.dateRangeButton}
-                                    >
-                                        <View>
-                                            <Text allowFontScaling={false} style={[
-                                                styles.optionText, 
-                                                { color: filters.dateRange === option.value ? colors.primary : colors.text }
-                                            ]}>
-                                                {option.label}
-                                            </Text>
-                                            <Text allowFontScaling={false} style={[styles.optionDescription, { color: colors.textSecondary }]}>
-                                                {option.description}
-                                            </Text>
-                                        </View>
-                                    </OptionButton>
-                                ))}
+                            <View style={styles.dateRangeGrid}>
+                                <OptionButton
+                                    selected={filters.dateRange === 'today'}
+                                    onPress={() => handleDateRangeChange('today')}
+                                    style={styles.dateRangeButton}
+                                >
+                                    <Text allowFontScaling={false} style={[
+                                        styles.dateRangeText,
+                                        { color: filters.dateRange === 'today' ? colors.primary : colors.text }
+                                    ]}>Today</Text>
+                                </OptionButton>
+
+                                <OptionButton
+                                    selected={filters.dateRange === 'week'}
+                                    onPress={() => handleDateRangeChange('week')}
+                                    style={styles.dateRangeButton}
+                                >
+                                    <Text allowFontScaling={false} style={[
+                                        styles.dateRangeText,
+                                        { color: filters.dateRange === 'week' ? colors.primary : colors.text }
+                                    ]}>7 Days</Text>
+                                </OptionButton>
+
+                                <OptionButton
+                                    selected={filters.dateRange === 'month'}
+                                    onPress={() => handleDateRangeChange('month')}
+                                    style={styles.dateRangeButton}
+                                >
+                                    <Text allowFontScaling={false} style={[
+                                        styles.dateRangeText,
+                                        { color: filters.dateRange === 'month' ? colors.primary : colors.text }
+                                    ]}>30 Days</Text>
+                                </OptionButton>
+
+                                <OptionButton
+                                    selected={filters.dateRange === 'custom'}
+                                    onPress={() => handleDateRangeChange('custom')}
+                                    style={styles.dateRangeButton}
+                                >
+                                    <Text allowFontScaling={false} style={[
+                                        styles.dateRangeText,
+                                        { color: filters.dateRange === 'custom' ? colors.primary : colors.text }
+                                    ]}>Custom</Text>
+                                </OptionButton>
                             </View>
 
-                            {/* Custom Date Inputs */}
                             {filters.dateRange === 'custom' && (
                                 <View style={[styles.customDateContainer, { backgroundColor: colors.background }]}>
                                     <View style={styles.dateInputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.dateLabel, { color: colors.textSecondary }]}>From Date:</Text>
+                                        <Text allowFontScaling={false} style={[styles.dateLabel, { color: colors.textSecondary }]}>From:</Text>
                                         <TextInput
                                             style={[styles.dateInput, { backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.border }]}
                                             value={filters.startDate}
@@ -314,7 +379,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                         />
                                     </View>
                                     <View style={styles.dateInputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.dateLabel, { color: colors.textSecondary }]}>To Date:</Text>
+                                        <Text allowFontScaling={false} style={[styles.dateLabel, { color: colors.textSecondary }]}>To:</Text>
                                         <TextInput
                                             style={[styles.dateInput, { backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.border }]}
                                             value={filters.endDate}
@@ -325,64 +390,60 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                     </View>
                                 </View>
                             )}
-
-                            {/* Current Date Range Display */}
-                            <View style={[styles.currentRangeDisplay, { backgroundColor: colors.background }]}>
-                                <Clock size={16} color={colors.textSecondary} />
-                                <Text allowFontScaling={false} style={[styles.currentRangeText, { color: colors.textSecondary }]}>
-                                    {new Date(filters.startDate).toLocaleDateString()} - {new Date(filters.endDate).toLocaleDateString()}
-                                </Text>
-                            </View>
                         </FilterSection>
 
                         {/* Status Filter */}
-                        <FilterSection title="Attendance Status" icon={<Users size={20} color={colors.primary} />}>
-                            <View style={styles.statusContainer}>
-                                {statusOptions.map((option) => (
-                                    <OptionButton
-                                        key={option.value}
-                                        selected={filters.status === option.value}
-                                        onPress={() => setFilters(prev => ({ ...prev, status: option.value }))}
-                                        style={styles.statusButton}
-                                    >
-                                        <Text allowFontScaling={false} style={styles.statusIcon}>{option.icon}</Text>
-                                        <Text allowFontScaling={false} style={[
-                                            styles.optionText, 
-                                            { color: filters.status === option.value ? colors.primary : colors.text }
-                                        ]}>
-                                            {option.label}
-                                        </Text>
-                                    </OptionButton>
-                                ))}
+                        <FilterSection title="Status" icon={<Users size={20} color={colors.primary} />}>
+                            <View style={styles.statusGrid}>
+                                <OptionButton
+                                    selected={filters.status === 'all'}
+                                    onPress={() => setFilters(prev => ({ ...prev, status: 'all' }))}
+                                    style={styles.statusButton}
+                                >
+                                    <Text allowFontScaling={false} style={styles.statusIcon}>👥</Text>
+                                    <Text allowFontScaling={false} style={[
+                                        styles.statusText,
+                                        { color: filters.status === 'all' ? colors.primary : colors.text }
+                                    ]}>All</Text>
+                                </OptionButton>
+
+                                <OptionButton
+                                    selected={filters.status === 'present'}
+                                    onPress={() => setFilters(prev => ({ ...prev, status: 'present' }))}
+                                    style={styles.statusButton}
+                                >
+                                    <Text allowFontScaling={false} style={styles.statusIcon}>✅</Text>
+                                    <Text allowFontScaling={false} style={[
+                                        styles.statusText,
+                                        { color: filters.status === 'present' ? colors.primary : colors.text }
+                                    ]}>Present</Text>
+                                </OptionButton>
+
+                                <OptionButton
+                                    selected={filters.status === 'late'}
+                                    onPress={() => setFilters(prev => ({ ...prev, status: 'late' }))}
+                                    style={styles.statusButton}
+                                >
+                                    <Text allowFontScaling={false} style={styles.statusIcon}>⏰</Text>
+                                    <Text allowFontScaling={false} style={[
+                                        styles.statusText,
+                                        { color: filters.status === 'late' ? colors.primary : colors.text }
+                                    ]}>Late</Text>
+                                </OptionButton>
+
+                                <OptionButton
+                                    selected={filters.status === 'absent'}
+                                    onPress={() => setFilters(prev => ({ ...prev, status: 'absent' }))}
+                                    style={styles.statusButton}
+                                >
+                                    <Text allowFontScaling={false} style={styles.statusIcon}>❌</Text>
+                                    <Text allowFontScaling={false} style={[
+                                        styles.statusText,
+                                        { color: filters.status === 'absent' ? colors.primary : colors.text }
+                                    ]}>Absent</Text>
+                                </OptionButton>
                             </View>
                         </FilterSection>
-
-                        {/* Applied Filters Summary */}
-                        <View style={[styles.summarySection, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                            <Text allowFontScaling={false} style={[styles.summaryTitle, { color: colors.text }]}>Current Filters:</Text>
-                            
-                            <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
-                                • View: {viewTypeOptions.find(v => v.value === filters.viewType)?.label}
-                            </Text>
-                            
-                            <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
-                                • Class: {classes.find(c => c.id === filters.selectedClass)?.name || 'None selected'}
-                            </Text>
-                            
-                            {filters.viewType === 'student' && filters.selectedStudent && (
-                                <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
-                                    • Student: {filteredStudents.find(s => s.id === filters.selectedStudent)?.full_name || 'None selected'}
-                                </Text>
-                            )}
-                            
-                            <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
-                                • Date: {dateRangeOptions.find(d => d.value === filters.dateRange)?.label}
-                            </Text>
-                            
-                            <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
-                                • Status: {statusOptions.find(s => s.value === filters.status)?.label}
-                            </Text>
-                        </View>
                     </ScrollView>
 
                     {/* Actions */}
@@ -394,7 +455,7 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                             <RotateCcw size={16} color={colors.textSecondary} />
                             <Text allowFontScaling={false} style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset</Text>
                         </TouchableOpacity>
-                        
+
                         <View style={styles.mainActions}>
                             <TouchableOpacity
                                 style={[styles.button, styles.cancelButton, { backgroundColor: colors.background, borderColor: colors.border }]}
@@ -402,12 +463,12 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                             >
                                 <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
                             </TouchableOpacity>
-                            
+
                             <TouchableOpacity
                                 style={[styles.button, styles.applyButton, { backgroundColor: colors.primary }]}
                                 onPress={handleApply}
                             >
-                                <Text allowFontScaling={false} style={styles.applyButtonText}>Apply Filters</Text>
+                                <Text allowFontScaling={false} style={styles.applyButtonText}>Apply</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -467,73 +528,82 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontFamily: 'Inter-SemiBold',
     },
-    viewTypeContainer: {
-        gap: 12,
-    },
-    viewTypeButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 16,
-        padding: 16,
-    },
-    viewTypeIcon: {
-        fontSize: 24,
-    },
-    viewTypeText: {
-        flex: 1,
-    },
-    horizontalScroll: {
-        marginHorizontal: -8,
-    },
     optionButton: {
         padding: 12,
         borderRadius: 12,
         borderWidth: 1,
         marginBottom: 8,
     },
+    viewTypeContainer: {
+        gap: 12,
+    },
+    viewTypeButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        padding: 16,
+    },
+    viewTypeTitle: {
+        fontSize: 16,
+        fontFamily: 'Inter-SemiBold',
+    },
+    viewTypeDesc: {
+        fontSize: 13,
+        fontFamily: 'Inter-Regular',
+        marginTop: 2,
+    },
+    horizontalScroll: {
+        marginHorizontal: -8,
+    },
     classButton: {
         marginHorizontal: 4,
         minWidth: 100,
         alignItems: 'center',
     },
-    studentScrollContainer: {
-        maxHeight: 200,
+    optionText: {
+        fontSize: 16,
+        fontFamily: 'Inter-Medium',
+    },
+    emptyContainer: {
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    emptyText: {
+        fontSize: 14,
+        fontFamily: 'Inter-Regular',
+    },
+    studentListContainer: {
+        gap: 8,
     },
     studentButton: {
         padding: 16,
     },
     studentInfo: {
-        alignItems: 'flex-start',
+        gap: 4,
     },
     studentName: {
         fontSize: 16,
-        fontFamily: 'Inter-Medium',
-        marginBottom: 2,
+        fontFamily: 'Inter-SemiBold',
     },
     studentRoll: {
         fontSize: 13,
         fontFamily: 'Inter-Regular',
     },
-    noStudentsText: {
-        fontSize: 14,
-        fontFamily: 'Inter-Regular',
-        textAlign: 'center',
-        padding: 20,
-    },
-    dateRangeContainer: {
+    dateRangeGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
         gap: 8,
     },
     dateRangeButton: {
-        padding: 16,
+        flex: 1,
+        minWidth: '45%',
+        alignItems: 'center',
+        padding: 12,
     },
-    optionText: {
-        fontSize: 16,
+    dateRangeText: {
+        fontSize: 14,
         fontFamily: 'Inter-Medium',
-    },
-    optionDescription: {
-        fontSize: 13,
-        fontFamily: 'Inter-Regular',
-        marginTop: 2,
     },
     customDateContainer: {
         borderRadius: 12,
@@ -555,45 +625,26 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontFamily: 'Inter-Regular',
     },
-    currentRangeDisplay: {
+    statusGrid: {
         flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        padding: 12,
-        borderRadius: 8,
-        marginTop: 12,
-    },
-    currentRangeText: {
-        fontSize: 14,
-        fontFamily: 'Inter-Medium',
-    },
-    statusContainer: {
+        flexWrap: 'wrap',
         gap: 8,
     },
     statusButton: {
+        flex: 1,
+        minWidth: '45%',
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-        padding: 16,
+        justifyContent: 'center',
+        gap: 8,
+        padding: 12,
     },
     statusIcon: {
-        fontSize: 20,
+        fontSize: 18,
     },
-    summarySection: {
-        borderRadius: 12,
-        borderWidth: 1,
-        padding: 16,
-        marginTop: 8,
-    },
-    summaryTitle: {
-        fontSize: 16,
-        fontFamily: 'Inter-SemiBold',
-        marginBottom: 8,
-    },
-    summaryItem: {
+    statusText: {
         fontSize: 14,
-        fontFamily: 'Inter-Regular',
-        marginBottom: 4,
+        fontFamily: 'Inter-Medium',
     },
     actions: {
         borderTopWidth: 1,

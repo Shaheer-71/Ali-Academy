@@ -18,6 +18,7 @@ export const CreateAssignmentModal = ({
     onSubmit,
     pickDocument,
     fetchStudents,
+    fetchSubjectsForClass,
 }: {
     visible: boolean;
     onClose: () => void;
@@ -31,6 +32,7 @@ export const CreateAssignmentModal = ({
     onSubmit: () => void;
     pickDocument: () => void;
     fetchStudents: (classId: string) => void;
+    fetchSubjectsForClass: (classId: string) => void;
 }) => {
     return (
         <Modal
@@ -151,7 +153,10 @@ export const CreateAssignmentModal = ({
                                                         borderColor: colors.border,
                                                     }
                                                 ]}
-                                                onPress={() => setNewAssignment(prev => ({ ...prev, class_id: cls.id }))}
+                                                onPress={() => {
+                                                    setNewAssignment(prev => ({ ...prev, class_id: cls.id, subject_id: '' }));
+                                                    fetchSubjectsForClass(cls.id);
+                                                }}
                                             >
                                                 <Text allowFontScaling={false} style={[
                                                     styles.optionText,
@@ -184,8 +189,9 @@ export const CreateAssignmentModal = ({
                                                         }
                                                     ]}
                                                     onPress={() => {
-                                                        setNewAssignment(prev => ({ ...prev, class_id: cls.id, student_id: '' }));
+                                                        setNewAssignment(prev => ({ ...prev, class_id: cls.id, student_id: '', subject_id: '' }));
                                                         fetchStudents(cls.id);
+                                                        fetchSubjectsForClass(cls.id);
                                                     }}
                                                 >
                                                     <Text allowFontScaling={false} style={[
@@ -296,3 +302,4 @@ export const CreateAssignmentModal = ({
             </View>
         </Modal>
     );
+}

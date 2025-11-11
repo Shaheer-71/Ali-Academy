@@ -12,9 +12,12 @@ interface DiaryAssignment {
     class_id?: string;
     student_id?: string;
     subject_id?: string;
+    assigned_by?: string;
     created_at: string;
     classes?: { name: string };
     students?: { full_name: string };
+    subjects?: { name: string };
+    profiles?: { full_name: string };
 }
 
 export const useDiaryAssignments = (profile: any, student: any) => {
@@ -24,28 +27,96 @@ export const useDiaryAssignments = (profile: any, student: any) => {
 
     const fetchAssignments = useCallback(async () => {
         try {
-            let query = supabase
-                .from('diary_assignments')
-                .select(`
-        *,
-        classes (name),
-        students (full_name)
-      `)
-                .order('created_at', { ascending: false });
+            setLoading(true);
 
-            const { data, error } = await query;
-            if (error) throw error;
+            if (profile?.role === 'teacher' || profile?.role === 'admin') {
+                // Step 1: Get enrolled student IDs (same as attendance)
+                const { data: enrollmentsData, error: enrollError } = await supabase
+                    .from('student_subject_enrollments')
+                    .select('student_id, subject_id, class_id')
+                    .eq('teacher_id', profile.id)
+                    .eq('is_active', true);
 
-            let filteredData = data || [];
-            if (profile?.role === "student" && student?.class_id && student?.id) {
-                filteredData = filteredData.filter(item =>
-                    item.class_id === student.class_id || item.student_id === student.id
-                );
+                if (enrollError) {
+                    console.error('Enrollments fetch error:', enrollError);
+                    throw enrollError;
+                }
+
+                console.log("📚 Teacher enrollments:", enrollmentsData);
+
+                if (!enrollmentsData || enrollmentsData.length === 0) {
+                    console.log("ℹ️ No enrollments found");
+                    setAssignments([]);
+                    return;
+                }
+
+                // Get unique subject IDs
+                const teacherSubjects = [...new Set(enrollmentsData.map(e => e.subject_id))];
+                console.log("📖 Teacher subjects:", teacherSubjects);
+
+                // Step 2: Fetch assignments with joins (like attendance does)
+                const { data, error } = await supabase
+                    .from('diary_assignments')
+                    .select(`
+                        *,
+                        classes (name),
+                        students (full_name),
+                        subjects (name),
+                        profiles:assigned_by (full_name)
+                    `)
+                    .in('subject_id', teacherSubjects)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                console.log("✅ Fetched assignments:", data?.length || 0);
+                setAssignments(data || []);
+
+            } else if (profile?.role === 'student' && student?.id) {
+                // Step 1: Get student's enrolled subjects
+                const { data: enrollmentsData, error: enrollError } = await supabase
+                    .from('student_subject_enrollments')
+                    .select('subject_id')
+                    .eq('student_id', student.id)
+                    .eq('is_active', true);
+
+                if (enrollError) {
+                    console.error('Student enrollments error:', enrollError);
+                    throw enrollError;
+                }
+
+                console.log("📚 Student enrollments:", enrollmentsData);
+
+                if (!enrollmentsData || enrollmentsData.length === 0) {
+                    console.log("ℹ️ No enrollments found");
+                    setAssignments([]);
+                    return;
+                }
+
+                const enrolledSubjects = enrollmentsData.map(e => e.subject_id);
+                console.log("📖 Enrolled subjects:", enrolledSubjects);
+
+                // Step 2: Fetch assignments (individual OR class-wide for enrolled subjects)
+                const { data, error } = await supabase
+                    .from('diary_assignments')
+                    .select(`
+                        *,
+                        classes (name),
+                        students (full_name),
+                        subjects (name),
+                        profiles:assigned_by (full_name)
+                    `)
+                    .or(`student_id.eq.${student.id},and(class_id.eq.${student.class_id},subject_id.in.(${enrolledSubjects.join(',')}))`)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                console.log("✅ Fetched student assignments:", data?.length || 0);
+                setAssignments(data || []);
             }
-
-            setAssignments(filteredData);
         } catch (error) {
-            console.error('Error fetching assignments:', error);
+            console.error('❌ Error fetching assignments:', error);
+            setAssignments([]);
         } finally {
             setLoading(false);
         }
@@ -108,4 +179,3 @@ export const useDiaryAssignments = (profile: any, student: any) => {
         handleRefresh,
     };
 };
-

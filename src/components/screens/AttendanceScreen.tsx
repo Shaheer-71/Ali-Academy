@@ -27,6 +27,11 @@ interface Class {
     name: string;
 }
 
+interface Subject {
+    id: string;
+    name: string;
+}
+
 interface Student {
     id: string;
     full_name: string;
@@ -39,6 +44,8 @@ interface AttendanceRecord {
     id: string;
     student_id: string;
     class_id: string;
+    subject_id: string;
+    teacher_id: string;
     date: string;
     arrival_time?: string;
     status: 'present' | 'late' | 'absent';
@@ -48,11 +55,15 @@ interface AttendanceRecord {
         roll_number: string;
         parent_contact: string;
     };
+    subjects?: {
+        name: string;
+    };
     created_at: string;
 }
 
 interface FilterData {
     selectedClass: string;
+    selectedSubject: string;
     startDate: string;
     endDate: string;
     status: 'all' | 'present' | 'late' | 'absent';
@@ -61,6 +72,7 @@ interface FilterData {
 
 interface ViewFilterData {
     selectedClass: string;
+    selectedSubject: string;
     startDate: string;
     endDate: string;
     status: 'all' | 'present' | 'late' | 'absent';
@@ -81,12 +93,14 @@ export default function AttendanceScreen() {
     const { profile } = useAuth();
     const { colors } = useTheme();
     const [classes, setClasses] = useState<Class[]>([]);
+    const [subjects, setSubjects] = useState<Subject[]>([]);
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [viewMode, setViewMode] = useState<'mark' | 'view' | 'reports'>('mark');
 
     // Filter states for mark/reports modes
     const [filters, setFilters] = useState<FilterData>({
         selectedClass: '',
+        selectedSubject: '',
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0],
         status: 'all',
@@ -96,6 +110,7 @@ export default function AttendanceScreen() {
     // Separate filter states for view mode
     const [viewFilters, setViewFilters] = useState<ViewFilterData>({
         selectedClass: '',
+        selectedSubject: '',
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0],
         status: 'all',
@@ -123,7 +138,7 @@ export default function AttendanceScreen() {
     const [selectedStudent, setSelectedStudent] = useState<string>('');
     const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
 
-    // Use existing hook for mark/reports modes
+    // Use existing hook for mark/reports modes - NOW WITH SUBJECT
     const {
         students,
         attendanceRecords,
@@ -143,50 +158,55 @@ export default function AttendanceScreen() {
         clearAllData,
         isStudentMarkedForDate,
         getStudentRecordForDate,
-    } = useAttendance(filters.selectedClass);
+    } = useAttendance(filters.selectedClass, filters.selectedSubject);
 
     useEffect(() => {
         if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
             fetchClasses();
-            fetchAllStudents();
         }
     }, [profile]);
 
+    // Fetch subjects when class changes
+    useEffect(() => {
+        if (filters.selectedClass) {
+            fetchSubjectsForClass(filters.selectedClass);
+        }
+    }, [filters.selectedClass]);
+
     // Apply filters when they change for reports mode
     useEffect(() => {
-        if (filters.selectedClass && viewMode === 'reports') {
+        if (filters.selectedClass && filters.selectedSubject && viewMode === 'reports') {
             fetchAttendanceData(filters.startDate, filters.endDate);
         }
-    }, [filters.selectedClass, filters.startDate, filters.endDate, viewMode]);
+    }, [filters.selectedClass, filters.selectedSubject, filters.startDate, filters.endDate, viewMode]);
 
     // Fetch today's attendance for mark mode
     useEffect(() => {
-        if (filters.selectedClass && viewMode === 'mark') {
+        if (filters.selectedClass && filters.selectedSubject && viewMode === 'mark') {
             fetchTodaysAttendance(filters.startDate);
         }
-    }, [filters.selectedClass, filters.startDate, viewMode]);
+    }, [filters.selectedClass, filters.selectedSubject, filters.startDate, viewMode]);
 
     // Handle view mode data fetching
     useEffect(() => {
-        if (viewMode === 'view' && viewFilters.selectedClass && (viewFilters.viewType === 'class' || viewFilters.selectedStudent)) {
+        if (viewMode === 'view' && viewFilters.selectedClass && viewFilters.selectedSubject &&
+            (viewFilters.viewType === 'class' || viewFilters.selectedStudent)) {
             fetchViewAttendanceData();
         }
     }, [viewFilters, viewMode]);
 
     const fetchClasses = async () => {
         try {
-
             const { data: classesIDData, error: classesIDError } = await supabase
-                .from('student_subject_enrollments')
+                .from('teacher_subject_enrollments') // FIXED: Changed table name
                 .select('class_id')
                 .eq('teacher_id', profile?.id)
+                .eq('is_active', true);
 
-            if (classesIDError) {
-                console.error('Enrollments fetch error:', classesIDError);
-                throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
-            }
-            let enrolledClasses = classesIDData?.map(item => item.class_id) || [];
-            console.log("📚 Fetched enrollments:", enrolledClasses);
+            if (classesIDError) throw classesIDError;
+
+            let enrolledClasses = [...new Set(classesIDData?.map(item => item.class_id) || [])];
+            console.log("📚 Fetched enrolled classes:", enrolledClasses);
 
             const { data, error } = await supabase
                 .from('classes')
@@ -196,49 +216,79 @@ export default function AttendanceScreen() {
 
             if (error) throw error;
             setClasses(data || []);
-            if (data && data.length > 0) {
-                const firstClassId = data[0].id;
-                setFilters(prev => ({ ...prev, selectedClass: firstClassId }));
-                setViewFilters(prev => ({ ...prev, selectedClass: firstClassId }));
-            }
+
+            // REMOVED: Auto-selection of first class
+            // Users must manually select class and subject
         } catch (error) {
             console.error('Error fetching classes:', error);
         }
     };
 
-    const fetchAllStudents = async () => {
+    const fetchSubjectsForClass = async (classId: string) => {
         try {
-            const { data: classesIDData, error: classesIDError } = await supabase
-                .from('student_subject_enrollments')
-                .select('student_id')
-                .eq('teacher_id', profile?.id)
+            console.log("🔍 Fetching subjects for class:", classId, "and teacher:", profile?.id);
 
-            if (classesIDError) {
-                console.error('Enrollments fetch error:', classesIDError);
-                throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+            const { data: subjectIDData, error: subjectIDError } = await supabase
+                .from('teacher_subject_enrollments') // FIXED: Changed table name
+                .select('subject_id')
+                .eq('teacher_id', profile?.id)
+                .eq('class_id', classId)
+                .eq('is_active', true);
+
+            if (subjectIDError) {
+                console.error("Error fetching subject enrollments:", subjectIDError);
+                throw subjectIDError;
             }
-            let studentsEnrolledIds = classesIDData?.map(item => item.student_id) || [];
-            console.log("📚 Fetched enrollments:", studentsEnrolledIds);
+
+            console.log("📋 Raw subject enrollment data:", subjectIDData);
+
+            let enrolledSubjects = [...new Set(subjectIDData?.map(item => item.subject_id) || [])];
+            console.log("📖 Unique enrolled subjects for this class:", enrolledSubjects);
+
+            if (enrolledSubjects.length === 0) {
+                console.log("⚠️ No subjects found for this class");
+                setSubjects([]);
+                setFilters(prev => ({ ...prev, selectedSubject: '' }));
+                setViewFilters(prev => ({ ...prev, selectedSubject: '' }));
+                return;
+            }
 
             const { data, error } = await supabase
-                .from('students')
-                .select('id, full_name, roll_number, parent_contact, class_id')
-                .eq('is_deleted', false)
-                .in('id', studentsEnrolledIds)
-                .order('roll_number');
+                .from('subjects')
+                .select('id, name')
+                .in('id', enrolledSubjects)
+                .order('name');
 
-            console.log("Fetched students:", data);
+            if (error) {
+                console.error("Error fetching subjects details:", error);
+                throw error;
+            }
 
-            if (error) throw error;
-            setAllStudents(data || []);
+            console.log("✅ Fetched subjects:", data);
+            setSubjects(data || []);
+
+            // REMOVED: Auto-selection of first subject
+            // Only clear if current selection is invalid
+            if (data && data.length > 0) {
+                const currentSubjectExists = data.some(s => s.id === filters.selectedSubject);
+                if (!currentSubjectExists) {
+                    setFilters(prev => ({ ...prev, selectedSubject: '' }));
+                    setViewFilters(prev => ({ ...prev, selectedSubject: '' }));
+                }
+            } else {
+                setFilters(prev => ({ ...prev, selectedSubject: '' }));
+                setViewFilters(prev => ({ ...prev, selectedSubject: '' }));
+            }
         } catch (error) {
-            console.error('Error fetching all students:', error);
-            setAllStudents([]);
+            console.error('Error fetching subjects:', error);
+            setSubjects([]);
+            setFilters(prev => ({ ...prev, selectedSubject: '' }));
+            setViewFilters(prev => ({ ...prev, selectedSubject: '' }));
         }
     };
 
     const fetchViewAttendanceData = async () => {
-        if (!viewFilters.selectedClass) return;
+        if (!viewFilters.selectedClass || !viewFilters.selectedSubject) return;
 
         setViewLoading(true);
         try {
@@ -250,9 +300,11 @@ export default function AttendanceScreen() {
                         full_name,
                         roll_number,
                         parent_contact
-                    )
+                    ),
+                    subjects (name)
                 `)
                 .eq('class_id', viewFilters.selectedClass)
+                .eq('subject_id', viewFilters.selectedSubject)
                 .gte('date', viewFilters.startDate)
                 .lte('date', viewFilters.endDate)
                 .order('date', { ascending: false });
@@ -332,12 +384,13 @@ export default function AttendanceScreen() {
                             const result = await postAttendance(filters.startDate);
                             if (result.success) {
                                 Alert.alert('Success', 'Attendance posted successfully');
+                                handleRefresh();
                             } else {
-                                Alert.alert('Error', 'Failed to post attendance');
+                                Alert.alert('Error', result.error || 'Failed to post attendance');
                             }
                         } catch (error: any) {
                             console.error('Error posting attendance:', error);
-                            Alert.alert('Error', 'Failed to post attendance');
+                            Alert.alert('Error', error.message || 'Failed to post attendance');
                         }
                     },
                 },
@@ -354,11 +407,11 @@ export default function AttendanceScreen() {
         try {
             if (viewMode === 'view') {
                 await fetchViewAttendanceData();
-            } else if (viewMode === 'reports' && filters.selectedClass) {
+            } else if (viewMode === 'reports' && filters.selectedClass && filters.selectedSubject) {
                 await fetchAttendanceData(filters.startDate, filters.endDate);
             } else {
                 await onRefresh();
-                if (filters.selectedClass && filters.startDate) {
+                if (filters.selectedClass && filters.selectedSubject && filters.startDate) {
                     await fetchTodaysAttendance(filters.startDate);
                 }
             }
@@ -371,19 +424,19 @@ export default function AttendanceScreen() {
         setViewMode(mode);
         clearCurrentAttendance();
 
-        if (mode === 'reports' && filters.selectedClass) {
+        if (mode === 'reports' && filters.selectedClass && filters.selectedSubject) {
             setTimeout(() => {
                 fetchAttendanceData(filters.startDate, filters.endDate);
             }, 100);
         }
 
-        if (mode === 'mark' && filters.selectedClass && filters.startDate) {
+        if (mode === 'mark' && filters.selectedClass && filters.selectedSubject && filters.startDate) {
             setTimeout(() => {
                 fetchTodaysAttendance(filters.startDate);
             }, 100);
         }
 
-        if (mode === 'view' && viewFilters.selectedClass) {
+        if (mode === 'view' && viewFilters.selectedClass && viewFilters.selectedSubject) {
             setTimeout(() => {
                 fetchViewAttendanceData();
             }, 100);
@@ -392,8 +445,9 @@ export default function AttendanceScreen() {
 
     // Handle filter application for mark/reports modes
     const handleApplyFilters = (newFilters: FilterData) => {
-        // Clear all data when changing class
-        if (newFilters.selectedClass !== filters.selectedClass) {
+        // Clear all data when changing class or subject
+        if (newFilters.selectedClass !== filters.selectedClass ||
+            newFilters.selectedSubject !== filters.selectedSubject) {
             clearAllData();
             clearCurrentAttendance();
         }
@@ -406,27 +460,17 @@ export default function AttendanceScreen() {
         setViewFilters(newFilters);
     };
 
-    // Check if any filters are active for mark/reports modes
+    // Check if any filters are active
     const hasActiveFilters = () => {
         const today = new Date().toISOString().split('T')[0];
-        const defaultFilters: FilterData = {
-            selectedClass: classes.length > 0 ? classes[0].id : '',
-            startDate: today,
-            endDate: today,
-            status: 'all',
-            dateRange: 'today',
-        };
-
         return (
-            filters.selectedClass !== defaultFilters.selectedClass ||
-            filters.startDate !== defaultFilters.startDate ||
-            filters.endDate !== defaultFilters.endDate ||
-            filters.status !== defaultFilters.status ||
-            filters.dateRange !== defaultFilters.dateRange
+            filters.dateRange !== 'today' ||
+            filters.status !== 'all' ||
+            filters.startDate !== today ||
+            filters.endDate !== today
         );
     };
 
-    // Check if any filters are active for view mode
     const hasActiveViewFilters = () => {
         const today = new Date().toISOString().split('T')[0];
         return (
@@ -442,11 +486,6 @@ export default function AttendanceScreen() {
     const filteredAttendanceRecords = filters.status === 'all'
         ? attendanceRecords
         : attendanceRecords.filter(record => record.status === filters.status);
-
-    // Get students for selected class in view mode
-    const getStudentsForClass = (classId: string) => {
-        return allStudents.filter(student => student.class_id === classId);
-    };
 
     const renderStudentContent = () => (
         <ScrollView
@@ -502,14 +541,31 @@ export default function AttendanceScreen() {
                     />
                 }
             >
-                {loading ? (
-                    // <LoadingState message={`Loading students for ${classes.find(c => c.id === filters.selectedClass)?.name || 'selected class'}...`} />
-                    <Text></Text>
+                {/* Class and Subject Info Banner */}
+                {filters.selectedClass && filters.selectedSubject && (
+                    <View style={[styles.classInfoBanner, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}>
+                        <Text allowFontScaling={false} style={[styles.classInfoText, { color: colors.primary }]}>
+                            {classes.find(c => c.id === filters.selectedClass)?.name} - {subjects.find(s => s.id === filters.selectedSubject)?.name}
+                        </Text>
+                        <Text allowFontScaling={false} style={[styles.dateInfoText, { color: colors.primary }]}>
+                            Date: {new Date(filters.startDate).toLocaleDateString()}
+                        </Text>
+                    </View>
+                )}
+
+                {!filters.selectedClass || !filters.selectedSubject ? (
+                    <EmptyState
+                        icon={<Users size={48} color={colors.textSecondary} />}
+                        title="Select Class and Subject"
+                        subtitle="Please use filters to select a class and subject to mark attendance"
+                    />
+                ) : loading ? (
+                    <LoadingState message="Loading students..." />
                 ) : students.length === 0 ? (
                     <EmptyState
                         icon={<Users size={48} color={colors.textSecondary} />}
-                        title="No students in this class"
-                        subtitle="Pull down to refresh or add students to this class"
+                        title="No students enrolled"
+                        subtitle="No students are enrolled in this class and subject combination"
                     />
                 ) : (
                     <>
@@ -567,8 +623,8 @@ export default function AttendanceScreen() {
                 <View style={styles.statsHeader}>
                     <Text allowFontScaling={false} style={[styles.statsTitle, { color: colors.text }]}>
                         {viewFilters.viewType === 'student'
-                            ? `${allStudents.find(s => s.id === viewFilters.selectedStudent)?.full_name || 'Student'} - Attendance Stats`
-                            : `${classes.find(c => c.id === viewFilters.selectedClass)?.name || 'Class'} - Overview`
+                            ? `Student Attendance Stats`
+                            : `${classes.find(c => c.id === viewFilters.selectedClass)?.name} - ${subjects.find(s => s.id === viewFilters.selectedSubject)?.name}`
                         }
                     </Text>
                 </View>
@@ -598,59 +654,23 @@ export default function AttendanceScreen() {
                 </View>
             </View>
 
-            {/* Active Filters Display */}
-            {hasActiveViewFilters() && (
-                <View style={[styles.activeFiltersCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text allowFontScaling={false} style={[styles.activeFiltersTitle, { color: colors.text }]}>Active Filters:</Text>
-                    <View style={styles.activeFiltersList}>
-                        {viewFilters.viewType === 'student' && viewFilters.selectedStudent && (
-                            <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                                <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>
-                                    Student: {allStudents.find(s => s.id === viewFilters.selectedStudent)?.full_name || 'Unknown'}
-                                </Text>
-                            </View>
-                        )}
-                        {viewFilters.status !== 'all' && (
-                            <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                                <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>
-                                    Status: {viewFilters.status.charAt(0).toUpperCase() + viewFilters.status.slice(1)}
-                                </Text>
-                            </View>
-                        )}
-                        {viewFilters.dateRange !== 'today' && (
-                            <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                                <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>
-                                    Range: {viewFilters.dateRange === 'week' ? 'Last 7 days' : viewFilters.dateRange === 'month' ? 'Last 30 days' : 'Custom'}
-                                </Text>
-                            </View>
-                        )}
-                    </View>
-                </View>
-            )}
-
             <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>
                 Attendance Records ({viewAttendanceRecords.length})
             </Text>
 
             {viewLoading ? (
                 <LoadingState message="Loading attendance data..." />
-            ) : !viewFilters.selectedClass ? (
+            ) : !viewFilters.selectedClass || !viewFilters.selectedSubject ? (
                 <EmptyState
                     icon={<Users size={48} color={colors.textSecondary} />}
-                    title="No class selected"
-                    subtitle="Please use filters to select a class"
-                />
-            ) : viewFilters.viewType === 'student' && !viewFilters.selectedStudent ? (
-                <EmptyState
-                    icon={<Users size={48} color={colors.textSecondary} />}
-                    title="No student selected"
-                    subtitle="Please use filters to select a student for individual view"
+                    title="Select Class and Subject"
+                    subtitle="Please use filters to select a class and subject"
                 />
             ) : viewAttendanceRecords.length === 0 ? (
                 <EmptyState
                     icon={<Calendar size={48} color={colors.textSecondary} />}
                     title="No attendance records found"
-                    subtitle="No records match your current filters. Try adjusting the date range or status filter."
+                    subtitle="No records match your current filters"
                 />
             ) : (
                 viewAttendanceRecords.map((record) => (
@@ -683,7 +703,7 @@ export default function AttendanceScreen() {
         >
             <View style={[styles.classStatsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <Text allowFontScaling={false} style={[styles.classStatsTitle, { color: colors.text }]}>
-                    {classes.find(c => c.id === filters.selectedClass)?.name} - Attendance Overview
+                    {classes.find(c => c.id === filters.selectedClass)?.name} - {subjects.find(s => s.id === filters.selectedSubject)?.name}
                 </Text>
                 <View style={styles.statsGrid}>
                     <View style={styles.statItem}>
@@ -704,29 +724,6 @@ export default function AttendanceScreen() {
                     </View>
                 </View>
             </View>
-
-            {/* Active Filters Display */}
-            {(filters.status !== 'all' || filters.dateRange !== 'today') && (
-                <View style={[styles.activeFiltersCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text allowFontScaling={false} style={[styles.activeFiltersTitle, { color: colors.text }]}>Active Filters:</Text>
-                    <View style={styles.activeFiltersList}>
-                        {filters.status !== 'all' && (
-                            <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                                <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>
-                                    Status: {filters.status.charAt(0).toUpperCase() + filters.status.slice(1)}
-                                </Text>
-                            </View>
-                        )}
-                        {filters.dateRange !== 'today' && (
-                            <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                                <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>
-                                    Range: {filters.dateRange === 'week' ? 'Last 7 days' : filters.dateRange === 'month' ? 'Last 30 days' : 'Custom'}
-                                </Text>
-                            </View>
-                        )}
-                    </View>
-                </View>
-            )}
 
             <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Attendance Records</Text>
             {loading ? (
@@ -755,7 +752,6 @@ export default function AttendanceScreen() {
             return renderStudentContent();
         }
 
-        // For teachers, render based on view mode
         switch (viewMode) {
             case 'mark':
                 return renderTeacherMarkMode();
@@ -768,7 +764,6 @@ export default function AttendanceScreen() {
         }
     };
 
-    // 🔄 Automatically refresh attendance data when screen becomes active
     useFocusEffect(
         useCallback(() => {
             handleRefresh();
@@ -782,34 +777,30 @@ export default function AttendanceScreen() {
                 style={[styles.container, { backgroundColor: colors.background }]}
                 edges={['left', 'right', 'bottom']}
             >
-
-                {
-                    profile?.role === "teacher" && (
-                        <AttendanceHeader
-                            userRole={profile?.role || 'student'}
-                            viewMode={viewMode}
-                            onViewModeChange={handleViewModeChange}
-                            onFilterPress={() => {
-                                if (viewMode === 'view') {
-                                    setViewFilterModalVisible(true);
-                                } else {
-                                    setFilterModalVisible(true);
-                                }
-                            }}
-                            hasActiveFilters={viewMode === 'view' ? hasActiveViewFilters() : hasActiveFilters()}
-                        />
-                    )
-                }
-
+                {profile?.role === "teacher" && (
+                    <AttendanceHeader
+                        userRole={profile?.role || 'student'}
+                        viewMode={viewMode}
+                        onViewModeChange={handleViewModeChange}
+                        onFilterPress={() => {
+                            if (viewMode === 'view') {
+                                setViewFilterModalVisible(true);
+                            } else {
+                                setFilterModalVisible(true);
+                            }
+                        }}
+                        hasActiveFilters={viewMode === 'view' ? hasActiveViewFilters() : hasActiveFilters()}
+                    />
+                )}
 
                 {renderContent()}
 
                 {/* Filter Modal for Mark/Reports modes */}
-
                 <ComprehensiveFilterModal
                     visible={filterModalVisible}
                     onClose={() => setFilterModalVisible(false)}
                     classes={classes}
+                    subjects={subjects}
                     currentFilters={filters}
                     onApplyFilters={handleApplyFilters}
                     userRole={profile?.role || 'student'}
@@ -821,7 +812,8 @@ export default function AttendanceScreen() {
                     visible={viewFilterModalVisible}
                     onClose={() => setViewFilterModalVisible(false)}
                     classes={classes}
-                    students={getStudentsForClass(viewFilters.selectedClass)}
+                    subjects={subjects}
+                    students={allStudents}
                     currentFilters={viewFilters}
                     onApplyFilters={handleApplyViewFilters}
                 />
