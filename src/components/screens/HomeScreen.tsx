@@ -62,30 +62,217 @@ export default function HomeScreen() {
     return 'Good Evening';
   };
 
+  // const fetchTeacherStats = async () => {
+  //   try {
+  //     if (!profile?.id) return;
+
+  //     let classIds
+  //     // Get teacher's classes
+  //     const { data: classes, error: classesError } = await supabase
+  //       .from('teacher_subject_enrollments')
+  //       .select('class_id')
+  //       .eq('teacher_id', profile.id);
+
+  //     if (classesError) {
+  //       console.error("Error fetching classes:", classesError);
+  //     } else {
+  //       classIds = [...new Set(classes.map(c => c.class_id))];
+  //       console.log("Unique Class IDs:", classIds);
+  //     }
+
+  //     if (classesError) throw classesError;
+
+
+  //     // Get teacher's classes and subjects
+
+  //     let uniqueClassSubjectPairs = [];
+
+  //     const { data: teacherClassesandStudents, error: teacherClassesandStudentsError } = await supabase
+  //       .from('teacher_subject_enrollments')
+  //       .select('class_id, subject_id')
+  //       .eq('teacher_id', profile?.id);
+
+  //     if (teacherClassesandStudentsError) {
+  //       console.error("Error fetching data:", teacherClassesandStudentsError);
+  //     } else {
+  //       // Create unique combinations of class_id + subject_id
+  //       uniqueClassSubjectPairs = Array.from(
+  //         new Map(
+  //           teacherClassesandStudents.map(item => [
+  //             `${item.class_id}-${item.subject_id}`, // unique key
+  //             { class_id: item.class_id, subject_id: item.subject_id } // value
+  //           ])
+  //         ).values()
+  //       );
+
+  //       console.log("Unique Class & Subject pairs:", uniqueClassSubjectPairs);
+  //     }
+
+  //     // 🧠 Extract all class_ids from unique pairs
+  //     const classIds = [...new Set(uniqueClassSubjectPairs.map(pair => pair.class_id))];
+
+  //     let uniqueStudentIds = [];
+
+  //     // Get total students in teacher's classes
+  //     const { data: students, error: studentsError } = await supabase
+  //       .from('student_subject_enrollments')
+  //       .select('student_id')
+  //       .in('class_id', classIds); // ✅ use the list of class_ids here
+
+  //     if (studentsError) {
+  //       console.error("Error fetching students:", studentsError);
+  //     } else {
+  //       uniqueStudentIds = [...new Set(students.map(s => s.student_id))];
+  //       console.log("Unique Student IDs:", uniqueStudentIds);
+  //     }
+
+
+  //     // Get total lectures uploaded by teacher
+  //     const { data: lectures, error: lecturesError } = await supabase
+  //       .from('lectures')
+  //       .select('id')
+  //       .eq('uploaded_by', profile.id);
+
+  //     if (lecturesError) throw lecturesError;
+
+  //     setStats({
+  //       students: uniqueStudentIds?.length || 0,
+  //       classes: classes?.length || 0,
+  //       lectures: lectures?.length || 0,
+  //     });
+
+  //     // Get recent activities for teacher
+  //     const activities: RecentActivity[] = [];
+
+  //     // Recent attendance sessions
+  //     const { data: recentAttendance } = await supabase
+  //       .from('attendance_sessions')
+  //       .select(`
+  //         id,
+  //         date,
+  //         posted_at,
+  //         classes!inner(name)
+  //       `)
+  //       .eq('posted_by', profile.id)
+  //       .order('posted_at', { ascending: false })
+  //       .limit(2);
+
+  //     recentAttendance?.forEach(session => {
+  //       activities.push({
+  //         id: session.id,
+  //         title: 'Attendance Marked',
+  //         description: `${session.classes.name} - ${new Date(session.date).toLocaleDateString()}`,
+  //         time: getTimeAgo(session.posted_at),
+  //         type: 'success'
+  //       });
+  //     });
+
+  //     // Recent lectures
+  //     const { data: recentLectures } = await supabase
+  //       .from('lectures')
+  //       .select(`
+  //         id,
+  //         title,
+  //         created_at,
+  //         classes!inner(name)
+  //       `)
+  //       .eq('uploaded_by', profile.id)
+  //       .order('created_at', { ascending: false })
+  //       .limit(2);
+
+  //     recentLectures?.forEach(lecture => {
+  //       activities.push({
+  //         id: lecture.id,
+  //         title: 'New Lecture Uploaded',
+  //         description: `${lecture.title} - ${lecture.classes.name}`,
+  //         time: getTimeAgo(lecture.created_at),
+  //         type: 'info'
+  //       });
+  //     });
+
+  //     // Recent diary assignments
+  //     const { data: recentDiary } = await supabase
+  //       .from('diary_assignments')
+  //       .select(`
+  //         id,
+  //         title,
+  //         created_at,
+  //         classes!inner(name)
+  //       `)
+  //       .eq('assigned_by', profile.id)
+  //       .order('created_at', { ascending: false })
+  //       .limit(2);
+
+  //     recentDiary?.forEach(diary => {
+  //       activities.push({
+  //         id: diary.id,
+  //         title: 'Homework Assigned',
+  //         description: `${diary.title} - ${diary.classes.name}`,
+  //         time: getTimeAgo(diary.created_at),
+  //         type: 'warning'
+  //       });
+  //     });
+
+  //     // Sort all activities by time and take top 3
+  //     activities.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+  //     setRecentActivities(activities.slice(0, 3));
+
+  //   } catch (error) {
+  //     console.error('Error fetching teacher stats:', error);
+  //   }
+  // };
+
   const fetchTeacherStats = async () => {
     try {
       if (!profile?.id) return;
 
-      // Get teacher's classes
+      // ========== 1️⃣ Get Teacher's Unique Class IDs ==========
+      let teacherClassIds = [];
       const { data: classes, error: classesError } = await supabase
-        .from('classes')
-        .select('id')
+        .from('teacher_subject_enrollments')
+        .select('class_id')
         .eq('teacher_id', profile.id);
 
       if (classesError) throw classesError;
 
-      const classIds = classes?.map(c => c.id) || [];
+      teacherClassIds = [...new Set(classes.map(c => c.class_id))];
+      console.log("✅ Unique Class IDs:", teacherClassIds);
 
-      // Get total students in teacher's classes
+      // ========== 2️⃣ Get Teacher's Class–Subject Pairs ==========
+      let uniqueClassSubjectPairs = [];
+
+      const { data: teacherClassesSubjects, error: teacherClassesSubjectsError } = await supabase
+        .from('teacher_subject_enrollments')
+        .select('class_id, subject_id')
+        .eq('teacher_id', profile.id);
+
+      if (teacherClassesSubjectsError) throw teacherClassesSubjectsError;
+
+      uniqueClassSubjectPairs = Array.from(
+        new Map(
+          teacherClassesSubjects.map(item => [
+            `${item.class_id}-${item.subject_id}`,
+            { class_id: item.class_id, subject_id: item.subject_id }
+          ])
+        ).values()
+      );
+
+      console.log("✅ Unique Class & Subject pairs:", uniqueClassSubjectPairs);
+
+      // ========== 3️⃣ Get Students from These Classes ==========
+      let uniqueStudentIds = [];
+
       const { data: students, error: studentsError } = await supabase
-        .from('students')
-        .select('id')
-        .in('class_id', classIds)
-        .eq('is_deleted', false);
+        .from('student_subject_enrollments')
+        .select('student_id')
+        .in('class_id', teacherClassIds); // ✅ use list of teacher's classes
 
       if (studentsError) throw studentsError;
 
-      // Get total lectures uploaded by teacher
+      uniqueStudentIds = [...new Set(students.map(s => s.student_id))];
+      console.log("✅ Unique Student IDs:", uniqueStudentIds);
+
+      // ========== 4️⃣ Get Total Lectures Uploaded ==========
       const { data: lectures, error: lecturesError } = await supabase
         .from('lectures')
         .select('id')
@@ -93,24 +280,25 @@ export default function HomeScreen() {
 
       if (lecturesError) throw lecturesError;
 
+      // ========== 5️⃣ Update Stats ==========
       setStats({
-        students: students?.length || 0,
-        classes: classes?.length || 0,
-        lectures: lectures?.length || 0,
+        students: uniqueStudentIds.length || 0,
+        classes: teacherClassIds.length || 0,
+        lectures: lectures.length || 0,
       });
 
-      // Get recent activities for teacher
-      const activities: RecentActivity[] = [];
+      // ========== 6️⃣ Build Recent Activities ==========
+      const activities = [];
 
       // Recent attendance sessions
       const { data: recentAttendance } = await supabase
         .from('attendance_sessions')
         .select(`
-          id,
-          date,
-          posted_at,
-          classes!inner(name)
-        `)
+        id,
+        date,
+        posted_at,
+        classes!inner(name)
+      `)
         .eq('posted_by', profile.id)
         .order('posted_at', { ascending: false })
         .limit(2);
@@ -129,11 +317,11 @@ export default function HomeScreen() {
       const { data: recentLectures } = await supabase
         .from('lectures')
         .select(`
-          id,
-          title,
-          created_at,
-          classes!inner(name)
-        `)
+        id,
+        title,
+        created_at,
+        classes!inner(name)
+      `)
         .eq('uploaded_by', profile.id)
         .order('created_at', { ascending: false })
         .limit(2);
@@ -152,11 +340,11 @@ export default function HomeScreen() {
       const { data: recentDiary } = await supabase
         .from('diary_assignments')
         .select(`
-          id,
-          title,
-          created_at,
-          classes!inner(name)
-        `)
+        id,
+        title,
+        created_at,
+        classes!inner(name)
+      `)
         .eq('assigned_by', profile.id)
         .order('created_at', { ascending: false })
         .limit(2);
@@ -176,9 +364,10 @@ export default function HomeScreen() {
       setRecentActivities(activities.slice(0, 3));
 
     } catch (error) {
-      console.error('Error fetching teacher stats:', error);
+      console.error('❌ Error fetching teacher stats:', error);
     }
   };
+
 
   const fetchStudentStats = async () => {
     try {

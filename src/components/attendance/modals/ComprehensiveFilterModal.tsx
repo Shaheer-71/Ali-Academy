@@ -1,16 +1,24 @@
 // components/attendance/modals/ComprehensiveFilterModal.tsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 'react-native';
-import { Filter, X, Calendar, Users, Building, Clock, RotateCcw } from 'lucide-react-native';
+import { Filter, X, Calendar, Users, Building, BookOpen, Clock, RotateCcw } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { supabase } from '@/src/lib/supabase';
+import { useAuth } from '@/src/contexts/AuthContext';
 
 interface Class {
     id: string;
     name: string;
 }
 
+interface Subject {
+    id: string;
+    name: string;
+}
+
 interface FilterData {
     selectedClass: string;
+    selectedSubject: string;
     startDate: string;
     endDate: string;
     status: 'all' | 'present' | 'late' | 'absent';
@@ -21,29 +29,139 @@ interface ComprehensiveFilterModalProps {
     visible: boolean;
     onClose: () => void;
     classes: Class[];
+    subjects: Subject[];
     currentFilters: FilterData;
     onApplyFilters: (filters: FilterData) => void;
     userRole: 'teacher' | 'student';
     viewMode: 'mark' | 'view';
+    teacherId?: string;
 }
 
 export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> = ({
     visible,
     onClose,
     classes,
+    subjects: initialSubjects,
     currentFilters,
     onApplyFilters,
     userRole,
     viewMode,
+    teacherId,
 }) => {
     const { colors } = useTheme();
+    const { profile } = useAuth();
     const [filters, setFilters] = useState<FilterData>(currentFilters);
+    const [localSubjects, setLocalSubjects] = useState<Subject[]>([]);
+    const [loadingSubjects, setLoadingSubjects] = useState(false);
 
+    // Reset filters when modal opens
     useEffect(() => {
-        setFilters(currentFilters);
-    }, [currentFilters, visible]);
+        if (visible) {
+            console.log("🔄 Modal opened, resetting to current filters:", currentFilters);
+            setFilters(currentFilters);
+
+            // Clear subjects initially - they'll be fetched when class is selected
+            if (!currentFilters.selectedClass) {
+                setLocalSubjects([]);
+            }
+        }
+    }, [visible]);
+
+    // Fetch subjects when class changes (only if we have a valid class selected)
+    useEffect(() => {
+        if (visible && filters.selectedClass && profile) {
+            console.log("🔄 Class changed, fetching subjects for:", filters.selectedClass);
+            fetchSubjectsForClass(filters.selectedClass);
+        } else if (visible && !filters.selectedClass) {
+            console.log("⚠️ No class selected, clearing subjects");
+            setLocalSubjects([]);
+        }
+    }, [filters.selectedClass, visible, teacherId]);
+
+    const fetchSubjectsForClass = async (classId: string) => {
+        if (!profile?.id || !classId) {
+            console.log("⚠️ Missing teacherId or classId, skipping fetch");
+            return;
+        }
+
+        setLoadingSubjects(true);
+        try {
+            console.log("🔍 Modal: Fetching subjects for class:", classId, "and teacher:", profile?.id);
+
+            const { data: subjectIDData, error: subjectIDError } = await supabase
+                .from('teacher_subject_enrollments')
+                .select('subject_id')
+                .eq('teacher_id', profile?.id)
+                .eq('class_id', classId);
+
+            if (subjectIDError) {
+                console.error("❌ Error fetching subject enrollments:", subjectIDError);
+                throw subjectIDError;
+            }
+
+            console.log("📋 Modal: Raw subject enrollment data:", subjectIDData);
+
+            let enrolledSubjects = [...new Set(subjectIDData?.map(item => item.subject_id) || [])];
+            console.log("📖 Modal: Unique enrolled subjects for this class:", enrolledSubjects);
+
+            if (enrolledSubjects.length === 0) {
+                console.log("⚠️ Modal: No subjects found for this class");
+                setLocalSubjects([]);
+                setFilters(prev => ({ ...prev, selectedSubject: '' }));
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from('subjects')
+                .select('id, name')
+                .in('id', enrolledSubjects)
+                .order('name');
+
+            if (error) {
+                console.error("❌ Error fetching subjects details:", error);
+                throw error;
+            }
+
+            console.log("✅ Modal: Fetched subjects:", data);
+            setLocalSubjects(data || []);
+
+            // Only auto-select if there's no current selection or if current selection is invalid
+            if (data && data.length > 0) {
+                const currentSubjectExists = data.some(s => s.id === filters.selectedSubject);
+                if (!currentSubjectExists) {
+                    console.log("🔄 Current subject not found, auto-selecting first subject");
+                    setFilters(prev => ({ ...prev, selectedSubject: data[0].id }));
+                }
+            } else {
+                setFilters(prev => ({ ...prev, selectedSubject: '' }));
+            }
+        } catch (error) {
+            console.error('❌ Modal: Error fetching subjects:', error);
+            setLocalSubjects([]);
+            setFilters(prev => ({ ...prev, selectedSubject: '' }));
+        } finally {
+            setLoadingSubjects(false);
+        }
+    };
+
+    const handleClassChange = (classId: string) => {
+        console.log("🏫 Modal: Class changed to:", classId);
+        setFilters(prev => ({
+            ...prev,
+            selectedClass: classId,
+            selectedSubject: '' // Clear subject when class changes
+        }));
+        fetchSubjectsForClass(classId);
+        // Note: fetchSubjectsForClass will be called by the useEffect
+    };
 
     const handleApply = () => {
+        // Validate that both class and subject are selected for teachers
+        if (userRole === 'teacher' && (!filters.selectedClass || !filters.selectedSubject)) {
+            alert('Please select both class and subject');
+            return;
+        }
+        console.log("✅ Applying filters:", filters);
         onApplyFilters(filters);
         onClose();
     };
@@ -51,13 +169,15 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
     const handleReset = () => {
         const today = new Date().toISOString().split('T')[0];
         const resetFilters: FilterData = {
-            selectedClass: classes.length > 0 ? classes[0].id : '',
+            selectedClass: '', // Start with no class selected
+            selectedSubject: '',
             startDate: today,
             endDate: today,
             status: 'all',
             dateRange: 'today',
         };
         setFilters(resetFilters);
+        setLocalSubjects([]); // Clear subjects when resetting
     };
 
     const handleDateRangeChange = (range: 'today' | 'week' | 'month' | 'custom') => {
@@ -80,7 +200,6 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                 startDate = monthAgo.toISOString().split('T')[0];
                 break;
             case 'custom':
-                // Keep current dates for custom
                 startDate = filters.startDate;
                 endDate = filters.endDate;
                 break;
@@ -169,23 +288,74 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                         {/* Class Filter - Only for Teachers */}
                         {userRole === 'teacher' && (
                             <FilterSection title="Select Class" icon={<Building size={20} color={colors.primary} />}>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-                                    {classes.map((classItem) => (
-                                        <OptionButton
-                                            key={classItem.id}
-                                            selected={filters.selectedClass === classItem.id}
-                                            onPress={() => setFilters(prev => ({ ...prev, selectedClass: classItem.id }))}
-                                            style={styles.classButton}
-                                        >
-                                            <Text allowFontScaling={false} style={[
-                                                styles.optionText,
-                                                { color: filters.selectedClass === classItem.id ? colors.primary : colors.text }
-                                            ]}>
-                                                {classItem.name}
-                                            </Text>
-                                        </OptionButton>
-                                    ))}
-                                </ScrollView>
+                                {classes.length === 0 ? (
+                                    <View style={[styles.emptySubjectsContainer, { backgroundColor: colors.background }]}>
+                                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
+                                            No classes available
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                                        {classes.map((classItem) => (
+                                            <OptionButton
+                                                key={classItem.id}
+                                                selected={filters.selectedClass === classItem.id}
+                                                onPress={() => handleClassChange(classItem.id)}
+                                                style={styles.classButton}
+                                            >
+                                                <Text allowFontScaling={false} style={[
+                                                    styles.optionText,
+                                                    { color: filters.selectedClass === classItem.id ? colors.primary : colors.text }
+                                                ]}>
+                                                    {classItem.name}
+                                                </Text>
+                                            </OptionButton>
+                                        ))}
+                                    </ScrollView>
+                                )}
+                            </FilterSection>
+                        )}
+
+                        {/* Subject Filter - Only for Teachers */}
+                        {userRole === 'teacher' && (
+                            <FilterSection title="Select Subject" icon={<BookOpen size={20} color={colors.primary} />}>
+                                {loadingSubjects ? (
+                                    <View style={[styles.emptySubjectsContainer, { backgroundColor: colors.background }]}>
+                                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
+                                            Loading subjects...
+                                        </Text>
+                                    </View>
+                                ) : !filters.selectedClass ? (
+                                    <View style={[styles.emptySubjectsContainer, { backgroundColor: colors.background }]}>
+                                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
+                                            Please select a class first
+                                        </Text>
+                                    </View>
+                                ) : localSubjects.length === 0 ? (
+                                    <View style={[styles.emptySubjectsContainer, { backgroundColor: colors.background }]}>
+                                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
+                                            No subjects found for this class
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                                        {localSubjects.map((subject) => (
+                                            <OptionButton
+                                                key={subject.id}
+                                                selected={filters.selectedSubject === subject.id}
+                                                onPress={() => setFilters(prev => ({ ...prev, selectedSubject: subject.id }))}
+                                                style={styles.classButton}
+                                            >
+                                                <Text allowFontScaling={false} style={[
+                                                    styles.optionText,
+                                                    { color: filters.selectedSubject === subject.id ? colors.primary : colors.text }
+                                                ]}>
+                                                    {subject.name}
+                                                </Text>
+                                            </OptionButton>
+                                        ))}
+                                    </ScrollView>
+                                )}
                             </FilterSection>
                         )}
 
@@ -278,9 +448,14 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                             <Text allowFontScaling={false} style={[styles.summaryTitle, { color: colors.text }]}>Current Filters:</Text>
 
                             {userRole === 'teacher' && (
-                                <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
-                                    • Class: {classes.find(c => c.id === filters.selectedClass)?.name || 'None selected'}
-                                </Text>
+                                <>
+                                    <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                                        • Class: {filters.selectedClass ? (classes.find(c => c.id === filters.selectedClass)?.name || 'Unknown') : 'None selected'}
+                                    </Text>
+                                    <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                                        • Subject: {filters.selectedSubject ? (localSubjects.find(s => s.id === filters.selectedSubject)?.name || 'Unknown') : 'None selected'}
+                                    </Text>
+                                </>
                             )}
 
                             <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
@@ -390,6 +565,15 @@ const styles = StyleSheet.create({
         marginHorizontal: 4,
         minWidth: 100,
         alignItems: 'center',
+    },
+    emptySubjectsContainer: {
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    emptyText: {
+        fontSize: 14,
+        fontFamily: 'Inter-Regular',
     },
     dateRangeContainer: {
         gap: 8,

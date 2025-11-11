@@ -128,11 +128,29 @@ export const AssignmentDetailModal = ({
                         {/* Subject */}
                         {assignment.subjects?.name && (
                             <View style={styles.detailSection}>
-                                <Text allowFontScaling={false} style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                                    Subject
-                                </Text>
-                                <Text allowFontScaling={false} style={[styles.detailValue, { color: colors.text }]}>
+                                <View style={styles.detailRow}>
+                                    <FileText size={16} color={colors.primary} />
+                                    <Text allowFontScaling={false} style={[styles.detailLabel, { color: colors.textSecondary, marginLeft: 8 }]}>
+                                        Subject
+                                    </Text>
+                                </View>
+                                <Text allowFontScaling={false} style={[styles.detailValue, { color: colors.text, marginLeft: 24 }]}>
                                     {assignment.subjects.name}
+                                </Text>
+                            </View>
+                        )}
+
+                        {/* Assigned By (Teacher) */}
+                        {assignment.profiles?.full_name && (
+                            <View style={styles.detailSection}>
+                                <View style={styles.detailRow}>
+                                    <User size={16} color={colors.primary} />
+                                    <Text allowFontScaling={false} style={[styles.detailLabel, { color: colors.textSecondary, marginLeft: 8 }]}>
+                                        Assigned By
+                                    </Text>
+                                </View>
+                                <Text allowFontScaling={false} style={[styles.detailValue, { color: colors.text, marginLeft: 24 }]}>
+                                    {assignment.profiles.full_name}
                                 </Text>
                             </View>
                         )}

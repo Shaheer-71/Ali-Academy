@@ -67,9 +67,7 @@ export default function UploadLectureModal({
 
     const loadClasses = async () => {
         try {
-            const data = await lectureService.fetchClasses(
-                (profile?.role === 'teacher' || profile?.role === 'admin') ? profile.id : undefined
-            );
+            const data = await lectureService.fetchClasses(profile.id , profile?.role);
 
             setClasses(data);
 
@@ -93,7 +91,7 @@ export default function UploadLectureModal({
             let studentsData = [];
 
             try {
-                subjectsData = await lectureService.fetchClassSubjects(classId);
+                subjectsData = await lectureService.fetchClassSubjects(classId , profile?.id , profile?.role);
             } catch (err) {
                 console.error("Error fetching subjects:", err);
             }

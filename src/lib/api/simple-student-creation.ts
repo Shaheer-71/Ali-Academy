@@ -7,6 +7,7 @@ interface StudentData {
     phone_number: string;
     parent_contact: string;
     class_id: string;
+    subject_ids: string[]; // ✅ NEW: Array of subject IDs
     gender: 'male' | 'female' | 'other';
     address: string;
     admission_date: string;
@@ -39,6 +40,11 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
             !studentData.parent_contact || !studentData.class_id || !studentData.gender ||
             !studentData.address || !studentData.admission_date) {
             throw new Error('All required fields must be provided');
+        }
+
+        // ✅ Validate subjects
+        if (!studentData.subject_ids || studentData.subject_ids.length === 0) {
+            throw new Error('At least one subject must be selected');
         }
 
         // Validate date format
@@ -80,6 +86,27 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
             throw new Error('Student with this email already exists');
         }
 
+        // ✅ Get teachers for the selected subjects
+        const { data: teacherEnrollments, error: teacherError } = await supabase
+            .from('teacher_subject_enrollments')
+            .select('subject_id, teacher_id')
+            .eq('class_id', studentData.class_id)
+            .in('subject_id', studentData.subject_ids)
+            .eq('is_active', true);
+
+        if (teacherError) {
+            console.error('Error fetching teachers:', teacherError);
+            throw new Error('Failed to fetch teachers for selected subjects');
+        }
+
+        // ✅ Verify all subjects have assigned teachers
+        const subjectsWithoutTeachers = studentData.subject_ids.filter(
+            subjectId => !teacherEnrollments?.some(te => te.subject_id === subjectId)
+        );
+
+        if (subjectsWithoutTeachers.length > 0) {
+            throw new Error(`No teachers assigned for some subjects in this class. Please assign teachers first.`);
+        }
 
         // Create student record ONLY - no auth user
         const { data, error } = await supabase
@@ -103,7 +130,6 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
                 is_deleted: false,
                 created_by: createdBy,
                 updated_by: createdBy,
-                // Add flag to track if student has registered yet
                 has_registered: false
             })
             .select()
@@ -114,13 +140,44 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
             throw new Error(`Failed to create student record: ${error.message}`);
         }
 
+        // ✅ Create student_subject_enrollments for each subject
+        const enrollments = studentData.subject_ids.map(subjectId => {
+            const teacherEnrollment = teacherEnrollments?.find(te => te.subject_id === subjectId);
+            return {
+                student_id: data.id,
+                class_id: studentData.class_id,
+                subject_id: subjectId,
+                teacher_id : "334e767a-8b49-4e69-a3dc-63b4773618d1",
+                is_active: true,
+                created_by: createdBy,
+            };
+        });
+
+        const { error: enrollmentError } = await supabase
+            .from('student_subject_enrollments')
+            .insert(enrollments);
+
+        if (enrollmentError) {
+            console.error('Enrollment creation error:', enrollmentError);
+
+            // ✅ Rollback: Delete the student if enrollments fail
+            await supabase
+                .from('students')
+                .delete()
+                .eq('id', data.id);
+
+            throw new Error(`Failed to enroll student in subjects: ${enrollmentError.message}`);
+        }
+
+        console.log(`✅ Student created and enrolled in ${enrollments.length} subjects`);
 
         return {
             success: true,
             message: 'Student created successfully. They can now register with their email.',
             data: {
                 student: data,
-                email: email
+                email: email,
+                enrolledSubjects: enrollments.length
             }
         };
 

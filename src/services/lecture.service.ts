@@ -16,19 +16,61 @@ class LectureService {
         classId?: string;
         subjectId?: string;
         userId?: string;
+        role?: string; // ✅ Add role here
     }) {
         try {
+            const userId = filters?.userId;
+            const role = filters?.role;
+
+            if (!userId) {
+                throw new Error('User ID is required');
+            }
+
+            if (!role) {
+                throw new Error('User role is required');
+            }
+
+            console.log(`🔍 Fetching lectures for ${role}:`, userId);
+
+            // Fetch enrollments based on role
+            const { data: enrollments, error: enrollmentError } = await supabase
+                .from('student_subject_enrollments')
+                .select('student_id, class_id, subject_id, teacher_id')
+                .eq(role === 'teacher' ? 'teacher_id' : 'student_id', userId)
+                .eq('is_active', true);
+
+            if (enrollmentError) {
+                console.error('Enrollments fetch error:', enrollmentError);
+                throw new Error('Failed to fetch enrollments: ' + enrollmentError.message);
+            }
+
+            if (!enrollments || enrollments.length === 0) {
+                console.log(`No enrollments found for ${role}:`, userId);
+                return [];
+            }
+
+            // Extract unique class_ids and subject_ids from enrollments
+            const classIds = [...new Set(enrollments.map(e => e.class_id))];
+            const subjectIds = [...new Set(enrollments.map(e => e.subject_id))];
+
+            console.log(`📚 ${role} enrolled class IDs:`, classIds);
+            console.log(`📚 ${role} enrolled subject IDs:`, subjectIds);
+
+            // Build query with enrollment filters
             let query = supabase
                 .from('lectures')
                 .select(`
-          *,
-          classes (name),
-          subjects (name),
-          profiles (full_name)
-        `)
+                *,
+                classes (name),
+                subjects (name),
+                profiles (full_name)
+            `)
                 .eq('is_active', true)
+                .in('class_id', classIds)
+                .in('subject_id', subjectIds)
                 .order('created_at', { ascending: false });
 
+            // Apply additional filters if provided
             if (filters?.classId) {
                 query = query.eq('class_id', filters.classId);
             }
@@ -39,12 +81,11 @@ class LectureService {
             const { data, error } = await query;
             if (error) throw error;
 
-            // Add view/download status if userId provided
-            if (data && filters?.userId) {
-                const enhancedLectures = await this.enhanceLecturesWithViewStatus(
-                    data,
-                    filters.userId
-                );
+            console.log(`✅ Fetched ${data?.length || 0} lectures for ${role}`);
+
+            // Add view/download status
+            if (data && userId) {
+                const enhancedLectures = await this.enhanceLecturesWithViewStatus(data, userId);
                 return enhancedLectures;
             }
 
@@ -149,39 +190,39 @@ class LectureService {
             }
 
             // 7️⃣ SEND PUSH NOTIFICATIONS (like fee reminder)
-        console.log(`📱 [LECTURE_UPLOAD] Sending push notifications to ${students.length} students...`);
-        let sentCount = 0;
-        let failedCount = 0;
+            console.log(`📱 [LECTURE_UPLOAD] Sending push notifications to ${students.length} students...`);
+            let sentCount = 0;
+            let failedCount = 0;
 
-        for (let i = 0; i < students.length; i++) {
-            const student = students[i];
-            try {
-                console.log(`📤 [LECTURE_UPLOAD] Sending to student ${i + 1}/${students.length}: ${student.full_name}`);
+            for (let i = 0; i < students.length; i++) {
+                const student = students[i];
+                try {
+                    console.log(`📤 [LECTURE_UPLOAD] Sending to student ${i + 1}/${students.length}: ${student.full_name}`);
 
-                await sendPushNotification({
-                    userId: student.id,
-                    title: `🎥 New Lecture Uploaded`,
-                    body: `The lecture "${formData.title}" has been uploaded. Check it now!`,
-                    data: {
-                        type: 'lecture_added',
-                        notificationId: notification.id,
-                        lectureId: lecture.id,
-                        classId: formData.class_id,
-                        subjectId: formData.subject_id,
-                        studentId: student.id,
-                        studentName: student.full_name,
-                        timestamp: new Date().toISOString(),
-                    },
-                });
+                    await sendPushNotification({
+                        userId: student.id,
+                        title: `🎥 New Lecture Uploaded`,
+                        body: `The lecture "${formData.title}" has been uploaded. Check it now!`,
+                        data: {
+                            type: 'lecture_added',
+                            notificationId: notification.id,
+                            lectureId: lecture.id,
+                            classId: formData.class_id,
+                            subjectId: formData.subject_id,
+                            studentId: student.id,
+                            studentName: student.full_name,
+                            timestamp: new Date().toISOString(),
+                        },
+                    });
 
-                console.log(`✅ [LECTURE_UPLOAD] Push sent to student ${i + 1}: ${student.full_name}`);
-                sentCount++;
-            } catch (pushError) {
-                console.error(`❌ [LECTURE_UPLOAD] Failed to send push to ${student.full_name}:`, pushError);
-                failedCount++;
-                continue;
+                    console.log(`✅ [LECTURE_UPLOAD] Push sent to student ${i + 1}: ${student.full_name}`);
+                    sentCount++;
+                } catch (pushError) {
+                    console.error(`❌ [LECTURE_UPLOAD] Failed to send push to ${student.full_name}:`, pushError);
+                    failedCount++;
+                    continue;
+                }
             }
-        }
 
             return lecture;
         } catch (error) {
@@ -353,67 +394,169 @@ class LectureService {
     /**
      * Fetch classes for a teacher or all classes
      */
-    async fetchClasses(teacherId?: string) {
-        let query = supabase.from('classes').select('*').order('name');
+    async fetchClasses(userId?: string, role?: string) {
+        try {
+            if (!userId) {
+                throw new Error('User ID is required');
+            }
 
-        if (teacherId) {
-            query = query.eq('teacher_id', teacherId);
+            if (!role) {
+                throw new Error('Role is required');
+            }
+
+            console.log(`🔍 Fetching classes for ${role}:`, userId);
+
+            // Fetch enrolled classes from student_subject_enrollments
+            const { data: enrollments, error: enrollmentError } = await supabase
+                .from('student_subject_enrollments')
+                .select('class_id')
+                .eq(role === 'teacher' ? 'teacher_id' : 'student_id', userId)
+                .eq('is_active', true);
+
+            if (enrollmentError) {
+                console.error('Error fetching enrollments:', enrollmentError);
+                throw new Error('Failed to fetch enrollments: ' + enrollmentError.message);
+            }
+
+            if (!enrollments || enrollments.length === 0) {
+                console.log('No enrolled classes found');
+                return [];
+            }
+
+            // Get unique class IDs
+            const classIds = [...new Set(enrollments.map(e => e.class_id))];
+
+            console.log('📚 Enrolled class IDs:', classIds);
+
+            // Fetch classes
+            const { data, error } = await supabase
+                .from('classes')
+                .select('*')
+                .in('id', classIds)
+                .order('name');
+
+            if (error) throw error;
+
+            console.log(`✅ Fetched ${data?.length || 0} classes`);
+
+            return data || [];
+        } catch (error) {
+            console.error('Error fetching classes:', error);
+            throw error;
         }
-
-        const { data, error } = await query;
-        if (error) throw error;
-
-        return data || [];
     }
+
 
     /**
      * Fetch subjects for a class
      */
-    async fetchClassSubjects(classId: string) {
-        // Step 1: get subject_ids
-        const { data: mapping, error } = await supabase
-            .from('classes_subjects')
-            .select('subject_id')
-            .eq('class_id', classId)
-            .eq('is_active', true);
+    async fetchClassSubjects(classId: string, userId?: string, role?: string) {
+        try {
+            if (!userId) {
+                throw new Error('User ID is required');
+            }
 
-        if (error) throw error;
-        if (!mapping || mapping.length === 0) return [];
+            if (!role) {
+                throw new Error('Role is required');
+            }
 
-        const subjectIds = mapping.map(m => m.subject_id);
+            console.log(`🔍 Fetching subjects for ${role} in class:`, classId);
 
+            // Fetch subjects for this class from student_subject_enrollments
+            const { data: enrollments, error: enrollmentError } = await supabase
+                .from('student_subject_enrollments')
+                .select('subject_id')
+                .eq('class_id', classId)
+                .eq(role === 'teacher' ? 'teacher_id' : 'student_id', userId)
+                .eq('is_active', true);
 
-        // Step 2: fetch subjects by id
-        const { data: subjects, error: subjectError } = await supabase
-            .from('subjects')
-            .select('id, name')  // only what you need
-            .in('id', subjectIds);
+            if (enrollmentError) {
+                console.error('Error fetching subject enrollments:', enrollmentError);
+                throw new Error('Failed to fetch subject enrollments: ' + enrollmentError.message);
+            }
 
-        if (subjectError) throw subjectError;
+            if (!enrollments || enrollments.length === 0) {
+                console.log('No subjects found for this class');
+                return [];
+            }
 
+            // Get unique subject IDs
+            const subjectIds = [...new Set(enrollments.map(e => e.subject_id))];
 
-        return subjects || [];
+            console.log('📚 Enrolled subject IDs for class:', subjectIds);
+
+            // Fetch subjects by ID
+            const { data: subjects, error: subjectError } = await supabase
+                .from('subjects')
+                .select('id, name, description')
+                .in('id', subjectIds)
+                .eq('is_active', true);
+
+            if (subjectError) throw subjectError;
+
+            console.log(`✅ Fetched ${subjects?.length || 0} subjects`);
+
+            return subjects || [];
+        } catch (error) {
+            console.error('Error fetching class subjects:', error);
+            return [];
+        }
     }
-
 
 
 
     /**
      * Fetch students in a class
      */
-    async fetchClassStudents(classId: string) {
+    async fetchClassStudents(classId: string, subjectId: string, teacherId?: string) {
         try {
-            const { data, error } = await supabase
-                .from('students')
-                .select('id, class_id') // keep it simple
+            if (!teacherId) {
+                console.warn('Teacher ID not provided');
+                return [];
+            }
+
+            console.log('🔍 Fetching students for class + subject:', { classId, subjectId, teacherId });
+
+            // Fetch students enrolled in this class + subject with this teacher
+            const { data: enrollments, error: enrollmentError } = await supabase
+                .from('student_subject_enrollments')
+                .select('student_id')
                 .eq('class_id', classId)
+                .eq('subject_id', subjectId)
+                .eq('teacher_id', teacherId)
                 .eq('is_active', true);
 
+            if (enrollmentError) {
+                console.error('Error fetching student enrollments:', enrollmentError);
+                throw new Error('Failed to fetch student enrollments: ' + enrollmentError.message);
+            }
+
+            if (!enrollments || enrollments.length === 0) {
+                console.log('No students enrolled in this class/subject');
+                return [];
+            }
+
+            // Get unique student IDs
+            const studentIds = [...new Set(enrollments.map(e => e.student_id))];
+
+            console.log('📚 Enrolled student IDs:', studentIds);
+
+            // Fetch student details from profiles table
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, email')
+                .in('id', studentIds)
+                .eq('role', 'student')
+                .order('full_name');
+
             if (error) throw error;
+
+            console.log(`✅ Fetched ${data?.length || 0} students`);
+
             return data || [];
         } catch (err) {
             console.error("Error fetching students:", err);
-            return []; // don’t block subjects
+            return [];
         }
     }
 

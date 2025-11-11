@@ -77,10 +77,10 @@ export const useStudents = (classId?: string) => {
   }) => {
     try {
       const { data, error } = await supabase
-        .from('students')
-        .insert([studentData])
-        .select()
-        .single();
+        // .from('students')
+        // .insert([studentData])
+        // .select()
+        // .single();
 
       if (error) throw error;
 

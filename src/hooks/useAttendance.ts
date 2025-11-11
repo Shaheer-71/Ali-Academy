@@ -8,6 +8,8 @@ interface AttendanceRecord {
   id: string;
   student_id: string;
   class_id: string;
+  subject_id: string; // ✅ Added
+  teacher_id: string; // ✅ Added
   date: string;
   arrival_time?: string;
   status: 'present' | 'late' | 'absent';
@@ -23,6 +25,8 @@ interface AttendanceRecord {
 interface AttendanceSession {
   id: string;
   class_id: string;
+  subject_id: string; // ✅ Added
+  teacher_id: string; // ✅ Added
   date: string;
   total_students: number;
   present_count: number;
@@ -30,6 +34,7 @@ interface AttendanceSession {
   absent_count: number;
   posted_at: string;
   classes?: { name: string };
+  subjects?: { name: string }; // ✅ Added
 }
 
 interface AttendanceStats {
@@ -48,7 +53,7 @@ interface Student {
   classes?: { name: string };
 }
 
-export const useAttendance = (classId?: string) => {
+export const useAttendance = (classId?: string, subjectId?: string) => { // ✅ Added subjectId parameter
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [attendanceSessions, setAttendanceSessions] = useState<AttendanceSession[]>([]);
@@ -66,7 +71,7 @@ export const useAttendance = (classId?: string) => {
   const [refreshing, setRefreshing] = useState(false);
   const { profile } = useAuth();
 
-  // Clear all data when classId changes
+  // Clear all data when classId or subjectId changes
   useEffect(() => {
     if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
       setStudents([]);
@@ -82,7 +87,7 @@ export const useAttendance = (classId?: string) => {
         attendanceRate: 0,
       });
 
-      if (classId) {
+      if (classId && subjectId) { // ✅ Require both class and subject
         setLoading(true);
         fetchStudents();
         fetchAttendanceData();
@@ -99,29 +104,42 @@ export const useAttendance = (classId?: string) => {
       });
       fetchStudentAttendance();
     }
-  }, [classId, profile]);
+  }, [classId, subjectId, profile]); // ✅ Added subjectId dependency
 
   const fetchStudents = async () => {
-    if (!classId) {
+    if (!classId || !subjectId) { // ✅ Require both
       setStudents([]);
       setLoading(false);
       return;
     }
 
     try {
+      console.log('🔍 Fetching students for class:', classId, 'subject:', subjectId);
 
-      const { data: classesIDData, error: classesIDError } = await supabase
+      // ✅ Get students enrolled in this specific class + subject
+      const { data: enrollments, error: enrollmentError } = await supabase
         .from('student_subject_enrollments')
-        .select('student_id, class_id')
-        .eq('teacher_id', profile?.id)
+        .select('student_id')
+        .eq('class_id', classId)
+        .eq('subject_id', subjectId)
+        .eq('is_active', true);
 
-      if (classesIDError) {
-        console.error('Enrollments fetch error:', classesIDError);
-        throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+      if (enrollmentError) {
+        console.error('Enrollments fetch error:', enrollmentError);
+        throw new Error('Failed to fetch enrollments: ' + enrollmentError.message);
       }
-      let studentsEnrolledIds = classesIDData?.map(item => item.student_id) || [];
-      console.log("📚 Fetched enrollments:", studentsEnrolledIds);
 
+      if (!enrollments || enrollments.length === 0) {
+        console.log('⚠️ No students enrolled in this class/subject combination');
+        setStudents([]);
+        setLoading(false);
+        return;
+      }
+
+      const studentIds = [...new Set(enrollments.map(e => e.student_id))];
+      console.log('📚 Enrolled student IDs:', studentIds);
+
+      // Fetch student details
       const { data, error } = await supabase
         .from('students')
         .select(`
@@ -131,28 +149,29 @@ export const useAttendance = (classId?: string) => {
           parent_contact,
           classes (name)
         `)
-        .eq('class_id', classId)
-        .in('id', studentsEnrolledIds)
+        .in('id', studentIds)
         .eq('is_deleted', false)
         .order('roll_number');
 
       if (error) throw error;
 
+      console.log(`✅ Fetched ${data?.length || 0} students`);
       setStudents(data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
       setStudents([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchTodaysAttendance = async (date: string) => {
-    if (!classId) {
+    if (!classId || !subjectId) { // ✅ Require both
       setTodaysAttendance({});
       return;
     }
 
     try {
-
       const { data, error } = await supabase
         .from('attendance')
         .select(`
@@ -164,6 +183,7 @@ export const useAttendance = (classId?: string) => {
           )
         `)
         .eq('class_id', classId)
+        .eq('subject_id', subjectId) // ✅ Filter by subject
         .eq('date', date);
 
       if (error) throw error;
@@ -182,7 +202,12 @@ export const useAttendance = (classId?: string) => {
   };
 
   const fetchAttendanceData = async (startDate?: string, endDate?: string) => {
-    if (!classId && (profile?.role === 'teacher' || profile?.role === 'admin')) {
+    if (profile?.role === 'student') {
+      // For students, fetch their own attendance
+      return fetchStudentAttendance(startDate, endDate);
+    }
+
+    if (!classId) {
       setAttendanceRecords([]);
       setLoading(false);
       return;
@@ -199,16 +224,15 @@ export const useAttendance = (classId?: string) => {
             full_name,
             roll_number,
             parent_contact
-          )
+          ),
+          subjects (name)
         `)
+        .eq('class_id', classId)
         .order('date', { ascending: false });
 
-      if (classId && (profile?.role === 'teacher' || profile?.role === 'admin')) {
-        query = query.eq('class_id', classId);
-      }
-
-      if (profile?.role === 'student') {
-        query = query.eq('student_id', profile.id);
+      // ✅ If subject is specified, filter by it
+      if (subjectId) {
+        query = query.eq('subject_id', subjectId);
       }
 
       if (startDate) {
@@ -225,10 +249,8 @@ export const useAttendance = (classId?: string) => {
       setAttendanceRecords(data || []);
       calculateStats(data || []);
 
-      // Fetch attendance sessions for teachers
-      if ((profile?.role === 'teacher' || profile?.role === 'admin') && classId) {
-        await fetchAttendanceSessions(startDate, endDate);
-      }
+      // Fetch attendance sessions
+      await fetchAttendanceSessions(startDate, endDate);
     } catch (error) {
       console.error('Error fetching attendance data:', error);
       setAttendanceRecords([]);
@@ -239,9 +261,15 @@ export const useAttendance = (classId?: string) => {
 
   const fetchStudentAttendance = async (startDate?: string, endDate?: string) => {
     try {
+      setLoading(true);
+
       let query = supabase
         .from('attendance')
-        .select('*')
+        .select(`
+          *,
+          subjects (name),
+          classes (name)
+        `)
         .eq('student_id', profile?.id)
         .order('date', { ascending: false });
 
@@ -276,10 +304,16 @@ export const useAttendance = (classId?: string) => {
         .from('attendance_sessions')
         .select(`
           *,
-          classes (name)
+          classes (name),
+          subjects (name)
         `)
         .eq('class_id', classId)
         .order('date', { ascending: false });
+
+      // ✅ If subject is specified, filter by it
+      if (subjectId) {
+        query = query.eq('subject_id', subjectId);
+      }
 
       if (startDate) {
         query = query.gte('date', startDate);
@@ -348,6 +382,8 @@ export const useAttendance = (classId?: string) => {
       [studentId]: {
         student_id: studentId,
         class_id: classId!,
+        subject_id: subjectId!, // ✅ Added
+        teacher_id: profile!.id, // ✅ Added
         date: new Date().toISOString().split('T')[0],
         arrival_time: currentTime,
         status: finalStatus,
@@ -357,19 +393,20 @@ export const useAttendance = (classId?: string) => {
   };
 
   const postAttendance = async (date: string = new Date().toISOString().split('T')[0]) => {
-    if (!classId || Object.keys(currentAttendance).length === 0) {
+    if (!classId || !subjectId || Object.keys(currentAttendance).length === 0) {
       throw new Error('No attendance data to post');
     }
 
     setPosting(true);
 
     try {
-      console.log("📅 Posting attendance for date:", date);
-      console.log("🧑‍🏫 Current attendance data:", currentAttendance);
+      console.log("📅 Posting attendance for date:", date, "class:", classId, "subject:", subjectId);
 
       const attendanceData = Object.values(currentAttendance).map(record => ({
         student_id: record.student_id,
         class_id: record.class_id,
+        subject_id: record.subject_id, // ✅ Added
+        teacher_id: record.teacher_id, // ✅ Added
         date,
         arrival_time: record.arrival_time,
         status: record.status,
@@ -379,27 +416,41 @@ export const useAttendance = (classId?: string) => {
 
       console.log("🟩 Prepared attendance data:", attendanceData);
 
+      // ✅ Check if attendance already exists for this class + subject + date
+      const { data: existing, error: checkError } = await supabase
+        .from('attendance')
+        .select('id')
+        .eq('class_id', classId)
+        .eq('subject_id', subjectId)
+        .eq('date', date)
+        .limit(1);
+
+      if (checkError) throw checkError;
+
+      if (existing && existing.length > 0) {
+        throw new Error('Attendance already posted for this subject today');
+      }
+
       const { error: attendanceError } = await supabase
         .from('attendance')
-        .upsert(attendanceData, { onConflict: 'student_id,date' });
+        .insert(attendanceData);
 
       if (attendanceError) throw attendanceError;
 
       console.log("✅ Attendance saved successfully");
 
-      // Late or absent
+      // Clear current attendance after successful post
+      setCurrentAttendance({});
+
+      // Refresh data
+      await fetchTodaysAttendance(date);
+      await fetchAttendanceData();
+
+      // Send notifications for late/absent students
       const affectedStudents = attendanceData.filter(
         r => r.status === 'late' || r.status === 'absent'
       );
 
-      console.log("🟨 Affected students:", affectedStudents);
-
-      if (affectedStudents.length === 0) {
-        console.log("ℹ️ No students to notify");
-        return;
-      }
-
-      // 🔁 Iterate one by one (keeps correct mapping)
       for (const record of affectedStudents) {
         const notificationPayload = {
           type: 'attendance_alert',
@@ -416,73 +467,47 @@ export const useAttendance = (classId?: string) => {
           priority: record.status === 'absent' ? 'high' : 'medium',
         };
 
-        console.log("🟩 Inserting notification for student:", record.student_id);
-
         const { data: notification, error: notifError } = await supabase
           .from('notifications')
           .insert([notificationPayload])
-          .select('id, target_id')
+          .select('id')
           .single();
 
-        if (notifError) {
-          console.error("❌ Error creating notification:", notifError);
-          continue;
+        if (!notifError && notification) {
+          await supabase
+            .from('notification_recipients')
+            .insert([{
+              notification_id: notification.id,
+              user_id: record.student_id,
+              is_read: false,
+              is_deleted: false,
+            }]);
+
+          await sendPushNotification({
+            userId: record.student_id,
+            title: notificationPayload.title,
+            body: notificationPayload.message,
+            data: {
+              type: 'attendance_alert',
+              status: record.status,
+              date,
+              classId: record.class_id,
+              subjectId: record.subject_id,
+              studentId: record.student_id,
+              notificationId: notification.id,
+            },
+          });
         }
-
-        console.log("✅ Notification inserted:", notification);
-
-        const recipientPayload = {
-          notification_id: notification.id,
-          user_id: record.student_id,
-          is_read: false,
-          is_deleted: false,
-        };
-
-        console.log("🟦 Inserting recipient:", recipientPayload);
-
-        const { error: recipientError } = await supabase
-          .from('notification_recipients')
-          .insert([recipientPayload]);
-
-        if (recipientError) {
-          console.error("❌ Error inserting recipient:", recipientError);
-          continue;
-        }
-
-        console.log("✅ Recipient added successfully for:", record.student_id);
-
-        // 📨 Send push notification
-        await sendPushNotification({
-          userId: record.student_id,
-          title:
-            record.status === 'late'
-              ? '⏰ Late Attendance Alert'
-              : '❌ Absence Alert',
-          body:
-            record.status === 'late'
-              ? `You were marked late on ${date}. Please be punctual next time.`
-              : `You were marked absent on ${date}. Please contact your instructor.`,
-          data: {
-            type: 'attendance_alert',
-            status: record.status,
-            date,
-            classId: record.class_id,
-            studentId: record.student_id,
-            notificationId: notification.id,
-            lateMinutes: record.late_minutes || 0,
-          },
-        });
       }
 
-      console.log("🚀 All notifications and recipients inserted successfully");
-    } catch (err) {
+      return { success: true, message: 'Attendance marked successfully' };
+    } catch (err: any) {
       console.error("🔥 Error posting attendance:", err);
+      return { success: false, error: err.message };
     } finally {
       setPosting(false);
     }
   };
-
-
 
   const updateAttendance = async (
     attendanceId: string,
@@ -502,7 +527,6 @@ export const useAttendance = (classId?: string) => {
 
       if (error) throw error;
 
-      // Refresh data including today's attendance
       await Promise.all([
         onRefresh(),
         fetchTodaysAttendance(new Date().toISOString().split('T')[0])
@@ -515,14 +539,12 @@ export const useAttendance = (classId?: string) => {
     }
   };
 
-  // Comprehensive refresh function
   const onRefresh = async () => {
     setRefreshing(true);
     setLoading(true);
 
     try {
       if ((profile?.role === 'teacher' || profile?.role === 'admin') && classId) {
-        // Clear all data first
         setStudents([]);
         setAttendanceRecords([]);
         setAttendanceSessions([]);
@@ -531,15 +553,13 @@ export const useAttendance = (classId?: string) => {
 
         const today = new Date().toISOString().split('T')[0];
 
-        // Fetch fresh data in parallel
         await Promise.all([
           fetchStudents(),
           fetchAttendanceSessions(),
           fetchTodaysAttendance(today),
         ]);
 
-        // Fetch fresh attendance data with recalculation
-        const { data: freshAttendanceData, error } = await supabase
+        let query = supabase
           .from('attendance')
           .select(`
             *,
@@ -547,33 +567,25 @@ export const useAttendance = (classId?: string) => {
               full_name,
               roll_number,
               parent_contact
-            )
+            ),
+            subjects (name)
           `)
           .eq('class_id', classId)
           .order('date', { ascending: false });
 
-        if (!error && freshAttendanceData) {
-          setAttendanceRecords(freshAttendanceData);
-          calculateStats(freshAttendanceData);
+        if (subjectId) {
+          query = query.eq('subject_id', subjectId);
         }
 
+        const { data, error } = await query;
+
+        if (!error && data) {
+          setAttendanceRecords(data);
+          calculateStats(data);
+        }
       } else if (profile?.role === 'student') {
-        // Clear student data first
-        setAttendanceRecords([]);
-
-        // Refresh all student data
-        const { data: studentAttendanceData, error } = await supabase
-          .from('attendance')
-          .select('*')
-          .eq('student_id', profile.id)
-          .order('date', { ascending: false });
-
-        if (!error && studentAttendanceData) {
-          setAttendanceRecords(studentAttendanceData);
-          calculateStats(studentAttendanceData);
-        }
+        await fetchStudentAttendance();
       }
-
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
@@ -601,19 +613,16 @@ export const useAttendance = (classId?: string) => {
     });
   };
 
-  // Check if student has attendance marked for specific date
   const isStudentMarkedForDate = (studentId: string, date: string) => {
-    const isMarked = !!todaysAttendance[studentId];
-    return isMarked;
+    return !!todaysAttendance[studentId];
   };
 
-  // Get student's attendance record for specific date
   const getStudentRecordForDate = (studentId: string, date: string) => {
     return todaysAttendance[studentId] || null;
   };
 
   const checkAttendanceForDate = async (date: string) => {
-    if (!classId) return [];
+    if (!classId || !subjectId) return [];
 
     try {
       const { data, error } = await supabase
@@ -627,6 +636,7 @@ export const useAttendance = (classId?: string) => {
           )
         `)
         .eq('class_id', classId)
+        .eq('subject_id', subjectId)
         .eq('date', date);
 
       if (error) throw error;

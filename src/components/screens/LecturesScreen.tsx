@@ -24,7 +24,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import SubjectFilter from '../common/SubjectFilter';
 import { supabase } from '@/src/lib/supabase';
 
-
 export default function LecturesScreen() {
   const { profile, student } = useAuth();
   const { colors } = useTheme();
@@ -42,53 +41,108 @@ export default function LecturesScreen() {
 
   // Initialize
   useEffect(() => {
-    loadLectures();
-  }, [profile]);
+    if (profile?.id && profile?.role) {
+      loadLectures();
+    }
+  }, [profile?.id, profile?.role]);
 
   useEffect(() => {
-    fetchSubjects();
-  }, []);
+    if (profile?.id && profile?.role) {
+      fetchSubjects();
+    }
+  }, [profile?.id, profile?.role]);
 
   const fetchSubjects = async () => {
     try {
-      const { data, error } = await supabase
-        .from('classes_subjects')
-        .select(`
-                        subjects (
-                        id,
-                        name
-                        )
-                    `)
-        .eq('class_id', student?.class_id)
-        .order('name', { foreignTable: 'subjects' }); // ✅ correct way to order by related table field
+      if (!profile?.id || !profile?.role) {
+        console.log('⚠️ Profile or role not available yet');
+        return;
+      }
 
-      if (error) throw error;
+      console.log('🔍 Fetching subjects for:', profile.role, profile.id);
 
-      // Flatten nested subjects into a simple array
-      const subjectsList = data
-        ?.map(item => item.subjects)
-        .filter(Boolean) || [];
+      // For students, get their class_id from student table
+      let userClassId = null;
 
-      setSubjects(subjectsList);
+      if (profile.role === 'student') {
+        const { data: studentData, error: studentError } = await supabase
+          .from('students')
+          .select('class_id')
+          .eq('id', profile.id)
+          .single();
+
+        if (studentError) {
+          console.error('Error fetching student class:', studentError);
+          return;
+        }
+
+        userClassId = studentData?.class_id;
+
+        if (!userClassId) {
+          console.log('⚠️ Student has no class assigned');
+          return;
+        }
+      }
+
+      // Fetch subjects from enrollments
+      const { data: enrollments, error: enrollmentError } = await supabase
+        .from('student_subject_enrollments')
+        .select('subject_id')
+        .eq(profile.role === 'teacher' ? 'teacher_id' : 'student_id', profile.id)
+        .eq('is_active', true);
+
+      if (enrollmentError) {
+        console.error('Error fetching enrollments:', enrollmentError);
+        return;
+      }
+
+      if (!enrollments || enrollments.length === 0) {
+        console.log('No subject enrollments found');
+        setSubjects([]);
+        return;
+      }
+
+      // Get unique subject IDs
+      const subjectIds = [...new Set(enrollments.map(e => e.subject_id))];
+
+      console.log('📚 Enrolled subject IDs:', subjectIds);
+
+      // Fetch subject details
+      const { data: subjectsData, error: subjectsError } = await supabase
+        .from('subjects')
+        .select('id, name, description')
+        .in('id', subjectIds)
+        .eq('is_active', true)
+        .order('name');
+
+      if (subjectsError) throw subjectsError;
+
+      console.log(`✅ Fetched ${subjectsData?.length || 0} subjects`);
+      setSubjects(subjectsData || []);
     } catch (error) {
       console.error('Error fetching subjects:', error);
+      setSubjects([]);
     }
   };
 
   // Filter lectures when search changes
   useEffect(() => {
-    if (!lectures.length) return;
+    if (!lectures.length) {
+      setFilteredLectures([]);
+      return;
+    }
 
     let updatedLectures = [...lectures];
 
-    // 👩‍🎓 If student, only show lectures of their class
-    if (profile?.role === "student" && student?.class_id) {
+    // Filter by selected subject
+    if (selectedSubject) {
       updatedLectures = updatedLectures.filter(
-        item => item.class_id === student.class_id
+        lecture => lecture.subject_id === selectedSubject
       );
+      console.log('🔍 After subject filter:', updatedLectures.length);
     }
 
-    // 🔍 If search query is entered, filter further
+    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       updatedLectures = updatedLectures.filter(
@@ -98,37 +152,46 @@ export default function LecturesScreen() {
           lecture.classes?.name?.toLowerCase().includes(query) ||
           lecture.subjects?.name?.toLowerCase().includes(query)
       );
-      console.log("🔍 After search filter:", updatedLectures.length);
+      console.log('🔍 After search filter:', updatedLectures.length);
     }
 
     setFilteredLectures(updatedLectures);
-  }, [lectures, searchQuery, profile, student]);
+  }, [lectures, searchQuery, selectedSubject]);
 
   // 🔄 Automatically refresh when the screen becomes active
   useFocusEffect(
     useCallback(() => {
-      onRefresh();
-    }, [profile])
+      if (profile?.id && profile?.role) {
+        onRefresh();
+      }
+    }, [profile?.id, profile?.role])
   );
 
-
   const loadLectures = async () => {
-    if (!profile) return;
+    if (!profile?.id || !profile?.role) {
+      console.log('⚠️ Profile or role not available yet');
+      return;
+    }
 
     try {
-      const data = await lectureService.fetchLectures({ userId: profile.id });
+      setLoading(true);
 
-      let filteredData = data;
+      console.log('📚 Loading lectures for:', profile.role, profile.id);
 
-      // 👩‍🎓 If student, only keep their class lectures
-      if (profile.role === "student" && student?.class_id) {
-        filteredData = data.filter(item => item.class_id === student.class_id);
-      }
+      const data = await lectureService.fetchLectures({
+        userId: profile.id,
+        role: profile.role, // ✅ Pass role here
+      });
 
-      setLectures(filteredData);
-      setFilteredLectures(filteredData);
+      console.log(`✅ Loaded ${data?.length || 0} lectures`);
+
+      setLectures(data || []);
+      setFilteredLectures(data || []);
     } catch (error) {
+      console.error('Error loading lectures:', error);
       Alert.alert('Error', 'Failed to load lectures');
+      setLectures([]);
+      setFilteredLectures([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -138,42 +201,7 @@ export default function LecturesScreen() {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadLectures();
-  }, [profile]);
-
-  useEffect(() => {
-    if (!lectures.length) return;
-
-    let updatedLectures = [...lectures];
-
-    // If student, only show lectures of their class
-    if (profile?.role === "student" && student?.class_id) {
-      updatedLectures = updatedLectures.filter(
-        item => item.class_id === student.class_id
-      );
-    }
-
-    // Filter by selected subject (for students only)
-    if (profile?.role === "student" && selectedSubject) {
-      updatedLectures = updatedLectures.filter(
-        lecture => lecture.subject_id === selectedSubject
-      );
-    }
-
-    // If search query is entered, filter further
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      updatedLectures = updatedLectures.filter(
-        lecture =>
-          lecture.title?.toLowerCase().includes(query) ||
-          lecture.description?.toLowerCase().includes(query) ||
-          lecture.classes?.name?.toLowerCase().includes(query) ||
-          lecture.subjects?.name?.toLowerCase().includes(query)
-      );
-    }
-
-    setFilteredLectures(updatedLectures);
-  }, [lectures, searchQuery, selectedSubject, profile, student]);
-
+  }, [profile?.id, profile?.role]);
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -198,7 +226,6 @@ export default function LecturesScreen() {
       <TopSection />
 
       <View style={styles.header}>
-
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -227,13 +254,6 @@ export default function LecturesScreen() {
             />
           )}
 
-          {/* <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-            onPress={() => setFilterModalVisible(true)}
-          >
-            <Filter size={20} color={colors.primary} />
-          </TouchableOpacity> */}
-
           {(profile?.role === 'teacher' || profile?.role === 'admin') && (
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.primary }]}
@@ -243,7 +263,6 @@ export default function LecturesScreen() {
             </TouchableOpacity>
           )}
         </View>
-
       </View>
 
       {/* Lectures List */}
@@ -252,7 +271,7 @@ export default function LecturesScreen() {
         renderItem={renderLecture}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
-        // ListEmptyComponent={!loading ? renderEmpty : null}
+        ListEmptyComponent={!loading ? renderEmpty : null}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -280,7 +299,6 @@ export default function LecturesScreen() {
         onSuccess={loadLectures}
       />
     </SafeAreaView>
-
   );
 }
 
@@ -290,9 +308,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    // borderWidth : 1,
     marginTop: -12
-    // borderWidth: 1
   },
   title: {
     fontSize: 24,
@@ -314,18 +330,18 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    // paddingVertical: 60,
+    paddingVertical: 60,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    // marginTop: 16,
-    // marginBottom: 8,
+    marginTop: 16,
   },
   emptySubtitle: {
     fontSize: 14,
     textAlign: 'center',
     paddingHorizontal: 40,
+    marginTop: 8,
   },
   fab: {
     position: 'absolute',
@@ -342,11 +358,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
   },
-
-
   searchContainer: {
     flexDirection: 'row',
-    // paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 16,
     gap: 12,
