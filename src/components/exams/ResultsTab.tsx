@@ -310,6 +310,8 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     );
 };
 
+import { TextSizes } from '@/src/styles/TextSizes'; // <--- import TextSizes
+
 const styles = StyleSheet.create({
     resultsContainer: {
         flex: 1,
@@ -324,12 +326,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     filterSummaryText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
         flex: 1,
     },
     resultCount: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
     resultsList: {
@@ -356,22 +358,22 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     resultTitle: {
-        fontSize: 16,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
         marginBottom: 4,
     },
     resultSubject: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         marginBottom: 2,
     },
     resultClass: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         marginBottom: 2,
     },
     studentName: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
     },
     resultStatus: {
@@ -386,12 +388,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     resultLabel: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         marginBottom: 4,
     },
     resultValue: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
     gradeContainer: {
@@ -401,7 +403,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     gradeText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
         color: '#ffffff',
     },
@@ -410,7 +412,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     pendingText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
     },
     absentResult: {
@@ -418,12 +420,12 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     absentText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
         marginBottom: 4,
     },
     absentReason: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
     },
     remarksContainer: {
@@ -432,14 +434,14 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     remarksLabel: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
         marginBottom: 4,
     },
     remarksText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
-        lineHeight: 18,
+        lineHeight: TextSizes.medium + 4,
     },
     emptyResults: {
         flex: 1,
@@ -448,13 +450,13 @@ const styles = StyleSheet.create({
         paddingVertical: 60,
     },
     emptyText: {
-        fontSize: 18,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
         marginTop: 16,
         marginBottom: 8,
     },
     emptySubtext: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
         paddingHorizontal: 20,
@@ -468,12 +470,12 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
     },
     suggestionsTitle: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
         marginBottom: 8,
     },
     suggestionText: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         marginBottom: 4,
     },
@@ -484,10 +486,191 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     editHintText: {
-        fontSize: 11,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         fontStyle: 'italic',
     },
 });
+
+
+// const styles = StyleSheet.create({
+//     resultsContainer: {
+//         flex: 1,
+//     },
+//     filterSummary: {
+//         borderRadius: 12,
+//         padding: 16,
+//         marginBottom: 16,
+//         borderWidth: 1,
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//     },
+//     filterSummaryText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         flex: 1,
+//     },
+//     resultCount: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     resultsList: {
+//         flex: 1,
+//     },
+//     resultCard: {
+//         borderRadius: 16,
+//         padding: 20,
+//         marginBottom: 12,
+//         borderWidth: 1,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.05,
+//         shadowRadius: 4,
+//         elevation: 2,
+//     },
+//     resultHeader: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         marginBottom: 12,
+//     },
+//     resultInfo: {
+//         flex: 1,
+//     },
+//     resultTitle: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 4,
+//     },
+//     resultSubject: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//         marginBottom: 2,
+//     },
+//     resultClass: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//         marginBottom: 2,
+//     },
+//     studentName: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     resultStatus: {
+//         marginLeft: 12,
+//     },
+//     resultDetails: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         marginBottom: 12,
+//     },
+//     resultDetail: {
+//         alignItems: 'center',
+//     },
+//     resultLabel: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//         marginBottom: 4,
+//     },
+//     resultValue: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     gradeContainer: {
+//         paddingHorizontal: 12,
+//         paddingVertical: 6,
+//         borderRadius: 8,
+//         alignItems: 'center',
+//     },
+//     gradeText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#ffffff',
+//     },
+//     pendingResult: {
+//         alignItems: 'center',
+//         paddingVertical: 12,
+//     },
+//     pendingText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     absentResult: {
+//         alignItems: 'center',
+//         paddingVertical: 12,
+//     },
+//     absentText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//         marginBottom: 4,
+//     },
+//     absentReason: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     remarksContainer: {
+//         borderRadius: 8,
+//         padding: 12,
+//         marginTop: 8,
+//     },
+//     remarksLabel: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//         marginBottom: 4,
+//     },
+//     remarksText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         lineHeight: 18,
+//     },
+//     emptyResults: {
+//         flex: 1,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingVertical: 60,
+//     },
+//     emptyText: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//         marginTop: 16,
+//         marginBottom: 8,
+//     },
+//     emptySubtext: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         textAlign: 'center',
+//         paddingHorizontal: 20,
+//         marginBottom: 20,
+//     },
+//     suggestionsContainer: {
+//         borderRadius: 12,
+//         padding: 16,
+//         borderWidth: 1,
+//         alignSelf: 'stretch',
+//         marginHorizontal: 20,
+//     },
+//     suggestionsTitle: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 8,
+//     },
+//     suggestionText: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//         marginBottom: 4,
+//     },
+//     editHintContainer: {
+//         borderRadius: 6,
+//         padding: 8,
+//         marginTop: 8,
+//         alignItems: 'center',
+//     },
+//     editHintText: {
+//         fontSize: 11,
+//         fontFamily: 'Inter-Regular',
+//         fontStyle: 'italic',
+//     },
+// });
 
 export default ResultsTab;

@@ -235,8 +235,8 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                     <OptionButton
                                         key={classItem.id}
                                         selected={filters.selectedClass === classItem.id}
-                                        onPress={() => setFilters(prev => ({ 
-                                            ...prev, 
+                                        onPress={() => setFilters(prev => ({
+                                            ...prev,
                                             selectedClass: classItem.id,
                                             selectedStudent: '' // Reset student when class changes
                                         }))}
@@ -448,6 +448,16 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
 
                     {/* Actions */}
                     <View style={[styles.actions, { borderTopColor: colors.border }]}>
+
+
+                        <View style={styles.mainActions}>
+                            {/* <TouchableOpacity
+                                style={[styles.button, styles.cancelButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+                                onPress={onClose}
+                            >
+                                <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
+                            </TouchableOpacity> */}
+
                         <TouchableOpacity
                             style={[styles.resetButton, { backgroundColor: colors.background, borderColor: colors.border }]}
                             onPress={handleReset}
@@ -455,15 +465,6 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                             <RotateCcw size={16} color={colors.textSecondary} />
                             <Text allowFontScaling={false} style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset</Text>
                         </TouchableOpacity>
-
-                        <View style={styles.mainActions}>
-                            <TouchableOpacity
-                                style={[styles.button, styles.cancelButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-                                onPress={onClose}
-                            >
-                                <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
-                            </TouchableOpacity>
-
                             <TouchableOpacity
                                 style={[styles.button, styles.applyButton, { backgroundColor: colors.primary }]}
                                 onPress={handleApply}
@@ -477,6 +478,8 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
         </Modal>
     );
 };
+
+import { TextSizes } from '@/src/styles/TextSizes';
 
 const styles = StyleSheet.create({
     overlay: {
@@ -503,7 +506,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     title: {
-        fontSize: 20,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
     },
     closeButton: {
@@ -525,7 +528,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
     optionButton: {
@@ -544,11 +547,11 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     viewTypeTitle: {
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
     viewTypeDesc: {
-        fontSize: 13,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         marginTop: 2,
     },
@@ -561,7 +564,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     optionText: {
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
     },
     emptyContainer: {
@@ -570,7 +573,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     emptyText: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
     },
     studentListContainer: {
@@ -583,11 +586,11 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     studentName: {
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
     studentRoll: {
-        fontSize: 13,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
     },
     dateRangeGrid: {
@@ -602,7 +605,7 @@ const styles = StyleSheet.create({
         padding: 12,
     },
     dateRangeText: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
     },
     customDateContainer: {
@@ -615,14 +618,14 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     dateLabel: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
     },
     dateInput: {
         borderWidth: 1,
         borderRadius: 8,
         padding: 12,
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
     },
     statusGrid: {
@@ -643,7 +646,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
     },
     statusText: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
     },
     actions: {
@@ -661,7 +664,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     resetButtonText: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
     },
     mainActions: {
@@ -686,12 +689,230 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     buttonText: {
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
     applyButtonText: {
         color: '#ffffff',
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
 });
+
+// const styles = StyleSheet.create({
+//     overlay: {
+//         flex: 1,
+//         backgroundColor: 'rgba(0, 0, 0, 0.5)',
+//         justifyContent: 'flex-end',
+//     },
+//     modalContainer: {
+//         borderTopLeftRadius: 24,
+//         borderTopRightRadius: 24,
+//         maxHeight: '90%',
+//         minHeight: '70%',
+//     },
+//     header: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         padding: 24,
+//         borderBottomWidth: 1,
+//     },
+//     headerLeft: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 12,
+//     },
+//     title: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     closeButton: {
+//         padding: 4,
+//     },
+//     content: {
+//         flex: 1,
+//         padding: 24,
+//     },
+//     section: {
+//         marginBottom: 32,
+//         borderBottomWidth: 1,
+//         paddingBottom: 24,
+//     },
+//     sectionHeader: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 8,
+//         marginBottom: 16,
+//     },
+//     sectionTitle: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     optionButton: {
+//         padding: 12,
+//         borderRadius: 12,
+//         borderWidth: 1,
+//         marginBottom: 8,
+//     },
+//     viewTypeContainer: {
+//         gap: 12,
+//     },
+//     viewTypeButton: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 12,
+//         padding: 16,
+//     },
+//     viewTypeTitle: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     viewTypeDesc: {
+//         fontSize: 13,
+//         fontFamily: 'Inter-Regular',
+//         marginTop: 2,
+//     },
+//     horizontalScroll: {
+//         marginHorizontal: -8,
+//     },
+//     classButton: {
+//         marginHorizontal: 4,
+//         minWidth: 100,
+//         alignItems: 'center',
+//     },
+//     optionText: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     emptyContainer: {
+//         padding: 16,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//     },
+//     emptyText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     studentListContainer: {
+//         gap: 8,
+//     },
+//     studentButton: {
+//         padding: 16,
+//     },
+//     studentInfo: {
+//         gap: 4,
+//     },
+//     studentName: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     studentRoll: {
+//         fontSize: 13,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     dateRangeGrid: {
+//         flexDirection: 'row',
+//         flexWrap: 'wrap',
+//         gap: 8,
+//     },
+//     dateRangeButton: {
+//         flex: 1,
+//         minWidth: '45%',
+//         alignItems: 'center',
+//         padding: 12,
+//     },
+//     dateRangeText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     customDateContainer: {
+//         borderRadius: 12,
+//         padding: 16,
+//         marginTop: 12,
+//         gap: 12,
+//     },
+//     dateInputGroup: {
+//         gap: 8,
+//     },
+//     dateLabel: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     dateInput: {
+//         borderWidth: 1,
+//         borderRadius: 8,
+//         padding: 12,
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     statusGrid: {
+//         flexDirection: 'row',
+//         flexWrap: 'wrap',
+//         gap: 8,
+//     },
+//     statusButton: {
+//         flex: 1,
+//         minWidth: '45%',
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         gap: 8,
+//         padding: 12,
+//     },
+//     statusIcon: {
+//         fontSize: 18,
+//     },
+//     statusText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     actions: {
+//         borderTopWidth: 1,
+//         padding: 24,
+//         gap: 16,
+//     },
+//     resetButton: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         gap: 8,
+//         padding: 12,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//     },
+//     resetButtonText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     mainActions: {
+//         flexDirection: 'row',
+//         gap: 12,
+//     },
+//     button: {
+//         flex: 1,
+//         paddingVertical: 16,
+//         paddingHorizontal: 20,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//     },
+//     cancelButton: {
+//         borderWidth: 1,
+//     },
+//     applyButton: {
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.1,
+//         shadowRadius: 4,
+//         elevation: 2,
+//     },
+//     buttonText: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     applyButtonText: {
+//         color: '#ffffff',
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+// });

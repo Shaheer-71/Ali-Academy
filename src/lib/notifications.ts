@@ -1,11 +1,40 @@
 // ============================================
-// lib/notifications.ts - COMPLETE NOTIFICATION SYSTEM
+// lib/notifications.ts - COMPLETE NOTIFICATION SYSTEM WITH IP TRACKING
 // ============================================
 
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { supabase } from './supabase';
 import { Platform } from 'react-native';
+
+// ============================================
+// HELPER: GET DEVICE IP ADDRESS
+// ============================================
+async function getDeviceIP(): Promise<string | null> {
+    try {
+        console.log('🌐 [IP] Fetching device IP address...');
+        
+        // Using ipify API (free, reliable, no auth needed)
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        
+        console.log('✅ [IP] IP address fetched:', data.ip);
+        return data.ip;
+    } catch (error) {
+        console.log('❌ [IP] Error fetching IP:', error);
+        // Fallback to another service
+        try {
+            console.log('🔄 [IP] Trying fallback IP service...');
+            const response = await fetch('https://api.ipify.org');
+            const ip = await response.text();
+            console.log('✅ [IP] IP address fetched (fallback):', ip);
+            return ip;
+        } catch (fallbackError) {
+            console.log('❌ [IP] Fallback also failed:', fallbackError);
+            return null;
+        }
+    }
+}
 
 // ============================================
 // 1. SETUP NOTIFICATION HANDLERS (Foreground + Background)
@@ -64,7 +93,7 @@ export function setupNotificationHandlers() {
 }
 
 // ============================================
-// 2. REGISTER DEVICE FOR NOTIFICATIONS
+// 2. REGISTER DEVICE FOR NOTIFICATIONS (WITH IP)
 // ============================================
 export async function registerDeviceForNotifications(userId: string) {
     try {
@@ -97,12 +126,17 @@ export async function registerDeviceForNotifications(userId: string) {
             return;
         }
 
-        // Save token to Supabase
+        // Get device IP address
+        const deviceIP = await getDeviceIP();
+        console.log('🌐 [REGISTER] Device IP:', deviceIP || 'Not available');
+
+        // Save token and IP to Supabase
         console.log('💾 [SUPABASE] Saving to devices table...');
         console.log('📋 [SUPABASE] Data:', {
             user_id: userId,
             token: token,
             platform: Platform.OS,
+            ip_address: deviceIP,
         });
 
         const { data: upsertData, error } = await supabase
@@ -111,6 +145,7 @@ export async function registerDeviceForNotifications(userId: string) {
                 user_id: userId,
                 token: token,
                 platform: Platform.OS,
+                ip_address: deviceIP,
                 updated_at: new Date().toISOString(),
             });
 
@@ -150,7 +185,7 @@ export async function sendPushNotification({
         console.log('🔍 [SEND] Fetching device tokens from Supabase...');
         const { data: devices, error: fetchError } = await supabase
             .from('devices')
-            .select('token, platform')
+            .select('token, platform, ip_address')
             .eq('user_id', userId);
 
         console.log('🔍 [SEND] Fetch response:', { deviceCount: devices?.length, error: fetchError });
@@ -175,6 +210,7 @@ export async function sendPushNotification({
             const device = devices[i];
             console.log(`📱 [SEND] Sending to device ${i + 1}/${devices.length}:`, {
                 platform: device.platform,
+                ip: device.ip_address || 'Unknown',
                 token: device.token.substring(0, 30) + '...',
             });
 
@@ -254,13 +290,45 @@ export async function getDeviceInfo(userId: string) {
         const { data, error } = await supabase
             .from('devices')
             .select('*')
-            .eq('user_id', userId)
-            .single();
+            .eq('user_id', userId);
 
         console.log('🔎 [DEBUG] Device info:', { data, error });
         return data;
     } catch (error) {
         console.log('❌ [DEBUG] Error fetching device info:', error);
         return null;
+    }
+}
+
+// ============================================
+// 6. UPDATE DEVICE IP (Manually refresh IP)
+// ============================================
+export async function updateDeviceIP(userId: string) {
+    try {
+        console.log('🔄 [UPDATE IP] Updating device IP for user:', userId);
+
+        const deviceIP = await getDeviceIP();
+        
+        if (!deviceIP) {
+            console.log('❌ [UPDATE IP] Could not fetch IP address');
+            return;
+        }
+
+        const { error } = await supabase
+            .from('devices')
+            .update({ 
+                ip_address: deviceIP,
+                updated_at: new Date().toISOString()
+            })
+            .eq('user_id', userId);
+
+        if (error) {
+            console.log('❌ [UPDATE IP] Error updating IP:', error.message);
+            return;
+        }
+
+        console.log('✅ [UPDATE IP] IP address updated successfully:', deviceIP);
+    } catch (error) {
+        console.log('❌ [UPDATE IP] Error:', error);
     }
 }

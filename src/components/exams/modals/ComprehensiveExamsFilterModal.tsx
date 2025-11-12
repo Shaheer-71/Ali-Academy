@@ -17,8 +17,8 @@ interface Subject {
 interface ExamFilterData {
     selectedClass: string;
     selectedSubject: string;
-    statusFilter: 'all' | 'scheduled' | 'completed'; // For Schedule tab
-    checkedFilter: 'all' | 'checked' | 'unchecked'; // For Results tab
+    statusFilter: 'all' | 'scheduled' | 'completed';
+    checkedFilter: 'all' | 'checked' | 'unchecked';
 }
 
 interface ComprehensiveExamsFilterModalProps {
@@ -30,7 +30,7 @@ interface ComprehensiveExamsFilterModalProps {
     onApplyFilters: (filters: ExamFilterData) => void;
     userRole: 'teacher' | 'student';
     activeTab: 'schedule' | 'results' | 'reports';
-    getSubjectsWithAll: (classId?: string) => Subject[];
+    getSubjectsForClass: (classId: string) => Promise<Subject[]>;
 }
 
 export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterModalProps> = ({
@@ -42,31 +42,62 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
     onApplyFilters,
     userRole,
     activeTab,
-    getSubjectsWithAll,
+    getSubjectsForClass,
 }) => {
     const { colors } = useTheme();
     const [filters, setFilters] = useState<ExamFilterData>(currentFilters);
+    const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
+    const [loadingSubjects, setLoadingSubjects] = useState(false);
 
     useEffect(() => {
         setFilters(currentFilters);
     }, [currentFilters, visible]);
 
+    // Fetch subjects when class changes
+    useEffect(() => {
+        if (filters.selectedClass) {
+            loadSubjectsForClass(filters.selectedClass);
+        } else {
+            setAvailableSubjects([]);
+        }
+    }, [filters.selectedClass]);
+
+    const loadSubjectsForClass = async (classId: string) => {
+        setLoadingSubjects(true);
+        try {
+            const classSubjects = await getSubjectsForClass(classId);
+            setAvailableSubjects(classSubjects);
+        } catch (error) {
+            console.error('Error loading subjects:', error);
+            setAvailableSubjects([]);
+        } finally {
+            setLoadingSubjects(false);
+        }
+    };
+
     const handleApply = () => {
+        // Validate selections
+        if (!filters.selectedClass || !filters.selectedSubject) {
+            alert('Please select both class and subject');
+            return;
+        }
         onApplyFilters(filters);
         onClose();
     };
 
     const handleReset = () => {
         const resetFilters: ExamFilterData = {
-            selectedClass: 'all',
-            selectedSubject: 'all',
+            selectedClass: classes.length > 0 ? classes[0].id : '',
+            selectedSubject: '',
             statusFilter: 'all',
             checkedFilter: 'all',
         };
         setFilters(resetFilters);
-        // 🎯 IMMEDIATE APPLY - This fixes the red dot issue
-        onApplyFilters(resetFilters);
-        onClose(); // Close modal immediately after reset
+
+        // Load subjects for first class
+        if (classes.length > 0) {
+            loadSubjectsForClass(classes[0].id);
+        }
     };
 
     const statusOptions = [
@@ -81,14 +112,14 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
         { value: 'unchecked' as const, label: 'Pending', icon: '⏳', color: '#F59E0B' },
     ];
 
-    const FilterSection = ({ 
-        title, 
-        icon, 
-        children 
-    }: { 
-        title: string; 
-        icon: React.ReactNode; 
-        children: React.ReactNode; 
+    const FilterSection = ({
+        title,
+        icon,
+        children
+    }: {
+        title: string;
+        icon: React.ReactNode;
+        children: React.ReactNode;
     }) => (
         <View style={[styles.section, { borderColor: colors.border }]}>
             <View style={styles.sectionHeader}>
@@ -99,16 +130,16 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
         </View>
     );
 
-    const OptionButton = ({ 
-        selected, 
-        onPress, 
-        children, 
-        style = {} 
-    }: { 
-        selected: boolean; 
-        onPress: () => void; 
-        children: React.ReactNode; 
-        style?: any; 
+    const OptionButton = ({
+        selected,
+        onPress,
+        children,
+        style = {}
+    }: {
+        selected: boolean;
+        onPress: () => void;
+        children: React.ReactNode;
+        style?: any;
     }) => (
         <TouchableOpacity
             style={[
@@ -122,17 +153,6 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
             {children}
         </TouchableOpacity>
     );
-
-    // Get classes with "All" option
-    const getClassesWithAll = () => [
-        { id: 'all', name: 'All Classes' },
-        ...classes
-    ];
-
-    // Get available subjects based on selected class
-    const getAvailableSubjects = () => {
-        return getSubjectsWithAll(filters.selectedClass);
-    };
 
     return (
         <Modal visible={visible} transparent animationType="fade">
@@ -154,19 +174,19 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                         {userRole === 'teacher' && (
                             <FilterSection title="Select Class" icon={<Building size={20} color={colors.primary} />}>
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-                                    {getClassesWithAll().map((classItem) => (
+                                    {classes.map((classItem) => (
                                         <OptionButton
                                             key={classItem.id}
                                             selected={filters.selectedClass === classItem.id}
-                                            onPress={() => setFilters(prev => ({ 
-                                                ...prev, 
+                                            onPress={() => setFilters(prev => ({
+                                                ...prev,
                                                 selectedClass: classItem.id,
-                                                selectedSubject: 'all' // Reset subject when class changes
+                                                selectedSubject: '' // Reset subject when class changes
                                             }))}
                                             style={styles.classButton}
                                         >
                                             <Text allowFontScaling={false} style={[
-                                                styles.optionText, 
+                                                styles.optionText,
                                                 { color: filters.selectedClass === classItem.id ? colors.primary : colors.text }
                                             ]}>
                                                 {classItem.name}
@@ -178,25 +198,47 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                         )}
 
                         {/* Subject Filter */}
-                        <FilterSection title="Select Subject" icon={<BookOpen size={20} color={colors.primary} />}>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-                                {getAvailableSubjects().map((subject) => (
-                                    <OptionButton
-                                        key={subject.id}
-                                        selected={filters.selectedSubject === subject.id}
-                                        onPress={() => setFilters(prev => ({ ...prev, selectedSubject: subject.id }))}
-                                        style={styles.subjectButton}
-                                    >
-                                        <Text allowFontScaling={false} style={[
-                                            styles.optionText, 
-                                            { color: filters.selectedSubject === subject.id ? colors.primary : colors.text }
-                                        ]}>
-                                            {subject.name}
+                        {userRole === 'teacher' && (
+                            <FilterSection title="Select Subject" icon={<BookOpen size={20} color={colors.primary} />}>
+                                {!filters.selectedClass ? (
+                                    <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
+                                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
+                                            Please select a class first
                                         </Text>
-                                    </OptionButton>
-                                ))}
-                            </ScrollView>
-                        </FilterSection>
+                                    </View>
+                                ) : loadingSubjects ? (
+                                    <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
+                                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
+                                            Loading subjects...
+                                        </Text>
+                                    </View>
+                                ) : availableSubjects.length === 0 ? (
+                                    <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
+                                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
+                                            No subjects assigned to this class
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                                        {availableSubjects.map((subject) => (
+                                            <OptionButton
+                                                key={subject.id}
+                                                selected={filters.selectedSubject === subject.id}
+                                                onPress={() => setFilters(prev => ({ ...prev, selectedSubject: subject.id }))}
+                                                style={styles.subjectButton}
+                                            >
+                                                <Text allowFontScaling={false} style={[
+                                                    styles.optionText,
+                                                    { color: filters.selectedSubject === subject.id ? colors.primary : colors.text }
+                                                ]}>
+                                                    {subject.name}
+                                                </Text>
+                                            </OptionButton>
+                                        ))}
+                                    </ScrollView>
+                                )}
+                            </FilterSection>
+                        )}
 
                         {/* Status Filter - For Schedule Tab */}
                         {(activeTab === 'schedule' || activeTab === 'reports') && (
@@ -211,7 +253,7 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                                         >
                                             <Text allowFontScaling={false} style={styles.statusIcon}>{option.icon}</Text>
                                             <Text allowFontScaling={false} style={[
-                                                styles.optionText, 
+                                                styles.optionText,
                                                 { color: filters.statusFilter === option.value ? colors.primary : colors.text }
                                             ]}>
                                                 {option.label}
@@ -235,7 +277,7 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                                         >
                                             <Text allowFontScaling={false} style={styles.statusIcon}>{option.icon}</Text>
                                             <Text allowFontScaling={false} style={[
-                                                styles.optionText, 
+                                                styles.optionText,
                                                 { color: filters.checkedFilter === option.value ? colors.primary : colors.text }
                                             ]}>
                                                 {option.label}
@@ -249,53 +291,52 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                         {/* Applied Filters Summary */}
                         <View style={[styles.summarySection, { backgroundColor: colors.background, borderColor: colors.border }]}>
                             <Text allowFontScaling={false} style={[styles.summaryTitle, { color: colors.text }]}>Current Filters:</Text>
-                            
+
                             {userRole === 'teacher' && (
-                                <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
-                                    • Class: {getClassesWithAll().find(c => c.id === filters.selectedClass)?.name || 'All Classes'}
-                                </Text>
+                                <>
+                                    <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                                        • Class: {classes.find(c => c.id === filters.selectedClass)?.name || 'None selected'}
+                                    </Text>
+                                    <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
+                                        • Subject: {availableSubjects.find(s => s.id === filters.selectedSubject)?.name || 'None selected'}
+                                    </Text>
+                                </>
                             )}
-                            
-                            <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
-                                • Subject: {getAvailableSubjects().find(s => s.id === filters.selectedSubject)?.name || 'All Subjects'}
-                            </Text>
-                            
+
                             {(activeTab === 'schedule' || activeTab === 'reports') && (
                                 <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                     • Status: {statusOptions.find(s => s.value === filters.statusFilter)?.label}
                                 </Text>
                             )}
-                            
+
                             {activeTab === 'results' && userRole === 'teacher' && (
                                 <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
                                     • Evaluation: {evaluationOptions.find(e => e.value === filters.checkedFilter)?.label}
                                 </Text>
                             )}
-
-                            <Text allowFontScaling={false} style={[styles.summaryItem, { color: colors.textSecondary }]}>
-                                • Active Tab: {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-                            </Text>
                         </View>
                     </ScrollView>
 
                     {/* Actions */}
                     <View style={[styles.actions, { borderTopColor: colors.border }]}>
-                        <TouchableOpacity
-                            style={[styles.resetButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-                            onPress={handleReset}
-                        >
-                            <RotateCcw size={16} color={colors.textSecondary} />
-                            <Text allowFontScaling={false} style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset & Apply</Text>
-                        </TouchableOpacity>
-                        
+
+
                         <View style={styles.mainActions}>
+
                             <TouchableOpacity
+                                style={[styles.resetButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+                                onPress={handleReset}
+                            >
+                                <RotateCcw size={16} color={colors.textSecondary} />
+                                <Text allowFontScaling={false} style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset & Apply</Text>
+                            </TouchableOpacity>
+                            {/* <TouchableOpacity
                                 style={[styles.button, styles.cancelButton, { backgroundColor: colors.background, borderColor: colors.border }]}
                                 onPress={onClose}
                             >
                                 <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
-                            </TouchableOpacity>
-                            
+                            </TouchableOpacity> */}
+
                             <TouchableOpacity
                                 style={[styles.button, styles.applyButton, { backgroundColor: colors.primary }]}
                                 onPress={handleApply}
@@ -309,6 +350,9 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
         </Modal>
     );
 };
+
+
+import { TextSizes } from '@/src/styles/TextSizes';
 
 const styles = StyleSheet.create({
     overlay: {
@@ -335,7 +379,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     title: {
-        fontSize: 20,
+        fontSize: TextSizes.extraLarge, // from 20
         fontFamily: 'Inter-SemiBold',
     },
     closeButton: {
@@ -357,7 +401,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: TextSizes.large, // from 18
         fontFamily: 'Inter-SemiBold',
     },
     horizontalScroll: {
@@ -379,6 +423,15 @@ const styles = StyleSheet.create({
         minWidth: 120,
         alignItems: 'center',
     },
+    emptyContainer: {
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    emptyText: {
+        fontSize: TextSizes.medium, // from 14
+        fontFamily: 'Inter-Regular',
+    },
     statusContainer: {
         gap: 8,
     },
@@ -389,10 +442,10 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     statusIcon: {
-        fontSize: 20,
+        fontSize: TextSizes.extraLarge, // from 20
     },
     optionText: {
-        fontSize: 16,
+        fontSize: TextSizes.medium, // from 16
         fontFamily: 'Inter-Medium',
     },
     summarySection: {
@@ -402,12 +455,12 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     summaryTitle: {
-        fontSize: 16,
+        fontSize: TextSizes.medium, // from 16
         fontFamily: 'Inter-SemiBold',
         marginBottom: 8,
     },
     summaryItem: {
-        fontSize: 14,
+        fontSize: TextSizes.small, // from 14
         fontFamily: 'Inter-Regular',
         marginBottom: 4,
     },
@@ -426,7 +479,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     resetButtonText: {
-        fontSize: 14,
+        fontSize: TextSizes.small, // from 14
         fontFamily: 'Inter-Medium',
     },
     mainActions: {
@@ -451,12 +504,173 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     buttonText: {
-        fontSize: 16,
+        fontSize: TextSizes.medium, // from 16
         fontFamily: 'Inter-SemiBold',
     },
     applyButtonText: {
         color: '#ffffff',
-        fontSize: 16,
+        fontSize: TextSizes.medium, // from 16
         fontFamily: 'Inter-SemiBold',
     },
 });
+
+
+// const styles = StyleSheet.create({
+//     overlay: {
+//         flex: 1,
+//         backgroundColor: 'rgba(0, 0, 0, 0.5)',
+//         justifyContent: 'flex-end',
+//     },
+//     modalContainer: {
+//         borderTopLeftRadius: 24,
+//         borderTopRightRadius: 24,
+//         maxHeight: '85%',
+//         minHeight: '60%',
+//     },
+//     header: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         padding: 24,
+//         borderBottomWidth: 1,
+//     },
+//     headerLeft: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 12,
+//     },
+//     title: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     closeButton: {
+//         padding: 4,
+//     },
+//     content: {
+//         flex: 1,
+//         padding: 24,
+//     },
+//     section: {
+//         marginBottom: 32,
+//         borderBottomWidth: 1,
+//         paddingBottom: 24,
+//     },
+//     sectionHeader: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 8,
+//         marginBottom: 16,
+//     },
+//     sectionTitle: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     horizontalScroll: {
+//         marginHorizontal: -8,
+//     },
+//     optionButton: {
+//         padding: 12,
+//         borderRadius: 12,
+//         borderWidth: 1,
+//         marginBottom: 8,
+//     },
+//     classButton: {
+//         marginHorizontal: 4,
+//         minWidth: 100,
+//         alignItems: 'center',
+//     },
+//     subjectButton: {
+//         marginHorizontal: 4,
+//         minWidth: 120,
+//         alignItems: 'center',
+//     },
+//     emptyContainer: {
+//         padding: 16,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//     },
+//     emptyText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     statusContainer: {
+//         gap: 8,
+//     },
+//     statusButton: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 12,
+//         padding: 16,
+//     },
+//     statusIcon: {
+//         fontSize: 20,
+//     },
+//     optionText: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     summarySection: {
+//         borderRadius: 12,
+//         borderWidth: 1,
+//         padding: 16,
+//         marginTop: 8,
+//     },
+//     summaryTitle: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 8,
+//     },
+//     summaryItem: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         marginBottom: 4,
+//     },
+//     actions: {
+//         borderTopWidth: 1,
+//         padding: 24,
+//         gap: 16,
+//     },
+//     resetButton: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         gap: 8,
+//         padding: 12,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//     },
+//     resetButtonText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     mainActions: {
+//         flexDirection: 'row',
+//         gap: 12,
+//     },
+//     button: {
+//         flex: 1,
+//         paddingVertical: 16,
+//         paddingHorizontal: 20,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//     },
+//     cancelButton: {
+//         borderWidth: 1,
+//     },
+//     applyButton: {
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.1,
+//         shadowRadius: 4,
+//         elevation: 2,
+//     },
+//     buttonText: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     applyButtonText: {
+//         color: '#ffffff',
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+// });

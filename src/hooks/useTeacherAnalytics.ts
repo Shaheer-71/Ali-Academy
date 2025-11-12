@@ -35,8 +35,8 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                 setError(null);
 
                 const { data: classesIDData, error: classesIDError } = await supabase
-                    .from('student_subject_enrollments')
-                    .select('student_id, class_id')
+                    .from('teacher_subject_enrollments')
+                    .select('class_id , subject_id')
                     .eq('teacher_id', profileId)
                 
                 if (classesIDError) {
@@ -45,7 +45,15 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                 }
 
                 let classIDs = classesIDData?.map(item => item.class_id) || [];
-                let studentsenrolledId = classesIDData?.map(item => item.student_id) || [];
+                let subjectIDs = classesIDData?.map(item => item.subject_id) || [];
+
+                const { data: studentIDData, error: studentIDError } = await supabase
+                    .from('student_subject_enrollments')
+                    .select('student_id , class_id')
+                    .in('class_id', classIDs)
+                    .in('subject_id', subjectIDs);
+
+                let studentsenrolledId = studentIDData?.map(item => item.student_id) || [];
 
                 console.log('Fetched class IDs from enrollments:', classIDs);
                 console.log('Fetched student IDs from enrollments:', studentsenrolledId);

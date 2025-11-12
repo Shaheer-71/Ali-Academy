@@ -11,6 +11,7 @@ import { EmptyState } from '@/src/components/attendance/EmptyState';
 import { LoadingState } from '@/src/components/attendance/LoadingState';
 import { AttendanceRecordCard } from '@/src/components/attendance/AttendanceRecordCard';
 import { ViewAttendanceFilterModal } from '@/src/components/attendance/modals/ViewAttendanceFilterModal';
+import { TextSizes } from '@/src/styles/TextSizes';
 
 interface Class {
     id: string;
@@ -63,7 +64,7 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
-    
+
     // Filter states
     const [filters, setFilters] = useState<ViewFilterData>({
         selectedClass: '',
@@ -217,7 +218,7 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
     const calculateClassStats = () => {
         const classStudents = getClassStudents();
         const totalStudents = classStudents.length;
-        
+
         if (totalStudents === 0) return null;
 
         const stats = {
@@ -230,7 +231,7 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
 
         // Calculate stats for the selected date range
         const uniqueDates = [...new Set(attendanceData.map(record => record.date))];
-        
+
         if (uniqueDates.length > 0) {
             const totalRecords = attendanceData.length;
             stats.presentCount = attendanceData.filter(r => r.status === 'present').length;
@@ -271,7 +272,7 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
                         </>
                     )}
                 </View>
-                
+
                 <TouchableOpacity
                     style={[styles.filterButton, { backgroundColor: colors.primary }]}
                     onPress={() => setFilterModalVisible(true)}
@@ -293,8 +294,8 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
                     {filters.dateRange !== 'today' && (
                         <View style={[styles.filterTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
                             <Text allowFontScaling={false} style={[styles.filterTagText, { color: colors.primary }]}>
-                                {filters.dateRange === 'week' ? 'Last 7 days' : 
-                                 filters.dateRange === 'month' ? 'Last 30 days' : 'Custom range'}
+                                {filters.dateRange === 'week' ? 'Last 7 days' :
+                                    filters.dateRange === 'month' ? 'Last 30 days' : 'Custom range'}
                             </Text>
                         </View>
                     )}
@@ -412,7 +413,7 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
         return (
             <View style={styles.recordsContainer}>
                 <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>
-                    Attendance Records ({attendanceData.length})
+                    {/* Attendance Records ({attendanceData.length}) */}
                 </Text>
                 {attendanceData.map((record) => (
                     <AttendanceRecordCard
@@ -428,7 +429,7 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             {renderViewTypeHeader()}
-            
+
             <ScrollView
                 style={styles.scrollView}
                 showsVerticalScrollIndicator={false}
@@ -461,100 +462,101 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
     );
 };
 
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
     scrollView: {
         flex: 1,
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
     },
     viewHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 20,
+        padding: 14,
         borderBottomWidth: 1,
     },
     viewTypeInfo: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: 8,
         flex: 1,
     },
     viewTypeTitle: {
-        fontSize: 18,
+        fontSize: TextSizes.medium, // smaller than before
         fontFamily: 'Inter-SemiBold',
     },
     viewTypeSubtitle: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
-        marginTop: 2,
+        marginTop: 1,
     },
     filterButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 8,
         position: 'relative',
     },
     filterButtonText: {
         color: '#ffffff',
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-SemiBold',
     },
     activeFilterDot: {
         position: 'absolute',
         top: -2,
         right: -2,
-        width: 12,
-        height: 12,
-        borderRadius: 6,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
         backgroundColor: '#EF4444',
     },
     activeFiltersContainer: {
-        borderRadius: 12,
-        padding: 16,
-        marginTop: 20,
-        marginBottom: 20,
+        borderRadius: 8,
+        padding: 10,
+        marginTop: 12,
+        marginBottom: 12,
         borderWidth: 1,
     },
     activeFiltersTitle: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 8,
+        marginBottom: 4,
     },
     filterTagsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 8,
+        gap: 4,
     },
     filterTag: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
         borderWidth: 1,
     },
     filterTagText: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
     },
     statsContainer: {
-        marginBottom: 24,
+        marginBottom: 14,
     },
     statsCard: {
-        borderRadius: 16,
-        padding: 20,
+        borderRadius: 10,
+        padding: 10,
         borderWidth: 1,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        shadowRadius: 2,
+        elevation: 1,
     },
     statsCardTitle: {
-        fontSize: 18,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 16,
+        marginBottom: 6,
     },
     statsGrid: {
         flexDirection: 'row',
@@ -562,22 +564,145 @@ const styles = StyleSheet.create({
     },
     statItem: {
         alignItems: 'center',
-        gap: 8,
+        gap: 2,
     },
     statValue: {
-        fontSize: 20,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
     statLabel: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
     },
     recordsContainer: {
-        marginBottom: 24,
+        marginBottom: 14,
     },
     sectionTitle: {
-        fontSize: 20,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 16,
+        marginBottom: 8,
     },
 });
+
+
+
+// const styles = StyleSheet.create({
+//     container: {
+//         flex: 1,
+//     },
+//     scrollView: {
+//         flex: 1,
+//         paddingHorizontal: 24,
+//     },
+//     viewHeader: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         padding: 20,
+//         borderBottomWidth: 1,
+//     },
+//     viewTypeInfo: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 12,
+//         flex: 1,
+//     },
+//     viewTypeTitle: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     viewTypeSubtitle: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         marginTop: 2,
+//     },
+//     filterButton: {
+//         paddingHorizontal: 16,
+//         paddingVertical: 10,
+//         borderRadius: 12,
+//         position: 'relative',
+//     },
+//     filterButtonText: {
+//         color: '#ffffff',
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     activeFilterDot: {
+//         position: 'absolute',
+//         top: -2,
+//         right: -2,
+//         width: 12,
+//         height: 12,
+//         borderRadius: 6,
+//         backgroundColor: '#EF4444',
+//     },
+//     activeFiltersContainer: {
+//         borderRadius: 12,
+//         padding: 16,
+//         marginTop: 20,
+//         marginBottom: 20,
+//         borderWidth: 1,
+//     },
+//     activeFiltersTitle: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 8,
+//     },
+//     filterTagsContainer: {
+//         flexDirection: 'row',
+//         flexWrap: 'wrap',
+//         gap: 8,
+//     },
+//     filterTag: {
+//         paddingHorizontal: 12,
+//         paddingVertical: 6,
+//         borderRadius: 16,
+//         borderWidth: 1,
+//     },
+//     filterTagText: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     statsContainer: {
+//         marginBottom: 24,
+//     },
+//     statsCard: {
+//         borderRadius: 16,
+//         padding: 20,
+//         borderWidth: 1,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.05,
+//         shadowRadius: 4,
+//         elevation: 2,
+//     },
+//     statsCardTitle: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 16,
+//     },
+//     statsGrid: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//     },
+//     statItem: {
+//         alignItems: 'center',
+//         gap: 8,
+//     },
+//     statValue: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     statLabel: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     recordsContainer: {
+//         marginBottom: 24,
+//     },
+//     sectionTitle: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 16,
+//     },
+// });

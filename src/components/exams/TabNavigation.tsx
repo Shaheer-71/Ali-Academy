@@ -24,17 +24,17 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
     hasActiveFilters = false,
     isModalVisible = false,
 }) => {
-    const TabButton = ({ 
-        title, 
-        isActive, 
-        onPress, 
+    const TabButton = ({
+        title,
+        isActive,
+        onPress,
         icon,
         hasIndicator = false,
         isIconOnly = false
-    }: { 
-        title: string; 
-        isActive: boolean; 
-        onPress: () => void; 
+    }: {
+        title: string;
+        isActive: boolean;
+        onPress: () => void;
         icon?: React.ReactNode;
         hasIndicator?: boolean;
         isIconOnly?: boolean;
@@ -42,9 +42,9 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
         <TouchableOpacity
             style={[
                 isIconOnly ? styles.iconButton : styles.headerButton,
-                { 
+                {
                     backgroundColor: isActive ? colors.primary : colors.background,
-                    borderColor: colors.border 
+                    borderColor: colors.border
                 }
             ]}
             onPress={onPress}
@@ -68,7 +68,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
     );
 
     return (
-        <View style={[styles.headerContainer, { backgroundColor: colors.background}]}>
+        <View style={[styles.headerContainer, { backgroundColor: colors.background }]}>
             <View style={styles.mainHeader}>
                 {/* Main navigation buttons container */}
                 <View style={styles.navigationContainer}>
@@ -89,12 +89,14 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
                     />
 
                     {/* Reports Button */}
-                    <TabButton
-                        title="Reports"
-                        isActive={activeTab === 'reports'}
-                        onPress={() => setActiveTab('reports')}
-                        icon={<BarChart3 size={14} color={activeTab === 'reports' ? '#ffffff' : colors.text} />}
-                    />
+                    {/* {(profile?.role === 'teacher' || profile?.role === 'admin') && ( */}
+                        <TabButton
+                            title="Reports"
+                            isActive={activeTab === 'reports'}
+                            onPress={() => setActiveTab('reports')}
+                            icon={<BarChart3 size={14} color={activeTab === 'reports' ? '#ffffff' : colors.text} />}
+                        />
+                    {/* )} */}
 
                     {/* Add Button (only for teachers) */}
                     {(profile?.role === 'teacher' || profile?.role === 'admin') && (
@@ -121,8 +123,10 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
     );
 };
 
+
+import { TextSizes } from '@/src/styles/TextSizes'; // <--- import TextSizes
+
 const styles = StyleSheet.create({
-    // Exact copy from AttendanceHeader
     headerContainer: {
         marginBottom: 25,
     },
@@ -141,12 +145,12 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 1, 
+        paddingHorizontal: 1,
         paddingVertical: 8,
         borderRadius: 8,
         borderWidth: 1,
-        gap: 3, 
-        flex: 1, 
+        gap: 3,
+        flex: 1,
         minHeight: 52,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
@@ -172,10 +176,10 @@ const styles = StyleSheet.create({
         minHeight: 52,
     },
     headerButtonText: {
-        fontSize: 10,
+        fontSize: TextSizes.small, // <--- use TextSizes
         fontFamily: 'Inter-SemiBold',
         textAlign: 'center',
-        lineHeight: 11,
+        lineHeight: TextSizes.small + 2, // optional, slightly bigger than fontSize
         flexShrink: 1,
         maxWidth: '100%',
         numberOfLines: 1,
@@ -198,5 +202,84 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffffff',
     },
 });
+
+
+// const styles = StyleSheet.create({
+//     // Exact copy from AttendanceHeader
+//     headerContainer: {
+//         marginBottom: 25,
+//     },
+//     mainHeader: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         paddingHorizontal: 24,
+//         gap: 8,
+//     },
+//     navigationContainer: {
+//         flex: 1,
+//         flexDirection: 'row',
+//         gap: 3,
+//     },
+//     headerButton: {
+//         flexDirection: 'column',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingHorizontal: 1,
+//         paddingVertical: 8,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//         gap: 3,
+//         flex: 1,
+//         minHeight: 52,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 1 },
+//         shadowOpacity: 0.05,
+//         shadowRadius: 2,
+//         elevation: 1,
+//         position: 'relative',
+//     },
+//     iconButton: {
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingHorizontal: 12,
+//         paddingVertical: 14,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 1 },
+//         shadowOpacity: 0.05,
+//         shadowRadius: 2,
+//         elevation: 1,
+//         position: 'relative',
+//         minWidth: 44,
+//         minHeight: 52,
+//     },
+//     headerButtonText: {
+//         fontSize: 10,
+//         fontFamily: 'Inter-SemiBold',
+//         textAlign: 'center',
+//         lineHeight: 11,
+//         flexShrink: 1,
+//         maxWidth: '100%',
+//         numberOfLines: 1,
+//     },
+//     activeFilterIndicator: {
+//         position: 'absolute',
+//         top: -2,
+//         right: -2,
+//         width: 12,
+//         height: 12,
+//         borderRadius: 6,
+//         backgroundColor: '#EF4444',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     activeFilterDot: {
+//         width: 6,
+//         height: 6,
+//         borderRadius: 3,
+//         backgroundColor: '#ffffff',
+//     },
+// });
 
 export default TabNavigation;

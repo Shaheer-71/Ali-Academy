@@ -1,0 +1,19 @@
+{
+    "arrival_time": "19:46:03",
+    "class_id": "78c641b1-e801-46ca-b7c2-ab18b4a42b33",
+    "classes": {
+        "name": "Class 10"
+    },
+    "created_at": "2025-11-12T14:46:06.084672+00:00",
+    "date": "2025-11-12",
+    "id": "7977834f-af30-4241-b301-48eba9adf545",
+    "late_minutes": null,
+    "marked_by": "c5fc9bd3-e87f-43ed-830b-b71f315585aa",
+    "status": "absent",
+    "student_id": "d6d1f2b0-85ca-4663-8436-605c0c2793f0",
+    "subject_id": "b3a4911e-68dc-4af4-bdbb-e53e4482aa64",
+    "subjects": {
+        "name": "Physics"
+    },
+    "teacher_id": "c5fc9bd3-e87f-43ed-830b-b71f315585aa"
+}

@@ -1,3 +1,4 @@
+// hooks/useQuizzes.ts - Fixed validation
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -86,19 +87,14 @@ export const useQuizzes = () => {
             fetchStudentResults();
         }
 
-        // Set up real-time subscriptions
         setupRealtimeSubscriptions();
 
-        // Cleanup subscriptions on unmount
         return () => {
             supabase.removeAllChannels();
         };
     }, [profile]);
 
-    // REAL-TIME SUBSCRIPTIONS
     const setupRealtimeSubscriptions = () => {
-
-        // Subscribe to quiz changes
         const quizChannel = supabase
             .channel('quiz-changes')
             .on(
@@ -109,12 +105,11 @@ export const useQuizzes = () => {
                     table: 'quizzes'
                 },
                 (payload) => {
-                    fetchQuizzes(); // Refresh quizzes
+                    fetchQuizzes();
                 }
             )
             .subscribe();
 
-        // Subscribe to quiz result changes
         const resultsChannel = supabase
             .channel('quiz-results-changes')
             .on(
@@ -134,7 +129,6 @@ export const useQuizzes = () => {
                 }
             )
             .subscribe();
-
     };
 
     const fetchClassesSubjects = async () => {
@@ -159,7 +153,6 @@ export const useQuizzes = () => {
 
     const fetchSubjects = async () => {
         try {
-
             const { data: classesIDData, error: classesIDError } = await supabase
                 .from('student_subject_enrollments')
                 .select('subject_id, class_id')
@@ -190,12 +183,11 @@ export const useQuizzes = () => {
 
     const fetchQuizzes = async () => {
         try {
-
             let data, error;
             let subjectIDs: string[] = [];
 
             const { data: classesIDData, error: classesIDError } = await supabase
-                .from('student_subject_enrollments')
+                .from('teacher_subject_enrollments')
                 .select('subject_id, class_id')
                 .eq('teacher_id', profile?.id);
 
@@ -211,7 +203,6 @@ export const useQuizzes = () => {
             console.log('🎯 Student subject IDs:', subjectIDs);
 
             if (profile?.role === "student") {
-                // 1️⃣ Get the student’s class ID
                 const class_id = await fetchStudentClassId(profile?.id);
 
                 if (!class_id) {
@@ -220,7 +211,6 @@ export const useQuizzes = () => {
                     return;
                 }
 
-                // 2️⃣ Fetch quizzes for that class
                 ({ data, error } = await supabase
                     .from('quizzes')
                     .select(`
@@ -232,7 +222,6 @@ export const useQuizzes = () => {
                     .order('scheduled_date', { ascending: false }));
             }
             else {
-                // 3️⃣ Fetch all quizzes for teacher/admin
                 ({ data, error } = await supabase
                     .from('quizzes')
                     .select(`
@@ -244,27 +233,21 @@ export const useQuizzes = () => {
                     .order('scheduled_date', { ascending: false }));
             }
 
-            // console.log('📋 Quizzes : : :', data);
-            // 4️⃣ Error handling
             if (error) throw error;
 
             console.log('✅ Quizzes fetched:', data?.length || 0);
             setQuizzes(data || []);
         } catch (error) {
             console.error('❌ Error fetching quizzes:', error);
-            setQuizzes([]); // prevent stale data in state
+            setQuizzes([]);
         }
     };
 
-
     const fetchQuizResults = async () => {
         try {
-
             let data, error;
 
-
             if (profile?.role === "student") {
-                // 🧠 Student: only fetch results for this student
                 ({ data, error } = await supabase
                     .from('quiz_results')
                     .select(`
@@ -278,10 +261,9 @@ export const useQuizzes = () => {
             subjects (name)
           )
         `)
-                    .eq('student_id', profile?.id) // 👈 only their own results
+                    .eq('student_id', profile?.id)
                     .order('created_at', { ascending: false }));
             } else {
-                // 👩‍🏫 Teacher/Admin: fetch all results
                 ({ data, error } = await supabase
                     .from('quiz_results')
                     .select(`
@@ -308,10 +290,33 @@ export const useQuizzes = () => {
         }
     };
 
-
     const fetchStudentResults = async () => {
         try {
-            console.log('👨‍🎓 Fetching student results for:', profile?.id);
+            console.log('👨‍🎓 Fetching student results for user:', profile?.id);
+            
+            // First, get the student record ID from the students table
+            const { data: studentData, error: studentError } = await supabase
+                .from('students')
+                .select('id')
+                .eq('id', profile?.id)
+                .single();
+
+            console.log("Student Found" , studentData)
+
+            if (studentError) {
+                console.error('❌ Error fetching student record:', studentError);
+                throw studentError;
+            }
+
+            if (!studentData) {
+                console.warn('⚠️ No student record found for user:', profile?.id);
+                setQuizResults([]);
+                setLoading(false);
+                return;
+            }
+
+            console.log('📋 Student record ID:', profile?.id);
+
             const { data, error } = await supabase
                 .from('quiz_results')
                 .select(`
@@ -325,7 +330,7 @@ export const useQuizzes = () => {
                         subjects (name)
                     )
                 `)
-                .eq('student_id', profile?.id)
+                .eq('student_id', studentData.id)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -338,25 +343,19 @@ export const useQuizzes = () => {
         }
     };
 
-    // Get subjects for a specific class using class-subject relationships
     const getSubjectsForClass = (selectedClass: string) => {
-
         if (!selectedClass || selectedClass === 'all') {
             const subjectsWithQuizzes = subjects.filter(subject =>
                 quizzes.some(quiz => quiz.subject_id === subject.id)
             );
             return subjectsWithQuizzes;
         } else {
-            // Get subjects assigned to the specific class from class-subject relationships
             const classSubjectRelations = classesSubjects.filter(cs =>
                 String(cs.class_id) === String(selectedClass) && cs.is_active
             );
 
-
-            // Get subject IDs for this class
             const subjectIdsInClass = classSubjectRelations.map(cs => cs.subject_id);
 
-            // Filter subjects to only those assigned to this class
             const subjectsInClass = subjects.filter(subject =>
                 subjectIdsInClass.includes(subject.id)
             );
@@ -432,7 +431,6 @@ export const useQuizzes = () => {
         return filteredResults;
     };
 
-    // Check if all results for a quiz are marked
     const areAllResultsMarked = (quizId: string) => {
         const quizResults_filtered = quizResults.filter(result => result.quiz_id === quizId);
 
@@ -458,19 +456,24 @@ export const useQuizzes = () => {
         instructions?: string;
     }) => {
         try {
+            console.log('🔍 Validating quiz creation:', quizData);
+            
+            // FIXED: Check teacher_subject_enrollments instead of classes_subjects
+            const { data: enrollment, error: enrollmentError } = await supabase
+                .from('teacher_subject_enrollments')
+                .select('*')
+                .eq('teacher_id', profile?.id)
+                .eq('class_id', quizData.class_id)
+                .eq('subject_id', quizData.subject_id)
+                .single();
 
-            // Validate that the class-subject combination exists
-            const validCombination = classesSubjects.some(cs =>
-                String(cs.class_id) === String(quizData.class_id) &&
-                String(cs.subject_id) === String(quizData.subject_id) &&
-                cs.is_active
-            );
-
-            if (!validCombination) {
-                throw new Error('This subject is not assigned to the selected class');
+            if (enrollmentError || !enrollment) {
+                console.error('❌ Validation failed:', enrollmentError);
+                throw new Error('You are not assigned to teach this subject in this class');
             }
 
-            // FIXED: Only use fields that exist in your schema
+            console.log('✅ Validation passed, creating quiz');
+
             const { data, error } = await supabase
                 .from('quizzes')
                 .insert([{
@@ -492,6 +495,8 @@ export const useQuizzes = () => {
 
             if (error) throw error;
 
+            console.log('✅ Quiz created successfully:', data);
+
             // Create quiz result entries for all students in the class
             const { data: students } = await supabase
                 .from('students')
@@ -512,8 +517,7 @@ export const useQuizzes = () => {
                     .insert(resultEntries);
             }
 
-
-            // FORCE IMMEDIATE REFRESH - Don't rely only on real-time
+            // FORCE IMMEDIATE REFRESH
             await fetchQuizzes();
             if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
                 await fetchQuizResults();
@@ -535,7 +539,6 @@ export const useQuizzes = () => {
         isAbsent?: boolean
     ) => {
         try {
-
             const updateData: any = {
                 is_checked: true,
                 remarks: remarks,
@@ -549,9 +552,6 @@ export const useQuizzes = () => {
             } else {
                 updateData.marks_obtained = marks;
                 updateData.submission_status = 'submitted';
-
-                // REMOVED: Don't set percentage and grade - they are generated columns
-                // The database will calculate these automatically based on marks_obtained and total_marks
             }
 
             const { data, error } = await supabase
@@ -563,7 +563,6 @@ export const useQuizzes = () => {
 
             if (error) throw error;
 
-            // NEW: Auto-complete quiz if teacher starts marking but quiz is still scheduled
             const result = quizResults.find(r => r.id === resultId);
             if (result) {
                 const quiz = quizzes.find(q => q.id === result.quiz_id);
@@ -576,11 +575,9 @@ export const useQuizzes = () => {
                 }
             }
 
-
-            // FORCE IMMEDIATE REFRESH - Don't rely only on real-time
             if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
                 await fetchQuizResults();
-                await fetchQuizzes(); // Also refresh quizzes to get updated status
+                await fetchQuizzes();
             } else if (profile?.role === 'student') {
                 await fetchStudentResults();
             }
@@ -594,8 +591,6 @@ export const useQuizzes = () => {
 
     const updateQuizStatus = async (quizId: string, status: Quiz['status']) => {
         try {
-
-            // FIXED: Only update status field (no updated_by field)
             const { error } = await supabase
                 .from('quizzes')
                 .update({
@@ -605,8 +600,6 @@ export const useQuizzes = () => {
 
             if (error) throw error;
 
-
-            // FORCE IMMEDIATE REFRESH - Don't rely only on real-time
             await fetchQuizzes();
             await fetchQuizResults();
 
@@ -671,7 +664,6 @@ export const useQuizzes = () => {
             return null;
         }
     };
-
 
     return {
         quizzes,
