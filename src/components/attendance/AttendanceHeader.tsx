@@ -151,6 +151,9 @@ export const AttendanceHeader: React.FC<AttendanceHeaderProps> = ({
     );
 };
 
+
+import { TextSizes } from '@/src/styles/TextSizes';
+
 const styles = StyleSheet.create({
     headerContainer: {
         marginBottom: 20,
@@ -201,13 +204,13 @@ const styles = StyleSheet.create({
         minHeight: 52, // Match navigation button height
     },
     headerButtonText: {
-        fontSize: 10, // Increased from 9px
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-SemiBold',
         textAlign: 'center',
-        lineHeight: 11,
+        lineHeight: TextSizes.small + 2, // Adjust line height slightly larger than font size
         flexShrink: 1, // Allow text to shrink if needed
         maxWidth: '100%', // Ensure text doesn't overflow
-        numberOfLines: 1, // Single line only
+        // numberOfLines: 1, // Single line only
     },
     activeFilterIndicator: {
         position: 'absolute',
@@ -227,3 +230,80 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffffff',
     },
 });
+
+// const styles = StyleSheet.create({
+//     headerContainer: {
+//         marginBottom: 20,
+//     },
+//     mainHeader: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         paddingHorizontal: 24,
+//         gap: 8,
+//     },
+//     navigationContainer: {
+//         flex: 1,
+//         flexDirection: 'row',
+//         gap: 3,
+//     },
+//     headerButton: {
+//         flexDirection: 'column',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingHorizontal: 1, 
+//         paddingVertical: 8,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//         gap: 3, 
+//         flex: 1, 
+//         minHeight: 52,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 1 },
+//         shadowOpacity: 0.05,
+//         shadowRadius: 2,
+//         elevation: 1,
+//         position: 'relative',
+//     },
+//     iconButton: {
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingHorizontal: 12,
+//         paddingVertical: 14,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 1 },
+//         shadowOpacity: 0.05,
+//         shadowRadius: 2,
+//         elevation: 1,
+//         position: 'relative',
+//         minWidth: 44,
+//         minHeight: 52, // Match navigation button height
+//     },
+//     headerButtonText: {
+//         fontSize: 10, // Increased from 9px
+//         fontFamily: 'Inter-SemiBold',
+//         textAlign: 'center',
+//         lineHeight: 11,
+//         flexShrink: 1, // Allow text to shrink if needed
+//         maxWidth: '100%', // Ensure text doesn't overflow
+//         numberOfLines: 1, // Single line only
+//     },
+//     activeFilterIndicator: {
+//         position: 'absolute',
+//         top: -2,
+//         right: -2,
+//         width: 12,
+//         height: 12,
+//         borderRadius: 6,
+//         backgroundColor: '#EF4444',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     activeFilterDot: {
+//         width: 6,
+//         height: 6,
+//         borderRadius: 3,
+//         backgroundColor: '#ffffff',
+//     },
+// });

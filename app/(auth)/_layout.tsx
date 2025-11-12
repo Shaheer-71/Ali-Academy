@@ -9,7 +9,9 @@ export default function AuthLayout() {
   }
 
   if (user) {
-    return <Redirect href="/(tabs)" />;
+    // Redirect to the app root so the root layout can route the user
+    // to the correct role group (teacher/student) based on profile.
+    return <Redirect href="/" />;
   }
 
   return (

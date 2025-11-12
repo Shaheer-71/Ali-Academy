@@ -31,9 +31,9 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
     onRefresh,
 }) => {
     const [refreshing, setRefreshing] = React.useState(false);
-    
+
     const filteredQuizzes = getFilteredQuizzes();
-    
+
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -129,10 +129,10 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
     // Get counts for status display
     const getResultCounts = (quizId: string) => {
         const quizResults_filtered = quizResults.filter(result => result.quiz_id === quizId);
-        const markedCount = quizResults_filtered.filter(result => 
+        const markedCount = quizResults_filtered.filter(result =>
             result.is_checked || result.submission_status === 'absent'
         ).length;
-        
+
         return {
             total: quizResults_filtered.length,
             marked: markedCount,
@@ -153,8 +153,8 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 </View>
             )}
 
-            <ScrollView 
-                showsVerticalScrollIndicator={false} 
+            <ScrollView
+                showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 50 }}
                 refreshControl={
                     <RefreshControl
@@ -179,7 +179,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                     filteredQuizzes.map((quiz) => {
                         const resultCounts = getResultCounts(quiz.id);
                         const allMarked = areAllResultsMarked(quiz.id);
-                        
+
                         return (
                             <View key={quiz.id} style={[styles.quizCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                                 <View style={styles.quizHeader}>
@@ -242,7 +242,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                                 </View>
 
                                 {/* Results Summary for All Quizzes */}
-                                {resultCounts.total > 0 && (
+                                {/* {resultCounts.total > 0 && (
                                     <View style={[styles.resultsSummary, { backgroundColor: colors.background }]}>
                                         <View style={styles.resultsRow}>
                                             <Users size={14} color={colors.textSecondary} />
@@ -261,7 +261,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                                             )}
                                         </View>
                                     </View>
-                                )}
+                                )} */}
 
                                 {/* Teacher Actions - ENHANCED LOGIC WITH AUTO-COMPLETE */}
                                 {(profile?.role === 'teacher' || profile?.role === 'admin') && (
@@ -289,19 +289,19 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                                         )}
 
                                         {/* Show Mark Quiz button for completed quizzes OR scheduled quizzes with some marks */}
-                                        {((quiz.status === 'completed' && !allMarked) || 
-                                          (quiz.status === 'scheduled' && resultCounts.marked > 0) || 
-                                          (quiz.status === 'active' && !allMarked)) && (
-                                            <TouchableOpacity
-                                                style={[styles.markingButton, { backgroundColor: colors.primary }]}
-                                                onPress={() => handleMarkQuizzes(quiz)}
-                                            >
-                                                <Edit3 size={16} color="#ffffff" />
-                                                <Text allowFontScaling={false} style={styles.markingButtonText}>
-                                                    {resultCounts.marked === 0 ? 'Start Marking' : 'Continue Marking'}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        )}
+                                        {((quiz.status === 'completed' && !allMarked) ||
+                                            (quiz.status === 'scheduled' && resultCounts.marked > 0) ||
+                                            (quiz.status === 'active' && !allMarked)) && (
+                                                <TouchableOpacity
+                                                    style={[styles.markingButton, { backgroundColor: colors.primary }]}
+                                                    onPress={() => handleMarkQuizzes(quiz)}
+                                                >
+                                                    <Edit3 size={16} color="#ffffff" />
+                                                    <Text allowFontScaling={false} style={styles.markingButtonText}>
+                                                        {resultCounts.marked === 0 ? 'Start Marking' : 'Continue Marking'}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            )}
 
                                         {/* Auto-complete info for scheduled quizzes with marks */}
                                         {quiz.status === 'scheduled' && resultCounts.marked > 0 && (
@@ -329,6 +329,8 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
     );
 };
 
+import { TextSizes } from '@/src/styles/TextSizes'; // <--- import TextSizes
+
 const styles = StyleSheet.create({
     scheduleContainer: {
         flex: 1,
@@ -341,7 +343,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     filterText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
     },
     emptyContainer: {
@@ -350,13 +352,13 @@ const styles = StyleSheet.create({
         paddingVertical: 60,
     },
     emptyText: {
-        fontSize: 18,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
         marginTop: 16,
         marginBottom: 8,
     },
     emptySubtext: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
         paddingHorizontal: 20,
@@ -389,12 +391,13 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     quizTitle: {
-        fontSize: 18,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
         marginBottom: 4,
+        paddingHorizontal: 2
     },
     quizSubject: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
     },
     statusBadge: {
@@ -403,14 +406,14 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     statusText: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-SemiBold',
         color: '#ffffff',
     },
     quizDescription: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
-        lineHeight: 20,
+        lineHeight: TextSizes.medium + 6,
         marginBottom: 12,
     },
     quizDetails: {
@@ -424,7 +427,7 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     quizDetailText: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
     },
     instructionsContainer: {
@@ -433,14 +436,14 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     instructionsLabel: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
         marginBottom: 4,
     },
     instructionsText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
-        lineHeight: 18,
+        lineHeight: TextSizes.medium + 4,
     },
     quizTypeBadge: {
         flexDirection: 'row',
@@ -454,12 +457,12 @@ const styles = StyleSheet.create({
         borderRadius: 6,
     },
     typeBadgeText: {
-        fontSize: 10,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-SemiBold',
         color: '#ffffff',
     },
     passingMarks: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
     },
     resultsSummary: {
@@ -473,7 +476,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     resultsText: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         flex: 1,
     },
@@ -483,7 +486,7 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     pendingBadgeText: {
-        fontSize: 10,
+        fontSize: TextSizes.xSmall,
         fontFamily: 'Inter-SemiBold',
         color: '#ffffff',
     },
@@ -494,7 +497,7 @@ const styles = StyleSheet.create({
         marginLeft: 8,
     },
     completeBadgeText: {
-        fontSize: 10,
+        fontSize: TextSizes.xSmall,
         fontFamily: 'Inter-SemiBold',
         color: '#ffffff',
     },
@@ -512,7 +515,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     actionButtonText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
     markingButton: {
@@ -525,7 +528,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     markingButtonText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
         color: '#ffffff',
     },
@@ -536,7 +539,7 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     autoCompleteText: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
         textAlign: 'center',
     },
@@ -547,10 +550,235 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     completedBadgeText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
         color: '#ffffff',
     },
 });
+
+
+// const styles = StyleSheet.create({
+//     scheduleContainer: {
+//         flex: 1,
+//     },
+//     filterBanner: {
+//         borderRadius: 8,
+//         padding: 12,
+//         marginBottom: 16,
+//         borderWidth: 1,
+//         alignItems: 'center',
+//     },
+//     filterText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     emptyContainer: {
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingVertical: 60,
+//     },
+//     emptyText: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//         marginTop: 16,
+//         marginBottom: 8,
+//     },
+//     emptySubtext: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         textAlign: 'center',
+//         paddingHorizontal: 20,
+//     },
+//     quizCard: {
+//         borderRadius: 16,
+//         padding: 20,
+//         marginBottom: 12,
+//         borderWidth: 1,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.05,
+//         shadowRadius: 4,
+//         elevation: 2,
+//     },
+//     quizHeader: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         marginBottom: 12,
+//     },
+//     quizIcon: {
+//         width: 48,
+//         height: 48,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         marginRight: 16,
+//     },
+//     quizInfo: {
+//         flex: 1,
+//     },
+//     quizTitle: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 4,
+//     },
+//     quizSubject: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     statusBadge: {
+//         paddingHorizontal: 12,
+//         paddingVertical: 6,
+//         borderRadius: 8,
+//     },
+//     statusText: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#ffffff',
+//     },
+//     quizDescription: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         lineHeight: 20,
+//         marginBottom: 12,
+//     },
+//     quizDetails: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         marginBottom: 12,
+//     },
+//     quizDetail: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 6,
+//     },
+//     quizDetailText: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     instructionsContainer: {
+//         borderRadius: 8,
+//         padding: 12,
+//         marginBottom: 12,
+//     },
+//     instructionsLabel: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//         marginBottom: 4,
+//     },
+//     instructionsText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         lineHeight: 18,
+//     },
+//     quizTypeBadge: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         marginBottom: 12,
+//     },
+//     typeBadge: {
+//         paddingHorizontal: 8,
+//         paddingVertical: 4,
+//         borderRadius: 6,
+//     },
+//     typeBadgeText: {
+//         fontSize: 10,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#ffffff',
+//     },
+//     passingMarks: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     resultsSummary: {
+//         borderRadius: 8,
+//         padding: 12,
+//         marginBottom: 12,
+//     },
+//     resultsRow: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 8,
+//     },
+//     resultsText: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//         flex: 1,
+//     },
+//     pendingBadge: {
+//         paddingHorizontal: 8,
+//         paddingVertical: 2,
+//         borderRadius: 4,
+//     },
+//     pendingBadgeText: {
+//         fontSize: 10,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#ffffff',
+//     },
+//     completeBadge: {
+//         paddingHorizontal: 8,
+//         paddingVertical: 2,
+//         borderRadius: 4,
+//         marginLeft: 8,
+//     },
+//     completeBadgeText: {
+//         fontSize: 10,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#ffffff',
+//     },
+//     teacherActions: {
+//         marginTop: 8,
+//         gap: 8,
+//     },
+//     actionButton: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingVertical: 12,
+//         paddingHorizontal: 16,
+//         borderRadius: 8,
+//         gap: 8,
+//     },
+//     actionButtonText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     markingButton: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingVertical: 12,
+//         paddingHorizontal: 16,
+//         borderRadius: 8,
+//         gap: 8,
+//     },
+//     markingButtonText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#ffffff',
+//     },
+//     autoCompleteInfo: {
+//         borderRadius: 8,
+//         padding: 12,
+//         borderWidth: 1,
+//         marginTop: 8,
+//     },
+//     autoCompleteText: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//         textAlign: 'center',
+//     },
+//     completedBadge: {
+//         paddingVertical: 12,
+//         paddingHorizontal: 16,
+//         borderRadius: 8,
+//         alignItems: 'center',
+//     },
+//     completedBadgeText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#ffffff',
+//     },
+// });
 
 export default ScheduleTab;

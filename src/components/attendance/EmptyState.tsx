@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { TextSizes } from '@/src/styles/TextSizes';
 
 interface EmptyStateProps {
-    icon: React.ReactNode;
+    icon?: React.ReactNode;
     title: string;
-    subtitle: string;
+    subtitle?: string;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
@@ -17,9 +18,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
     return (
         <View style={styles.emptyContainer}>
-            {icon}
-            <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>{title}</Text>
-            <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>{subtitle}</Text>
+            {icon && <View style={styles.iconContainer}>{icon}</View>}
+            <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>
+                {title}
+            </Text>
+            {subtitle && (
+                <Text allowFontScaling={false} style={[styles.subtitle, { color: colors.textSecondary }]}>
+                    {subtitle}
+                </Text>
+            )}
         </View>
     );
 };
@@ -31,15 +38,17 @@ const styles = StyleSheet.create({
         paddingVertical: 60,
         paddingHorizontal: 20,
     },
-    emptyText: {
-        fontSize: 18,
-        fontFamily: 'Inter-SemiBold',
-        marginTop: 16,
-        marginBottom: 8,
-        textAlign: 'center',
+    iconContainer: {
+        marginBottom: 16,
     },
-    emptySubtext: {
-        fontSize: 14,
+    title: {
+        fontSize: TextSizes.sectionTitle, // matches AttendanceScreen sectionTitle
+        fontFamily: 'Inter-SemiBold',
+        textAlign: 'center',
+        marginBottom: 8,
+    },
+    subtitle: {
+        fontSize: TextSizes.small, // matches small/subtext usage
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
         lineHeight: 20,

@@ -3,22 +3,24 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CheckCircle, AlertCircle, XCircle, Clock, Edit3 } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { TextSizes } from '@/src/styles/TextSizes';
+
 
 interface Student {
-  id: string;
-  full_name: string;
-  roll_number: string;
-  parent_contact: string;
+    id: string;
+    full_name: string;
+    roll_number: string;
+    parent_contact: string;
 }
 
 interface AttendanceRecord {
-  id: string;
-  student_id: string;
-  class_id: string;
-  date: string;
-  arrival_time?: string;
-  status: 'present' | 'late' | 'absent';
-  late_minutes?: number;
+    id: string;
+    student_id: string;
+    class_id: string;
+    date: string;
+    arrival_time?: string;
+    status: 'present' | 'late' | 'absent';
+    late_minutes?: number;
 }
 
 interface StudentCardProps {
@@ -45,6 +47,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
     onEdit,
 }) => {
     const { colors } = useTheme();
+
 
     const getStatusIcon = (status: 'present' | 'late' | 'absent' | undefined) => {
         switch (status) {
@@ -75,16 +78,16 @@ export const StudentCard: React.FC<StudentCardProps> = ({
 
     // Primary logic: Buttons are disabled if student already has attendance in database
     const buttonsDisabled = isMarkedInDatabase;
-    
+
     // Determine which record to display (database record takes priority)
     const displayRecord = dbRecord || record;
-    
+
     // Determine the source of the record
     const recordSource = dbRecord ? 'database' : (record ? 'temporary' : 'none');
 
     return (
         <View style={[
-            styles.modernStudentCard, 
+            styles.modernStudentCard,
             { backgroundColor: colors.cardBackground, borderColor: colors.border },
             isMarkedInDatabase && { borderColor: colors.primary, borderWidth: 2 }
         ]}>
@@ -107,7 +110,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
             </View>
 
             {/* Show arrival time info if available */}
-            {displayRecord?.arrival_time && (
+            {/* {displayRecord?.arrival_time && displayRecord?.status !== 'absent' (
                 <View style={[styles.timeInfo, { backgroundColor: colors.background }]}>
                     <Clock size={14} color={colors.textSecondary} />
                     <Text allowFontScaling={false} style={[styles.timeText, { color: colors.textSecondary }]}>
@@ -115,7 +118,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
                         {displayRecord.late_minutes && displayRecord.late_minutes > 0 && ` (${displayRecord.late_minutes} min late)`}
                     </Text>
                 </View>
-            )}
+            )} */}
 
             {/* Status information based on record source */}
             {recordSource === 'temporary' && (
@@ -126,13 +129,13 @@ export const StudentCard: React.FC<StudentCardProps> = ({
                 </View>
             )}
 
-            {recordSource === 'database' && (
+            {/* {recordSource === 'database' && (
                 <View style={[styles.databaseInfo, { backgroundColor: colors.primary }]}>
                     <Text allowFontScaling={false} style={styles.databaseText}>
                         ✅ Attendance recorded for {new Date(selectedDate).toLocaleDateString()}
                     </Text>
                 </View>
-            )}
+            )} */}
 
             {recordSource === 'none' && (
                 <View style={[styles.noRecordInfo, { backgroundColor: '#F3F4F6' }]}>
@@ -146,7 +149,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
             <View style={styles.actionButtons}>
                 <TouchableOpacity
                     style={[
-                        styles.actionButton, 
+                        styles.actionButton,
                         styles.presentButton,
                         buttonsDisabled && styles.disabledButton
                     ]}
@@ -165,7 +168,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
 
                 <TouchableOpacity
                     style={[
-                        styles.actionButton, 
+                        styles.actionButton,
                         styles.customTimeButton,
                         buttonsDisabled && styles.disabledButton
                     ]}
@@ -184,7 +187,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
 
                 <TouchableOpacity
                     style={[
-                        styles.actionButton, 
+                        styles.actionButton,
                         styles.absentButton,
                         buttonsDisabled && styles.disabledButton
                     ]}
@@ -229,33 +232,34 @@ export const StudentCard: React.FC<StudentCardProps> = ({
     );
 };
 
+
 const styles = StyleSheet.create({
     modernStudentCard: {
         borderRadius: 16,
-        padding: 20,
-        marginBottom: 16,
+        padding: 16,
+        marginBottom: 12,
         borderWidth: 1,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+        elevation: 3,
     },
     studentCardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 12,
     },
     studentAvatar: {
-        width: 48,
-        height: 48,
-        borderRadius: 16,
+        width: 40,
+        height: 40,
+        borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 16,
+        marginRight: 12,
     },
     studentInitial: {
-        fontSize: 20,
+        fontSize: TextSizes.large, // smaller avatar text
         fontFamily: 'Inter-SemiBold',
         color: '#ffffff',
     },
@@ -263,81 +267,81 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     studentName: {
-        fontSize: 18,
+        fontSize: TextSizes.xlarge, // previously 18
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     rollNumber: {
-        fontSize: 14,
+        fontSize: TextSizes.normal, // previously 14
         fontFamily: 'Inter-Regular',
     },
     statusIndicator: {
         alignItems: 'center',
     },
     statusText: {
-        fontSize: 10,
+        fontSize: TextSizes.small, // previously 10
         fontFamily: 'Inter-SemiBold',
-        marginTop: 4,
+        marginTop: 2,
     },
     timeInfo: {
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 12,
+        borderRadius: 6,
+        padding: 8,
+        marginBottom: 8,
         flexDirection: 'row',
         alignItems: 'center',
     },
     timeText: {
-        fontSize: 14,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Regular',
-        marginLeft: 8,
+        marginLeft: 6,
     },
     temporaryInfo: {
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 12,
+        borderRadius: 6,
+        padding: 8,
+        marginBottom: 8,
         alignItems: 'center',
     },
     temporaryText: {
-        fontSize: 14,
+        fontSize: TextSizes.normal, // previously 14
         fontFamily: 'Inter-Medium',
         textAlign: 'center',
     },
     databaseInfo: {
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 12,
+        borderRadius: 6,
+        padding: 8,
+        marginBottom: 8,
         alignItems: 'center',
     },
     databaseText: {
         color: '#ffffff',
-        fontSize: 14,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-SemiBold',
         textAlign: 'center',
     },
     noRecordInfo: {
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 12,
+        borderRadius: 6,
+        padding: 8,
+        marginBottom: 8,
         alignItems: 'center',
     },
     noRecordText: {
-        fontSize: 14,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
     },
     actionButtons: {
         flexDirection: 'row',
-        gap: 8,
-        marginBottom: 12,
+        gap: 6,
+        marginBottom: 8,
     },
     actionButton: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        borderRadius: 12,
-        gap: 6,
+        paddingVertical: 8,
+        borderRadius: 10,
+        gap: 4,
     },
     presentButton: {
         backgroundColor: '#10B981',
@@ -354,38 +358,200 @@ const styles = StyleSheet.create({
     },
     actionButtonText: {
         color: '#ffffff',
-        fontSize: 12,
+        fontSize: TextSizes.normal, // compact button label
         fontFamily: 'Inter-SemiBold',
     },
     disabledButtonText: {
         color: '#999999',
     },
     editContainer: {
-        marginTop: 8,
+        marginTop: 6,
     },
     editButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
         borderWidth: 1,
-        borderRadius: 12,
-        gap: 8,
+        borderRadius: 10,
+        gap: 6,
     },
     editButtonText: {
-        fontSize: 14,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Medium',
     },
     disabledInfo: {
-        borderRadius: 8,
-        padding: 10,
-        marginTop: 8,
+        borderRadius: 6,
+        padding: 8,
+        marginTop: 6,
         alignItems: 'center',
     },
     disabledInfoText: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
         textAlign: 'center',
     },
 });
+
+
+// const styles = StyleSheet.create({
+//     modernStudentCard: {
+//         borderRadius: 16,
+//         padding: 20,
+//         marginBottom: 16,
+//         borderWidth: 1,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 4 },
+//         shadowOpacity: 0.08,
+//         shadowRadius: 8,
+//         elevation: 4,
+//     },
+//     studentCardHeader: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         marginBottom: 16,
+//     },
+//     studentAvatar: {
+//         width: 48,
+//         height: 48,
+//         borderRadius: 16,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         marginRight: 16,
+//     },
+//     studentInitial: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#ffffff',
+//     },
+//     studentInfo: {
+//         flex: 1,
+//     },
+//     studentName: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 4,
+//     },
+//     rollNumber: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     statusIndicator: {
+//         alignItems: 'center',
+//     },
+//     statusText: {
+//         fontSize: 10,
+//         fontFamily: 'Inter-SemiBold',
+//         marginTop: 4,
+//     },
+//     timeInfo: {
+//         borderRadius: 8,
+//         padding: 12,
+//         marginBottom: 12,
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//     },
+//     timeText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         marginLeft: 8,
+//     },
+//     temporaryInfo: {
+//         borderRadius: 8,
+//         padding: 12,
+//         marginBottom: 12,
+//         alignItems: 'center',
+//     },
+//     temporaryText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//         textAlign: 'center',
+//     },
+//     databaseInfo: {
+//         borderRadius: 8,
+//         padding: 12,
+//         marginBottom: 12,
+//         alignItems: 'center',
+//     },
+//     databaseText: {
+//         color: '#ffffff',
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//         textAlign: 'center',
+//     },
+//     noRecordInfo: {
+//         borderRadius: 8,
+//         padding: 12,
+//         marginBottom: 12,
+//         alignItems: 'center',
+//     },
+//     noRecordText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         textAlign: 'center',
+//     },
+//     actionButtons: {
+//         flexDirection: 'row',
+//         gap: 8,
+//         marginBottom: 12,
+//     },
+//     actionButton: {
+//         flex: 1,
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingVertical: 12,
+//         borderRadius: 12,
+//         gap: 6,
+//     },
+//     presentButton: {
+//         backgroundColor: '#10B981',
+//     },
+//     customTimeButton: {
+//         backgroundColor: '#274d71',
+//     },
+//     absentButton: {
+//         backgroundColor: '#EF4444',
+//     },
+//     disabledButton: {
+//         backgroundColor: '#E5E7EB',
+//         opacity: 0.6,
+//     },
+//     actionButtonText: {
+//         color: '#ffffff',
+//         fontSize: 12,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     disabledButtonText: {
+//         color: '#999999',
+//     },
+//     editContainer: {
+//         marginTop: 8,
+//     },
+//     editButton: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingVertical: 12,
+//         paddingHorizontal: 16,
+//         borderWidth: 1,
+//         borderRadius: 12,
+//         gap: 8,
+//     },
+//     editButtonText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     disabledInfo: {
+//         borderRadius: 8,
+//         padding: 10,
+//         marginTop: 8,
+//         alignItems: 'center',
+//     },
+//     disabledInfoText: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//         textAlign: 'center',
+//     },
+// });

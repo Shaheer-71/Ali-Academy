@@ -1,4 +1,4 @@
-// ExamsScreen.tsx - Updated with comprehensive filter system
+// ExamsScreen.tsx - Fixed with correct table usage
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,7 +16,6 @@ import { ComprehensiveExamsFilterModal } from '../exams/modals/ComprehensiveExam
 import { supabase } from '@/src/lib/supabase';
 import { useFocusEffect } from '@react-navigation/native';
 
-
 interface ExamFilterData {
   selectedClass: string;
   selectedSubject: string;
@@ -30,129 +29,175 @@ export default function ExamsScreen() {
 
   // State management
   const [classes, setClasses] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'schedule' | 'results' | 'reports'>('schedule');
   const [modalVisible, setModalVisible] = useState(false);
   const [markingModalVisible, setMarkingModalVisible] = useState(false);
   const [selectedResult, setSelectedResult] = useState<any>(null);
 
-  // NEW: Comprehensive filter state
+  // Comprehensive filter state
   const [filters, setFilters] = useState<ExamFilterData>({
-    selectedClass: 'all',
-    selectedSubject: 'all',
+    selectedClass: '',
+    selectedSubject: '',
     statusFilter: 'all',
     checkedFilter: 'all',
   });
 
-  // NEW: Filter modal state
+  // Filter modal state
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
-  // Get data WITHOUT class filtering in the hook - we'll filter in the component
+  // Get data from hook
   const {
     quizzes,
-    subjects,
     quizResults,
-    classesSubjects,
     loading,
     createQuiz,
     markQuizResult,
     updateQuizStatus,
-    getFilteredResults,
-    getSubjectsForClass,
     areAllResultsMarked,
     refetch,
-    fetchStudentClassId
   } = useQuizzes();
 
   useEffect(() => {
-    fetchClasses();
-  }, []);
-
-  // Set default class when classes are loaded
-  useEffect(() => {
-    if (classes.length > 0 && filters.selectedClass === 'all') {
-      if (profile?.role === 'student') {
-        // For students, keep 'all' or set to their class if you have that logic
-        setFilters(prev => ({ ...prev, selectedClass: 'all' }));
-      } else {
-        // For teachers, set to first class
-        setFilters(prev => ({ ...prev, selectedClass: classes[0].id }));
-      }
+    if (profile?.role === 'teacher' || profile?.role === 'admin') {
+      fetchClassesAndSubjects();
     }
-  }, [classes, profile, filters.selectedClass]);
+  }, [profile]);
 
-  const fetchClasses = async () => {
+  // Set default class when data is loaded
+  useEffect(() => {
+    if (classes.length > 0 && !filters.selectedClass) {
+      const firstClassId = classes[0].id;
+      setFilters(prev => ({ ...prev, selectedClass: firstClassId }));
+    }
+  }, [classes]);
+
+  const fetchClassesAndSubjects = async () => {
     try {
-
-      const { data: classesIDData, error: classesIDError } = await supabase
-        .from('student_subject_enrollments')
-        .select('student_id, class_id')
+      // Use teacher_subject_enrollments table
+      const { data: enrollments, error: enrollmentError } = await supabase
+        .from('teacher_subject_enrollments')
+        .select('class_id, subject_id')
         .eq('teacher_id', profile?.id);
 
-      if (classesIDError) {
-        console.error('Enrollments fetch error:', classesIDError);
-        throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
-      }
+      if (enrollmentError) throw enrollmentError;
 
-      let classIDs = classesIDData?.map(item => item.class_id) || [];
+      console.log("📋 Enrollments data:", enrollments);
 
-      const { data, error } = await supabase
+      // Get unique class IDs
+      const classIDs = [...new Set(enrollments?.map(item => item.class_id) || [])];
+
+      // Get unique subject IDs
+      const subjectIDs = [...new Set(enrollments?.map(item => item.subject_id) || [])];
+
+      console.log("🏫 Class IDs:", classIDs);
+      console.log("📚 Subject IDs:", subjectIDs);
+
+      // Fetch classes
+      const { data: classesData, error: classesError } = await supabase
         .from('classes')
         .select('*')
         .in('id', classIDs)
         .order('name');
 
-      if (error) throw error;
-      setClasses(data || []);
+      if (classesError) throw classesError;
+      setClasses(classesData || []);
+
+      // Fetch subjects
+      const { data: subjectsData, error: subjectsError } = await supabase
+        .from('subjects')
+        .select('*')
+        .in('id', subjectIDs)
+        .order('name');
+
+      if (subjectsError) throw subjectsError;
+      setSubjects(subjectsData || []);
+
     } catch (error) {
-      console.error('Error fetching classes:', error);
+      console.error('❌ Error fetching classes and subjects:', error);
     }
   };
 
-  // ENHANCED: Comprehensive refresh function
+  // Get subjects for selected class
+  const getSubjectsForClass = useCallback(async (classId: string) => {
+    if (!classId || !profile?.id) {
+      console.log("⚠️ Missing classId or profile");
+      return [];
+    }
+
+    try {
+      console.log("🔍 Fetching subjects for class:", classId, "teacher:", profile?.id);
+
+      const { data: enrollments, error } = await supabase
+        .from('teacher_subject_enrollments')
+        .select('subject_id')
+        .eq('teacher_id', profile?.id)
+        .eq('class_id', classId);
+
+      if (error) throw error;
+
+      console.log("📋 Subject enrollments for class:", enrollments);
+
+      const subjectIDs = [...new Set(enrollments?.map(item => item.subject_id) || [])];
+      console.log("📚 Subject IDs:", subjectIDs);
+
+      // Fetch full subject details
+      const { data: subjectsData, error: subjectsError } = await supabase
+        .from('subjects')
+        .select('id, name')
+        .in('id', subjectIDs)
+        .order('name');
+
+      if (subjectsError) throw subjectsError;
+
+      console.log("✅ Subjects for class:", subjectsData);
+
+      return subjectsData || [];
+    } catch (error) {
+      console.error('❌ Error fetching subjects for class:', error);
+      return [];
+    }
+  }, [profile]);
+
+  // Comprehensive refresh function
   const handleRefresh = async () => {
     try {
       await refetch();
-      await fetchClasses();
+      if (profile?.role === 'teacher' || profile?.role === 'admin') {
+        await fetchClassesAndSubjects();
+      }
     } catch (error) {
       console.error('❌ ExamsScreen: Error during refresh:', error);
       throw error;
     }
   };
 
-  // NEW: Handle filter application
+  // Handle filter application
   const handleApplyFilters = (newFilters: ExamFilterData) => {
     setFilters(newFilters);
   };
 
-  // NEW: Check if any filters are active
+  // Check if any filters are active
   const hasActiveFilters = () => {
-    const defaultFilters: ExamFilterData = {
-      selectedClass: 'all',
-      selectedSubject: 'all',
-      statusFilter: 'all',
-      checkedFilter: 'all',
-    };
-
     return (
-      filters.selectedClass !== defaultFilters.selectedClass ||
-      filters.selectedSubject !== defaultFilters.selectedSubject ||
-      filters.statusFilter !== defaultFilters.statusFilter ||
-      filters.checkedFilter !== defaultFilters.checkedFilter
+      filters.selectedClass !== '' ||
+      filters.selectedSubject !== '' ||
+      filters.statusFilter !== 'all' ||
+      filters.checkedFilter !== 'all'
     );
   };
 
-
-  // Filter functions - UPDATED to use comprehensive filters
+  // Filter quizzes based on selected class and subject
   const getFilteredQuizzes = () => {
     let filtered = quizzes;
 
-    // Filter by class if a specific class is selected
-    if (filters.selectedClass !== 'all') {
+    // Filter by class if selected
+    if (filters.selectedClass) {
       filtered = filtered.filter(quiz => quiz.class_id === filters.selectedClass);
     }
 
-    // Filter by subject if a specific subject is selected
-    if (filters.selectedSubject !== 'all') {
+    // Filter by subject if selected
+    if (filters.selectedSubject) {
       filtered = filtered.filter(quiz => quiz.subject_id === filters.selectedSubject);
     }
 
@@ -164,46 +209,37 @@ export default function ExamsScreen() {
     return filtered;
   };
 
-  // ENHANCED: Get subjects with all option, filtered by class
-  const getSubjectsWithAll = (classId?: string) => {
-    const targetClass = classId || filters.selectedClass;
+  // Get filtered results based on class, subject, and checked status
+  const getAdvancedFilteredResults = () => {
+    let filtered = quizResults;
 
-    let filteredSubjects = subjects;
-
-    if (targetClass !== 'all') {
-      const classQuizzes = quizzes.filter(quiz => {
-        const quizClassId = String(quiz.class_id);
-        const selectedClassStr = String(targetClass);
-        return quizClassId === selectedClassStr;
-      });
-
-      const subjectIdsInClass = [...new Set(classQuizzes.map(quiz => quiz.subject_id))];
-      filteredSubjects = subjects.filter(subject =>
-        subjectIdsInClass.includes(subject.id)
-      );
-    } else {
-      const allSubjectIds = [...new Set(quizzes.map(quiz => quiz.subject_id))];
-      filteredSubjects = subjects.filter(subject =>
-        allSubjectIds.includes(subject.id)
-      );
+    // Filter by class
+    if (filters.selectedClass) {
+      const classQuizIds = quizzes
+        .filter(quiz => quiz.class_id === filters.selectedClass)
+        .map(quiz => quiz.id);
+      filtered = filtered.filter(result => classQuizIds.includes(result.quiz_id));
     }
 
-    return [
-      { id: 'all', name: 'All Subjects' },
-      ...filteredSubjects
-    ];
-  };
+    // Filter by subject
+    if (filters.selectedSubject) {
+      const subjectQuizIds = quizzes
+        .filter(quiz =>
+          quiz.subject_id === filters.selectedSubject &&
+          (!filters.selectedClass || quiz.class_id === filters.selectedClass)
+        )
+        .map(quiz => quiz.id);
+      filtered = filtered.filter(result => subjectQuizIds.includes(result.quiz_id));
+    }
 
-  const getClassesWithAll = () => {
-    return [
-      { id: 'all', name: 'All Classes' },
-      ...classes
-    ];
-  };
+    // Filter by checked status
+    if (filters.checkedFilter === 'checked') {
+      filtered = filtered.filter(result => result.is_checked);
+    } else if (filters.checkedFilter === 'unchecked') {
+      filtered = filtered.filter(result => !result.is_checked);
+    }
 
-  // ENHANCED: Advanced filtering function for results
-  const getAdvancedFilteredResults = () => {
-    return getFilteredResults(filters.selectedClass, filters.selectedSubject, filters.checkedFilter);
+    return filtered;
   };
 
   const renderTabContent = () => {
@@ -234,7 +270,7 @@ export default function ExamsScreen() {
             setSelectedSubject={(subject) => setFilters(prev => ({ ...prev, selectedSubject: subject }))}
             checkedFilter={filters.checkedFilter}
             setCheckedFilter={(filter) => setFilters(prev => ({ ...prev, checkedFilter: filter }))}
-            getSubjectsWithAll={getSubjectsWithAll}
+            getSubjectsWithAll={() => []} // Not used anymore
             getFilteredResults={getAdvancedFilteredResults}
             setSelectedResult={setSelectedResult}
             setMarkingModalVisible={setMarkingModalVisible}
@@ -253,7 +289,7 @@ export default function ExamsScreen() {
             selectedClass={filters.selectedClass}
             classes={classes}
             subjects={subjects}
-            quizzes={getFilteredQuizzes()} // Pass filtered quizzes
+            quizzes={getFilteredQuizzes()}
             quizResults={quizResults}
             onRefresh={handleRefresh}
           />
@@ -270,12 +306,10 @@ export default function ExamsScreen() {
     }, [profile])
   );
 
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TopSections />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
-
         <TabNavigation
           colors={colors}
           profile={profile}
@@ -300,7 +334,7 @@ export default function ExamsScreen() {
           onApplyFilters={handleApplyFilters}
           userRole={profile?.role || 'student'}
           activeTab={activeTab}
-          getSubjectsWithAll={getSubjectsWithAll}
+          getSubjectsForClass={getSubjectsForClass}
         />
 
         {(profile?.role === 'teacher' || profile?.role === 'admin') && (

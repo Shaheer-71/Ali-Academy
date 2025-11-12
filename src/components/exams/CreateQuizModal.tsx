@@ -1,4 +1,4 @@
-// components/CreateQuizModal.tsx - Fixed TypeScript issues
+// CreateQuizModal.tsx - Fixed with async getSubjectsForClass
 import React, { useState, useEffect } from 'react';
 import {
     Modal,
@@ -46,8 +46,8 @@ interface CreateQuizModalProps {
     subjects: Subject[];
     classes: Class[];
     selectedClass: string;
-    createQuiz: (quizData: QuizData) => Promise<{ success: boolean; error?: any }>;
-    getSubjectsForClass: (classId: string) => Subject[];
+    createQuiz: (quizData: QuizData) => Promise<{ success: boolean; error?: any; data?: any }>;
+    getSubjectsForClass: (classId: string) => Promise<Subject[]>;
 }
 
 const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
@@ -76,6 +76,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
 
     // Available subjects based on selected class
     const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
+    const [loadingSubjects, setLoadingSubjects] = useState<boolean>(false);
 
     // Reset form when modal is opened
     useEffect(() => {
@@ -91,21 +92,36 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                 passing_marks: '40',
                 instructions: '',
             });
+            setAvailableSubjects([]);
         }
     }, [modalVisible, selectedClass]);
 
     // Update available subjects when class changes
     useEffect(() => {
-        if (newQuiz.class_id && newQuiz.class_id !== '') {
-            const classSubjects = getSubjectsForClass(newQuiz.class_id);
-            setAvailableSubjects(classSubjects);
-            // Reset subject selection when class changes
-            setNewQuiz(prev => ({ ...prev, subject_id: '' }));
-        } else {
-            setAvailableSubjects([]);
-            setNewQuiz(prev => ({ ...prev, subject_id: '' }));
-        }
-    }, [newQuiz.class_id, getSubjectsForClass]);
+        const loadSubjects = async () => {
+            if (newQuiz.class_id && newQuiz.class_id !== '') {
+                setLoadingSubjects(true);
+                try {
+                    console.log("🔍 Loading subjects for class:", newQuiz.class_id);
+                    const classSubjects = await getSubjectsForClass(newQuiz.class_id);
+                    console.log("✅ Loaded subjects:", classSubjects);
+                    setAvailableSubjects(classSubjects);
+                    // Reset subject selection when class changes
+                    setNewQuiz(prev => ({ ...prev, subject_id: '' }));
+                } catch (error) {
+                    console.error("❌ Error loading subjects:", error);
+                    setAvailableSubjects([]);
+                } finally {
+                    setLoadingSubjects(false);
+                }
+            } else {
+                setAvailableSubjects([]);
+                setNewQuiz(prev => ({ ...prev, subject_id: '' }));
+            }
+        };
+
+        loadSubjects();
+    }, [newQuiz.class_id]);
 
     const handleCreateQuiz = async (): Promise<void> => {
         // Validation
@@ -184,8 +200,8 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                             title: `${newQuiz.title} Scheduled`,
                             message: `A new quiz has been scheduled for ${newQuiz.scheduled_date}. Prepare well!`,
                             entity_type: 'quiz',
-                            entity_id: result.data.id, // quiz ID
-                            created_by: profile?.id, // teacher
+                            entity_id: result.data.id,
+                            created_by: profile?.id,
                             target_type: 'students',
                             target_id: newQuiz.class_id,
                             priority: 'high',
@@ -241,7 +257,6 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                     } catch (studentError) {
                         console.error(`❌ [QUIZ] Failed to send notification to student ${i + 1}:`, studentError);
                         failedCount++;
-                        // Continue with next student instead of stopping
                         continue;
                     }
                 }
@@ -268,7 +283,6 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
             setCreating(false);
         }
     };
-
 
     return (
         <Modal
@@ -330,7 +344,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                                                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
                                                 newQuiz.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                                             ]}
-                                            onPress={() => setNewQuiz({ ...newQuiz, class_id: classItem.id })}
+                                            onPress={() => setNewQuiz({ ...newQuiz, class_id: classItem.id, subject_id: '' })}
                                         >
                                             <Text allowFontScaling={false} style={[
                                                 styles.optionText,
@@ -350,12 +364,21 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                             <View style={styles.inputGroup}>
                                 <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Subject *</Text>
                                 <Text allowFontScaling={false} style={[styles.helperText, { color: colors.textSecondary }]}>
-                                    {newQuiz.subject_id
-                                        ? `Selected: ${availableSubjects.find(s => s.id === newQuiz.subject_id)?.name}`
-                                        : `Available subjects for ${classes.find(c => c.id === newQuiz.class_id)?.name}`
+                                    {loadingSubjects
+                                        ? 'Loading subjects...'
+                                        : newQuiz.subject_id
+                                            ? `Selected: ${availableSubjects.find(s => s.id === newQuiz.subject_id)?.name}`
+                                            : `Available subjects for ${classes.find(c => c.id === newQuiz.class_id)?.name}`
                                     }
                                 </Text>
-                                {availableSubjects.length > 0 ? (
+                                {loadingSubjects ? (
+                                    <View style={[styles.loadingContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                                        <ActivityIndicator color={colors.primary} />
+                                        <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>
+                                            Loading subjects...
+                                        </Text>
+                                    </View>
+                                ) : availableSubjects.length > 0 ? (
                                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                         <View style={styles.options}>
                                             {availableSubjects.map((subject) => (
@@ -461,10 +484,10 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                             style={[
                                 styles.submitButton,
                                 { backgroundColor: colors.primary },
-                                (!newQuiz.class_id || !newQuiz.subject_id) && { backgroundColor: colors.textSecondary }
+                                (!newQuiz.class_id || !newQuiz.subject_id || loadingSubjects) && { backgroundColor: colors.textSecondary }
                             ]}
                             onPress={handleCreateQuiz}
-                            disabled={creating || !newQuiz.class_id || !newQuiz.subject_id}
+                            disabled={creating || !newQuiz.class_id || !newQuiz.subject_id || loadingSubjects}
                         >
                             {creating ? (
                                 <ActivityIndicator color="#ffffff" />
@@ -478,6 +501,9 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
         </Modal>
     );
 };
+
+
+import { TextSizes } from '@/src/styles/TextSizes';
 
 const styles = StyleSheet.create({
     modalOverlay: {
@@ -508,7 +534,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: TextSizes.extraLarge,  // from 20
         fontFamily: 'Inter-SemiBold',
     },
     closeButton: {
@@ -521,12 +547,12 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     label: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,      // from 14
         fontFamily: 'Inter-Medium',
         marginBottom: 8,
     },
     helperText: {
-        fontSize: 12,
+        fontSize: TextSizes.small,       // from 12
         fontFamily: 'Inter-Regular',
         marginBottom: 8,
     },
@@ -535,7 +561,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 12,
         paddingHorizontal: 16,
-        fontSize: 16,
+        fontSize: TextSizes.medium,      // from 16
         fontFamily: 'Inter-Regular',
     },
     textArea: {
@@ -558,8 +584,21 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     optionText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,      // from 14
         fontFamily: 'Inter-Medium',
+    },
+    loadingContainer: {
+        borderRadius: 8,
+        padding: 16,
+        borderWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+    },
+    loadingText: {
+        fontSize: TextSizes.medium,      // from 14
+        fontFamily: 'Inter-Regular',
     },
     noSubjectsContainer: {
         borderRadius: 8,
@@ -567,7 +606,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     noSubjectsText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,      // from 14
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
     },
@@ -578,7 +617,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     infoText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,      // from 14
         fontFamily: 'Inter-Regular',
     },
     infoValue: {
@@ -595,9 +634,144 @@ const styles = StyleSheet.create({
     },
     submitButtonText: {
         color: '#ffffff',
-        fontSize: 16,
+        fontSize: TextSizes.medium,      // from 16
         fontFamily: 'Inter-SemiBold',
     },
 });
+
+
+// const styles = StyleSheet.create({
+//     modalOverlay: {
+//         flex: 1,
+//         backgroundColor: 'rgba(0, 0, 0, 0.5)',
+//         justifyContent: 'flex-end',
+//     },
+//     modalContent: {
+//         borderTopLeftRadius: 24,
+//         borderTopRightRadius: 24,
+//         maxHeight: '90%',
+//     },
+//     modalScrollView: {
+//         maxHeight: '80%',
+//     },
+//     modalScrollViewContent: {
+//         paddingHorizontal: 24,
+//         paddingVertical: 20,
+//         paddingBottom: 40,
+//     },
+//     modalHeader: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         paddingHorizontal: 24,
+//         paddingTop: 24,
+//         paddingBottom: 16,
+//         borderBottomWidth: 1,
+//     },
+//     modalTitle: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     closeButton: {
+//         width: 32,
+//         height: 32,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     inputGroup: {
+//         marginBottom: 20,
+//     },
+//     label: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//         marginBottom: 8,
+//     },
+//     helperText: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//         marginBottom: 8,
+//     },
+//     input: {
+//         height: 50,
+//         borderWidth: 1,
+//         borderRadius: 12,
+//         paddingHorizontal: 16,
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     textArea: {
+//         height: 80,
+//         textAlignVertical: 'top',
+//         paddingTop: 16,
+//     },
+//     rowInputs: {
+//         flexDirection: 'row',
+//         alignItems: 'flex-end',
+//     },
+//     options: {
+//         flexDirection: 'row',
+//         gap: 8,
+//     },
+//     option: {
+//         paddingHorizontal: 16,
+//         paddingVertical: 12,
+//         borderWidth: 1,
+//         borderRadius: 8,
+//     },
+//     optionText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     loadingContainer: {
+//         borderRadius: 8,
+//         padding: 16,
+//         borderWidth: 1,
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         gap: 12,
+//     },
+//     loadingText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     noSubjectsContainer: {
+//         borderRadius: 8,
+//         padding: 16,
+//         borderWidth: 1,
+//     },
+//     noSubjectsText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         textAlign: 'center',
+//     },
+//     infoContainer: {
+//         borderRadius: 8,
+//         padding: 12,
+//         borderWidth: 1,
+//         marginBottom: 20,
+//     },
+//     infoText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     infoValue: {
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     submitButton: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         height: 50,
+//         borderRadius: 12,
+//         marginTop: 12,
+//         gap: 8,
+//     },
+//     submitButtonText: {
+//         color: '#ffffff',
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+// });
 
 export default CreateQuizModal;

@@ -472,22 +472,23 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
 
                     {/* Actions */}
                     <View style={[styles.actions, { borderTopColor: colors.border }]}>
-                        <TouchableOpacity
-                            style={[styles.resetButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-                            onPress={handleReset}
-                        >
-                            <RotateCcw size={16} color={colors.textSecondary} />
-                            <Text allowFontScaling={false} style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset</Text>
-                        </TouchableOpacity>
+
 
                         <View style={styles.mainActions}>
-                            <TouchableOpacity
+                            {/* <TouchableOpacity
                                 style={[styles.button, styles.cancelButton, { backgroundColor: colors.background, borderColor: colors.border }]}
                                 onPress={onClose}
                             >
                                 <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
-                            </TouchableOpacity>
+                            </TouchableOpacity> */}
 
+                            <TouchableOpacity
+                                style={[styles.resetButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+                                onPress={handleReset}
+                            >
+                                <RotateCcw size={16} color={colors.textSecondary} />
+                                <Text allowFontScaling={false} style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset</Text>
+                            </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.button, styles.applyButton, { backgroundColor: colors.primary }]}
                                 onPress={handleApply}
@@ -501,6 +502,8 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
         </Modal>
     );
 };
+
+import { TextSizes } from '@/src/styles/TextSizes';
 
 const styles = StyleSheet.create({
     overlay: {
@@ -527,7 +530,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     title: {
-        fontSize: 20,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
     },
     closeButton: {
@@ -549,7 +552,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
     horizontalScroll: {
@@ -572,7 +575,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     emptyText: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
     },
     dateRangeContainer: {
@@ -582,11 +585,11 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     optionText: {
-        fontSize: 16,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Medium',
     },
     optionDescription: {
-        fontSize: 13,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         marginTop: 2,
     },
@@ -600,14 +603,14 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     dateLabel: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
     },
     dateInput: {
         borderWidth: 1,
         borderRadius: 8,
         padding: 12,
-        fontSize: 16,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Regular',
     },
     currentRangeDisplay: {
@@ -619,7 +622,7 @@ const styles = StyleSheet.create({
         marginTop: 12,
     },
     currentRangeText: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
     },
     statusContainer: {
@@ -632,7 +635,7 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     statusIcon: {
-        fontSize: 20,
+        fontSize: TextSizes.normal,
     },
     summarySection: {
         borderRadius: 12,
@@ -641,12 +644,12 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     summaryTitle: {
-        fontSize: 16,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-SemiBold',
         marginBottom: 8,
     },
     summaryItem: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         marginBottom: 4,
     },
@@ -665,7 +668,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     resetButtonText: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
     },
     mainActions: {
@@ -690,12 +693,210 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     buttonText: {
-        fontSize: 16,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-SemiBold',
     },
     applyButtonText: {
         color: '#ffffff',
-        fontSize: 16,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-SemiBold',
     },
 });
+
+// const styles = StyleSheet.create({
+//     overlay: {
+//         flex: 1,
+//         backgroundColor: 'rgba(0, 0, 0, 0.5)',
+//         justifyContent: 'flex-end',
+//     },
+//     modalContainer: {
+//         borderTopLeftRadius: 24,
+//         borderTopRightRadius: 24,
+//         maxHeight: '90%',
+//         minHeight: '60%',
+//     },
+//     header: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         padding: 24,
+//         borderBottomWidth: 1,
+//     },
+//     headerLeft: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 12,
+//     },
+//     title: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     closeButton: {
+//         padding: 4,
+//     },
+//     content: {
+//         flex: 1,
+//         padding: 24,
+//     },
+//     section: {
+//         marginBottom: 32,
+//         borderBottomWidth: 1,
+//         paddingBottom: 24,
+//     },
+//     sectionHeader: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 8,
+//         marginBottom: 16,
+//     },
+//     sectionTitle: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     horizontalScroll: {
+//         marginHorizontal: -8,
+//     },
+//     optionButton: {
+//         padding: 12,
+//         borderRadius: 12,
+//         borderWidth: 1,
+//         marginBottom: 8,
+//     },
+//     classButton: {
+//         marginHorizontal: 4,
+//         minWidth: 100,
+//         alignItems: 'center',
+//     },
+//     emptySubjectsContainer: {
+//         padding: 16,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//     },
+//     emptyText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     dateRangeContainer: {
+//         gap: 8,
+//     },
+//     dateRangeButton: {
+//         padding: 16,
+//     },
+//     optionText: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     optionDescription: {
+//         fontSize: 13,
+//         fontFamily: 'Inter-Regular',
+//         marginTop: 2,
+//     },
+//     customDateContainer: {
+//         borderRadius: 12,
+//         padding: 16,
+//         marginTop: 12,
+//         gap: 12,
+//     },
+//     dateInputGroup: {
+//         gap: 8,
+//     },
+//     dateLabel: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     dateInput: {
+//         borderWidth: 1,
+//         borderRadius: 8,
+//         padding: 12,
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     currentRangeDisplay: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 8,
+//         padding: 12,
+//         borderRadius: 8,
+//         marginTop: 12,
+//     },
+//     currentRangeText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     statusContainer: {
+//         gap: 8,
+//     },
+//     statusButton: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 12,
+//         padding: 16,
+//     },
+//     statusIcon: {
+//         fontSize: 20,
+//     },
+//     summarySection: {
+//         borderRadius: 12,
+//         borderWidth: 1,
+//         padding: 16,
+//         marginTop: 8,
+//     },
+//     summaryTitle: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 8,
+//     },
+//     summaryItem: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         marginBottom: 4,
+//     },
+//     actions: {
+//         borderTopWidth: 1,
+//         padding: 24,
+//         gap: 16,
+//     },
+//     resetButton: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         gap: 8,
+//         padding: 12,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//     },
+//     resetButtonText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     mainActions: {
+//         flexDirection: 'row',
+//         gap: 12,
+//     },
+//     button: {
+//         flex: 1,
+//         paddingVertical: 16,
+//         paddingHorizontal: 20,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//     },
+//     cancelButton: {
+//         borderWidth: 1,
+//     },
+//     applyButton: {
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.1,
+//         shadowRadius: 4,
+//         elevation: 2,
+//     },
+//     buttonText: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     applyButtonText: {
+//         color: '#ffffff',
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+// });

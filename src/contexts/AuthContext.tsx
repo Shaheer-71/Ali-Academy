@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { UserProfile, StudentProfile } from '@/src/lib/auth';
+import * as Notifications from 'expo-notifications';
 
 interface AuthContextType {
   user: any;
@@ -96,7 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       try {
         setLoading(true);
-        
+
         const { data, error } = await supabase
           .from('students')
           .select('*')
@@ -126,7 +127,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchStudentInfo();
   }, [profile, profileStudentFetched]);
 
+  const deleteDeviceToken = async (userId: string) => {
+    try {
+      console.log('🗑️ [DEVICE] Deleting device token for user:', userId);
 
+      // Get current device's Expo push token
+      const tokenData = await Notifications.getExpoPushTokenAsync();
+      const currentToken = tokenData.data;
+
+      if (!currentToken) {
+        console.log('⚠️ [DEVICE] No token found to delete');
+        return;
+      }
+
+      // Delete this specific device from database
+      const { error } = await supabase
+        .from('devices')
+        .delete()
+        .eq('user_id', userId)
+        .eq('token', currentToken);
+
+      if (error) {
+        console.log('❌ [DEVICE] Error deleting token:', error.message);
+      } else {
+        console.log('✅ [DEVICE] Device token deleted successfully');
+      }
+    } catch (error) {
+      console.log('❌ [DEVICE] Error in deleteDeviceToken:', error);
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -134,11 +163,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    if (user?.id) {
+      await deleteDeviceToken(user.id);
+    }
+
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     setUser(null);
     setProfile(null);
     setProfileFetched(false);
+
+
   };
 
   return (

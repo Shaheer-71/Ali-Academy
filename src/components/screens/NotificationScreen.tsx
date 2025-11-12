@@ -10,7 +10,6 @@ import {
     Modal,
     Alert,
     RefreshControl,
-    SafeAreaView,
     ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -30,6 +29,7 @@ import {
 import TopSections from '@/src/components/common/TopSections';
 import { useNotificationForm } from '../../hooks/useNotificationForm';
 import { useNotificationHistory } from '../../hooks/useNotificationHistory';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface NotificationFormData {
     title: string;
@@ -138,7 +138,7 @@ export default function NotificationScreen() {
     }
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
             <TopSections />
 
             {/* Header */}
@@ -661,6 +661,9 @@ const NotificationCard = ({ notification, colors, students }: any) => {
     );
 };
 
+
+import { TextSizes } from '@/src/styles/TextSizes';
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -671,7 +674,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     restrictedText: {
-        fontSize: 16,
+        fontSize: TextSizes.medium, // was 16
         fontFamily: 'Inter-Medium',
         marginTop: 12,
     },
@@ -684,12 +687,12 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     headerTitle: {
-        fontSize: 28,
+        fontSize: TextSizes.xxlarge, // was 28
         fontFamily: 'Inter-SemiBold',
         marginBottom: 4,
     },
     headerSubtitle: {
-        fontSize: 14,
+        fontSize: TextSizes.regular, // was 14
         fontFamily: 'Inter-Regular',
     },
     createButton: {
@@ -716,13 +719,13 @@ const styles = StyleSheet.create({
         paddingVertical: 60,
     },
     emptyText: {
-        fontSize: 18,
+        fontSize: TextSizes.large, // was 18
         fontFamily: 'Inter-SemiBold',
         marginTop: 16,
         marginBottom: 8,
     },
     emptySubtext: {
-        fontSize: 14,
+        fontSize: TextSizes.regular, // was 14
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
     },
@@ -752,12 +755,12 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     cardTitle: {
-        fontSize: 16,
+        fontSize: TextSizes.medium, // was 16
         fontFamily: 'Inter-SemiBold',
         marginBottom: 2,
     },
     cardType: {
-        fontSize: 12,
+        fontSize: TextSizes.small, // was 12
         fontFamily: 'Inter-Regular',
     },
     badge: {
@@ -768,7 +771,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     cardMessage: {
-        fontSize: 13,
+        fontSize: TextSizes.small, // was 13
         fontFamily: 'Inter-Regular',
         lineHeight: 18,
         marginBottom: 12,
@@ -779,11 +782,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     cardTarget: {
-        fontSize: 12,
+        fontSize: TextSizes.small, // was 12
         fontFamily: 'Inter-Medium',
     },
     cardTime: {
-        fontSize: 11,
+        fontSize: TextSizes.tiny, // was 11
         fontFamily: 'Inter-Regular',
     },
     modalOverlay: {
@@ -806,7 +809,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: TextSizes.xlarge, // was 20
         fontFamily: 'Inter-SemiBold',
     },
     closeButton: {
@@ -824,7 +827,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     label: {
-        fontSize: 14,
+        fontSize: TextSizes.regular, // was 14
         fontFamily: 'Inter-SemiBold',
         marginBottom: 8,
     },
@@ -833,7 +836,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 12,
-        fontSize: 16,
+        fontSize: TextSizes.medium, // was 16
         fontFamily: 'Inter-Regular',
     },
     textArea: {
@@ -841,7 +844,7 @@ const styles = StyleSheet.create({
         textAlignVertical: 'top',
     },
     charCount: {
-        fontSize: 11,
+        fontSize: TextSizes.tiny, // was 11
         fontFamily: 'Inter-Regular',
         marginTop: 4,
         textAlign: 'right',
@@ -861,7 +864,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     typeOptionText: {
-        fontSize: 13,
+        fontSize: TextSizes.small, // was 13
         fontFamily: 'Inter-Medium',
     },
     priorityGrid: {
@@ -876,7 +879,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     priorityOptionText: {
-        fontSize: 13,
+        fontSize: TextSizes.small, // was 13
         fontFamily: 'Inter-Medium',
     },
     targetGrid: {
@@ -894,7 +897,7 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     targetOptionText: {
-        fontSize: 12,
+        fontSize: TextSizes.small, // was 12
         fontFamily: 'Inter-Medium',
     },
     studentScroll: {
@@ -909,7 +912,7 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     studentOptionText: {
-        fontSize: 13,
+        fontSize: TextSizes.small, // was 13
         fontFamily: 'Inter-Medium',
     },
     previewCard: {
@@ -932,16 +935,16 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     previewTitle: {
-        fontSize: 14,
+        fontSize: TextSizes.regular, // was 14
         fontFamily: 'Inter-SemiBold',
     },
     previewSubtitle: {
-        fontSize: 11,
+        fontSize: TextSizes.tiny, // was 11
         fontFamily: 'Inter-Regular',
         marginTop: 2,
     },
     previewMessage: {
-        fontSize: 13,
+        fontSize: TextSizes.small, // was 13
         fontFamily: 'Inter-Regular',
         lineHeight: 18,
         marginBottom: 8,
@@ -952,7 +955,7 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     previewFooterText: {
-        fontSize: 11,
+        fontSize: TextSizes.tiny, // was 11
         fontFamily: 'Inter-Regular',
     },
     modalFooter: {
@@ -970,7 +973,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     cancelButtonText: {
-        fontSize: 16,
+        fontSize: TextSizes.medium, // was 16
         fontFamily: 'Inter-SemiBold',
     },
     sendButton: {
@@ -987,7 +990,339 @@ const styles = StyleSheet.create({
     },
     sendButtonText: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: TextSizes.medium, // was 16
         fontFamily: 'Inter-SemiBold',
     },
 });
+
+
+// const styles = StyleSheet.create({
+//     container: {
+//         flex: 1,
+//     },
+//     restrictedContainer: {
+//         flex: 1,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     restrictedText: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-Medium',
+//         marginTop: 12,
+//     },
+//     header: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         paddingHorizontal: 24,
+//         paddingVertical: 20,
+//         borderBottomWidth: 1,
+//     },
+//     headerTitle: {
+//         fontSize: 28,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 4,
+//     },
+//     headerSubtitle: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     createButton: {
+//         width: 50,
+//         height: 50,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     listContainer: {
+//         flex: 1,
+//         paddingHorizontal: 24,
+//         paddingTop: 16,
+//     },
+//     centerContainer: {
+//         flex: 1,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingVertical: 60,
+//     },
+//     emptyContainer: {
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingVertical: 60,
+//     },
+//     emptyText: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//         marginTop: 16,
+//         marginBottom: 8,
+//     },
+//     emptySubtext: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         textAlign: 'center',
+//     },
+//     notificationCard: {
+//         borderRadius: 12,
+//         padding: 16,
+//         marginBottom: 12,
+//         borderWidth: 1,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.05,
+//         shadowRadius: 4,
+//         elevation: 2,
+//     },
+//     cardHeader: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         marginBottom: 12,
+//     },
+//     priorityIndicator: {
+//         width: 8,
+//         height: 8,
+//         borderRadius: 4,
+//         marginRight: 10,
+//     },
+//     cardTitleContainer: {
+//         flex: 1,
+//     },
+//     cardTitle: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 2,
+//     },
+//     cardType: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     badge: {
+//         width: 24,
+//         height: 24,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     cardMessage: {
+//         fontSize: 13,
+//         fontFamily: 'Inter-Regular',
+//         lineHeight: 18,
+//         marginBottom: 12,
+//     },
+//     cardFooter: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//     },
+//     cardTarget: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     cardTime: {
+//         fontSize: 11,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     modalOverlay: {
+//         flex: 1,
+//         backgroundColor: 'rgba(0, 0, 0, 0.5)',
+//         justifyContent: 'flex-end',
+//     },
+//     modalContent: {
+//         borderTopLeftRadius: 24,
+//         borderTopRightRadius: 24,
+//         maxHeight: '95%',
+//     },
+//     modalHeader: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         paddingHorizontal: 24,
+//         paddingTop: 20,
+//         paddingBottom: 16,
+//         borderBottomWidth: 1,
+//     },
+//     modalTitle: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     closeButton: {
+//         width: 32,
+//         height: 32,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     modalScroll: {
+//         paddingHorizontal: 24,
+//         paddingTop: 20,
+//         paddingBottom: 20,
+//     },
+//     inputGroup: {
+//         marginBottom: 24,
+//     },
+//     label: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 8,
+//     },
+//     input: {
+//         borderWidth: 1,
+//         borderRadius: 12,
+//         paddingHorizontal: 16,
+//         paddingVertical: 12,
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     textArea: {
+//         height: 100,
+//         textAlignVertical: 'top',
+//     },
+//     charCount: {
+//         fontSize: 11,
+//         fontFamily: 'Inter-Regular',
+//         marginTop: 4,
+//         textAlign: 'right',
+//     },
+//     typeGrid: {
+//         flexDirection: 'row',
+//         flexWrap: 'wrap',
+//         gap: 8,
+//     },
+//     typeOption: {
+//         flex: 1,
+//         minWidth: '48%',
+//         paddingVertical: 12,
+//         paddingHorizontal: 12,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//         alignItems: 'center',
+//     },
+//     typeOptionText: {
+//         fontSize: 13,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     priorityGrid: {
+//         flexDirection: 'row',
+//         gap: 8,
+//     },
+//     priorityOption: {
+//         flex: 1,
+//         paddingVertical: 12,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//         alignItems: 'center',
+//     },
+//     priorityOptionText: {
+//         fontSize: 13,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     targetGrid: {
+//         flexDirection: 'row',
+//         gap: 8,
+//     },
+//     targetOption: {
+//         flex: 1,
+//         paddingVertical: 12,
+//         paddingHorizontal: 8,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         gap: 6,
+//     },
+//     targetOptionText: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     studentScroll: {
+//         marginHorizontal: -8,
+//         paddingHorizontal: 8,
+//     },
+//     studentOption: {
+//         paddingHorizontal: 14,
+//         paddingVertical: 10,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//         marginRight: 8,
+//     },
+//     studentOptionText: {
+//         fontSize: 13,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     previewCard: {
+//         borderWidth: 1,
+//         borderRadius: 12,
+//         padding: 12,
+//     },
+//     previewHeader: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         marginBottom: 10,
+//     },
+//     priorityDot: {
+//         width: 8,
+//         height: 8,
+//         borderRadius: 4,
+//         marginRight: 8,
+//     },
+//     previewTitleContainer: {
+//         flex: 1,
+//     },
+//     previewTitle: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     previewSubtitle: {
+//         fontSize: 11,
+//         fontFamily: 'Inter-Regular',
+//         marginTop: 2,
+//     },
+//     previewMessage: {
+//         fontSize: 13,
+//         fontFamily: 'Inter-Regular',
+//         lineHeight: 18,
+//         marginBottom: 8,
+//     },
+//     previewFooter: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 4,
+//     },
+//     previewFooterText: {
+//         fontSize: 11,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     modalFooter: {
+//         flexDirection: 'row',
+//         gap: 12,
+//         paddingHorizontal: 24,
+//         paddingBottom: 24,
+//     },
+//     cancelButton: {
+//         flex: 1,
+//         paddingVertical: 14,
+//         borderRadius: 12,
+//         borderWidth: 1,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     cancelButtonText: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     sendButton: {
+//         flex: 1,
+//         flexDirection: 'row',
+//         paddingVertical: 14,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         gap: 8,
+//     },
+//     sendButtonDisabled: {
+//         opacity: 0.6,
+//     },
+//     sendButtonText: {
+//         color: '#fff',
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+// });

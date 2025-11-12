@@ -53,7 +53,7 @@ export default function SignUpScreen() {
         setLoading(true);
         try {
             const result = await validateStudentEmail(email.toLowerCase().trim());
-            
+
             if (result.isValid && result.student) {
                 setStudentData(result?.student);
                 setStep(2);
@@ -87,7 +87,7 @@ export default function SignUpScreen() {
         setLoading(true);
         try {
             const result = await completeStudentRegistration(email, password);
-            
+
             if (result.success) {
                 setStep(3);
             } else {
@@ -371,6 +371,9 @@ export default function SignUpScreen() {
     );
 }
 
+
+import { TextSizes } from '@/src/styles/TextSizes';
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -401,7 +404,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     progressStepText: {
-        fontSize: 14,
+        fontSize: TextSizes.small, // from 14
         fontFamily: 'Inter-SemiBold',
     },
     progressLine: {
@@ -414,7 +417,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     progressLabel: {
-        fontSize: 12,
+        fontSize: TextSizes.extraSmall, // from 12
         fontFamily: 'Inter-Medium',
         color: '#6B7280',
     },
@@ -426,14 +429,14 @@ const styles = StyleSheet.create({
         marginBottom: 32,
     },
     stepTitle: {
-        fontSize: 24,
+        fontSize: TextSizes.large, // from 24
         fontFamily: 'Inter-SemiBold',
         color: '#274d71',
         marginTop: 16,
         marginBottom: 8,
     },
     stepDescription: {
-        fontSize: 16,
+        fontSize: TextSizes.medium, // from 16
         fontFamily: 'Inter-Regular',
         color: '#6B7280',
         textAlign: 'center',
@@ -446,7 +449,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     label: {
-        fontSize: 14,
+        fontSize: TextSizes.small, // from 14
         fontFamily: 'Inter-Medium',
         color: '#374151',
         marginBottom: 8,
@@ -458,7 +461,7 @@ const styles = StyleSheet.create({
         borderColor: '#E5E7EB',
         borderRadius: 12,
         paddingHorizontal: 16,
-        fontSize: 16,
+        fontSize: TextSizes.medium, // from 16
         fontFamily: 'Inter-Regular',
         color: '#111827',
     },
@@ -474,7 +477,7 @@ const styles = StyleSheet.create({
         flex: 1,
         height: 50,
         paddingHorizontal: 16,
-        fontSize: 16,
+        fontSize: TextSizes.medium, // from 16
         fontFamily: 'Inter-Regular',
         color: '#111827',
     },
@@ -495,25 +498,25 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     studentInfoTitle: {
-        fontSize: 14,
+        fontSize: TextSizes.small, // from 14
         fontFamily: 'Inter-Medium',
         color: '#374151',
         marginLeft: 8,
     },
     studentName: {
-        fontSize: 18,
+        fontSize: TextSizes.large, // from 18
         fontFamily: 'Inter-SemiBold',
         color: '#274d71',
         marginBottom: 4,
     },
     studentDetails: {
-        fontSize: 14,
+        fontSize: TextSizes.small, // from 14
         fontFamily: 'Inter-Regular',
         color: '#6B7280',
         marginBottom: 2,
     },
     studentEmail: {
-        fontSize: 14,
+        fontSize: TextSizes.small, // from 14
         fontFamily: 'Inter-Regular',
         color: '#6B7280',
     },
@@ -521,13 +524,13 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     requirementsTitle: {
-        fontSize: 14,
+        fontSize: TextSizes.small, // from 14
         fontFamily: 'Inter-Medium',
         color: '#374151',
         marginBottom: 8,
     },
     requirementItem: {
-        fontSize: 14,
+        fontSize: TextSizes.small, // from 14
         fontFamily: 'Inter-Regular',
         color: '#6B7280',
         marginBottom: 4,
@@ -549,7 +552,7 @@ const styles = StyleSheet.create({
     },
     buttonText: {
         color: '#ffffff',
-        fontSize: 16,
+        fontSize: TextSizes.medium, // from 16
         fontFamily: 'Inter-SemiBold',
     },
     secondaryButton: {
@@ -565,7 +568,7 @@ const styles = StyleSheet.create({
     },
     secondaryButtonText: {
         color: '#374151',
-        fontSize: 16,
+        fontSize: TextSizes.medium, // from 16
         fontFamily: 'Inter-Medium',
     },
     successCard: {
@@ -578,16 +581,238 @@ const styles = StyleSheet.create({
         marginBottom: 32,
     },
     successName: {
-        fontSize: 20,
+        fontSize: TextSizes.large, // from 20
         fontFamily: 'Inter-SemiBold',
         color: '#274d71',
         marginTop: 16,
         marginBottom: 8,
     },
     successDetails: {
-        fontSize: 16,
+        fontSize: TextSizes.medium, // from 16
         fontFamily: 'Inter-Regular',
         color: '#6B7280',
         textAlign: 'center',
     },
 });
+
+
+// const styles = StyleSheet.create({
+//     container: {
+//         flex: 1,
+//         backgroundColor: '#ffffff',
+//     },
+//     keyboardView: {
+//         flex: 1,
+//     },
+//     scrollContent: {
+//         flexGrow: 1,
+//         paddingHorizontal: 24,
+//         paddingTop: 40,
+//     },
+//     progressContainer: {
+//         marginBottom: 40,
+//     },
+//     progressSteps: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         marginBottom: 12,
+//     },
+//     progressStep: {
+//         width: 32,
+//         height: 32,
+//         borderRadius: 16,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     progressStepText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     progressLine: {
+//         width: 60,
+//         height: 2,
+//     },
+//     progressLabels: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         paddingHorizontal: 16,
+//     },
+//     progressLabel: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//         color: '#6B7280',
+//     },
+//     stepContainer: {
+//         flex: 1,
+//     },
+//     stepHeader: {
+//         alignItems: 'center',
+//         marginBottom: 32,
+//     },
+//     stepTitle: {
+//         fontSize: 24,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#274d71',
+//         marginTop: 16,
+//         marginBottom: 8,
+//     },
+//     stepDescription: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//         color: '#6B7280',
+//         textAlign: 'center',
+//         lineHeight: 24,
+//     },
+//     inputContainer: {
+//         marginBottom: 24,
+//     },
+//     inputGroup: {
+//         marginBottom: 20,
+//     },
+//     label: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//         color: '#374151',
+//         marginBottom: 8,
+//     },
+//     input: {
+//         height: 50,
+//         backgroundColor: '#F9FAFB',
+//         borderWidth: 1,
+//         borderColor: '#E5E7EB',
+//         borderRadius: 12,
+//         paddingHorizontal: 16,
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//         color: '#111827',
+//     },
+//     passwordContainer: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         backgroundColor: '#F9FAFB',
+//         borderWidth: 1,
+//         borderColor: '#E5E7EB',
+//         borderRadius: 12,
+//     },
+//     passwordInput: {
+//         flex: 1,
+//         height: 50,
+//         paddingHorizontal: 16,
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//         color: '#111827',
+//     },
+//     eyeButton: {
+//         padding: 15,
+//     },
+//     studentInfoCard: {
+//         backgroundColor: '#F0F9FF',
+//         borderWidth: 1,
+//         borderColor: '#0EA5E9',
+//         borderRadius: 12,
+//         padding: 16,
+//         marginBottom: 24,
+//     },
+//     studentInfoHeader: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         marginBottom: 12,
+//     },
+//     studentInfoTitle: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//         color: '#374151',
+//         marginLeft: 8,
+//     },
+//     studentName: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#274d71',
+//         marginBottom: 4,
+//     },
+//     studentDetails: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         color: '#6B7280',
+//         marginBottom: 2,
+//     },
+//     studentEmail: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         color: '#6B7280',
+//     },
+//     passwordRequirements: {
+//         marginBottom: 24,
+//     },
+//     requirementsTitle: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//         color: '#374151',
+//         marginBottom: 8,
+//     },
+//     requirementItem: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         color: '#6B7280',
+//         marginBottom: 4,
+//     },
+//     buttonContainer: {
+//         flexDirection: 'row',
+//         gap: 12,
+//     },
+//     button: {
+//         height: 50,
+//         backgroundColor: '#274d71',
+//         borderRadius: 12,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         marginTop: 12,
+//     },
+//     buttonDisabled: {
+//         opacity: 0.6,
+//     },
+//     buttonText: {
+//         color: '#ffffff',
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     secondaryButton: {
+//         height: 50,
+//         backgroundColor: '#F9FAFB',
+//         borderWidth: 1,
+//         borderColor: '#E5E7EB',
+//         borderRadius: 12,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         marginTop: 12,
+//         minWidth: 80,
+//     },
+//     secondaryButtonText: {
+//         color: '#374151',
+//         fontSize: 16,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     successCard: {
+//         backgroundColor: '#F0F9FF',
+//         borderWidth: 1,
+//         borderColor: '#0EA5E9',
+//         borderRadius: 16,
+//         padding: 24,
+//         alignItems: 'center',
+//         marginBottom: 32,
+//     },
+//     successName: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#274d71',
+//         marginTop: 16,
+//         marginBottom: 8,
+//     },
+//     successDetails: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//         color: '#6B7280',
+//         textAlign: 'center',
+//     },
+// });
