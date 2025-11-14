@@ -139,7 +139,7 @@ export default function Header({
                     placeholderTextColor={colors.textSecondary}
                 />
             </View>
-            {(profile?.role === 'teacher' || profile?.role === 'admin') && (
+            {(profile?.role === 'teacher') && (
                 <TouchableOpacity
                     style={[styles.addHeaderButton, { backgroundColor: colors.primary }]}
                     onPress={() => {
@@ -155,6 +155,7 @@ export default function Header({
     );
 }
 
+import { TextSizes } from '@/src/styles/TextSizes';
 const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
     searchInput: {
         flex: 1,
         height: 48,
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
         marginLeft: 12,
     },

@@ -32,7 +32,6 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
             setRefreshing(true);
             try {
                 await onRefresh();
-                console.log('✅ Reports tab refreshed successfully');
             } catch (error) {
                 console.error('❌ Error refreshing reports:', error);
             } finally {
@@ -48,11 +47,6 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
             const studentQuizzes = quizzes;
             const studentResults = quizResults.filter(r => r.student_id === profile?.id);
 
-            console.log('📊 Student Report Data:', {
-                totalQuizzes: studentQuizzes.length,
-                studentResults: studentResults.length,
-                checkedResults: studentResults.filter(r => r.is_checked).length
-            });
 
             return {
                 filteredQuizzes: studentQuizzes,
@@ -91,11 +85,7 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
         const totalPossible = checkedResults.reduce((sum, r) => sum + r.total_marks, 0);
         const averagePercentage = totalPossible > 0 ? (totalMarks / totalPossible) * 100 : 0;
 
-        console.log('📈 Overall Stats:', {
-            totalQuizzes: relevantResults.length,
-            checkedQuizzes: checkedResults.length,
-            averagePercentage: averagePercentage.toFixed(2)
-        });
+
 
         return {
             totalQuizzes: relevantResults.length,

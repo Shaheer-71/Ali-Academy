@@ -28,94 +28,107 @@ export const useDiaryAssignments = (profile: any, student: any) => {
     const fetchAssignments = useCallback(async () => {
         try {
             setLoading(true);
+            if (!profile) return setAssignments([]);
 
-            if (profile?.role === 'teacher' || profile?.role === 'admin') {
-                // Step 1: Get enrolled student IDs (same as attendance)
-                const { data: enrollmentsData, error: enrollError } = await supabase
-                    .from('student_subject_enrollments')
-                    .select('student_id, subject_id, class_id')
-                    .eq('teacher_id', profile.id)
-                    .eq('is_active', true);
+            // -------------------- TEACHER --------------------
+            if (profile.role === "teacher") {
+                // 1️⃣ Get teacher's active class-subject pairs
+                const { data: teacherEnrollments, error: teacherErr } = await supabase
+                    .from("teacher_subject_enrollments")
+                    .select("class_id, subject_id")
+                    .eq("teacher_id", profile.id)
+                    .eq("is_active", true);
 
-                if (enrollError) {
-                    console.error('Enrollments fetch error:', enrollError);
-                    throw enrollError;
-                }
+                if (teacherErr) throw teacherErr;
+                if (!teacherEnrollments || teacherEnrollments.length === 0) return setAssignments([]);
 
-                console.log("📚 Teacher enrollments:", enrollmentsData);
+                // 2️⃣ Build OR expression for class-subject combinations
+                const orExpr = teacherEnrollments
+                    .map(p => `and(class_id.eq.${p.class_id},subject_id.eq.${p.subject_id})`)
+                    .join(',');
 
-                if (!enrollmentsData || enrollmentsData.length === 0) {
-                    console.log("ℹ️ No enrollments found");
-                    setAssignments([]);
-                    return;
-                }
-
-                // Get unique subject IDs
-                const teacherSubjects = [...new Set(enrollmentsData.map(e => e.subject_id))];
-                console.log("📖 Teacher subjects:", teacherSubjects);
-
-                // Step 2: Fetch assignments with joins (like attendance does)
-                const { data, error } = await supabase
-                    .from('diary_assignments')
+                // 3️⃣ Fetch assignments for teacher's class-subject pairs
+                const { data: assignmentsData, error: assignErr } = await supabase
+                    .from("diary_assignments")
                     .select(`
                         *,
-                        classes (name),
-                        students (full_name),
-                        subjects (name),
-                        profiles:assigned_by (full_name)
+                        classes(name),
+                        students(full_name),
+                        subjects(name),
+                        profiles:assigned_by(full_name)
                     `)
-                    .in('subject_id', teacherSubjects)
-                    .order('created_at', { ascending: false });
+                    .or(orExpr)
+                    .order("created_at", { ascending: false });
 
-                if (error) throw error;
+                if (assignErr) throw assignErr;
 
-                console.log("✅ Fetched assignments:", data?.length || 0);
-                setAssignments(data || []);
-
-            } else if (profile?.role === 'student' && student?.id) {
-                // Step 1: Get student's enrolled subjects
-                const { data: enrollmentsData, error: enrollError } = await supabase
-                    .from('student_subject_enrollments')
-                    .select('subject_id')
-                    .eq('student_id', student.id)
-                    .eq('is_active', true);
-
-                if (enrollError) {
-                    console.error('Student enrollments error:', enrollError);
-                    throw enrollError;
-                }
-
-                console.log("📚 Student enrollments:", enrollmentsData);
-
-                if (!enrollmentsData || enrollmentsData.length === 0) {
-                    console.log("ℹ️ No enrollments found");
-                    setAssignments([]);
-                    return;
-                }
-
-                const enrolledSubjects = enrollmentsData.map(e => e.subject_id);
-                console.log("📖 Enrolled subjects:", enrolledSubjects);
-
-                // Step 2: Fetch assignments (individual OR class-wide for enrolled subjects)
-                const { data, error } = await supabase
-                    .from('diary_assignments')
-                    .select(`
-                        *,
-                        classes (name),
-                        students (full_name),
-                        subjects (name),
-                        profiles:assigned_by (full_name)
-                    `)
-                    .or(`student_id.eq.${student.id},and(class_id.eq.${student.class_id},subject_id.in.(${enrolledSubjects.join(',')}))`)
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
-
-                console.log("✅ Fetched student assignments:", data?.length || 0);
-                setAssignments(data || []);
+                setAssignments(assignmentsData || []);
+                return;
             }
-        } catch (error) {
-            console.error('❌ Error fetching assignments:', error);
+
+            // -------------------- STUDENT --------------------
+            if (profile.role === "student" && profile?.id) {
+                // 1️⃣ Get student's active class-subject enrollments
+                const { data: studentEnrollments, error: enrollErr } = await supabase
+                    .from("student_subject_enrollments")
+                    .select("class_id, subject_id")
+                    .eq("student_id", profile?.id)
+                    .eq("is_active", true);
+
+                if (enrollErr) throw enrollErr;
+                if (!studentEnrollments || studentEnrollments.length === 0) return setAssignments([]);
+
+                // 2️⃣ Separate: 
+                // - assignments for this student
+                // - class-wide assignments (student_id IS NULL) but only for enrolled class+subject
+                const classWideOrExpr = studentEnrollments
+                    .map(p => `and(class_id.eq.${p.class_id},subject_id.eq.${p.subject_id},student_id.is.null)`)
+                    .join(',');
+
+                // 3️⃣ Fetch assignments assigned specifically to student
+                const { data: personalAssignments, error: personalErr } = await supabase
+                    .from("diary_assignments")
+                    .select(`
+                        *,
+                        classes(name),
+                        students(full_name),
+                        subjects(name),
+                        profiles:assigned_by(full_name)
+                    `)
+                    .eq("student_id", profile?.id)
+                    .order("created_at", { ascending: false });
+
+                if (personalErr) throw personalErr;
+
+                // 4️⃣ Fetch class-wide assignments for student's enrolled subjects
+                let classAssignments: DiaryAssignment[] = [];
+                if (classWideOrExpr) {
+                    const { data, error: classErr } = await supabase
+                        .from("diary_assignments")
+                        .select(`
+                            *,
+                            classes(name),
+                            students(full_name),
+                            subjects(name),
+                            profiles:assigned_by(full_name)
+                        `)
+                        .or(classWideOrExpr)
+                        .order("created_at", { ascending: false });
+                    if (classErr) throw classErr;
+                    classAssignments = data || [];
+                }
+
+                // 5️⃣ Combine and sort by newest first
+                const combined = [...(personalAssignments || []), ...classAssignments]
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+                setAssignments(combined);
+                return;
+            }
+
+            setAssignments([]);
+        } catch (err: any) {
+            console.error("❌ fetchAssignments error:", err);
             setAssignments([]);
         } finally {
             setLoading(false);
@@ -163,7 +176,7 @@ export const useDiaryAssignments = (profile: any, student: any) => {
             setRefreshing(true);
             await fetchAssignments();
         } catch (error) {
-            console.error('Error refreshing:', error);
+            console.error('❌ Error refreshing:', error);
         } finally {
             setRefreshing(false);
         }

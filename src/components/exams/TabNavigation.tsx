@@ -90,12 +90,12 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
 
                     {/* Reports Button */}
                     {/* {(profile?.role === 'teacher' || profile?.role === 'admin') && ( */}
-                        <TabButton
-                            title="Reports"
-                            isActive={activeTab === 'reports'}
-                            onPress={() => setActiveTab('reports')}
-                            icon={<BarChart3 size={14} color={activeTab === 'reports' ? '#ffffff' : colors.text} />}
-                        />
+                    <TabButton
+                        title="Reports"
+                        isActive={activeTab === 'reports'}
+                        onPress={() => setActiveTab('reports')}
+                        icon={<BarChart3 size={14} color={activeTab === 'reports' ? '#ffffff' : colors.text} />}
+                    />
                     {/* )} */}
 
                     {/* Add Button (only for teachers) */}
@@ -110,14 +110,16 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
                 </View>
 
                 {/* Filter Button - Icon only */}
-                <TabButton
-                    title="Filter"
-                    isActive={false}
-                    onPress={onFilterPress}
-                    icon={<Filter size={16} color={hasActiveFilters ? colors.primary : colors.text} />}
-                    hasIndicator={hasActiveFilters}
-                    isIconOnly={true}
-                />
+                {(profile?.role === 'teacher' || profile?.role === 'admin') && (
+                    <TabButton
+                        title="Filter"
+                        isActive={false}
+                        onPress={onFilterPress}
+                        icon={<Filter size={16} color={hasActiveFilters ? colors.primary : colors.text} />}
+                        hasIndicator={hasActiveFilters}
+                        isIconOnly={true}
+                    />
+                )}
             </View>
         </View>
     );

@@ -225,14 +225,14 @@ export default function FeeScreen() {
             await notificationService.addNotificationRecipients(recipients);
 
             // 📱 SEND PUSH NOTIFICATIONS TO ALL STUDENTS
-            console.log(`📱 [FEE_REMINDER] Sending push notifications to ${recipientList.length} students...`);
+            // console.log(`📱 [FEE_REMINDER] Sending push notifications to ${recipientList.length} students...`);
             let sentCount = 0;
             let failedCount = 0;
 
             for (let i = 0; i < recipientList.length; i++) {
                 const student = recipientList[i];
                 try {
-                    console.log(`📤 [FEE_REMINDER] Sending to student ${i + 1}/${recipientList.length}: ${student.full_name}`);
+                    // console.log(`📤 [FEE_REMINDER] Sending to student ${i + 1}/${recipientList.length}: ${student.full_name}`);
 
                     await sendPushNotification({
                         userId: student.id,
@@ -250,7 +250,7 @@ export default function FeeScreen() {
                         },
                     });
 
-                    console.log(`✅ [FEE_REMINDER] Push sent to student ${i + 1}: ${student.full_name}`);
+                    // console.log(`✅ [FEE_REMINDER] Push sent to student ${i + 1}: ${student.full_name}`);
                     sentCount++;
                 } catch (pushError) {
                     console.error(`❌ [FEE_REMINDER] Failed to send push to student ${i + 1} (${student.full_name}):`, pushError);

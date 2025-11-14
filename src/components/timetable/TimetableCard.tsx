@@ -27,12 +27,12 @@ export const TimetableCard: React.FC<TimetableCardProps> = ({
   isLast = false,
 }) => {
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[
         styles.container,
         isFirst && styles.firstCard,
         isLast && styles.lastCard,
-      ]} 
+      ]}
       onPress={onPress}
     >
       <View style={styles.header}>
@@ -47,9 +47,9 @@ export const TimetableCard: React.FC<TimetableCardProps> = ({
           <Text allowFontScaling={false} style={styles.roomText}>{entry.room_number}</Text>
         </View>
       </View>
-      
+
       <Text allowFontScaling={false} style={styles.subject}>{entry.subject}</Text>
-      
+
       {entry.teacher_name && (
         <View style={styles.teacherContainer}>
           <User size={12} color="#6B7280" />
@@ -66,6 +66,8 @@ export const TimetableCard: React.FC<TimetableCardProps> = ({
     </TouchableOpacity>
   );
 };
+
+import { TextSizes } from '@/src/styles/TextSizes';
 
 const styles = StyleSheet.create({
   container: {
@@ -99,7 +101,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   timeText: {
-    fontSize: 12,
+    fontSize: TextSizes.small,
     fontFamily: 'Inter-SemiBold',
     color: '#274d71',
     marginLeft: 6,
@@ -114,12 +116,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   roomText: {
-    fontSize: 10,
+    fontSize: TextSizes.extraSmall,
     fontFamily: 'Inter-SemiBold',
     color: '#274d71',
   },
   subject: {
-    fontSize: 16,
+    fontSize: TextSizes.medium,
     fontFamily: 'Inter-SemiBold',
     color: '#111827',
     marginBottom: 6,
@@ -130,7 +132,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   teacherText: {
-    fontSize: 12,
+    fontSize: TextSizes.small,
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
     marginLeft: 4,
@@ -140,7 +142,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   classText: {
-    fontSize: 12,
+    fontSize: TextSizes.small,
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
     marginLeft: 4,

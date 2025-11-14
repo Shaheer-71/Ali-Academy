@@ -12,7 +12,6 @@ export const StudentAnalyticsView = () => {
     const { analytics, loading, error } = useStudentAnalytics(profile?.id);
 
 
-    console.log("object" , analytics)
 
     const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
         switch (trend) {

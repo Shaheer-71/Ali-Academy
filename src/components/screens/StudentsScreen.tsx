@@ -95,7 +95,6 @@ export default function StudentsScreen() {
                 .order('name');
             if (error) throw error;
             setClasses(data || []);
-            console.log("Feth Classes in Student Creation : ", data);
             if (data && data.length > 0) {
                 setNewStudent((prev) => ({ ...prev, class_id: data[0].id }));
             }
@@ -114,7 +113,6 @@ export default function StudentsScreen() {
 
         setLoadingSubjects(true);
         try {
-            console.log('🔍 Fetching subjects for class:', classId);
 
             // Get subjects from teacher_subject_enrollments (subjects that have teachers assigned)
             const { data: teacherEnrollments, error: enrollmentError } = await supabase
@@ -126,7 +124,6 @@ export default function StudentsScreen() {
             if (enrollmentError) throw enrollmentError;
 
             if (!teacherEnrollments || teacherEnrollments.length === 0) {
-                console.log('⚠️ No subjects with assigned teachers found for this class');
                 setSubjects([]);
                 setSelectedSubjects([]);
                 Alert.alert(
@@ -139,7 +136,6 @@ export default function StudentsScreen() {
             // Get unique subject IDs
             const subjectIds = [...new Set(teacherEnrollments.map(e => e.subject_id))];
 
-            console.log('📚 Subject IDs with teachers:', subjectIds);
 
             // Fetch subject details
             const { data: subjectsData, error: subjectsError } = await supabase
@@ -151,7 +147,6 @@ export default function StudentsScreen() {
 
             if (subjectsError) throw subjectsError;
 
-            console.log(`✅ Fetched ${subjectsData?.length || 0} subjects`);
             setSubjects(subjectsData || []);
             setSelectedSubjects([]); // Reset selection when class changes
         } catch (error) {
@@ -780,11 +775,14 @@ export default function StudentsScreen() {
     );
 }
 
-// Updated styles
+import { TextSizes } from '@/src/styles/TextSizes';
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+
+    // Error
     errorContainer: {
         flex: 1,
         alignItems: 'center',
@@ -792,15 +790,17 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
     },
     errorText: {
-        fontSize: 24,
+        fontSize: TextSizes.header,
         fontFamily: 'Inter-SemiBold',
         marginBottom: 8,
     },
     errorSubtext: {
-        fontSize: 16,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
     },
+
+    // Header & Search
     headerContainer: {
         paddingHorizontal: 24,
         paddingTop: 16,
@@ -815,14 +815,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         borderRadius: 12,
-        paddingHorizontal: 16,
+        paddingHorizontal: 12,
         borderWidth: 1,
         marginRight: 12,
+        height: 48,
     },
     searchInput: {
         flex: 1,
-        height: 48,
-        fontSize: 16,
+        fontSize: TextSizes.normal + 4,
         fontFamily: 'Inter-Regular',
         marginLeft: 12,
     },
@@ -843,14 +843,16 @@ const styles = StyleSheet.create({
     },
     alertText: {
         flex: 1,
-        fontSize: 14,
+        fontSize: TextSizes.bannerSubtitle,
         fontFamily: 'Inter-Medium',
         marginLeft: 8,
     },
     alertAction: {
-        fontSize: 14,
+        fontSize: TextSizes.bannerTitle,
         fontFamily: 'Inter-SemiBold',
     },
+
+    // Scroll / loading / empty
     scrollView: {
         flex: 1,
         paddingHorizontal: 24,
@@ -861,7 +863,7 @@ const styles = StyleSheet.create({
         paddingVertical: 60,
     },
     loadingText: {
-        fontSize: 16,
+        fontSize: TextSizes.modalText,
         fontFamily: 'Inter-Regular',
         marginTop: 12,
     },
@@ -871,19 +873,21 @@ const styles = StyleSheet.create({
         paddingVertical: 60,
     },
     emptyText: {
-        fontSize: 18,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
         marginTop: 16,
         marginBottom: 8,
     },
     emptySubtext: {
-        fontSize: 14,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
     },
+
+    // Student card
     studentCard: {
-        borderRadius: 16,
-        padding: 20,
+        borderRadius: 12,
+        padding: 16,
         marginBottom: 12,
         borderWidth: 1,
         shadowColor: '#000',
@@ -906,7 +910,7 @@ const styles = StyleSheet.create({
         marginRight: 16,
     },
     studentInitial: {
-        fontSize: 20,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
         color: '#ffffff',
     },
@@ -914,7 +918,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     studentName: {
-        fontSize: 18,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
     },
     studentDetails: {
@@ -927,7 +931,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     detailText: {
-        fontSize: 14,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Regular',
         marginLeft: 4,
     },
@@ -941,10 +945,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     contactText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
         marginLeft: 8,
     },
+
+    // Modal
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -965,7 +971,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: TextSizes.modalTitle,
         fontFamily: 'Inter-SemiBold',
     },
     closeButton: {
@@ -978,8 +984,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         paddingVertical: 24,
     },
+
+    // Form inputs
     sectionTitle: {
-        fontSize: 16,
+        fontSize: TextSizes.sectionTitle,
         fontFamily: 'Inter-SemiBold',
         marginBottom: 16,
     },
@@ -987,39 +995,41 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     label: {
-        fontSize: 14,
+        fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-Medium',
         marginBottom: 8,
     },
     input: {
-        height: 50,
+        height: 48,
         borderWidth: 1,
         borderRadius: 12,
-        paddingHorizontal: 16,
-        fontSize: 16,
+        paddingHorizontal: 12,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Regular',
     },
     textArea: {
         borderWidth: 1,
         borderRadius: 12,
-        paddingHorizontal: 16,
+        paddingHorizontal: 12,
         paddingVertical: 12,
-        fontSize: 16,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Regular',
         textAlignVertical: 'top',
     },
+
+    // Class & gender options
     classOptions: {
         flexDirection: 'row',
         gap: 8,
     },
     classOption: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
         borderWidth: 1,
         borderRadius: 8,
     },
     classOptionText: {
-        fontSize: 14,
+        fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-Medium',
     },
     genderOptions: {
@@ -1028,16 +1038,18 @@ const styles = StyleSheet.create({
     },
     genderOption: {
         flex: 1,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
         borderWidth: 1,
         borderRadius: 8,
         alignItems: 'center',
     },
     genderOptionText: {
-        fontSize: 14,
+        fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-Medium',
     },
+
+    // Submit button
     submitButton: {
         height: 50,
         borderRadius: 12,
@@ -1048,44 +1060,13 @@ const styles = StyleSheet.create({
     },
     submitButtonText: {
         color: '#ffffff',
-        fontSize: 16,
+        fontSize: TextSizes.buttonText,
         fontFamily: 'Inter-SemiBold',
     },
-    infoText: {
-        fontSize: 14,
-        fontFamily: 'Inter-Regular',
-        textAlign: 'center',
-    },
-    pendingStudentCard: {
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        marginBottom: 12,
-    },
-    pendingStudentInfo: {
-        flex: 1,
-    },
-    pendingStudentName: {
-        fontSize: 16,
-        fontFamily: 'Inter-SemiBold',
-        marginBottom: 4,
-    },
-    pendingStudentDetails: {
-        fontSize: 14,
-        fontFamily: 'Inter-Regular',
-        marginBottom: 4,
-    },
-    pendingStudentEmail: {
-        fontSize: 14,
-        fontFamily: 'Inter-Medium',
-        marginBottom: 4,
-    },
-    pendingStudentStatus: {
-        fontSize: 12,
-        fontFamily: 'Inter-Medium',
-    },
+
+    // Helper / info text
     helpText: {
-        fontSize: 12,
+        fontSize: TextSizes.tiny,
         fontFamily: 'Inter-Regular',
         marginTop: 4,
         fontStyle: 'italic',
@@ -1097,14 +1078,375 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     infoTitle: {
-        fontSize: 14,
+        fontSize: TextSizes.modalTitle,
         fontFamily: 'Inter-SemiBold',
         marginBottom: 8,
     },
     infoText: {
-        fontSize: 12,
+        fontSize: TextSizes.modalText,
         fontFamily: 'Inter-Regular',
         lineHeight: 18,
     },
 
+    // Pending registration modal
+    pendingStudentCard: {
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        marginBottom: 12,
+    },
+    pendingStudentInfo: {
+        flex: 1,
+    },
+    pendingStudentName: {
+        fontSize: TextSizes.modalTitle,
+        fontFamily: 'Inter-SemiBold',
+        marginBottom: 4,
+    },
+    pendingStudentDetails: {
+        fontSize: TextSizes.modalText,
+        fontFamily: 'Inter-Regular',
+        marginBottom: 4,
+    },
+    pendingStudentEmail: {
+        fontSize: TextSizes.modalText,
+        fontFamily: 'Inter-Medium',
+        marginBottom: 4,
+    },
+    pendingStudentStatus: {
+        fontSize: TextSizes.small,
+        fontFamily: 'Inter-Medium',
+    },
 });
+
+
+
+
+// Updated styles
+// const styles = StyleSheet.create({
+//     container: {
+//         flex: 1,
+//     },
+//     errorContainer: {
+//         flex: 1,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingHorizontal: 24,
+//     },
+//     errorText: {
+//         fontSize: 24,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 8,
+//     },
+//     errorSubtext: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//         textAlign: 'center',
+//     },
+//     headerContainer: {
+//         paddingHorizontal: 24,
+//         paddingTop: 16,
+//     },
+//     searchContainer: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         marginBottom: 16,
+//     },
+//     searchInputContainer: {
+//         flex: 1,
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         borderRadius: 12,
+//         paddingHorizontal: 16,
+//         borderWidth: 1,
+//         marginRight: 12,
+//     },
+//     searchInput: {
+//         flex: 1,
+//         height: 48,
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//         marginLeft: 12,
+//     },
+//     addButton: {
+//         width: 48,
+//         height: 48,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     alertBanner: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         padding: 12,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//         marginBottom: 16,
+//     },
+//     alertText: {
+//         flex: 1,
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//         marginLeft: 8,
+//     },
+//     alertAction: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     scrollView: {
+//         flex: 1,
+//         paddingHorizontal: 24,
+//     },
+//     loadingContainer: {
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingVertical: 60,
+//     },
+//     loadingText: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//         marginTop: 12,
+//     },
+//     emptyContainer: {
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingVertical: 60,
+//     },
+//     emptyText: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//         marginTop: 16,
+//         marginBottom: 8,
+//     },
+//     emptySubtext: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         textAlign: 'center',
+//     },
+//     studentCard: {
+//         borderRadius: 16,
+//         padding: 20,
+//         marginBottom: 12,
+//         borderWidth: 1,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.05,
+//         shadowRadius: 4,
+//         elevation: 2,
+//     },
+//     studentHeader: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         marginBottom: 12,
+//     },
+//     studentAvatar: {
+//         width: 48,
+//         height: 48,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         marginRight: 16,
+//     },
+//     studentInitial: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#ffffff',
+//     },
+//     studentInfo: {
+//         flex: 1,
+//     },
+//     studentName: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     studentDetails: {
+//         flexDirection: 'row',
+//         gap: 16,
+//         flexWrap: 'wrap',
+//     },
+//     detailItem: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//     },
+//     detailText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         marginLeft: 4,
+//     },
+//     contactInfo: {
+//         paddingTop: 12,
+//         borderTopWidth: 1,
+//         gap: 8,
+//     },
+//     contactRow: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//     },
+//     contactText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//         marginLeft: 8,
+//     },
+//     modalOverlay: {
+//         flex: 1,
+//         backgroundColor: 'rgba(0, 0, 0, 0.5)',
+//         justifyContent: 'flex-end',
+//     },
+//     modalContent: {
+//         borderTopLeftRadius: 24,
+//         borderTopRightRadius: 24,
+//         maxHeight: '90%',
+//     },
+//     modalHeader: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         paddingHorizontal: 24,
+//         paddingTop: 24,
+//         paddingBottom: 16,
+//         borderBottomWidth: 1,
+//     },
+//     modalTitle: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     closeButton: {
+//         width: 32,
+//         height: 32,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     modalScrollView: {
+//         paddingHorizontal: 24,
+//         paddingVertical: 24,
+//     },
+//     sectionTitle: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 16,
+//     },
+//     inputGroup: {
+//         marginBottom: 20,
+//     },
+//     label: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//         marginBottom: 8,
+//     },
+//     input: {
+//         height: 50,
+//         borderWidth: 1,
+//         borderRadius: 12,
+//         paddingHorizontal: 16,
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     textArea: {
+//         borderWidth: 1,
+//         borderRadius: 12,
+//         paddingHorizontal: 16,
+//         paddingVertical: 12,
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//         textAlignVertical: 'top',
+//     },
+//     classOptions: {
+//         flexDirection: 'row',
+//         gap: 8,
+//     },
+//     classOption: {
+//         paddingHorizontal: 16,
+//         paddingVertical: 12,
+//         borderWidth: 1,
+//         borderRadius: 8,
+//     },
+//     classOptionText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     genderOptions: {
+//         flexDirection: 'row',
+//         gap: 8,
+//     },
+//     genderOption: {
+//         flex: 1,
+//         paddingHorizontal: 16,
+//         paddingVertical: 12,
+//         borderWidth: 1,
+//         borderRadius: 8,
+//         alignItems: 'center',
+//     },
+//     genderOptionText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     submitButton: {
+//         height: 50,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         marginTop: 12,
+//         marginBottom: 16,
+//     },
+//     submitButtonText: {
+//         color: '#ffffff',
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     infoText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         textAlign: 'center',
+//     },
+//     pendingStudentCard: {
+//         padding: 16,
+//         borderRadius: 12,
+//         borderWidth: 1,
+//         marginBottom: 12,
+//     },
+//     pendingStudentInfo: {
+//         flex: 1,
+//     },
+//     pendingStudentName: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 4,
+//     },
+//     pendingStudentDetails: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         marginBottom: 4,
+//     },
+//     pendingStudentEmail: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//         marginBottom: 4,
+//     },
+//     pendingStudentStatus: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     helpText: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//         marginTop: 4,
+//         fontStyle: 'italic',
+//     },
+//     infoBox: {
+//         padding: 16,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//         marginBottom: 20,
+//     },
+//     infoTitle: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 8,
+//     },
+//     infoText: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//         lineHeight: 18,
+//     },
+
+// });

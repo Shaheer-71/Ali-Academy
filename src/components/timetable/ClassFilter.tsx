@@ -1,3 +1,4 @@
+// ClassFilter.tsx - FIXED
 import React from 'react';
 import { View, ScrollView, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { Class, TimetableFilters, ThemeColors } from '@/src/types/timetable';
@@ -11,28 +12,10 @@ interface ClassFilterProps {
 }
 
 export default function ClassFilter({ classes, filters, setFilters, colors, loading }: ClassFilterProps) {
-    const isAllClassesSelected = !filters.class_id;
-
     return (
         <View style={styles.classFilter}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.classButtons}>
-                    <TouchableOpacity
-                        style={[
-                            styles.classButton,
-                            { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                            isAllClassesSelected && { backgroundColor: colors.primary, borderColor: colors.primary },
-                        ]}
-                        onPress={() => setFilters({ class_id: undefined })}
-                    >
-                        <Text allowFontScaling={false} style={[
-                            styles.classButtonText,
-                            { color: colors.text },
-                            isAllClassesSelected && { color: '#ffffff' },
-                        ]}>
-                            All Classes
-                        </Text>
-                    </TouchableOpacity>
                     {classes.map((classItem) => {
                         const isSelected = filters.class_id === classItem.id;
                         return (
@@ -66,6 +49,8 @@ export default function ClassFilter({ classes, filters, setFilters, colors, load
     );
 }
 
+import { TextSizes } from '@/src/styles/TextSizes';
+
 const styles = StyleSheet.create({
     classFilter: {
         paddingHorizontal: 24,
@@ -82,7 +67,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     classButtonText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium, // updated from 14
         fontFamily: 'Inter-Medium',
     },
     loadingIndicator: {

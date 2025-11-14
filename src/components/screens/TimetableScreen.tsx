@@ -1,11 +1,11 @@
-// TimetableScreen.tsx - FIXED TYPE ISSUES
+// TimetableScreen.tsx - COMPLETE FIX
 import React, { useState, useEffect, useCallback } from 'react';
-import { SafeAreaView, ScrollView, RefreshControl, StyleSheet, Alert, View } from 'react-native';
+import { SafeAreaView, ScrollView, RefreshControl, StyleSheet, Alert, View, TouchableOpacity, Text } from 'react-native';
+import { Plus } from 'lucide-react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useTimetable } from '@/src/hooks/useTimetable';
 import TopSection from '@/src/components/common/TopSections';
-import Header from '@/src/components/timetable/Header';
 import ClassFilter from '@/src/components/timetable/ClassFilter';
 import DayRow from '@/src/components/timetable/DayRow';
 import TimetableEntryModal from '@/src/components/timetable/TimetableEntryModal';
@@ -20,9 +20,6 @@ import {
     ThemeColors
 } from '@/src/types/timetable';
 import { useFocusEffect } from '@react-navigation/native';
-import SubjectFilter from '../common/SubjectFilter';
-
-
 
 export default function TimetableScreen() {
     const { profile, student } = useAuth();
@@ -45,9 +42,7 @@ export default function TimetableScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [editingEntry, setEditingEntry] = useState<TimetableEntryWithDetails | null>(null);
     const [currentWeek, setCurrentWeek] = useState(new Date());
-    const [searchQuery, setSearchQuery] = useState('');
     const [refreshing, setRefreshing] = useState(false);
-    const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
     const [newEntry, setNewEntry] = useState<Partial<CreateTimetableEntry>>({
         day: undefined,
@@ -57,87 +52,157 @@ export default function TimetableScreen() {
         room_number: '',
         class_id: '',
         teacher_id: profile?.id || '',
-
     });
 
-    // Early return if no profile - this prevents type issues
     if (!profile) {
-        return null; // or a loading spinner
+        return null;
     }
+
+    const isTeacher = profile.role === 'teacher';
+    const isStudent = profile.role === 'student';
 
     useEffect(() => {
         fetchClasses();
         fetchSubjects();
-    }, []);
-
-    useEffect(() => {
-        setFilters({ search_query: searchQuery });
-    }, [searchQuery, setFilters]);
+    }, [profile]);
 
     const fetchClasses = async () => {
         try {
+            if (isTeacher) {
+                // Get classes from teacher_subject_enrollments
+                const { data: teacherEnrollments, error: enrollmentError } = await supabase
+                    .from('teacher_subject_enrollments')
+                    .select('class_id')
+                    .eq('teacher_id', profile.id)
+                    .eq('is_active', true);
 
-            const { data: classesIDData, error: classesIDError } = await supabase
-                .from('student_subject_enrollments')
-                .select('class_id')
-                .eq('teacher_id', profile?.id)
+                if (enrollmentError) {
+                    console.error('Error fetching teacher enrollments:', enrollmentError);
+                    throw enrollmentError;
+                }
 
-            if (classesIDError) {
-                console.error('Error fetch classes in timetable', classesIDError);
-                throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+                if (!teacherEnrollments || teacherEnrollments.length === 0) {
+                    setClasses([]);
+                    return;
+                }
+
+                const classIds = [...new Set(teacherEnrollments.map(e => e.class_id))];
+                console.log('📚 Teacher enrolled class IDs:', classIds);
+
+                const { data, error } = await supabase
+                    .from('classes')
+                    .select('id, name')
+                    .in('id', classIds)
+                    .order('name');
+
+                if (error) throw error;
+                setClasses(data || []);
+
+                // Set first class as default filter
+                if (data && data.length > 0) {
+                    setFilters({ class_id: data[0].id });
+                }
+            } else if (isStudent && student?.class_id) {
+                // For students, get their own class
+                const { data, error } = await supabase
+                    .from('classes')
+                    .select('id, name')
+                    .eq('id', student.class_id)
+                    .single();
+
+                if (error) throw error;
+                if (data) {
+                    setClasses([data]);
+                    setFilters({ class_id: data.id });
+                }
             }
-            let classEnrolledIds = classesIDData?.map(item => item.class_id) || [];
-            console.log("📚 Fetched enrollments:", classEnrolledIds);
-
-            const { data, error } = await supabase
-                .from('classes')
-                .select('id, name')
-                .in('id', classEnrolledIds)
-                .order('name');
-            if (error) throw error;
-            setClasses(data || []);
         } catch (error) {
             console.error('Error fetching classes:', error);
         }
     };
-    
+
     const fetchSubjects = async () => {
         try {
+            if (isTeacher) {
+                // Get subjects from teacher_subject_enrollments based on selected class
+                const classId = filters.class_id || classes[0]?.id;
 
-            const { data: classesIDData, error: classesIDError } = await supabase
-                .from('student_subject_enrollments')
-                .select('subject_id')
-                .eq('teacher_id', profile?.id)
+                if (!classId) {
+                    setSubjects([]);
+                    return;
+                }
 
-            if (classesIDError) {
-                console.error('Error fetch subjects in timetable', classesIDError);
-                throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+                const { data: teacherEnrollments, error: enrollmentError } = await supabase
+                    .from('teacher_subject_enrollments')
+                    .select('subject_id')
+                    .eq('teacher_id', profile.id)
+                    .eq('class_id', classId)
+                    .eq('is_active', true);
+
+                if (enrollmentError) {
+                    console.error('Error fetching teacher subject enrollments:', enrollmentError);
+                    throw enrollmentError;
+                }
+
+                if (!teacherEnrollments || teacherEnrollments.length === 0) {
+                    console.log('No subjects assigned to teacher for this class');
+                    setSubjects([]);
+                    return;
+                }
+
+                const subjectIds = [...new Set(teacherEnrollments.map(e => e.subject_id))];
+                console.log('📚 Teacher enrolled subject IDs for class:', subjectIds);
+
+                const { data, error } = await supabase
+                    .from('subjects')
+                    .select('id, name')
+                    .in('id', subjectIds)
+                    .eq('is_active', true)
+                    .order('name');
+
+                if (error) throw error;
+                setSubjects(data || []);
+            } else if (isStudent && student?.id) {
+                // For students, get subjects from student_subject_enrollments
+                const { data: studentEnrollments, error: enrollmentError } = await supabase
+                    .from('student_subject_enrollments')
+                    .select('subject_id')
+                    .eq('student_id', student.id)
+                    .eq('is_active', true);
+
+                if (enrollmentError) {
+                    console.error('Error fetching student enrollments:', enrollmentError);
+                    throw enrollmentError;
+                }
+
+                if (!studentEnrollments || studentEnrollments.length === 0) {
+                    setSubjects([]);
+                    return;
+                }
+
+                const subjectIds = [...new Set(studentEnrollments.map(e => e.subject_id))];
+
+                const { data, error } = await supabase
+                    .from('subjects')
+                    .select('id, name')
+                    .in('id', subjectIds)
+                    .eq('is_active', true)
+                    .order('name');
+
+                if (error) throw error;
+                setSubjects(data || []);
             }
-            let subjectsEnrolledIds = classesIDData?.map(item => item.subject_id) || [];
-
-
-            const { data, error } = await supabase
-                .from('classes_subjects')
-                .select(`
-                        subjects (
-                        id,
-                        name
-                        )
-                    `)
-                .eq('class_id', student?.class_id)
-
-            if (error) throw error;
-
-            // Flatten nested subjects into a simple array
-            const subjectsList = data
-                ?.map(item => item.subjects)
-                .filter(Boolean) || [];
-
-            setSubjects(subjectsList);
         } catch (error) {
             console.error('Error fetching subjects:', error);
         }
     };
+
+    // Refetch subjects when class filter changes
+    useEffect(() => {
+        if (filters.class_id && isTeacher) {
+            fetchSubjects();
+        }
+    }, [filters.class_id]);
 
     const formatTime = (time: string) => time.includes(':') && time.split(':').length === 2 ? time + ':00' : time;
 
@@ -220,7 +285,7 @@ export default function TimetableScreen() {
             end_time: '',
             subject: '',
             room_number: '',
-            class_id: '',
+            class_id: filters.class_id || '',
             teacher_id: profile.id,
         });
     };
@@ -258,92 +323,75 @@ export default function TimetableScreen() {
         setModalVisible(true);
     };
 
+    const handleAddButtonPress = () => {
+        if (!filters.class_id) {
+            Alert.alert('Select Class', 'Please select a class first');
+            return;
+        }
+        resetForm();
+        setEditingEntry(null);
+        setModalVisible(true);
+    };
+
     if (error && !loading) {
         return <ErrorState error={error} colors={colors} refreshTimetable={refreshTimetable} />;
     }
 
-
-    // Automatically refresh timetable when screen becomes active
     useFocusEffect(
         useCallback(() => {
             onRefresh();
         }, [profile])
     );
 
-
     const weekDates = getCurrentWeekDates();
-    const isTeacher = profile.role === 'teacher';
 
     return (
         <>
             <TopSection />
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
 
-                {/* <View style={{ flexDirection: 'row', borderWidth: 1 }}>
-                    <View style={{ flex: 1, borderWidth: 1 }}>
-                        <Header
-                            profile={profile}
-                            colors={colors}
-                            searchQuery={searchQuery}
-                            setSearchQuery={setSearchQuery}
-                            setModalVisible={setModalVisible}
-                            resetForm={resetForm}
-                            setEditingEntry={setEditingEntry}
-                        />
-                    </View>
-
-                    <View style={{borderWidth: 1 }}>
-                        {profile.role === 'student' && (
-                            <View style={styles.filterContainer}>
-                                <SubjectFilter
-                                    subjects={subjects}
-                                    selectedSubject={selectedSubject}
-                                    onSubjectSelect={setSelectedSubject}
-                                    colors={colors}
-                                    loading={loading}
-                                />
-                            </View>
-                        )}
-                    </View>
-                </View> */}
-
-                {/* <View style={styles.headerRow}>
-                    <View style={styles.searchContainer}>
-                        <Header
-                            profile={profile}
-                            colors={colors}
-                            searchQuery={searchQuery}
-                            setSearchQuery={setSearchQuery}
-                            setModalVisible={setModalVisible}
-                            resetForm={resetForm}
-                            setEditingEntry={setEditingEntry}
-                        />
-                    </View>
-
-                    {profile.role === 'student' && (
-                        <View style={styles.filterWrapper}>
-                            <SubjectFilter
-                                subjects={subjects}
-                                selectedSubject={selectedSubject}
-                                onSubjectSelect={setSelectedSubject}
+                {/* Class Filter with Add Button (for teachers) */}
+                {isTeacher && classes.length > 0 && (
+                    <View style={styles.filterRow}>
+                        <View style={styles.classFilterWrapper}>
+                            <ClassFilter
+                                classes={classes}
+                                filters={filters}
+                                setFilters={setFilters}
                                 colors={colors}
                                 loading={loading}
                             />
                         </View>
-                    )}
-                </View> */}
+                        {isTeacher && profile.email === "rafeh@aliacademy.edu..." && classes.length > 0 && (
+                            <TouchableOpacity
+                                style={[styles.addButton, { backgroundColor: colors.primary }]}
+                                onPress={handleAddButtonPress}
+                            >
+                                <Plus size={20} color="#ffffff" />
+                            </TouchableOpacity>
+                        )}
 
-
-
-                {isTeacher && (
-                    <ClassFilter
-                        classes={classes}
-                        filters={filters}
-                        setFilters={setFilters}
-                        colors={colors}
-                        loading={loading}
-                    />
+                    </View>
                 )}
+
+                {/* For students - just show their class name */}
+                {/* {isStudent && student?.class_id && (
+                    <View style={styles.studentClassInfo}>
+                        <Text allowFontScaling={false} style={[styles.studentClassText, { color: colors.text }]}>
+                            {classes[0]?.name || 'Your Class Schedule'}
+                        </Text>
+                    </View>
+                )} */}
+
+                {/* Empty State for Teachers with No Classes */}
+                {isTeacher && classes.length === 0 && !loading && (
+                    <View style={styles.emptyState}>
+                        <Text allowFontScaling={false} style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+                            No classes assigned to you yet
+                        </Text>
+                    </View>
+                )}
+
                 <ScrollView
                     style={styles.scrollView}
                     showsVerticalScrollIndicator={false}
@@ -365,6 +413,7 @@ export default function TimetableScreen() {
                         ))}
                     </View>
                 </ScrollView>
+
                 {isTeacher && (
                     <TimetableEntryModal
                         modalVisible={modalVisible}
@@ -394,18 +443,58 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     headerRow: {
+        paddingHorizontal: 24,
+        paddingTop: 16,
+        paddingBottom: 12,
+        marginTop: -12,
+    },
+    pageTitle: {
+        fontSize: 24,
+        fontFamily: 'Inter-Bold',
+    },
+    filterRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        paddingRight: 24,
+        gap: 12,
+        width: '100%',
+    },
+    classFilterWrapper: {
+        flex: 1,
+    },
+    addButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 8,
+        gap: 6,
+        marginBottom: 20,
+    },
+    addButtonText: {
+        fontSize: 14,
+        fontFamily: 'Inter-SemiBold',
+        color: '#ffffff',
+    },
+    studentClassInfo: {
         paddingHorizontal: 24,
-        paddingVertical: 8,
-        gap: 8, // small spacing between search bar & filter
-        marginTop: -12
+        paddingVertical: 12,
+        marginBottom: 12,
     },
-    searchContainer: {
-        flex: 1, // takes up all available width
+    studentClassText: {
+        fontSize: 16,
+        fontFamily: 'Inter-SemiBold',
     },
-    filterWrapper: {
-        flexShrink: 0, // prevents filter from expanding, takes only needed space
+    emptyState: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 60,
+    },
+    emptyStateText: {
+        fontSize: 16,
+        fontFamily: 'Inter-Regular',
     },
     scrollView: {
         flex: 1,
@@ -414,11 +503,4 @@ const styles = StyleSheet.create({
     timetableContainer: {
         paddingBottom: 40,
     },
-    filterContainer: {
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(0,0,0,0.05)',
-    },
 });
-

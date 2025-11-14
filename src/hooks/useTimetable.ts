@@ -1,4 +1,4 @@
-// hooks/useTimetable.ts - REFACTORED WITHOUT USELESS LOGIC
+// hooks/useTimetable.ts - FIXED to properly filter by assigned classes and subjects
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/src/lib/supabase';
@@ -24,7 +24,7 @@ export const useTimetable = (): UseTimetableReturn => {
     const [filters, setFiltersState] = useState<TimetableFilters>({});
     const subscriptionRef = useRef<any>(null);
 
-    // Fetch timetable data
+    // Fetch timetable data with proper filtering
     const fetchTimetable = useCallback(async () => {
         if (!profile) return;
 
@@ -40,6 +40,7 @@ export const useTimetable = (): UseTimetableReturn => {
 
             // Apply role-based filters
             if (profile.role === 'student') {
+                // Students see only their class schedule
                 const { data: studentData } = await supabase
                     .from('students')
                     .select('class_id')
@@ -52,6 +53,14 @@ export const useTimetable = (): UseTimetableReturn => {
                     setTimetable([]);
                     setLoading(false);
                     return;
+                }
+            } else if (profile.role === 'teacher') {
+                // Teachers see only THEIR OWN lectures (where they are the teacher)
+                query = query.eq('teacher_id', profile.id);
+                
+                // If specific class is selected, also filter by that class
+                if (filters.class_id) {
+                    query = query.eq('class_id', filters.class_id);
                 }
             } else if (profile.role === 'parent') {
                 const { data: studentData } = await supabase
@@ -67,8 +76,6 @@ export const useTimetable = (): UseTimetableReturn => {
                     setLoading(false);
                     return;
                 }
-            } else if (profile.role === 'teacher' && filters.class_id) {
-                query = query.eq('class_id', filters.class_id);
             }
 
             // Apply additional filters
@@ -127,6 +134,24 @@ export const useTimetable = (): UseTimetableReturn => {
         return data?.id || null;
     };
 
+    // Validate if teacher can teach this subject in this class
+    const validateTeacherAssignment = async (
+        teacherId: string,
+        classId: string,
+        subjectId: string
+    ): Promise<boolean> => {
+        const { data } = await supabase
+            .from('teacher_subject_enrollments')
+            .select('id')
+            .eq('teacher_id', teacherId)
+            .eq('class_id', classId)
+            .eq('subject_id', subjectId)
+            .eq('is_active', true)
+            .single();
+
+        return !!data;
+    };
+
     // Create timetable entry
     const createEntry = useCallback(async (entry: CreateTimetableEntry): Promise<TimetableEntryWithDetails | null> => {
         if (!profile?.id) return null;
@@ -146,6 +171,18 @@ export const useTimetable = (): UseTimetableReturn => {
             const subjectId = await getSubjectId(entry.subject);
             if (!subjectId) {
                 Alert.alert('Error', 'Subject not found');
+                return null;
+            }
+
+            // Validate teacher assignment
+            const isAssigned = await validateTeacherAssignment(
+                entry.teacher_id,
+                entry.class_id,
+                subjectId
+            );
+
+            if (!isAssigned) {
+                Alert.alert('Error', 'You are not assigned to teach this subject in this class');
                 return null;
             }
 

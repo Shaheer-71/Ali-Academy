@@ -65,6 +65,7 @@ export default function TimeSlot({
     );
 }
 
+import { TextSizes } from '@/src/styles/TextSizes';
 const styles = StyleSheet.create({
     timeSlot: {
         borderRadius: 12,
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     timeText: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-SemiBold',
         marginLeft: 6,
     },
@@ -111,12 +112,12 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     roomText: {
-        fontSize: 10,
+        fontSize: TextSizes.extraSmall,
         fontFamily: 'Inter-SemiBold',
         color: '#274d71',
     },
     subjectText: {
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
         marginBottom: 6,
     },
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     teacherText: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         marginLeft: 4,
     },
@@ -140,7 +141,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     classText: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         marginLeft: 4,
     },

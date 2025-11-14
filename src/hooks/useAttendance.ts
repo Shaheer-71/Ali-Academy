@@ -114,7 +114,6 @@ export const useAttendance = (classId?: string, subjectId?: string) => { // ✅ 
     }
 
     try {
-      console.log('🔍 Fetching students for class:', classId, 'subject:', subjectId);
 
       // ✅ Get students enrolled in this specific class + subject
       const { data: enrollments, error: enrollmentError } = await supabase
@@ -130,14 +129,12 @@ export const useAttendance = (classId?: string, subjectId?: string) => { // ✅ 
       }
 
       if (!enrollments || enrollments.length === 0) {
-        console.log('⚠️ No students enrolled in this class/subject combination');
         setStudents([]);
         setLoading(false);
         return;
       }
 
       const studentIds = [...new Set(enrollments.map(e => e.student_id))];
-      console.log('📚 Enrolled student IDs:', studentIds);
 
       // Fetch student details
       const { data, error } = await supabase
@@ -155,7 +152,6 @@ export const useAttendance = (classId?: string, subjectId?: string) => { // ✅ 
 
       if (error) throw error;
 
-      console.log(`✅ Fetched ${data?.length || 0} students`);
       setStudents(data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
@@ -400,7 +396,6 @@ export const useAttendance = (classId?: string, subjectId?: string) => { // ✅ 
     setPosting(true);
 
     try {
-      console.log("📅 Posting attendance for date:", date, "class:", classId, "subject:", subjectId);
 
       const attendanceData = Object.values(currentAttendance).map(record => ({
         student_id: record.student_id,
@@ -414,7 +409,6 @@ export const useAttendance = (classId?: string, subjectId?: string) => { // ✅ 
         marked_by: profile!.id,
       }));
 
-      console.log("🟩 Prepared attendance data:", attendanceData);
 
       // ✅ Check if attendance already exists for this class + subject + date
       const { data: existing, error: checkError } = await supabase
@@ -437,7 +431,6 @@ export const useAttendance = (classId?: string, subjectId?: string) => { // ✅ 
 
       if (attendanceError) throw attendanceError;
 
-      console.log("✅ Attendance saved successfully");
 
       // Clear current attendance after successful post
       setCurrentAttendance({});

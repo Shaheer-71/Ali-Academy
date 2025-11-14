@@ -43,7 +43,7 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
     const dueDate = new Date(assignment.due_date);
     const diffTime = dueDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 0) return `${Math.abs(diffDays)} days overdue`;
     if (diffDays === 0) return 'Due today';
     if (diffDays === 1) return 'Due tomorrow';
@@ -53,8 +53,8 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
   const overdue = isOverdue();
 
   return (
-    <TouchableOpacity 
-      style={[styles.container, overdue && styles.overdueContainer]} 
+    <TouchableOpacity
+      style={[styles.container, overdue && styles.overdueContainer]}
       onPress={onPress}
     >
       <View style={styles.header}>
@@ -115,6 +115,8 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
   );
 };
 
+
+import { TextSizes } from '@/src/styles/TextSizes';
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#ffffff',
@@ -153,7 +155,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 16,
+    fontSize: TextSizes.large,       // was 16
     fontFamily: 'Inter-SemiBold',
     color: '#111827',
     marginBottom: 6,
@@ -166,7 +168,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   metadataText: {
-    fontSize: 11,
+    fontSize: TextSizes.medium,      // was 11
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
     marginLeft: 4,
@@ -179,7 +181,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   description: {
-    fontSize: 14,
+    fontSize: TextSizes.normal,      // was 14
     fontFamily: 'Inter-Regular',
     color: '#374151',
     lineHeight: 18,
@@ -195,7 +197,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dueText: {
-    fontSize: 12,
+    fontSize: TextSizes.small,       // was 12
     fontFamily: 'Inter-Medium',
     color: '#6B7280',
     marginLeft: 4,
@@ -210,8 +212,110 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   attachmentText: {
-    fontSize: 11,
+    fontSize: TextSizes.small,       // was 11
     fontFamily: 'Inter-Medium',
     color: '#274d71',
   },
 });
+
+
+// const styles = StyleSheet.create({
+//   container: {
+//     backgroundColor: '#ffffff',
+//     borderRadius: 12,
+//     padding: 16,
+//     marginBottom: 8,
+//     borderWidth: 1,
+//     borderColor: '#E5E7EB',
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 1 },
+//     shadowOpacity: 0.05,
+//     shadowRadius: 2,
+//     elevation: 1,
+//   },
+//   overdueContainer: {
+//     borderColor: '#FEE2E2',
+//     backgroundColor: '#FEF2F2',
+//   },
+//   header: {
+//     flexDirection: 'row',
+//     marginBottom: 12,
+//   },
+//   iconContainer: {
+//     width: 40,
+//     height: 40,
+//     backgroundColor: '#F3F4F6',
+//     borderRadius: 10,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     marginRight: 12,
+//   },
+//   overdueIconContainer: {
+//     backgroundColor: '#FEE2E2',
+//   },
+//   info: {
+//     flex: 1,
+//   },
+//   title: {
+//     fontSize: 16,
+//     fontFamily: 'Inter-SemiBold',
+//     color: '#111827',
+//     marginBottom: 6,
+//   },
+//   metadata: {
+//     gap: 4,
+//   },
+//   metadataItem: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//   },
+//   metadataText: {
+//     fontSize: 11,
+//     fontFamily: 'Inter-Regular',
+//     color: '#6B7280',
+//     marginLeft: 4,
+//   },
+//   overdueText: {
+//     color: '#EF4444',
+//     fontFamily: 'Inter-Medium',
+//   },
+//   overdueIndicator: {
+//     marginLeft: 8,
+//   },
+//   description: {
+//     fontSize: 14,
+//     fontFamily: 'Inter-Regular',
+//     color: '#374151',
+//     lineHeight: 18,
+//     marginBottom: 12,
+//   },
+//   footer: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     alignItems: 'center',
+//   },
+//   dueInfo: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//   },
+//   dueText: {
+//     fontSize: 12,
+//     fontFamily: 'Inter-Medium',
+//     color: '#6B7280',
+//     marginLeft: 4,
+//   },
+//   attachmentButton: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     backgroundColor: '#F9FAFB',
+//     paddingVertical: 6,
+//     paddingHorizontal: 10,
+//     borderRadius: 6,
+//     gap: 4,
+//   },
+//   attachmentText: {
+//     fontSize: 11,
+//     fontFamily: 'Inter-Medium',
+//     color: '#274d71',
+//   },
+// });

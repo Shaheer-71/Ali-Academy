@@ -80,14 +80,11 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
         setUploading(true);
 
         try {
-            console.log('🟢 Starting assignment creation...');
             let fileUrl: string | undefined;
 
             if (newAssignment.file) {
-                console.log('Uploading file to Cloudinary...');
                 const uploadResult = await uploadToCloudinary(newAssignment.file, 'raw');
                 fileUrl = uploadResult.secure_url;
-                console.log('✅ File uploaded:', fileUrl);
             }
 
             const assignmentData = {
@@ -101,7 +98,6 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                 assigned_by: profile!.id,
             };
 
-            console.log('📦 Inserting assignment data:', assignmentData);
 
             const { data: assignment, error } = await supabase
                 .from('diary_assignments')
@@ -111,11 +107,9 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
 
             if (error) throw error;
 
-            console.log('✅ Assignment created:', assignment);
 
             // CASE 1: Class-wide assignment
             if (newAssignment.assignTo === 'class' && newAssignment.class_id) {
-                console.log('🔔 Creating class-wide notification for class:', newAssignment.class_id);
 
                 const { data: students, error: studentError } = await supabase
                     .from('students')
@@ -127,7 +121,6 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                 } else if (!students || students.length === 0) {
                     console.warn('⚠️ No students found for this class');
                 } else {
-                    console.log(`✅ Found ${students.length} students in class ${newAssignment.class_id}`);
 
                     const { data: notif, error: notifError } = await supabase
                         .from('notifications')
@@ -164,16 +157,13 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                         if (recipientError) {
                             console.error('❌ Error adding assignment recipients:', recipientError);
                         } else {
-                            console.log(`✅ Added ${students.length} notification recipients`);
 
-                            console.log(`📱 [ASSIGNMENT] Sending push notifications to ${students.length} students...`);
                             let sentCount = 0;
                             let failedCount = 0;
 
                             for (let i = 0; i < students.length; i++) {
                                 const student = students[i];
                                 try {
-                                    console.log(`📤 Sending to student ${i + 1}/${students.length}: ${student.full_name}`);
                                     await sendPushNotification({
                                         userId: student.id,
                                         title: `📝 New Assignment: ${newAssignment.title}`,
@@ -197,12 +187,10 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                                 }
                             }
 
-                            console.log(`📊 Push Summary: Sent ${sentCount}, Failed ${failedCount}`);
                         }
                     }
                 }
             } else if (newAssignment.assignTo === 'student' && newAssignment.student_id) {
-                console.log('🔔 Creating individual notification for student:', newAssignment.student_id);
 
                 const { data: notif, error: notifError } = await supabase
                     .from('notifications')
@@ -239,7 +227,6 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                     if (recipientError) {
                         console.error('❌ Error adding recipient:', recipientError);
                     } else {
-                        console.log('✅ Added recipient for single student');
 
                         try {
                             await sendPushNotification({
@@ -255,7 +242,6 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                                     timestamp: new Date().toISOString(),
                                 },
                             });
-                            console.log(`✅ Push sent to student ID: ${newAssignment.student_id}`);
                         } catch (pushError) {
                             console.error('❌ Failed to send push notification:', pushError);
                         }
@@ -272,7 +258,6 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
             Alert.alert('Error', error.message);
             return false;
         } finally {
-            console.log('🟡 Upload process finished');
             setUploading(false);
         }
     }, [newAssignment, profile, resetForm, onSuccess]);

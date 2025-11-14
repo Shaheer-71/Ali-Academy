@@ -66,6 +66,7 @@ export default function ClassSelector({ classes, selectedClassId, onClassSelect 
     );
 }
 
+import { TextSizes } from '@/src/styles/TextSizes';
 const styles = StyleSheet.create({
     container: {
         marginVertical: 16,
@@ -86,8 +87,34 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     classOptionText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
         textAlign: 'center',
     },
 });
+
+// const styles = StyleSheet.create({
+//     container: {
+//         marginVertical: 16,
+//     },
+//     scrollContainer: {
+//         paddingHorizontal: 24,
+//         gap: 12,
+//     },
+//     classOption: {
+//         flexDirection: 'column',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         minWidth: 100,
+//         paddingHorizontal: 16,
+//         paddingVertical: 12,
+//         borderWidth: 2,
+//         borderRadius: 12,
+//         gap: 4,
+//     },
+//     classOptionText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//         textAlign: 'center',
+//     },
+// });

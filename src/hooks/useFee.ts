@@ -514,17 +514,11 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
 
     const createFeeNotification = useCallback(
         async (notificationRequest: FeeNotificationRequest): Promise<FeeNotification | null> => {
-            console.log("🚀 [FEE] createFeeNotification called with:", JSON.stringify(notificationRequest, null, 2));
 
             try {
                 setLoading(true);
                 setError(null);
 
-                // 🔍 1️⃣ Log dependency info
-                console.log("📦 [FEE] Using userId:", dependencies?.userId);
-
-                // 🔍 2️⃣ Log before insert
-                console.log("📝 [FEE] Inserting into notifications...");
 
                 const { data: notif, error: notifError } = await supabase
                     .from("notifications")
@@ -544,7 +538,6 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .select()
                     .single();
 
-                console.log("📤 [FEE] Supabase insert result:", { notif, notifError });
 
                 if (notifError) {
                     console.error("❌ [FEE] Error inserting notification:", notifError);
@@ -553,15 +546,12 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                 }
 
                 // ✅ 3️⃣ Log success
-                console.log("✅ [FEE] Notification created:", notif.id);
 
                 // 🔍 4️⃣ Check recipients
                 if (!notificationRequest.student_ids || notificationRequest.student_ids.length === 0) {
-                    console.log("ℹ️ [FEE] No recipients provided for this notification");
                     return notif as FeeNotification;
                 }
 
-                console.log(`👥 [FEE] Processing ${notificationRequest.student_ids.length} students...`);
 
                 // 🧾 5️⃣ Insert recipients
                 const recipientRows = notificationRequest.student_ids.map((studentId) => ({
@@ -571,29 +561,22 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     is_deleted: false,
                 }));
 
-                console.log(`🔗 [FEE] Inserting ${recipientRows.length} recipients...`);
                 const { data: recData, error: recipientError } = await supabase
                     .from("notification_recipients")
                     .insert(recipientRows)
                     .select();
 
-                console.log("📤 [FEE] Recipients insert result:", { count: recData?.length, error: recipientError });
 
                 if (recipientError) {
                     console.error("❌ [FEE] Error inserting recipients:", recipientError);
-                } else {
-                    console.log(`✅ [FEE] ${recData?.length || 0} recipients inserted successfully`);
-                }
-
+                } 
                 // 📱 6️⃣ SEND PUSH NOTIFICATIONS TO ALL STUDENTS
-                console.log(`📱 [FEE] Sending push notifications to ${notificationRequest.student_ids.length} students...`);
                 let sentCount = 0;
                 let failedCount = 0;
 
                 for (let i = 0; i < notificationRequest.student_ids.length; i++) {
                     const studentId = notificationRequest.student_ids[i];
                     try {
-                        console.log(`📤 [FEE] Sending notification to student ${i + 1}/${notificationRequest.student_ids.length}...`);
 
                         await sendPushNotification({
                             userId: studentId,
@@ -609,7 +592,6 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                             },
                         });
 
-                        console.log(`✅ [FEE] Push notification sent to student ${i + 1}`);
                         sentCount++;
                     } catch (studentError) {
                         console.error(`❌ [FEE] Failed to send notification to student ${i + 1}:`, studentError);
@@ -617,12 +599,6 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                         // Continue with next student instead of stopping
                         continue;
                     }
-                }
-
-                console.log(`📊 [FEE] Push notification summary: ${sentCount} sent, ${failedCount} failed out of ${notificationRequest.student_ids.length} students`);
-
-                if (sentCount > 0) {
-                    console.log(`✅ [FEE] Successfully notified ${sentCount} students`);
                 }
 
                 return notif as FeeNotification;

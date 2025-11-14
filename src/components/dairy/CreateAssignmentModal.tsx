@@ -95,7 +95,7 @@ export const CreateAssignmentModal = ({
                         </View>
 
                         {/* Assign To Toggle */}
-                        <View style={styles.inputGroup}>
+                        {/* <View style={styles.inputGroup}>
                             <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Assign To</Text>
                             <View style={styles.assignToButtons}>
                                 <TouchableOpacity
@@ -135,7 +135,7 @@ export const CreateAssignmentModal = ({
                                     </Text>
                                 </TouchableOpacity>
                             </View>
-                        </View>
+                        </View> */}
 
                         {/* Class Selection */}
                         {newAssignment.assignTo === 'class' && (
@@ -172,7 +172,7 @@ export const CreateAssignmentModal = ({
                         )}
 
                         {/* Student Selection */}
-                        {newAssignment.assignTo === 'student' && (
+                        {/* {newAssignment.assignTo === 'student' && (
                             <>
                                 <View style={styles.inputGroup}>
                                     <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Select Class First</Text>
@@ -236,7 +236,7 @@ export const CreateAssignmentModal = ({
                                     </View>
                                 )}
                             </>
-                        )}
+                        )} */}
 
                         {/* Subject Selection */}
                         <View style={styles.inputGroup}>

@@ -46,7 +46,7 @@ export default function TimetableEntryModal({
     handleDeleteEntry,
     resetForm
 }: TimetableEntryModalProps) {
-    const canDelete = (profile?.role === 'teacher' || profile?.role === 'admin') && editingEntry?.teacher_id === profile?.id;
+    const canDelete = (profile?.role === 'teacher') && editingEntry?.teacher_id === profile?.id;
 
     const formatTimeForInput = (time: string) => time.substring(0, 5);
 
@@ -224,6 +224,8 @@ export default function TimetableEntryModal({
     );
 }
 
+import { TextSizes } from '@/src/styles/TextSizes';
+
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
@@ -245,7 +247,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
     },
     closeButton: {
@@ -262,7 +264,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     label: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
         marginBottom: 8,
     },
@@ -271,7 +273,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 12,
         paddingHorizontal: 16,
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
     },
     timeRow: {
@@ -289,7 +291,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     dayOptionText: {
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
     },
     classOptions: {
@@ -303,7 +305,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     classOptionText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
     },
     subjectOptions: {
@@ -317,7 +319,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     subjectOptionText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
     },
     buttonContainer: {
@@ -334,7 +336,7 @@ const styles = StyleSheet.create({
     },
     submitButtonText: {
         color: '#ffffff',
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
     deleteButton: {
@@ -348,7 +350,7 @@ const styles = StyleSheet.create({
     },
     deleteButtonText: {
         color: '#ffffff',
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
 });

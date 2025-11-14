@@ -59,6 +59,9 @@ export const StudentCard: React.FC<StudentCardProps> = ({
   );
 };
 
+
+import { TextSizes } from '@/src/styles/TextSizes';
+
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#ffffff',
@@ -88,7 +91,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   initial: {
-    fontSize: 16,
+    fontSize: TextSizes.large,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
   },
@@ -96,7 +99,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   name: {
-    fontSize: 16,
+    fontSize: TextSizes.large,
     fontFamily: 'Inter-SemiBold',
     color: '#111827',
     marginBottom: 4,
@@ -110,7 +113,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailText: {
-    fontSize: 12,
+    fontSize: TextSizes.normal,
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
     marginLeft: 4,
@@ -129,9 +132,87 @@ const styles = StyleSheet.create({
     borderTopColor: '#F3F4F6',
   },
   contactText: {
-    fontSize: 14,
+    fontSize: TextSizes.medium,
     fontFamily: 'Inter-Medium',
     color: '#374151',
     marginLeft: 6,
   },
 });
+
+
+// const styles = StyleSheet.create({
+//   container: {
+//     backgroundColor: '#ffffff',
+//     borderRadius: 12,
+//     padding: 16,
+//     marginBottom: 8,
+//     borderWidth: 1,
+//     borderColor: '#E5E7EB',
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 1 },
+//     shadowOpacity: 0.05,
+//     shadowRadius: 2,
+//     elevation: 1,
+//   },
+//   header: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     marginBottom: 12,
+//   },
+//   avatar: {
+//     width: 40,
+//     height: 40,
+//     backgroundColor: '#274d71',
+//     borderRadius: 10,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     marginRight: 12,
+//   },
+//   initial: {
+//     fontSize: 16,
+//     fontFamily: 'Inter-SemiBold',
+//     color: '#ffffff',
+//   },
+//   info: {
+//     flex: 1,
+//   },
+//   name: {
+//     fontSize: 16,
+//     fontFamily: 'Inter-SemiBold',
+//     color: '#111827',
+//     marginBottom: 4,
+//   },
+//   details: {
+//     flexDirection: 'row',
+//     gap: 12,
+//   },
+//   detailItem: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//   },
+//   detailText: {
+//     fontSize: 12,
+//     fontFamily: 'Inter-Regular',
+//     color: '#6B7280',
+//     marginLeft: 4,
+//   },
+//   menuButton: {
+//     width: 32,
+//     height: 32,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//   },
+//   contact: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     paddingTop: 8,
+//     borderTopWidth: 1,
+//     borderTopColor: '#F3F4F6',
+//   },
+//   contactText: {
+//     fontSize: 14,
+//     fontFamily: 'Inter-Medium',
+//     color: '#374151',
+//     marginLeft: 6,
+//   },
+// });

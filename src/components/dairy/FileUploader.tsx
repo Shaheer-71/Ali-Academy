@@ -38,7 +38,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
 
   const getFileIcon = () => {
     if (!selectedFile) return <Upload size={20} color="#274d71" />;
-    
+
     if (selectedFile.mimeType?.includes('video')) {
       return <Video size={20} color="#8B5CF6" />;
     }
@@ -57,7 +57,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   return (
     <View style={styles.container}>
       <Text allowFontScaling={false} style={styles.label}>{label}</Text>
-      
+
       {selectedFile ? (
         <View style={styles.selectedFileContainer}>
           <View style={styles.fileInfo}>
@@ -90,7 +90,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
           </Text>
         </TouchableOpacity>
       )}
-      
+
       <Text allowFontScaling={false} style={styles.supportedFormats}>
         Supported: PDF, Images, Videos
       </Text>
@@ -98,12 +98,14 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   );
 };
 
+import { TextSizes } from '@/src/styles/TextSizes';
+
 const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
   },
   label: {
-    fontSize: 14,
+    fontSize: TextSizes.medium,
     fontFamily: 'Inter-Medium',
     color: '#374151',
     marginBottom: 8,
@@ -121,7 +123,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   uploadText: {
-    fontSize: 14,
+    fontSize: TextSizes.medium,
     fontFamily: 'Inter-Medium',
     color: '#274d71',
   },
@@ -145,13 +147,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fileName: {
-    fontSize: 14,
+    fontSize: TextSizes.medium,
     fontFamily: 'Inter-Medium',
     color: '#111827',
     marginBottom: 2,
   },
   fileSize: {
-    fontSize: 12,
+    fontSize: TextSizes.large,
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
   },
@@ -162,10 +164,82 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   supportedFormats: {
-    fontSize: 11,
+    fontSize: TextSizes.small,
     fontFamily: 'Inter-Regular',
     color: '#9CA3AF',
     marginTop: 6,
     textAlign: 'center',
   },
 });
+
+// const styles = StyleSheet.create({
+//   container: {
+//     marginBottom: 16,
+//   },
+//   label: {
+//     fontSize: 14,
+//     fontFamily: 'Inter-Medium',
+//     color: '#374151',
+//     marginBottom: 8,
+//   },
+//   uploadButton: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     backgroundColor: '#F9FAFB',
+//     borderWidth: 2,
+//     borderColor: '#E5E7EB',
+//     borderStyle: 'dashed',
+//     borderRadius: 8,
+//     paddingVertical: 20,
+//     gap: 8,
+//   },
+//   uploadText: {
+//     fontSize: 14,
+//     fontFamily: 'Inter-Medium',
+//     color: '#274d71',
+//   },
+//   selectedFileContainer: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     justifyContent: 'space-between',
+//     backgroundColor: '#F9FAFB',
+//     borderWidth: 1,
+//     borderColor: '#E5E7EB',
+//     borderRadius: 8,
+//     padding: 12,
+//   },
+//   fileInfo: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     flex: 1,
+//   },
+//   fileDetails: {
+//     marginLeft: 12,
+//     flex: 1,
+//   },
+//   fileName: {
+//     fontSize: 14,
+//     fontFamily: 'Inter-Medium',
+//     color: '#111827',
+//     marginBottom: 2,
+//   },
+//   fileSize: {
+//     fontSize: 12,
+//     fontFamily: 'Inter-Regular',
+//     color: '#6B7280',
+//   },
+//   removeButton: {
+//     width: 24,
+//     height: 24,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//   },
+//   supportedFormats: {
+//     fontSize: 11,
+//     fontFamily: 'Inter-Regular',
+//     color: '#9CA3AF',
+//     marginTop: 6,
+//     textAlign: 'center',
+//   },
+// });
