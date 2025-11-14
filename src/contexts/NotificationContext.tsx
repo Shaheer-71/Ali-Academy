@@ -119,7 +119,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       setNotifications(formattedNotifications);
     } catch (err) {
-      console.error('Failed to fetch notifications:', err);
+      console.log('Failed to fetch notifications:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch notifications');
     } finally {
       setLoading(false);

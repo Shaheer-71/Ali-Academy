@@ -102,9 +102,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
             if (newQuiz.class_id && newQuiz.class_id !== '') {
                 setLoadingSubjects(true);
                 try {
-                    console.log("🔍 Loading subjects for class:", newQuiz.class_id);
                     const classSubjects = await getSubjectsForClass(newQuiz.class_id);
-                    console.log("✅ Loaded subjects:", classSubjects);
                     setAvailableSubjects(classSubjects);
                     // Reset subject selection when class changes
                     setNewQuiz(prev => ({ ...prev, subject_id: '' }));
@@ -228,14 +226,12 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                     .insert(recipientRows);
 
                 // ✅ 4️⃣ SEND PUSH NOTIFICATIONS TO ALL STUDENTS
-                console.log(`📱 [QUIZ] Sending push notifications to ${students.length} students...`);
                 let sentCount = 0;
                 let failedCount = 0;
 
                 for (let i = 0; i < students.length; i++) {
                     const student = students[i];
                     try {
-                        console.log(`📤 [QUIZ] Sending notification to student ${i + 1}/${students.length}...`);
 
                         await sendPushNotification({
                             userId: student.id,
@@ -252,7 +248,6 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                             },
                         });
 
-                        console.log(`✅ [QUIZ] Push notification sent to student ${i + 1}`);
                         sentCount++;
                     } catch (studentError) {
                         console.error(`❌ [QUIZ] Failed to send notification to student ${i + 1}:`, studentError);
@@ -261,16 +256,8 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                     }
                 }
 
-                console.log(`📊 [QUIZ] Push notification summary: ${sentCount} sent, ${failedCount} failed out of ${students.length} students`);
-
-                if (sentCount > 0) {
-                    console.log(`✅ [QUIZ] Successfully notified ${sentCount} students`);
-                }
-
                 if (recipientError) {
                     console.error('Error adding recipients:', recipientError);
-                } else {
-                    console.log(`Notification sent to ${students.length} students`);
                 }
             } else {
                 Alert.alert('Error', result.error?.message || 'Failed to create quiz');

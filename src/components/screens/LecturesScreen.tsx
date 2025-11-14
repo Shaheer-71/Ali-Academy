@@ -19,6 +19,7 @@ import { lectureService } from '@/src/services/lecture.service';
 import { Lecture } from '@/src/types/lectures';
 import LectureCard from '@/src/components/lectures/LectureCard';
 import UploadLectureModal from '@/src/components/lectures/UploadLectureModal';
+import EditLectureModal from '@/src/components/lectures/EditLectureModal';
 import TopSection from '../common/TopSections';
 import { useFocusEffect } from '@react-navigation/native';
 import SubjectFilter from '../common/SubjectFilter';
@@ -35,6 +36,8 @@ export default function LecturesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
@@ -55,11 +58,11 @@ export default function LecturesScreen() {
   const fetchSubjects = async () => {
     try {
       if (!profile?.id || !profile?.role) {
-        console.log('⚠️ Profile or role not available yet');
+        // console.log('⚠️ Profile or role not available yet');
         return;
       }
 
-      console.log('🔍 Fetching subjects for:', profile.role, profile.id);
+      // console.log('🔍 Fetching subjects for:', profile.role, profile.id);
 
       // For students, get their class_id from student table
       let userClassId = null;
@@ -79,7 +82,6 @@ export default function LecturesScreen() {
         userClassId = studentData?.class_id;
 
         if (!userClassId) {
-          console.log('⚠️ Student has no class assigned');
           return;
         }
       }
@@ -97,7 +99,6 @@ export default function LecturesScreen() {
       }
 
       if (!enrollments || enrollments.length === 0) {
-        console.log('No subject enrollments found');
         setSubjects([]);
         return;
       }
@@ -105,7 +106,6 @@ export default function LecturesScreen() {
       // Get unique subject IDs
       const subjectIds = [...new Set(enrollments.map(e => e.subject_id))];
 
-      console.log('📚 Enrolled subject IDs:', subjectIds);
 
       // Fetch subject details
       const { data: subjectsData, error: subjectsError } = await supabase
@@ -117,7 +117,6 @@ export default function LecturesScreen() {
 
       if (subjectsError) throw subjectsError;
 
-      console.log(`✅ Fetched ${subjectsData?.length || 0} subjects`);
       setSubjects(subjectsData || []);
     } catch (error) {
       console.error('Error fetching subjects:', error);
@@ -139,7 +138,6 @@ export default function LecturesScreen() {
       updatedLectures = updatedLectures.filter(
         lecture => lecture.subject_id === selectedSubject
       );
-      console.log('🔍 After subject filter:', updatedLectures.length);
     }
 
     // Filter by search query
@@ -152,7 +150,6 @@ export default function LecturesScreen() {
           lecture.classes?.name?.toLowerCase().includes(query) ||
           lecture.subjects?.name?.toLowerCase().includes(query)
       );
-      console.log('🔍 After search filter:', updatedLectures.length);
     }
 
     setFilteredLectures(updatedLectures);
@@ -169,21 +166,18 @@ export default function LecturesScreen() {
 
   const loadLectures = async () => {
     if (!profile?.id || !profile?.role) {
-      console.log('⚠️ Profile or role not available yet');
       return;
     }
 
     try {
       setLoading(true);
 
-      console.log('📚 Loading lectures for:', profile.role, profile.id);
 
       const data = await lectureService.fetchLectures({
         userId: profile.id,
-        role: profile.role, // ✅ Pass role here
+        role: profile.role,
       });
 
-      console.log(`✅ Loaded ${data?.length || 0} lectures`);
 
       setLectures(data || []);
       setFilteredLectures(data || []);
@@ -203,6 +197,17 @@ export default function LecturesScreen() {
     loadLectures();
   }, [profile?.id, profile?.role]);
 
+  const handleEdit = (lecture: Lecture) => {
+    setSelectedLecture(lecture);
+    setEditModalVisible(true);
+  };
+
+  const handleEditSuccess = () => {
+    setEditModalVisible(false);
+    setSelectedLecture(null);
+    loadLectures();
+  };
+
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <BookOpen size={48} color={colors.textSecondary} />
@@ -218,7 +223,11 @@ export default function LecturesScreen() {
   );
 
   const renderLecture = ({ item }: { item: Lecture }) => (
-    <LectureCard lecture={item} onRefresh={loadLectures} />
+    <LectureCard
+      lecture={item}
+      onRefresh={loadLectures}
+      onEdit={handleEdit}
+    />
   );
 
   return (
@@ -298,20 +307,34 @@ export default function LecturesScreen() {
         onClose={() => setUploadModalVisible(false)}
         onSuccess={loadLectures}
       />
+
+      {/* Edit Modal */}
+      <EditLectureModal
+        visible={editModalVisible}
+        lecture={selectedLecture}
+        onClose={() => {
+          setEditModalVisible(false);
+          setSelectedLecture(null);
+        }}
+        onSuccess={handleEditSuccess}
+      />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+import { TextSizes } from '@/src/styles/TextSizes';
+
+
+export const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
   header: {
     paddingHorizontal: 24,
-    marginTop: -12
+    marginTop: -12,
   },
   title: {
-    fontSize: 24,
+    fontSize: TextSizes.header, // 14
     fontWeight: 'bold',
     marginBottom: 15,
   },
@@ -320,7 +343,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 10,
     paddingHorizontal: 12,
-    height: 44,
+    height: 48,
     borderWidth: 1,
   },
   listContent: {
@@ -333,12 +356,12 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: TextSizes.large, // 12
     fontWeight: '600',
     marginTop: 16,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: TextSizes.normal, // 10
     textAlign: 'center',
     paddingHorizontal: 40,
     marginTop: 8,
@@ -375,7 +398,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     height: 48,
-    fontSize: 16,
+    fontSize: 16, // 👈 bigger for usability
     marginLeft: 12,
   },
   actionButton: {
@@ -387,3 +410,90 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
 });
+
+
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//   },
+//   header: {
+//     paddingHorizontal: 24,
+//     marginTop: -12
+//   },
+//   title: {
+//     fontSize: 24,
+//     fontWeight: 'bold',
+//     marginBottom: 15,
+//   },
+//   searchBar: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     borderRadius: 10,
+//     paddingHorizontal: 12,
+//     height: 44,
+//     borderWidth: 1,
+//   },
+//   listContent: {
+//     paddingHorizontal: 20,
+//     paddingBottom: 100,
+//   },
+//   emptyContainer: {
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     paddingVertical: 60,
+//   },
+//   emptyTitle: {
+//     fontSize: 18,
+//     fontWeight: '600',
+//     marginTop: 16,
+//   },
+//   emptySubtitle: {
+//     fontSize: 14,
+//     textAlign: 'center',
+//     paddingHorizontal: 40,
+//     marginTop: 8,
+//   },
+//   fab: {
+//     position: 'absolute',
+//     bottom: 20,
+//     right: 20,
+//     width: 56,
+//     height: 56,
+//     borderRadius: 28,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     elevation: 8,
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowOpacity: 0.25,
+//     shadowRadius: 4,
+//   },
+//   searchContainer: {
+//     flexDirection: 'row',
+//     paddingTop: 16,
+//     paddingBottom: 16,
+//     gap: 12,
+//   },
+//   searchInputContainer: {
+//     flex: 1,
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     borderRadius: 12,
+//     paddingHorizontal: 16,
+//     borderWidth: 1,
+//   },
+//   searchInput: {
+//     flex: 1,
+//     height: 48,
+//     fontSize: 16,
+//     marginLeft: 12,
+//   },
+//   actionButton: {
+//     width: 48,
+//     height: 48,
+//     borderRadius: 12,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     borderWidth: 1,
+//   },
+// });

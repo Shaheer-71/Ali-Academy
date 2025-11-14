@@ -57,7 +57,6 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
     // Reset filters when modal opens
     useEffect(() => {
         if (visible) {
-            console.log("🔄 Modal opened, resetting to current filters:", currentFilters);
             setFilters(currentFilters);
 
             // Clear subjects initially - they'll be fetched when class is selected
@@ -70,23 +69,19 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
     // Fetch subjects when class changes (only if we have a valid class selected)
     useEffect(() => {
         if (visible && filters.selectedClass && profile) {
-            console.log("🔄 Class changed, fetching subjects for:", filters.selectedClass);
             fetchSubjectsForClass(filters.selectedClass);
         } else if (visible && !filters.selectedClass) {
-            console.log("⚠️ No class selected, clearing subjects");
             setLocalSubjects([]);
         }
     }, [filters.selectedClass, visible, teacherId]);
 
     const fetchSubjectsForClass = async (classId: string) => {
         if (!profile?.id || !classId) {
-            console.log("⚠️ Missing teacherId or classId, skipping fetch");
             return;
         }
 
         setLoadingSubjects(true);
         try {
-            console.log("🔍 Modal: Fetching subjects for class:", classId, "and teacher:", profile?.id);
 
             const { data: subjectIDData, error: subjectIDError } = await supabase
                 .from('teacher_subject_enrollments')
@@ -99,13 +94,10 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                 throw subjectIDError;
             }
 
-            console.log("📋 Modal: Raw subject enrollment data:", subjectIDData);
 
             let enrolledSubjects = [...new Set(subjectIDData?.map(item => item.subject_id) || [])];
-            console.log("📖 Modal: Unique enrolled subjects for this class:", enrolledSubjects);
 
             if (enrolledSubjects.length === 0) {
-                console.log("⚠️ Modal: No subjects found for this class");
                 setLocalSubjects([]);
                 setFilters(prev => ({ ...prev, selectedSubject: '' }));
                 return;
@@ -122,7 +114,6 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                 throw error;
             }
 
-            console.log("✅ Modal: Fetched subjects:", data);
             setLocalSubjects(data || []);
 
             // Only auto-select if there's no current selection or if current selection is invalid

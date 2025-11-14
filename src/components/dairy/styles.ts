@@ -1,5 +1,6 @@
 // components/diary/styles.ts
 import { StyleSheet } from 'react-native';
+import { TextSizes } from '@/src/styles/TextSizes';
 
 const styles = StyleSheet.create({
     container: {
@@ -14,7 +15,7 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
     },
     title: {
-        fontSize: 28,
+        fontSize: TextSizes.header,
         fontFamily: 'Inter-SemiBold',
     },
     addButton: {
@@ -35,7 +36,7 @@ const styles = StyleSheet.create({
         paddingVertical: 40,
     },
     loadingText: {
-        fontSize: 16,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-Regular',
     },
     emptyContainer: {
@@ -44,13 +45,13 @@ const styles = StyleSheet.create({
         paddingVertical: 60,
     },
     emptyText: {
-        fontSize: 18,
+        fontSize: TextSizes.xlarge,
         fontFamily: 'Inter-SemiBold',
         marginTop: 16,
         marginBottom: 8,
     },
     emptySubtext: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
     },
@@ -75,20 +76,23 @@ const styles = StyleSheet.create({
     },
     actionButtonText: {
         color: '#ffffff',
-        fontSize: 12,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
         marginTop: 4,
     },
     assignmentCard: {
-        borderRadius: 16,
-        padding: 20,
+        borderRadius: 12,    // slightly smaller radius like lecture card
+        paddingVertical: 12, // less vertical padding
+        paddingHorizontal: 16, // less horizontal padding
         borderWidth: 1,
+        borderColor: '#E5E7EB',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        shadowRadius: 2,
+        elevation: 1,
     },
+
     overdueCard: {
         borderColor: '#FEE2E2',
         backgroundColor: '#FEF2F2',
@@ -109,7 +113,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     assignmentTitle: {
-        fontSize: 16,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
         marginBottom: 6,
     },
@@ -122,7 +126,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     detailText: {
-        fontSize: 12,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
         marginLeft: 4,
     },
@@ -131,7 +135,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-Medium',
     },
     assignmentDescription: {
-        fontSize: 14,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-Regular',
         lineHeight: 20,
         marginBottom: 12,
@@ -147,7 +151,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     attachmentText: {
-        fontSize: 12,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
     },
     overdueLabel: {
@@ -161,7 +165,7 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     overdueLabelText: {
-        fontSize: 10,
+        fontSize: TextSizes.tiny,
         fontFamily: 'Inter-SemiBold',
         color: '#EF4444',
     },
@@ -185,7 +189,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: TextSizes.xlarge,
         fontFamily: 'Inter-SemiBold',
     },
     closeButton: {
@@ -203,7 +207,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     label: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
         marginBottom: 8,
     },
@@ -212,7 +216,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 12,
         paddingHorizontal: 16,
-        fontSize: 16,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-Regular',
     },
     textArea: {
@@ -235,7 +239,7 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     assignToButtonText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
     },
     options: {
@@ -249,7 +253,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     optionText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
     },
     filePickerButton: {
@@ -262,7 +266,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     filePickerText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
     },
     submitButton: {
@@ -277,7 +281,7 @@ const styles = StyleSheet.create({
     },
     submitButtonText: {
         color: '#ffffff',
-        fontSize: 16,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
     },
     searchContainer: {
@@ -299,7 +303,7 @@ const styles = StyleSheet.create({
     searchInput: {
         flex: 1,
         height: 48,
-        fontSize: 16,
+        fontSize: TextSizes.large + 3,
         fontFamily: 'Inter-Regular',
         marginLeft: 12,
     },
@@ -325,7 +329,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     detailModalTitle: {
-        fontSize: 20,
+        fontSize: TextSizes.xlarge,
         fontFamily: 'Inter-SemiBold',
     },
     detailModalScrollView: {
@@ -340,18 +344,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     detailLabel: {
-        fontSize: 12,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
         textTransform: 'uppercase',
         marginBottom: 6,
     },
     detailValue: {
-        fontSize: 16,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
         marginBottom: 4,
     },
     detailDescription: {
-        fontSize: 14,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-Regular',
         lineHeight: 22,
     },
@@ -365,7 +369,7 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     statusBadgeText: {
-        fontSize: 12,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
         color: '#EF4444',
     },
@@ -378,16 +382,16 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     attachmentTitle: {
-        fontSize: 14,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
         marginBottom: 2,
     },
     attachmentSubtitle: {
-        fontSize: 12,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
     },
     createdDate: {
-        fontSize: 12,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
         marginTop: 16,
@@ -403,7 +407,7 @@ const styles = StyleSheet.create({
     },
     detailCloseButtonText: {
         color: '#ffffff',
-        fontSize: 16,
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
     },
 });

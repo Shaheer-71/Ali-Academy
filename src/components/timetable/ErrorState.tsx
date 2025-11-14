@@ -31,6 +31,7 @@ export default function ErrorState({ error, colors, refreshTimetable }: ErrorSta
     );
 }
 
+import { TextSizes } from '@/src/styles/TextSizes';
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -42,7 +43,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
     },
     errorText: {
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
         marginVertical: 16,
@@ -54,7 +55,7 @@ const styles = StyleSheet.create({
     },
     retryButtonText: {
         color: '#ffffff',
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
 });

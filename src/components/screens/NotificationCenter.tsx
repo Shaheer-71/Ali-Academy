@@ -42,8 +42,6 @@ export default function NotificationCenter() {
         setRefreshing(false);
     };
 
-    console.log("object", notifications)
-
     const EmptyState = () => (
         <View style={styles.emptyContainer}>
             <Bell size={64} color={colors.textSecondary} />

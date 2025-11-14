@@ -77,6 +77,8 @@ export default function DayRow({
     );
 }
 
+import { TextSizes } from '@/src/styles/TextSizes';
+
 const styles = StyleSheet.create({
     dayRow: {
         flexDirection: 'row',
@@ -93,13 +95,13 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     dayName: {
-        fontSize: 14,
+        fontSize: TextSizes.medium, // updated
         fontFamily: 'Inter-SemiBold',
         marginBottom: 4,
         textAlign: 'center',
     },
     dayDate: {
-        fontSize: 18,
+        fontSize: TextSizes.large, // updated
         fontFamily: 'Inter-SemiBold',
     },
     timeSlots: {
@@ -116,7 +118,7 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed',
     },
     emptyDayText: {
-        fontSize: 14,
+        fontSize: TextSizes.medium, // updated
         fontFamily: 'Inter-Regular',
         marginTop: 8,
         textAlign: 'center',

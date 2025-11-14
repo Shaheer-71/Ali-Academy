@@ -1,170 +1,413 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { TimetableCard } from './TimetableCard';
-import { Calendar } from 'lucide-react-native';
+// TimetableScreen.tsx - FIXED
+import React, { useState, useEffect, useCallback } from 'react';
+import { SafeAreaView, ScrollView, RefreshControl, StyleSheet, Alert, View } from 'react-native';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { useTheme } from '@/src/contexts/ThemeContext';
+import { useTimetable } from '@/src/hooks/useTimetable';
+import TopSection from '@/src/components/common/TopSections';
+import Header from '@/src/components/timetable/Header';
+import ClassFilter from '@/src/components/timetable/ClassFilter';
+import DayRow from '@/src/components/timetable/DayRow';
+import TimetableEntryModal from '@/src/components/timetable/TimetableEntryModal';
+import ErrorState from '@/src/components/timetable/ErrorState';
+import { supabase } from '@/src/lib/supabase';
+import {
+    Class,
+    Subject,
+    TimetableEntryWithDetails,
+    CreateTimetableEntry,
+    DAYS_ORDER,
+    ThemeColors
+} from '@/src/types/timetable';
+import { useFocusEffect } from '@react-navigation/native';
 
-interface TimetableEntry {
-  id: string;
-  day: string;
-  start_time: string;
-  end_time: string;
-  subject: string;
-  room_number: string;
-  teacher_name?: string;
-  class_name?: string;
-}
+export default function TimetableScreen() {
+    const { profile, student } = useAuth();
+    const { colors } = useTheme() as { colors: ThemeColors };
+    const {
+        timetable,
+        loading,
+        error,
+        filters,
+        setFilters,
+        createEntry,
+        updateEntry,
+        deleteEntry,
+        getEntriesForDay,
+        refreshTimetable
+    } = useTimetable();
 
-interface WeeklyTimetableViewProps {
-  timetable: TimetableEntry[];
-  weekDates: Date[];
-  selectedClass?: string;
-}
+    const [classes, setClasses] = useState<Class[]>([]);
+    const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [editingEntry, setEditingEntry] = useState<TimetableEntryWithDetails | null>(null);
+    const [currentWeek, setCurrentWeek] = useState(new Date());
+    const [searchQuery, setSearchQuery] = useState('');
+    const [refreshing, setRefreshing] = useState(false);
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const [newEntry, setNewEntry] = useState<Partial<CreateTimetableEntry>>({
+        day: undefined,
+        start_time: '',
+        end_time: '',
+        subject: '',
+        room_number: '',
+        class_id: '',
+        teacher_id: profile?.id || '',
+    });
 
-export const WeeklyTimetableView: React.FC<WeeklyTimetableViewProps> = ({
-  timetable,
-  weekDates,
-  selectedClass,
-}) => {
-  const getEntriesForDay = (day: string) => {
-    return timetable
-      .filter(entry => 
-        entry.day === day && 
-        (selectedClass === '' || !selectedClass || entry.class_name === selectedClass)
-      )
-      .sort((a, b) => a.start_time.localeCompare(b.start_time))
-      .slice(0, 3); // Max 3 classes per day
-  };
+    if (!profile) {
+        return null;
+    }
 
-  return (
-    <View style={styles.container}>
-      {DAYS.map((day, dayIndex) => {
-        const dayEntries = getEntriesForDay(day);
-        const dayDate = weekDates[dayIndex];
-        const isToday = dayDate && dayDate.toDateString() === new Date().toDateString();
+    useEffect(() => {
+        fetchClasses();
+        fetchSubjects();
+    }, [profile]);
 
-        return (
-          <View key={day} style={styles.dayRow}>
-            {/* Day Header - Vertical */}
-            <View style={[
-              styles.dayHeader,
-              isToday && styles.todayHeader
-            ]}>
-              <Text allowFontScaling={false} style={[
-                styles.dayName,
-                isToday && styles.todayText
-              ]}>
-                {day}
-              </Text>
-              <Text allowFontScaling={false} style={[
-                styles.dayDate,
-                isToday && styles.todayDateText
-              ]}>
-                {dayDate ? dayDate.getDate() : ''}
-              </Text>
-            </View>
+    useEffect(() => {
+        setFilters({ search_query: searchQuery });
+    }, [searchQuery, setFilters]);
 
-            {/* Time Slots - Horizontal */}
-            <View style={styles.timeSlotsContainer}>
-              {dayEntries.length === 0 ? (
-                <View style={styles.emptyDay}>
-                  <Calendar size={20} color="#9CA3AF" />
-                  <Text allowFontScaling={false} style={styles.emptyDayText}>No classes</Text>
-                </View>
-              ) : (
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.timeSlots}
-                >
-                  {dayEntries.map((entry, index) => (
-                    <View key={entry.id} style={styles.timeSlotWrapper}>
-                      <TimetableCard
-                        entry={entry}
-                        isFirst={index === 0}
-                        isLast={index === dayEntries.length - 1}
-                      />
-                    </View>
-                  ))}
-                </ScrollView>
-              )}
-            </View>
-          </View>
+    const fetchClasses = async () => {
+        try {
+            if (profile.role === 'teacher') {
+                // ✅ For teachers, get classes from teacher_subject_enrollments
+                const { data: teacherEnrollments, error: enrollmentError } = await supabase
+                    .from('teacher_subject_enrollments')
+                    .select('class_id')
+                    .eq('teacher_id', profile.id)
+                    .eq('is_active', true);
+
+                if (enrollmentError) {
+                    console.error('Error fetching teacher enrollments:', enrollmentError);
+                    throw enrollmentError;
+                }
+
+                if (!teacherEnrollments || teacherEnrollments.length === 0) {
+                    setClasses([]);
+                    return;
+                }
+
+                const classIds = [...new Set(teacherEnrollments.map(e => e.class_id))];
+
+                const { data, error } = await supabase
+                    .from('classes')
+                    .select('id, name')
+                    .in('id', classIds)
+                    .order('name');
+
+                if (error) throw error;
+                setClasses(data || []);
+                
+                // ✅ Set first class as default filter
+                if (data && data.length > 0) {
+                    setFilters({ class_id: data[0].id });
+                }
+            } else if (profile.role === 'student' && student?.class_id) {
+                // ✅ For students, get their own class
+                const { data, error } = await supabase
+                    .from('classes')
+                    .select('id, name')
+                    .eq('id', student.class_id)
+                    .single();
+
+                if (error) throw error;
+                if (data) {
+                    setClasses([data]);
+                    setFilters({ class_id: data.id });
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching classes:', error);
+        }
+    };
+
+    const fetchSubjects = async () => {
+        try {
+            if (profile.role === 'teacher') {
+                // ✅ For teachers, get subjects from teacher_subject_enrollments
+                const { data: teacherEnrollments, error: enrollmentError } = await supabase
+                    .from('teacher_subject_enrollments')
+                    .select('subject_id')
+                    .eq('teacher_id', profile.id)
+                    .eq('is_active', true);
+
+                if (enrollmentError) {
+                    console.error('Error fetching teacher subject enrollments:', enrollmentError);
+                    throw enrollmentError;
+                }
+
+                if (!teacherEnrollments || teacherEnrollments.length === 0) {
+                    setSubjects([]);
+                    return;
+                }
+
+                const subjectIds = [...new Set(teacherEnrollments.map(e => e.subject_id))];
+
+                const { data, error } = await supabase
+                    .from('subjects')
+                    .select('id, name')
+                    .in('id', subjectIds)
+                    .eq('is_active', true)
+                    .order('name');
+
+                if (error) throw error;
+                setSubjects(data || []);
+            } else if (profile.role === 'student' && student?.id) {
+                // ✅ For students, get subjects from student_subject_enrollments
+                const { data: studentEnrollments, error: enrollmentError } = await supabase
+                    .from('student_subject_enrollments')
+                    .select('subject_id')
+                    .eq('student_id', student.id)
+                    .eq('is_active', true);
+
+                if (enrollmentError) {
+                    console.error('Error fetching student enrollments:', enrollmentError);
+                    throw enrollmentError;
+                }
+
+                if (!studentEnrollments || studentEnrollments.length === 0) {
+                    setSubjects([]);
+                    return;
+                }
+
+                const subjectIds = [...new Set(studentEnrollments.map(e => e.subject_id))];
+
+                const { data, error } = await supabase
+                    .from('subjects')
+                    .select('id, name')
+                    .in('id', subjectIds)
+                    .eq('is_active', true)
+                    .order('name');
+
+                if (error) throw error;
+                setSubjects(data || []);
+            }
+        } catch (error) {
+            console.error('Error fetching subjects:', error);
+        }
+    };
+
+    const formatTime = (time: string) => time.includes(':') && time.split(':').length === 2 ? time + ':00' : time;
+
+    const validateEntry = () => {
+        return newEntry.day && newEntry.start_time && newEntry.end_time &&
+            newEntry.subject && newEntry.room_number && newEntry.class_id;
+    };
+
+    const handleAddEntry = async () => {
+        if (!validateEntry()) {
+            Alert.alert('Error', 'Please fill in all fields');
+            return;
+        }
+
+        const entryData: CreateTimetableEntry = {
+            day: newEntry.day!,
+            start_time: formatTime(newEntry.start_time!),
+            end_time: formatTime(newEntry.end_time!),
+            subject: newEntry.subject!,
+            room_number: newEntry.room_number!,
+            class_id: newEntry.class_id!,
+            teacher_id: newEntry.teacher_id || profile.id,
+        };
+
+        const result = await createEntry(entryData);
+        if (result) {
+            setModalVisible(false);
+            resetForm();
+        }
+    };
+
+    const handleUpdateEntry = async () => {
+        if (!editingEntry || !validateEntry()) return;
+
+        const entryData = {
+            id: editingEntry.id,
+            day: newEntry.day,
+            start_time: newEntry.start_time ? formatTime(newEntry.start_time) : undefined,
+            end_time: newEntry.end_time ? formatTime(newEntry.end_time) : undefined,
+            subject: newEntry.subject,
+            room_number: newEntry.room_number,
+            class_id: newEntry.class_id,
+            teacher_id: newEntry.teacher_id,
+        };
+
+        const result = await updateEntry(entryData);
+        if (result) {
+            setModalVisible(false);
+            setEditingEntry(null);
+            resetForm();
+        }
+    };
+
+    const handleDeleteEntry = async (entry: TimetableEntryWithDetails) => {
+        Alert.alert(
+            'Delete Entry',
+            `Delete ${entry.subject_name} class?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const success = await deleteEntry(entry.id);
+                        if (success) {
+                            setModalVisible(false);
+                            setEditingEntry(null);
+                            resetForm();
+                        }
+                    },
+                },
+            ]
         );
-      })}
-    </View>
-  );
-};
+    };
+
+    const resetForm = () => {
+        setNewEntry({
+            day: undefined,
+            start_time: '',
+            end_time: '',
+            subject: '',
+            room_number: '',
+            class_id: '',
+            teacher_id: profile.id,
+        });
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await refreshTimetable();
+        setRefreshing(false);
+    };
+
+    const getCurrentWeekDates = () => {
+        const startOfWeek = new Date(currentWeek);
+        startOfWeek.setDate(currentWeek.getDate() - currentWeek.getDay() + 1);
+        return DAYS_ORDER.map((_, index) => {
+            const date = new Date(startOfWeek);
+            date.setDate(startOfWeek.getDate() + index);
+            return date;
+        });
+    };
+
+    const handleEditEntry = (entry: TimetableEntryWithDetails) => {
+        setEditingEntry(entry);
+
+        const formatTimeForInput = (time: string) => time.substring(0, 5);
+
+        setNewEntry({
+            day: entry.day,
+            start_time: formatTimeForInput(entry.start_time),
+            end_time: formatTimeForInput(entry.end_time),
+            subject: entry.subject_name,
+            room_number: entry.room_number,
+            class_id: entry.class_id,
+            teacher_id: entry.teacher_id,
+        });
+        setModalVisible(true);
+    };
+
+    if (error && !loading) {
+        return <ErrorState error={error} colors={colors} refreshTimetable={refreshTimetable} />;
+    }
+
+    useFocusEffect(
+        useCallback(() => {
+            onRefresh();
+        }, [profile])
+    );
+
+    const weekDates = getCurrentWeekDates();
+    const isTeacher = profile.role === 'teacher';
+
+    return (
+        <>
+            <TopSection />
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+                {/* ✅ Header with Add Button */}
+                <View style={styles.headerRow}>
+                    <Header
+                        profile={profile}
+                        colors={colors}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                        setModalVisible={setModalVisible}
+                        resetForm={resetForm}
+                        setEditingEntry={setEditingEntry}
+                    />
+                </View>
+
+                {/* ✅ Class Filter (for teachers and students) */}
+                {classes.length > 0 && (
+                    <ClassFilter
+                        classes={classes}
+                        filters={filters}
+                        setFilters={setFilters}
+                        colors={colors}
+                        loading={loading}
+                    />
+                )}
+
+                <ScrollView
+                    style={styles.scrollView}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                >
+                    <View style={styles.timetableContainer}>
+                        {DAYS_ORDER.map((day, dayIndex) => (
+                            <DayRow
+                                key={day}
+                                day={day}
+                                dayIndex={dayIndex}
+                                weekDates={weekDates}
+                                getEntriesForDay={getEntriesForDay}
+                                colors={colors}
+                                profile={profile}
+                                handleEditEntry={handleEditEntry}
+                                handleDeleteEntry={handleDeleteEntry}
+                            />
+                        ))}
+                    </View>
+                </ScrollView>
+
+                {isTeacher && (
+                    <TimetableEntryModal
+                        modalVisible={modalVisible}
+                        setModalVisible={setModalVisible}
+                        editingEntry={editingEntry}
+                        setEditingEntry={setEditingEntry}
+                        newEntry={newEntry}
+                        setNewEntry={setNewEntry}
+                        profile={profile}
+                        colors={colors}
+                        classes={classes}
+                        subjects={subjects}
+                        teachers={[]}
+                        handleAddEntry={handleAddEntry}
+                        handleUpdateEntry={handleUpdateEntry}
+                        handleDeleteEntry={handleDeleteEntry}
+                        resetForm={resetForm}
+                    />
+                )}
+            </SafeAreaView>
+        </>
+    );
+}
 
 const styles = StyleSheet.create({
-  container: {
-    paddingBottom: 20,
-  },
-  dayRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    minHeight: 100,
-  },
-  dayHeader: {
-    width: 80,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  todayHeader: {
-    backgroundColor: '#274d71',
-    borderColor: '#274d71',
-  },
-  dayName: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    color: '#111827',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  todayText: {
-    color: '#ffffff',
-  },
-  dayDate: {
-    fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
-    color: '#274d71',
-  },
-  todayDateText: {
-    color: '#b6d509',
-  },
-  timeSlotsContainer: {
-    flex: 1,
-  },
-  timeSlots: {
-    gap: 12,
-    paddingRight: 16,
-  },
-  timeSlotWrapper: {
-    width: 200,
-  },
-  emptyDay: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderStyle: 'dashed',
-  },
-  emptyDayText: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-    marginTop: 6,
-    textAlign: 'center',
-  },
+    container: {
+        flex: 1,
+    },
+    headerRow: {
+        paddingHorizontal: 24,
+        paddingTop: 16,
+        marginTop: -12,
+    },
+    scrollView: {
+        flex: 1,
+        paddingHorizontal: 24,
+    },
+    timetableContainer: {
+        paddingBottom: 40,
+    },
 });

@@ -111,34 +111,33 @@ export default function DiaryScreen() {
     }, [profile])
   );
 
+  // ✅ FIXED: Fetch teacher subjects from teacher_subject_enrollments
   const fetchTeacherSubjects = async () => {
     try {
       const { data, error } = await supabase
-        .from('student_subject_enrollments')
+        .from('teacher_subject_enrollments')
         .select(`
-        subjects (
-          id,
-          name
-        )
-      `)
+          subject_id,
+          subjects (
+            id,
+            name
+          )
+        `)
         .eq('teacher_id', profile?.id)
         .eq('is_active', true);
 
       if (error) throw error;
 
-      console.log("📚 Raw subjects data:", data);
-
       // Extract unique subjects
       const uniqueSubjects = Array.from(
         new Map(
           data
-            ?.flatMap(item => item.subjects)
+            ?.map(item => item.subjects)
             .filter(Boolean)
             .map(subject => [subject.id, subject])
         ).values()
       );
 
-      console.log("✅ Unique subjects:", uniqueSubjects);
       setSubjects(uniqueSubjects);
     } catch (error) {
       console.error('❌ Error fetching teacher subjects:', error);
@@ -146,7 +145,7 @@ export default function DiaryScreen() {
     }
   };
 
-  // ADD THIS NEW FUNCTION to fetch subjects based on selected class
+  // ✅ FIXED: Fetch subjects for selected class from teacher_subject_enrollments
   const fetchSubjectsForClass = async (classId: string) => {
     try {
       if (!classId) {
@@ -156,38 +155,37 @@ export default function DiaryScreen() {
       }
 
       const { data, error } = await supabase
-        .from('student_subject_enrollments')
+        .from('teacher_subject_enrollments')
         .select(`
-        subjects (
-          id,
-          name
-        )
-      `)
+          subjects (
+            id,
+            name
+          )
+        `)
         .eq('teacher_id', profile?.id)
         .eq('class_id', classId)
         .eq('is_active', true);
 
       if (error) throw error;
 
-      console.log("📚 Subjects for class:", data);
 
       const uniqueSubjects = Array.from(
         new Map(
           data
-            ?.flatMap(item => item.subjects)
+            ?.map(item => item.subjects)
             .filter(Boolean)
             .map(subject => [subject.id, subject])
         ).values()
       );
 
-      console.log("✅ Filtered subjects for class:", uniqueSubjects);
       setSubjects(uniqueSubjects);
     } catch (error) {
-      console.error('❌ Error fetching subjects for class:', error);
+      console.log('❌ Error fetching subjects for class:', error);
       setSubjects([]);
     }
   };
 
+  // Student subjects - unchanged
   const fetchSubjects = async () => {
     try {
       if (!student?.id) {
@@ -198,23 +196,21 @@ export default function DiaryScreen() {
       const { data, error } = await supabase
         .from('student_subject_enrollments')
         .select(`
-                subjects (
-                    id,
-                    name
-                )
-            `)
+          subjects (
+            id,
+            name
+          )
+        `)
         .eq('student_id', student.id)
         .eq('is_active', true);
 
       if (error) throw error;
 
-      console.log("📚 Student subjects:", data);
 
       const subjectsList = data
-        ?.flatMap(item => item.subjects)
+        ?.map(item => item.subjects)
         .filter(Boolean) || [];
 
-      console.log("✅ Subjects list:", subjectsList);
       setSubjects(subjectsList);
     } catch (error) {
       console.error('❌ Error fetching subjects:', error);
@@ -222,33 +218,32 @@ export default function DiaryScreen() {
     }
   };
 
+  // ✅ FIXED: Fetch classes from teacher_subject_enrollments
   const fetchClasses = async () => {
     try {
       const { data, error } = await supabase
-        .from('student_subject_enrollments')
+        .from('teacher_subject_enrollments')
         .select(`
-                classes (
-                    id,
-                    name
-                )
-            `)
+          classes (
+            id,
+            name
+          )
+        `)
         .eq('teacher_id', profile?.id)
         .eq('is_active', true);
 
       if (error) throw error;
 
-      console.log("🏫 Raw classes:", data);
 
       const uniqueClasses = Array.from(
         new Map(
           data
-            ?.flatMap(item => item.classes)
+            ?.map(item => item.classes)
             .filter(Boolean)
             .map(cls => [cls.id, cls])
         ).values()
       );
 
-      console.log("✅ Unique classes:", uniqueClasses);
       setClasses(uniqueClasses);
     } catch (error) {
       console.error('❌ Error fetching classes:', error);
@@ -256,6 +251,7 @@ export default function DiaryScreen() {
     }
   };
 
+  // ✅ FIXED: Fetch students from student_subject_enrollments based on teacher's class-subject
   const fetchStudents = async (classId: string) => {
     try {
       if (!newAssignment.subject_id) {
@@ -264,36 +260,33 @@ export default function DiaryScreen() {
         return;
       }
 
-      // Same pattern as attendance: get enrolled student IDs first
+      // Get student IDs enrolled in this class-subject combination
       const { data: enrollmentsData, error: enrollError } = await supabase
         .from('student_subject_enrollments')
         .select('student_id')
         .eq('class_id', classId)
         .eq('subject_id', newAssignment.subject_id)
-        .eq('teacher_id', profile?.id)
         .eq('is_active', true);
 
       if (enrollError) throw enrollError;
 
       const studentIds = enrollmentsData?.map(e => e.student_id) || [];
-      console.log("👥 Enrolled student IDs:", studentIds);
 
       if (studentIds.length === 0) {
         setStudents([]);
         return;
       }
 
-      // Then fetch student details
+      // Fetch student details from profiles
       const { data, error } = await supabase
-        .from('students')
-        .select('id, full_name, roll_number')
+        .from('profiles')
+        .select('id, full_name, email')
         .in('id', studentIds)
-        .eq('is_deleted', false)
-        .order('roll_number');
+        .eq('role', 'student')
+        .order('full_name');
 
       if (error) throw error;
 
-      console.log("✅ Students:", data);
       setStudents(data || []);
     } catch (error) {
       console.error('❌ Error fetching students:', error);

@@ -77,7 +77,6 @@ export const useQuizzes = () => {
     const { profile } = useAuth();
 
     useEffect(() => {
-        console.log('🚀 useQuizzes: Initial data fetch');
         fetchSubjects();
         fetchClassesSubjects();
         fetchQuizzes();
@@ -120,7 +119,6 @@ export const useQuizzes = () => {
                     table: 'quiz_results'
                 },
                 (payload) => {
-                    console.log('🔔 Quiz result change detected:', payload);
                     if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
                         fetchQuizResults();
                     } else if (profile?.role === 'student') {
@@ -144,7 +142,6 @@ export const useQuizzes = () => {
                 .order('classes(name), subjects(name)');
 
             if (error) throw error;
-            console.log('✅ Class-subject relationships fetched:', data?.length || 0);
             setClassesSubjects(data || []);
         } catch (error) {
             console.error('❌ Error fetching class-subject relationships:', error);
@@ -165,7 +162,6 @@ export const useQuizzes = () => {
 
             let subject_id = classesIDData?.map(item => item.subject_id) || [];
 
-            console.log('📚 Fetching ALL subjects...');
             const { data, error } = await supabase
                 .from('subjects')
                 .select('*')
@@ -174,7 +170,6 @@ export const useQuizzes = () => {
                 .order('name');
 
             if (error) throw error;
-            console.log('✅ Subjects fetched:', data?.length || 0);
             setSubjects(data || []);
         } catch (error) {
             console.error('❌ Error fetching subjects:', error);
@@ -183,62 +178,49 @@ export const useQuizzes = () => {
 
     const fetchQuizzes = async () => {
         try {
-            let data, error;
-            let subjectIDs: string[] = [];
+            if (!profile?.id) return setQuizzes([]);
 
-            const { data: classesIDData, error: classesIDError } = await supabase
-                .from('teacher_subject_enrollments')
-                .select('subject_id, class_id')
-                .eq('teacher_id', profile?.id);
+            let enrollmentsData, enrollmentsError;
 
-            if (classesIDError) {
-                console.error('Enrollments fetch error:', classesIDError);
-                throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+            if (profile.role === "teacher") {
+                ({ data: enrollmentsData, error: enrollmentsError } = await supabase
+                    .from('teacher_subject_enrollments')
+                    .select('class_id, subject_id')
+                    .eq('teacher_id', profile.id)
+                    .eq('is_active', true));
+            } else {
+                ({ data: enrollmentsData, error: enrollmentsError } = await supabase
+                    .from('student_subject_enrollments')
+                    .select('class_id, subject_id')
+                    .eq('student_id', profile.id)
+                    .eq('is_active', true));
             }
 
-            subjectIDs = [
-                ...new Set(classesIDData?.map(item => item.subject_id).filter(Boolean))
-            ];
-
-            console.log('🎯 Student subject IDs:', subjectIDs);
-
-            if (profile?.role === "student") {
-                const class_id = await fetchStudentClassId(profile?.id);
-
-                if (!class_id) {
-                    console.warn('⚠️ No class_id found for student');
-                    setQuizzes([]);
-                    return;
-                }
-
-                ({ data, error } = await supabase
-                    .from('quizzes')
-                    .select(`
-                            *,
-                            subjects (id, name),
-                            classes (name)
-                            `)
-                    .eq('class_id', class_id)
-                    .order('scheduled_date', { ascending: false }));
+            if (enrollmentsError) throw enrollmentsError;
+            if (!enrollmentsData || enrollmentsData.length === 0) {
+                setQuizzes([]);
+                return;
             }
-            else {
-                ({ data, error } = await supabase
-                    .from('quizzes')
-                    .select(`
-          *,
-          subjects (id, name),
-          classes (name)
-        `)
-                    .in('subject_id', subjectIDs)
-                    .order('scheduled_date', { ascending: false }));
-            }
+
+            // Build OR condition for class + subject combinations
+            const orExpr = enrollmentsData
+                .map(e => `and(class_id.eq.${e.class_id},subject_id.eq.${e.subject_id})`)
+                .join(',');
+
+            let { data, error } = await supabase
+                .from('quizzes')
+                .select(`
+                *,
+                subjects(id, name),
+                classes(name)
+            `)
+                .or(orExpr)
+                .order('scheduled_date', { ascending: false });
 
             if (error) throw error;
-
-            console.log('✅ Quizzes fetched:', data?.length || 0);
             setQuizzes(data || []);
-        } catch (error) {
-            console.error('❌ Error fetching quizzes:', error);
+        } catch (err) {
+            console.error('❌ Error fetching quizzes:', err);
             setQuizzes([]);
         }
     };
@@ -292,8 +274,7 @@ export const useQuizzes = () => {
 
     const fetchStudentResults = async () => {
         try {
-            console.log('👨‍🎓 Fetching student results for user:', profile?.id);
-            
+
             // First, get the student record ID from the students table
             const { data: studentData, error: studentError } = await supabase
                 .from('students')
@@ -301,7 +282,6 @@ export const useQuizzes = () => {
                 .eq('id', profile?.id)
                 .single();
 
-            console.log("Student Found" , studentData)
 
             if (studentError) {
                 console.error('❌ Error fetching student record:', studentError);
@@ -315,7 +295,6 @@ export const useQuizzes = () => {
                 return;
             }
 
-            console.log('📋 Student record ID:', profile?.id);
 
             const { data, error } = await supabase
                 .from('quiz_results')
@@ -334,7 +313,6 @@ export const useQuizzes = () => {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            console.log('✅ Student results fetched:', data?.length || 0);
             setQuizResults(data || []);
         } catch (error) {
             console.error('❌ Error fetching student results:', error);
@@ -443,6 +421,95 @@ export const useQuizzes = () => {
         );
     };
 
+    // const createQuiz = async (quizData: {
+    //     title: string;
+    //     description?: string;
+    //     subject_id: string;
+    //     class_id: string;
+    //     scheduled_date: string;
+    //     duration_minutes: number;
+    //     total_marks: number;
+    //     passing_marks: number;
+    //     quiz_type: 'quiz' | 'test' | 'exam' | 'assignment';
+    //     instructions?: string;
+    // }) => {
+    //     try {
+    //         console.log('🔍 Validating quiz creation:', quizData);
+
+    //         // FIXED: Check teacher_subject_enrollments instead of classes_subjects
+    //         const { data: enrollment, error: enrollmentError } = await supabase
+    //             .from('teacher_subject_enrollments')
+    //             .select('*')
+    //             .eq('teacher_id', profile?.id)
+    //             .eq('class_id', quizData.class_id)
+    //             .eq('subject_id', quizData.subject_id)
+    //             .single();
+
+    //         if (enrollmentError || !enrollment) {
+    //             console.error('❌ Validation failed:', enrollmentError);
+    //             throw new Error('You are not assigned to teach this subject in this class');
+    //         }
+
+    //         console.log('✅ Validation passed, creating quiz');
+
+    //         const { data, error } = await supabase
+    //             .from('quizzes')
+    //             .insert([{
+    //                 title: quizData.title,
+    //                 description: quizData.description,
+    //                 subject_id: quizData.subject_id,
+    //                 class_id: quizData.class_id,
+    //                 scheduled_date: quizData.scheduled_date,
+    //                 duration_minutes: quizData.duration_minutes,
+    //                 total_marks: quizData.total_marks,
+    //                 passing_marks: quizData.passing_marks,
+    //                 quiz_type: quizData.quiz_type,
+    //                 status: 'scheduled',
+    //                 instructions: quizData.instructions,
+    //                 created_by: profile!.id,
+    //             }])
+    //             .select()
+    //             .single();
+
+    //         if (error) throw error;
+
+    //         console.log('✅ Quiz created successfully:', data);
+
+    //         // Create quiz result entries for all students in the class
+    //         const { data: students } = await supabase
+    //             .from('students')
+    //             .select('id')
+    //             .eq('class_id', quizData.class_id);
+
+    //         if (students && students.length > 0) {
+    //             const resultEntries = students.map(student => ({
+    //                 quiz_id: data.id,
+    //                 student_id: student.id,
+    //                 total_marks: quizData.total_marks,
+    //                 is_checked: false,
+    //                 submission_status: 'submitted'
+    //             }));
+
+    //             await supabase
+    //                 .from('quiz_results')
+    //                 .insert(resultEntries);
+    //         }
+
+    //         // FORCE IMMEDIATE REFRESH
+    //         await fetchQuizzes();
+    //         if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+    //             await fetchQuizResults();
+    //         } else if (profile?.role === 'student') {
+    //             await fetchStudentResults();
+    //         }
+
+    //         return { success: true, data };
+    //     } catch (error) {
+    //         console.error('❌ Error creating quiz:', error);
+    //         return { success: false, error };
+    //     }
+    // };
+
     const createQuiz = async (quizData: {
         title: string;
         description?: string;
@@ -457,7 +524,7 @@ export const useQuizzes = () => {
     }) => {
         try {
             console.log('🔍 Validating quiz creation:', quizData);
-            
+
             // FIXED: Check teacher_subject_enrollments instead of classes_subjects
             const { data: enrollment, error: enrollmentError } = await supabase
                 .from('teacher_subject_enrollments')
@@ -497,16 +564,20 @@ export const useQuizzes = () => {
 
             console.log('✅ Quiz created successfully:', data);
 
-            // Create quiz result entries for all students in the class
-            const { data: students } = await supabase
-                .from('students')
-                .select('id')
-                .eq('class_id', quizData.class_id);
+            // ✅ FIXED: Create quiz results only for students enrolled in this class + subject
+            const { data: enrolledStudents, error: studentsError } = await supabase
+                .from('student_subject_enrollments')
+                .select('student_id')
+                .eq('class_id', quizData.class_id)
+                .eq('subject_id', quizData.subject_id)
+                .eq('is_active', true);
 
-            if (students && students.length > 0) {
-                const resultEntries = students.map(student => ({
+            if (studentsError) {
+                console.error('❌ Error fetching enrolled students:', studentsError);
+            } else if (enrolledStudents && enrolledStudents.length > 0) {
+                const resultEntries = enrolledStudents.map(student => ({
                     quiz_id: data.id,
-                    student_id: student.id,
+                    student_id: student.student_id,
                     total_marks: quizData.total_marks,
                     is_checked: false,
                     submission_status: 'submitted'
@@ -531,6 +602,7 @@ export const useQuizzes = () => {
             return { success: false, error };
         }
     };
+
 
     const markQuizResult = async (
         resultId: string,

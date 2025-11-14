@@ -67,7 +67,7 @@ export default function UploadLectureModal({
 
     const loadClasses = async () => {
         try {
-            const data = await lectureService.fetchClasses(profile.id , profile?.role);
+            const data = await lectureService.fetchClasses(profile.id, profile?.role);
 
             setClasses(data);
 
@@ -85,23 +85,60 @@ export default function UploadLectureModal({
     };
 
 
+    // const loadClassData = async (classId: string) => {
+    //     try {
+    //         let subjectsData = [];
+    //         let studentsData = [];
+
+    //         try {
+    //             subjectsData = await lectureService.fetchClassSubjects(classId , profile?.id , profile?.role);
+    //         } catch (err) {
+    //             console.error("Error fetching subjects:", err);
+    //         }
+
+    //         try {
+    //             studentsData = await lectureService.fetchClassStudents(classId);
+    //         } catch (err) {
+    //             console.error("Error fetching students:", err);
+    //         }
+
+
+    //         setSubjects(subjectsData);
+    //         setStudents(studentsData);
+
+    //         if (subjectsData.length > 0) {
+    //             setFormData(prev => ({
+    //                 ...prev,
+    //                 subject_id: subjectsData[0].id
+    //             }));
+    //         }
+    //     } catch (error) {
+    //         console.error("Unexpected error in loadClassData:", error);
+    //         Alert.alert('Error', 'Failed to load class data');
+    //     }
+    // };
+
+    // In UploadLectureModal.tsx, update loadClassData function:
+
     const loadClassData = async (classId: string) => {
         try {
             let subjectsData = [];
             let studentsData = [];
 
             try {
-                subjectsData = await lectureService.fetchClassSubjects(classId , profile?.id , profile?.role);
+                subjectsData = await lectureService.fetchClassSubjects(classId, profile?.id, profile?.role);
             } catch (err) {
                 console.error("Error fetching subjects:", err);
             }
 
-            try {
-                studentsData = await lectureService.fetchClassStudents(classId);
-            } catch (err) {
-                console.error("Error fetching students:", err);
+            // ✅ FIXED: Only fetch students if subject is selected
+            if (formData.subject_id) {
+                try {
+                    studentsData = await lectureService.fetchClassStudents(classId, formData.subject_id);
+                } catch (err) {
+                    console.error("Error fetching students:", err);
+                }
             }
-
 
             setSubjects(subjectsData);
             setStudents(studentsData);
@@ -118,6 +155,21 @@ export default function UploadLectureModal({
         }
     };
 
+    // ✅ Add effect to load students when subject changes
+    useEffect(() => {
+        if (formData.class_id && formData.subject_id) {
+            loadStudentsForSubject(formData.class_id, formData.subject_id);
+        }
+    }, [formData.subject_id]);
+
+    const loadStudentsForSubject = async (classId: string, subjectId: string) => {
+        try {
+            const studentsData = await lectureService.fetchClassStudents(classId, subjectId);
+            setStudents(studentsData);
+        } catch (err) {
+            console.error("Error fetching students:", err);
+        }
+    };
 
     const resetForm = () => {
         setFormData({
@@ -442,6 +494,8 @@ export default function UploadLectureModal({
     );
 }
 
+import { TextSizes } from '@/src/styles/TextSizes';
+
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
@@ -461,28 +515,30 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     title: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: TextSizes.modalTitle,
+        fontFamily: 'Inter-SemiBold',
     },
     content: {
         padding: 20,
     },
     field: {
-        marginBottom: 20,
+        marginBottom: 16,
     },
     label: {
-        fontSize: 14,
-        fontWeight: '600',
-        marginBottom: 8,
+        fontSize: TextSizes.modalText,
+        fontFamily: 'Inter-SemiBold',
+        marginBottom: 6,
     },
     input: {
         borderRadius: 8,
-        padding: 12,
-        fontSize: 14,
+        padding: 12,           // slightly more padding
+        fontSize: TextSizes.medium, // increased from normal (10) to medium (11)
+        fontFamily: 'Inter-Regular',
     },
     textArea: {
-        minHeight: 60,
+        minHeight: 70,         // slightly taller
         textAlignVertical: 'top',
+        fontSize: TextSizes.medium, // match input font size
     },
     options: {
         flexDirection: 'row',
@@ -490,73 +546,196 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     option: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
         borderRadius: 6,
         borderWidth: 1,
     },
     optionText: {
-        fontSize: 13,
-        fontWeight: '500',
+        fontSize: TextSizes.normal,
+        fontFamily: 'Inter-SemiBold',
     },
     accessTypes: {
         flexDirection: 'row',
-        gap: 10,
+        gap: 8,
     },
     accessType: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 10,
+        padding: 8,
         borderRadius: 8,
         borderWidth: 1,
-        gap: 6,
+        gap: 4,
     },
     accessTypeText: {
-        fontSize: 13,
-        fontWeight: '500',
+        fontSize: TextSizes.normal,
+        fontFamily: 'Inter-SemiBold',
     },
     studentList: {
         maxHeight: 150,
     },
     student: {
-        padding: 10,
-        marginBottom: 6,
+        padding: 8,
+        marginBottom: 4,
         borderRadius: 6,
         borderWidth: 1,
     },
     studentName: {
-        fontSize: 13,
+        fontSize: TextSizes.normal,
+        fontFamily: 'Inter-Regular',
     },
     filePicker: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 14,
+        padding: 12,
         borderRadius: 8,
         borderWidth: 1,
-        gap: 10,
+        gap: 8,
     },
     fileText: {
         flex: 1,
-        fontSize: 13,
+        fontSize: TextSizes.normal,
+        fontFamily: 'Inter-Regular',
     },
     fileSize: {
-        fontSize: 11,
+        fontSize: TextSizes.small,
+        fontFamily: 'Inter-Regular',
         marginTop: 4,
     },
     uploadButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 14,
+        padding: 12,
         borderRadius: 8,
-        gap: 8,
+        gap: 6,
         marginTop: 10,
     },
     uploadButtonText: {
         color: 'white',
-        fontSize: 15,
-        fontWeight: '600',
+        fontSize: TextSizes.buttonText,
+        fontFamily: 'Inter-SemiBold',
     },
 });
+
+
+// const styles = StyleSheet.create({
+//     overlay: {
+//         flex: 1,
+//         backgroundColor: 'rgba(0,0,0,0.5)',
+//         justifyContent: 'flex-end',
+//     },
+//     modal: {
+//         borderTopLeftRadius: 20,
+//         borderTopRightRadius: 20,
+//         maxHeight: '85%',
+//     },
+//     header: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         padding: 20,
+//         borderBottomWidth: 1,
+//     },
+//     title: {
+//         fontSize: 18,
+//         fontWeight: 'bold',
+//     },
+//     content: {
+//         padding: 20,
+//     },
+//     field: {
+//         marginBottom: 20,
+//     },
+//     label: {
+//         fontSize: 14,
+//         fontWeight: '600',
+//         marginBottom: 8,
+//     },
+//     input: {
+//         borderRadius: 8,
+//         padding: 12,
+//         fontSize: 14,
+//     },
+//     textArea: {
+//         minHeight: 60,
+//         textAlignVertical: 'top',
+//     },
+//     options: {
+//         flexDirection: 'row',
+//         flexWrap: 'wrap',
+//         gap: 8,
+//     },
+//     option: {
+//         paddingHorizontal: 14,
+//         paddingVertical: 8,
+//         borderRadius: 6,
+//         borderWidth: 1,
+//     },
+//     optionText: {
+//         fontSize: 13,
+//         fontWeight: '500',
+//     },
+//     accessTypes: {
+//         flexDirection: 'row',
+//         gap: 10,
+//     },
+//     accessType: {
+//         flex: 1,
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         padding: 10,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//         gap: 6,
+//     },
+//     accessTypeText: {
+//         fontSize: 13,
+//         fontWeight: '500',
+//     },
+//     studentList: {
+//         maxHeight: 150,
+//     },
+//     student: {
+//         padding: 10,
+//         marginBottom: 6,
+//         borderRadius: 6,
+//         borderWidth: 1,
+//     },
+//     studentName: {
+//         fontSize: 13,
+//     },
+//     filePicker: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         padding: 14,
+//         borderRadius: 8,
+//         borderWidth: 1,
+//         gap: 10,
+//     },
+//     fileText: {
+//         flex: 1,
+//         fontSize: 13,
+//     },
+//     fileSize: {
+//         fontSize: 11,
+//         marginTop: 4,
+//     },
+//     uploadButton: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         padding: 14,
+//         borderRadius: 8,
+//         gap: 8,
+//         marginTop: 10,
+//     },
+//     uploadButtonText: {
+//         color: 'white',
+//         fontSize: 15,
+//         fontWeight: '600',
+//     },
+// });

@@ -82,7 +82,6 @@ export default function ExamsScreen() {
 
       if (enrollmentError) throw enrollmentError;
 
-      console.log("📋 Enrollments data:", enrollments);
 
       // Get unique class IDs
       const classIDs = [...new Set(enrollments?.map(item => item.class_id) || [])];
@@ -90,8 +89,6 @@ export default function ExamsScreen() {
       // Get unique subject IDs
       const subjectIDs = [...new Set(enrollments?.map(item => item.subject_id) || [])];
 
-      console.log("🏫 Class IDs:", classIDs);
-      console.log("📚 Subject IDs:", subjectIDs);
 
       // Fetch classes
       const { data: classesData, error: classesError } = await supabase
@@ -121,12 +118,10 @@ export default function ExamsScreen() {
   // Get subjects for selected class
   const getSubjectsForClass = useCallback(async (classId: string) => {
     if (!classId || !profile?.id) {
-      console.log("⚠️ Missing classId or profile");
       return [];
     }
 
     try {
-      console.log("🔍 Fetching subjects for class:", classId, "teacher:", profile?.id);
 
       const { data: enrollments, error } = await supabase
         .from('teacher_subject_enrollments')
@@ -136,10 +131,8 @@ export default function ExamsScreen() {
 
       if (error) throw error;
 
-      console.log("📋 Subject enrollments for class:", enrollments);
 
       const subjectIDs = [...new Set(enrollments?.map(item => item.subject_id) || [])];
-      console.log("📚 Subject IDs:", subjectIDs);
 
       // Fetch full subject details
       const { data: subjectsData, error: subjectsError } = await supabase
@@ -150,7 +143,6 @@ export default function ExamsScreen() {
 
       if (subjectsError) throw subjectsError;
 
-      console.log("✅ Subjects for class:", subjectsData);
 
       return subjectsData || [];
     } catch (error) {
@@ -191,6 +183,7 @@ export default function ExamsScreen() {
   const getFilteredQuizzes = () => {
     let filtered = quizzes;
 
+    
     // Filter by class if selected
     if (filters.selectedClass) {
       filtered = filtered.filter(quiz => quiz.class_id === filters.selectedClass);
@@ -325,17 +318,22 @@ export default function ExamsScreen() {
         </View>
 
         {/* Comprehensive Filter Modal */}
-        <ComprehensiveExamsFilterModal
-          visible={filterModalVisible}
-          onClose={() => setFilterModalVisible(false)}
-          classes={classes}
-          subjects={subjects}
-          currentFilters={filters}
-          onApplyFilters={handleApplyFilters}
-          userRole={profile?.role || 'student'}
-          activeTab={activeTab}
-          getSubjectsForClass={getSubjectsForClass}
-        />
+        {(profile?.role === 'teacher') ? (
+          <ComprehensiveExamsFilterModal
+            visible={filterModalVisible}
+            onClose={() => setFilterModalVisible(false)}
+            classes={classes}
+            subjects={subjects}
+            currentFilters={filters}
+            onApplyFilters={handleApplyFilters}
+            userRole={profile?.role || 'student'}
+            activeTab={activeTab}
+            getSubjectsForClass={getSubjectsForClass}
+          />
+        ) :
+          null
+        }
+
 
         {(profile?.role === 'teacher' || profile?.role === 'admin') && (
           <>

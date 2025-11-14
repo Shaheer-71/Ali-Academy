@@ -208,7 +208,6 @@ export default function AttendanceScreen() {
             if (classesIDError) throw classesIDError;
 
             let enrolledClasses = [...new Set(classesIDData?.map(item => item.class_id) || [])];
-            console.log("📚 Fetched enrolled classes:", enrolledClasses);
 
             const { data, error } = await supabase
                 .from('classes')
@@ -228,7 +227,6 @@ export default function AttendanceScreen() {
 
     const fetchSubjectsForClass = async (classId: string) => {
         try {
-            console.log("🔍 Fetching subjects for class:", classId, "and teacher:", profile?.id);
 
             const { data: subjectIDData, error: subjectIDError } = await supabase
                 .from('teacher_subject_enrollments') // FIXED: Changed table name
@@ -242,13 +240,11 @@ export default function AttendanceScreen() {
                 throw subjectIDError;
             }
 
-            console.log("📋 Raw subject enrollment data:", subjectIDData);
 
             let enrolledSubjects = [...new Set(subjectIDData?.map(item => item.subject_id) || [])];
-            console.log("📖 Unique enrolled subjects for this class:", enrolledSubjects);
 
             if (enrolledSubjects.length === 0) {
-                console.log("⚠️ No subjects found for this class");
+                // console.log("⚠️ No subjects found for this class");
                 setSubjects([]);
                 setFilters(prev => ({ ...prev, selectedSubject: '' }));
                 setViewFilters(prev => ({ ...prev, selectedSubject: '' }));
@@ -266,7 +262,7 @@ export default function AttendanceScreen() {
                 throw error;
             }
 
-            console.log("✅ Fetched subjects:", data);
+            // console.log("✅ Fetched subjects:", data);
             setSubjects(data || []);
 
             // REMOVED: Auto-selection of first subject
