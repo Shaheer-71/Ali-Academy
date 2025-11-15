@@ -277,6 +277,8 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
             transparent={true}
             visible={modalVisible}
             onRequestClose={() => setModalVisible(false)}
+            statusBarTranslucent={true}  // ← ADD THIS
+            presentationStyle="overFullScreen"
         >
             <View style={styles.modalOverlay}>
                 <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
@@ -501,10 +503,10 @@ const styles = StyleSheet.create({
     modalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '90%',
+        maxHeight: '65%',
     },
     modalScrollView: {
-        maxHeight: '80%',
+        maxHeight: '65%',
     },
     modalScrollViewContent: {
         paddingHorizontal: 24,

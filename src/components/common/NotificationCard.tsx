@@ -106,12 +106,14 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+import { TextSizes } from '@/src/styles/TextSizes';
+
+export const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -126,12 +128,12 @@ const styles = StyleSheet.create({
     borderColor: '#274d71',
   },
   iconContainer: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   content: {
     flex: 1,
@@ -141,25 +143,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   title: {
-    fontSize: 14,
+    fontSize: TextSizes.large, // was 14
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
     flex: 1,
     marginRight: 8,
   },
   timestamp: {
-    fontSize: 11,
+    fontSize: TextSizes.large, // was 11
     fontFamily: 'Inter-Regular',
     color: '#9CA3AF',
   },
   message: {
-    fontSize: 13,
+    fontSize: TextSizes.medium, // was 13
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
-    lineHeight: 18,
+    lineHeight: 16,
   },
   unreadIndicator: {
     position: 'absolute',

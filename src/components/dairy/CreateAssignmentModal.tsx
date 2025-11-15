@@ -40,6 +40,8 @@ export const CreateAssignmentModal = ({
             transparent
             animationType="fade"
             onRequestClose={onClose}
+            statusBarTranslucent={true}  // ← ADD THIS
+            presentationStyle="overFullScreen"
         >
             <View style={styles.modalOverlay}>
                 <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
@@ -289,7 +291,7 @@ export const CreateAssignmentModal = ({
 
                         {/* Submit Button */}
                         <TouchableOpacity
-                            style={[styles.submitButton, { backgroundColor: colors.primary }, uploading && styles.submitButtonDisabled]}
+                            style={[styles.submitButton, { backgroundColor: colors.primary, marginBottom: 40 }, uploading && styles.submitButtonDisabled]}
                             onPress={onSubmit}
                             disabled={uploading}
                         >

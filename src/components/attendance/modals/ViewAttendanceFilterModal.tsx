@@ -170,7 +170,12 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
     );
 
     return (
-        <Modal visible={visible} transparent animationType="fade">
+        <Modal
+            visible={visible}
+            transparent animationType="fade"
+            statusBarTranslucent={true}
+            presentationStyle="overFullScreen"
+        >
             <View style={styles.overlay}>
                 <View style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
                     {/* Header */}
@@ -458,13 +463,13 @@ export const ViewAttendanceFilterModal: React.FC<ViewAttendanceFilterModalProps>
                                 <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
                             </TouchableOpacity> */}
 
-                        <TouchableOpacity
-                            style={[styles.resetButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-                            onPress={handleReset}
-                        >
-                            <RotateCcw size={16} color={colors.textSecondary} />
-                            <Text allowFontScaling={false} style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset</Text>
-                        </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.resetButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+                                onPress={handleReset}
+                            >
+                                <RotateCcw size={16} color={colors.textSecondary} />
+                                <Text allowFontScaling={false} style={[styles.resetButtonText, { color: colors.textSecondary }]}>Reset</Text>
+                            </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.button, styles.applyButton, { backgroundColor: colors.primary }]}
                                 onPress={handleApply}

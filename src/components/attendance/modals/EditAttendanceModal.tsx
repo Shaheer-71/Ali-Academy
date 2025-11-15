@@ -67,6 +67,8 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
             transparent={true}
             visible={visible}
             onRequestClose={onClose}
+            statusBarTranslucent={true}  // ← ADD THIS
+            presentationStyle="overFullScreen"  // ← ADD THIS
         >
             <View style={styles.modalOverlay}>
                 <View style={[styles.editModalContent, { backgroundColor: colors.background }]}>
@@ -152,7 +154,7 @@ const styles = StyleSheet.create({
     editModalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '80%',
+        maxHeight: '65%',
     },
     modalHeader: {
         flexDirection: 'row',

@@ -51,6 +51,8 @@ export const AssignmentDetailModal = ({
             transparent
             animationType="fade"
             onRequestClose={onClose}
+            statusBarTranslucent={true}  // ← ADD THIS
+            presentationStyle="overFullScreen"
         >
             <View style={styles.detailModalOverlay}>
                 <View style={[styles.detailModalContent, { backgroundColor: colors.background }]}>

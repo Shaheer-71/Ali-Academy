@@ -551,10 +551,13 @@ export default function HomeScreen() {
 }
 
 
+import { TextSizes } from '@/src/styles/TextSizes';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: -10
+    paddingTop: -10,
+    paddingBottom: 10,
   },
   headerContainer: {
     marginHorizontal: 24,
@@ -569,16 +572,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   greeting: {
-    fontSize: 14,
+    fontSize: TextSizes.normal,
     fontFamily: 'Inter-Regular',
   },
   username: {
-    fontSize: 20,
+    fontSize: TextSizes.xlarge,
     fontFamily: 'Inter-SemiBold',
     marginTop: 4,
   },
   role: {
-    fontSize: 10,
+    fontSize: TextSizes.small,
     fontFamily: 'Inter-Medium',
     color: '#b6d509',
     paddingHorizontal: 8,
@@ -603,12 +606,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statsNumber: {
-    fontSize: 16,
+    fontSize: TextSizes.xlarge,
     fontFamily: 'Inter-SemiBold',
     marginBottom: 4,
   },
   statsLabel: {
-    fontSize: 6,
+    fontSize: TextSizes.tiny,
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
   },
@@ -622,7 +625,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: TextSizes.sectionTitle,
     fontFamily: 'Inter-SemiBold',
   },
   sectionIcon: {
@@ -639,30 +642,26 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionCard: {
-    width: '48%',
-    borderRadius: 16,
-    padding: 15,
+    width: '47%',
+    borderRadius: 14,
+    padding: 20,
     alignItems: 'center',
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   actionTitle: {
-    fontSize: 12,
+    fontSize: TextSizes.small,
     fontFamily: 'Inter-Medium',
     textAlign: 'center',
   },
+
   actionIndicator: {
     position: 'absolute',
     bottom: -0.5,
@@ -699,12 +698,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   activityTitle: {
-    fontSize: 12,
+    fontSize: TextSizes.filterLabel,
     fontFamily: 'Inter-Medium',
     marginBottom: 2,
   },
   activityTime: {
-    fontSize: 10,
+    fontSize: TextSizes.small,
     fontFamily: 'Inter-Regular',
   },
   activityDotSuccess: {
@@ -717,3 +716,172 @@ const styles = StyleSheet.create({
     backgroundColor: '#F59E0B',
   },
 });
+
+
+
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//     paddingTop: -10,
+//   },
+//   headerContainer: {
+//     marginHorizontal: 24,
+//     paddingTop: 8,
+//     marginBottom: 12,
+//     paddingHorizontal: 12,
+//     borderRadius: 16,
+//   },
+//   header: {
+//     paddingTop: 8,
+//     borderRadius: 12,
+//     paddingHorizontal: 16,
+//   },
+//   greeting: {
+//     fontSize: 14,
+//     fontFamily: 'Inter-Regular',
+//   },
+//   username: {
+//     fontSize: 20,
+//     fontFamily: 'Inter-SemiBold',
+//     marginTop: 4,
+//   },
+//   role: {
+//     fontSize: 10,
+//     fontFamily: 'Inter-Medium',
+//     color: '#b6d509',
+//     paddingHorizontal: 8,
+//     paddingVertical: 2,
+//     borderRadius: 4,
+//     marginTop: 8,
+//     alignSelf: 'flex-start',
+//   },
+//   statsContainer: {
+//     flexDirection: 'row',
+//     marginBottom: 16,
+//     gap: 12,
+//     borderRadius: 12,
+//     padding: 12,
+//   },
+//   statsCard: {
+//     flex: 1,
+//     borderRadius: 16,
+//     paddingHorizontal: 20,
+//     paddingVertical: 10,
+//     alignItems: 'center',
+//     borderWidth: 1,
+//   },
+//   statsNumber: {
+//     fontSize: 16,
+//     fontFamily: 'Inter-SemiBold',
+//     marginBottom: 4,
+//   },
+//   statsLabel: {
+//     fontSize: 6,
+//     fontFamily: 'Inter-Regular',
+//     textAlign: 'center',
+//   },
+//   section: {
+//     paddingHorizontal: 24,
+//   },
+//   sectionHeader: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     justifyContent: 'space-between',
+//     marginBottom: 16,
+//   },
+//   sectionTitle: {
+//     fontSize: 16,
+//     fontFamily: 'Inter-SemiBold',
+//   },
+//   sectionIcon: {
+//     width: 32,
+//     height: 32,
+//     borderRadius: 8,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     borderWidth: 1,
+//   },
+//   actionsGrid: {
+//     flexDirection: 'row',
+//     flexWrap: 'wrap',
+//     gap: 12,
+//   },
+//   actionCard: {
+//     width: '48%',
+//     borderRadius: 16,
+//     padding: 15,
+//     alignItems: 'center',
+//     borderWidth: 1,
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowOpacity: 0.05,
+//     shadowRadius: 4,
+//     elevation: 2,
+//   },
+//   actionIcon: {
+//     width: 48,
+//     height: 48,
+//     borderRadius: 12,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     marginBottom: 12,
+//   },
+//   actionTitle: {
+//     fontSize: 12,
+//     fontFamily: 'Inter-Medium',
+//     textAlign: 'center',
+//   },
+//   actionIndicator: {
+//     position: 'absolute',
+//     bottom: -0.5,
+//     left: 0,
+//     right: 0,
+//     height: 8,
+//     borderBottomLeftRadius: 16,
+//     borderBottomRightRadius: 16,
+//   },
+//   activityCard: {
+//     borderRadius: 16,
+//     padding: 20,
+//     borderWidth: 1,
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowOpacity: 0.05,
+//     shadowRadius: 4,
+//     elevation: 2,
+//   },
+//   activityItem: {
+//     flexDirection: 'row',
+//     alignItems: 'flex-start',
+//     marginBottom: 16,
+//   },
+//   activityDot: {
+//     width: 8,
+//     height: 8,
+//     backgroundColor: '#b6d509',
+//     borderRadius: 4,
+//     marginTop: 6,
+//     marginRight: 12,
+//   },
+//   activityContent: {
+//     flex: 1,
+//   },
+//   activityTitle: {
+//     fontSize: 12,
+//     fontFamily: 'Inter-Medium',
+//     marginBottom: 2,
+//   },
+//   activityTime: {
+//     fontSize: 10,
+//     fontFamily: 'Inter-Regular',
+//   },
+//   activityDotSuccess: {
+//     backgroundColor: '#10B981',
+//   },
+//   activityDotInfo: {
+//     backgroundColor: '#3B82F6',
+//   },
+//   activityDotWarning: {
+//     backgroundColor: '#F59E0B',
+//   },
+// });

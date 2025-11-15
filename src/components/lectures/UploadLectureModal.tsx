@@ -268,7 +268,12 @@ export default function UploadLectureModal({
 
 
     return (
-        <Modal visible={visible} animationType="fade" transparent>
+        <Modal
+            visible={visible}
+            animationType="fade"
+            transparent
+            statusBarTranslucent={true}  // ← ADD THIS
+            presentationStyle="overFullScreen">
             <View style={styles.overlay}>
                 <View style={[styles.modal, { backgroundColor: colors.background }]}>
                     {/* Header */}
@@ -505,7 +510,7 @@ const styles = StyleSheet.create({
     modal: {
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        maxHeight: '85%',
+        maxHeight: '65%',
     },
     header: {
         flexDirection: 'row',
@@ -612,6 +617,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         gap: 6,
         marginTop: 10,
+        marginBottom: 40,
     },
     uploadButtonText: {
         color: 'white',

@@ -21,7 +21,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
   student,
   onPress,
   onMenuPress,
-  showActions = false,
+  showActions = false
 }) => {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
@@ -58,7 +58,6 @@ export const StudentCard: React.FC<StudentCardProps> = ({
     </TouchableOpacity>
   );
 };
-
 
 import { TextSizes } from '@/src/styles/TextSizes';
 

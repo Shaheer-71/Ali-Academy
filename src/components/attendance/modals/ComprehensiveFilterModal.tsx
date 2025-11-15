@@ -261,9 +261,23 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
     );
 
     return (
-        <Modal visible={visible} transparent animationType="fade">
-            <View style={styles.overlay}>
-                <View style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
+        <Modal
+            visible={visible}
+            transparent
+            animationType="fade"
+            statusBarTranslucent={true}
+            presentationStyle="overFullScreen"
+        >
+            <TouchableOpacity
+                style={styles.overlay}
+                activeOpacity={1}
+                onPress={onClose}
+            >
+                <TouchableOpacity
+                    activeOpacity={1}
+                    style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}
+                    onPress={(e) => e.stopPropagation()}
+                >
                     {/* Header */}
                     <View style={[styles.header, { borderBottomColor: colors.border }]}>
                         <View style={styles.headerLeft}>
@@ -275,7 +289,9 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                         </TouchableOpacity>
                     </View>
 
+                    {/* Scrollable Content */}
                     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                        {/* All your filter sections here - unchanged */}
                         {/* Class Filter - Only for Teachers */}
                         {userRole === 'teacher' && (
                             <FilterSection title="Select Class" icon={<Building size={20} color={colors.primary} />}>
@@ -435,7 +451,7 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                         )}
 
                         {/* Applied Filters Summary */}
-                        <View style={[styles.summarySection, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                        {/* <View style={[styles.summarySection, { backgroundColor: colors.background, borderColor: colors.border }]}>
                             <Text allowFontScaling={false} style={[styles.summaryTitle, { color: colors.text }]}>Current Filters:</Text>
 
                             {userRole === 'teacher' && (
@@ -458,21 +474,12 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                                     • Status: {statusOptions.find(s => s.value === filters.status)?.label}
                                 </Text>
                             )}
-                        </View>
+                        </View> */}
                     </ScrollView>
 
-                    {/* Actions */}
-                    <View style={[styles.actions, { borderTopColor: colors.border }]}>
-
-
+                    {/* Fixed Bottom Actions - OUTSIDE ScrollView */}
+                    <View style={[styles.actions, { backgroundColor: colors.cardBackground, borderTopColor: colors.border }]}>
                         <View style={styles.mainActions}>
-                            {/* <TouchableOpacity
-                                style={[styles.button, styles.cancelButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-                                onPress={onClose}
-                            >
-                                <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
-                            </TouchableOpacity> */}
-
                             <TouchableOpacity
                                 style={[styles.resetButton, { backgroundColor: colors.background, borderColor: colors.border }]}
                                 onPress={handleReset}
@@ -488,8 +495,8 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                             </TouchableOpacity>
                         </View>
                     </View>
-                </View>
-            </View>
+                </TouchableOpacity>
+            </TouchableOpacity>
         </Modal>
     );
 };
@@ -505,8 +512,8 @@ const styles = StyleSheet.create({
     modalContainer: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '90%',
-        minHeight: '60%',
+        height: '65%',
+        overflow: 'hidden',
     },
     header: {
         flexDirection: 'row',
@@ -529,7 +536,8 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        padding: 24,
+        paddingHorizontal: 24,
+        paddingTop: 24,
     },
     section: {
         marginBottom: 32,
@@ -646,8 +654,9 @@ const styles = StyleSheet.create({
     },
     actions: {
         borderTopWidth: 1,
-        padding: 24,
-        gap: 16,
+        paddingHorizontal: 24,
+        paddingTop: 16,
+        paddingBottom: 24,
     },
     resetButton: {
         flexDirection: 'row',

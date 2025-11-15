@@ -98,6 +98,8 @@ const MarkingModal: React.FC<MarkingModalProps> = ({
             transparent={true}
             visible={markingModalVisible}
             onRequestClose={handleClose}
+            statusBarTranslucent={true}
+            presentationStyle="overFullScreen"
         >
             <TouchableOpacity
                 style={styles.modalOverlay}

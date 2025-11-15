@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Animated, PanResponder, TouchableOpacity } from 'react-native';
 import { Text } from 'react-native';
-import { NotebookPen, Calendar, Users, User, FileText, Clock, Edit3, Trash2 } from 'lucide-react-native';
+import { NotebookPen, Calendar, Users, User, FileText, Clock, Edit3, Trash2, BookOpen, Edit } from 'lucide-react-native';
 import styles from './styles';
 
 interface DiaryAssignment {
@@ -99,7 +99,8 @@ export const SwipeableAssignmentCard = ({
                             onEdit(assignment);
                         }}
                     >
-                        <Edit3 size={20} color="#3B82F6" />
+                        <Edit size={20} color={colors.primary} />
+                        <Text allowFontScaling={false} style={[styles.actionBtnText, { color: colors.primary }]}>Edit</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.actionButton, { backgroundColor: '#fff' }]}
@@ -109,6 +110,7 @@ export const SwipeableAssignmentCard = ({
                         }}
                     >
                         <Trash2 size={20} color="#EF4444" />
+                        <Text allowFontScaling={false} style={[styles.actionBtnText, { color: "#EF4444" }]}>Delete</Text>
                     </TouchableOpacity>
                 </View>
             )}
