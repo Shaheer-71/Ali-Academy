@@ -155,7 +155,11 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
     );
 
     return (
-        <Modal visible={visible} transparent animationType="fade">
+        <Modal
+            visible={visible}
+            transparent animationType="fade"
+            statusBarTranslucent={true}  // ← ADD THIS
+            presentationStyle="overFullScreen">
             <View style={styles.overlay}>
                 <View style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
                     {/* Header */}
@@ -289,7 +293,7 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                         )}
 
                         {/* Applied Filters Summary */}
-                        <View style={[styles.summarySection, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                        {/* <View style={[styles.summarySection, { backgroundColor: colors.background, borderColor: colors.border }]}>
                             <Text allowFontScaling={false} style={[styles.summaryTitle, { color: colors.text }]}>Current Filters:</Text>
 
                             {userRole === 'teacher' && (
@@ -314,7 +318,7 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
                                     • Evaluation: {evaluationOptions.find(e => e.value === filters.checkedFilter)?.label}
                                 </Text>
                             )}
-                        </View>
+                        </View> */}
                     </ScrollView>
 
                     {/* Actions */}
@@ -363,7 +367,7 @@ const styles = StyleSheet.create({
     modalContainer: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '85%',
+        maxHeight: '65%',
         minHeight: '60%',
     },
     header: {

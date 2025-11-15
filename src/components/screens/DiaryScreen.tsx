@@ -18,7 +18,7 @@ import { uploadToCloudinary } from '@/src/lib/cloudinary';
 import * as DocumentPicker from 'expo-document-picker';
 import {
   Plus,
-  NotebookPen,
+  BookOpen,
   Search,
 } from 'lucide-react-native';
 import TopSections from '@/src/components/common/TopSections';
@@ -497,7 +497,7 @@ export default function DiaryScreen() {
             </View>
           ) : filteredAssignments.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <NotebookPen size={48} color={colors.textSecondary} />
+              <BookOpen size={48} color={colors.textSecondary} />
               <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>
                 No assignments yet
               </Text>

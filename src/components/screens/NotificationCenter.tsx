@@ -139,76 +139,166 @@ export default function NotificationCenter() {
     );
 }
 
+
+import { TextSizes } from '@/src/styles/TextSizes';
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingVertical: 16,
+        paddingVertical: 14,
         borderBottomWidth: 1,
     },
+
     headerTitle: {
-        fontSize: 24,
+        fontSize: TextSizes.header, // was 24
         fontFamily: 'Inter-Bold',
     },
+
     markAllButton: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingVertical: 6,
         borderRadius: 20,
     },
+
     markAllText: {
         color: '#fff',
-        fontSize: 14,
+        fontSize: TextSizes.buttonText, // was 14
         fontFamily: 'Inter-Medium',
         marginLeft: 6,
     },
+
     filterContainer: {
         flexDirection: 'row',
-        padding: 8,
+        padding: 6,
         marginHorizontal: 20,
-        marginVertical: 12,
+        marginVertical: 10,
         borderRadius: 12,
     },
+
     filterTab: {
         flex: 1,
-        paddingVertical: 10,
+        paddingVertical: 8,
         alignItems: 'center',
         borderRadius: 8,
     },
+
     filterText: {
-        fontSize: 14,
+        fontSize: TextSizes.filterLabel, // was 14
         fontFamily: 'Inter-SemiBold',
     },
+
     listContent: {
         paddingHorizontal: 20,
         paddingBottom: 20,
     },
+
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
+
     emptyContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         paddingVertical: 60,
     },
+
     emptyTitle: {
-        fontSize: 20,
+        fontSize: TextSizes.large, // was 20
         fontFamily: 'Inter-SemiBold',
         marginTop: 16,
     },
+
     emptyMessage: {
-        fontSize: 14,
+        fontSize: TextSizes.normal, // was 14
         fontFamily: 'Inter-Regular',
-        marginTop: 8,
+        marginTop: 6,
         textAlign: 'center',
     },
 });
+
+
+// const styles = StyleSheet.create({
+//     container: {
+//         flex: 1,
+//     },
+//     header: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         paddingHorizontal: 20,
+//         paddingVertical: 16,
+//         borderBottomWidth: 1,
+//     },
+//     headerTitle: {
+//         fontSize: 24,
+//         fontFamily: 'Inter-Bold',
+//     },
+//     markAllButton: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         paddingHorizontal: 12,
+//         paddingVertical: 8,
+//         borderRadius: 20,
+//     },
+//     markAllText: {
+//         color: '#fff',
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//         marginLeft: 6,
+//     },
+//     filterContainer: {
+//         flexDirection: 'row',
+//         padding: 8,
+//         marginHorizontal: 20,
+//         marginVertical: 12,
+//         borderRadius: 12,
+//     },
+//     filterTab: {
+//         flex: 1,
+//         paddingVertical: 10,
+//         alignItems: 'center',
+//         borderRadius: 8,
+//     },
+//     filterText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     listContent: {
+//         paddingHorizontal: 20,
+//         paddingBottom: 20,
+//     },
+//     loadingContainer: {
+//         flex: 1,
+//         justifyContent: 'center',
+//         alignItems: 'center',
+//     },
+//     emptyContainer: {
+//         flex: 1,
+//         justifyContent: 'center',
+//         alignItems: 'center',
+//         paddingVertical: 60,
+//     },
+//     emptyTitle: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//         marginTop: 16,
+//     },
+//     emptyMessage: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         marginTop: 8,
+//         textAlign: 'center',
+//     },
+// });

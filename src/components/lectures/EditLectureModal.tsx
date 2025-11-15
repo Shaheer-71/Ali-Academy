@@ -96,7 +96,12 @@ export default function EditLectureModal({
     };
 
     return (
-        <Modal visible={visible} animationType="fade" transparent>
+        <Modal
+            visible={visible}
+            animationType="fade"
+            transparent
+            statusBarTranslucent={true}
+            presentationStyle="overFullScreen">
             <View style={styles.overlay}>
                 <View style={[styles.modal, { backgroundColor: colors.background }]}>
                     {/* Header */}

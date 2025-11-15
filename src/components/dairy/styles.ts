@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     modalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '85%',
+        maxHeight: '65%',
     },
     modalHeader: {
         flexDirection: 'row',
@@ -275,9 +275,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 12,
+
     },
     submitButtonDisabled: {
         opacity: 0.6,
+        // marginBottom: 40
     },
     submitButtonText: {
         color: '#ffffff',
@@ -317,7 +319,7 @@ const styles = StyleSheet.create({
     detailModalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '90%',
+        maxHeight: '65%',
     },
     detailModalHeader: {
         flexDirection: 'row',
@@ -338,6 +340,11 @@ const styles = StyleSheet.create({
     },
     detailSection: {
         marginBottom: 24,
+    },
+    actionBtnText: {
+        fontSize: TextSizes.buttonText,
+        fontFamily: 'Inter-SemiBold',
+        textAlign: 'center',
     },
     detailRow: {
         flexDirection: 'row',

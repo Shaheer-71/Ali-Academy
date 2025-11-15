@@ -56,11 +56,9 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
 
     const handleNotificationPress = async (notificationId: string) => {
         await markAsRead(notificationId);
-        // Navigate based on notification type if needed
         const notification = notifications.find(n => n.id === notificationId);
         if (notification?.entity_type && notification?.entity_id) {
             setNotificationsVisible(false);
-            // Navigate to specific screen based on entity_type
             switch (notification.entity_type) {
                 case 'lecture':
                     router.push(`/lectures/${notification.entity_id}`);
@@ -108,7 +106,7 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                         </TouchableOpacity>
                     )}
 
-                    
+
                     {(profile?.role === 'teacher' && profile?.email === 'rafeh@aliacademy.edu') && !inFee && (
                         <TouchableOpacity
                             style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
@@ -118,7 +116,6 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                         </TouchableOpacity>
                     )}
 
-                    {/* Show dark mode toggle only on settings page */}
                     {inSettings && (
                         <TouchableOpacity
                             style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
@@ -132,7 +129,6 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                         </TouchableOpacity>
                     )}
 
-                    {/* Hide settings gear if already in settings */}
                     {!inSettings && (
                         <TouchableOpacity
                             style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
@@ -145,15 +141,24 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                 </View>
             </View>
 
-            {/* Notifications Modal */}
+            {/* Notifications Modal - 50% BOTTOM SHEET */}
             <Modal
-                animationType="fade"
+                animationType="slide"
                 transparent
                 visible={notificationsVisible}
                 onRequestClose={() => setNotificationsVisible(false)}
+                statusBarTranslucent={true}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setNotificationsVisible(false)}
+                >
+                    <TouchableOpacity
+                        activeOpacity={1}
+                        style={[styles.modalContent, { backgroundColor: colors.background }]}
+                        onPress={(e) => e.stopPropagation()}
+                    >
                         {/* Modal Header */}
                         <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
                             <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>
@@ -258,16 +263,20 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                                 ))
                             )}
                         </ScrollView>
-                    </View>
-                </View>
+                    </TouchableOpacity>
+                </TouchableOpacity>
             </Modal>
         </SafeAreaView>
     );
 }
 
+import { TextSizes } from '@/src/styles/TextSizes';
+
+
 const styles = StyleSheet.create({
     container: {
         backgroundColor: '#fff',
+
     },
     content: {
         paddingHorizontal: 12,
@@ -277,10 +286,11 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
         marginVertical: 5,
         marginRight: '5%',
+
     },
     title: {
         fontWeight: 'bold',
-        fontSize: 28,
+        fontSize: TextSizes.header + 6,
         fontFamily: 'Inter-SemiBold',
     },
     rightSection: {
@@ -309,20 +319,28 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
     },
     badgeText: {
-        fontSize: 10,
+        fontSize: TextSizes.tiny,
         fontFamily: 'Inter-SemiBold',
         color: '#ffffff',
     },
     modalOverlay: {
-        flex: 1,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'flex-end',
     },
     modalContent: {
+        height: '65%',
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '85%',
-        minHeight: '60%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 5,
     },
     modalHeader: {
         flexDirection: 'row',
@@ -334,7 +352,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: TextSizes.sectionTitle,
         fontFamily: 'Inter-SemiBold',
     },
     modalHeaderActions: {
@@ -369,7 +387,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     filterText: {
-        fontSize: 14,
+        fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-Medium',
     },
     notificationsList: {
@@ -386,15 +404,161 @@ const styles = StyleSheet.create({
         paddingVertical: 40,
     },
     emptyText: {
-        fontSize: 16,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Regular',
         marginTop: 16,
     },
     emptySubText: {
-        fontSize: 14,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         marginTop: 8,
         textAlign: 'center',
         paddingHorizontal: 32,
     },
 });
+
+
+
+
+// const styles = StyleSheet.create({
+//     container: {
+//         backgroundColor: '#fff',
+//     },
+//     content: {
+//         paddingHorizontal: 12,
+//         marginHorizontal: 12,
+//         justifyContent: 'space-between',
+//         flexDirection: 'row',
+//         paddingVertical: 5,
+//         marginVertical: 5,
+//         marginRight: '5%',
+//     },
+//     title: {
+//         fontWeight: 'bold',
+//         fontSize: 28,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     rightSection: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 12,
+//     },
+//     iconButton: {
+//         width: 40,
+//         height: 40,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         position: 'relative',
+//     },
+//     notificationBadge: {
+//         position: 'absolute',
+//         top: -2,
+//         right: -2,
+//         minWidth: 18,
+//         height: 18,
+//         backgroundColor: '#EF4444',
+//         borderRadius: 9,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingHorizontal: 4,
+//     },
+//     badgeText: {
+//         fontSize: 10,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#ffffff',
+//     },
+//     // FIXED: Overlay covers full screen with absolute positioning
+//     modalOverlay: {
+//         position: 'absolute',
+//         top: 0,
+//         left: 0,
+//         right: 0,
+//         bottom: 0,
+//         backgroundColor: 'rgba(0, 0, 0, 0.5)',
+//         justifyContent: 'flex-end',
+//     },
+//     modalContent: {
+//         height: '65%',  // Takes 50% of screen from bottom
+//         borderTopLeftRadius: 24,
+//         borderTopRightRadius: 24,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: -2 },
+//         shadowOpacity: 0.25,
+//         shadowRadius: 8,
+//         elevation: 5,
+//     },
+//     modalHeader: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         paddingHorizontal: 24,
+//         paddingTop: 24,
+//         paddingBottom: 16,
+//         borderBottomWidth: 1,
+//     },
+//     modalTitle: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     modalHeaderActions: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 12,
+//     },
+//     headerActionButton: {
+//         width: 32,
+//         height: 32,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     closeButton: {
+//         width: 32,
+//         height: 32,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     filterContainer: {
+//         flexDirection: 'row',
+//         padding: 4,
+//         marginHorizontal: 24,
+//         marginTop: 16,
+//         marginBottom: 8,
+//         borderRadius: 12,
+//     },
+//     filterTab: {
+//         flex: 1,
+//         paddingVertical: 8,
+//         alignItems: 'center',
+//         borderRadius: 8,
+//     },
+//     filterText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     notificationsList: {
+//         paddingHorizontal: 24,
+//         paddingVertical: 16,
+//     },
+//     loadingContainer: {
+//         paddingVertical: 40,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//     },
+//     emptyNotifications: {
+//         alignItems: 'center',
+//         paddingVertical: 40,
+//     },
+//     emptyText: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//         marginTop: 16,
+//     },
+//     emptySubText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         marginTop: 8,
+//         textAlign: 'center',
+//         paddingHorizontal: 32,
+//     },
+// });

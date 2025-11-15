@@ -414,6 +414,8 @@ export default function StudentsScreen() {
                         transparent={true}
                         visible={modalVisible}
                         onRequestClose={() => setModalVisible(false)}
+                        statusBarTranslucent={true}  // ← ADD THIS
+                        presentationStyle="overFullScreen"
                     >
                         <View style={styles.modalOverlay}>
                             <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
@@ -728,6 +730,8 @@ export default function StudentsScreen() {
                         transparent={true}
                         visible={passwordStatusModalVisible}
                         onRequestClose={() => setPasswordStatusModalVisible(false)}
+                        statusBarTranslucent={true}  // ← ADD THIS
+                        presentationStyle="overFullScreen"
                     >
                         <View style={styles.modalOverlay}>
                             <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
@@ -959,7 +963,7 @@ const styles = StyleSheet.create({
     modalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '90%',
+        maxHeight: '65%',
     },
     modalHeader: {
         flexDirection: 'row',

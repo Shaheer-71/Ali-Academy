@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 
@@ -39,9 +39,20 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             transparent={true}
             visible={visible}
             onRequestClose={onClose}
+            statusBarTranslucent={true}
+            presentationStyle="overFullScreen"
         >
-            <View style={styles.modalOverlay}>
-                <View style={[styles.filterModalContent, { backgroundColor: colors.background }]}>
+            <TouchableOpacity
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPress={onClose}
+            >
+                <TouchableOpacity
+                    activeOpacity={1}
+                    style={[styles.filterModalContent, { backgroundColor: colors.background }]}
+                    onPress={(e) => e.stopPropagation()}
+                >
+                    {/* Header */}
                     <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
                         <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Filter Attendance Records</Text>
                         <TouchableOpacity onPress={onClose}>
@@ -49,7 +60,12 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                         </TouchableOpacity>
                     </View>
 
-                    <View style={styles.filterContent}>
+                    {/* Scrollable Content */}
+                    <ScrollView
+                        style={styles.scrollContent}
+                        contentContainerStyle={styles.filterContent}
+                        showsVerticalScrollIndicator={false}
+                    >
                         <View style={styles.inputGroup}>
                             <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>From Date</Text>
                             <TextInput
@@ -90,7 +106,10 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                                 ))}
                             </View>
                         </View>
+                    </ScrollView>
 
+                    {/* Fixed Bottom Button */}
+                    <View style={[styles.bottomActions, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
                         <TouchableOpacity
                             style={[styles.applyFilterButton, { backgroundColor: colors.primary }]}
                             onPress={onApply}
@@ -98,8 +117,8 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                             <Text allowFontScaling={false} style={styles.applyFilterButtonText}>Apply Filter</Text>
                         </TouchableOpacity>
                     </View>
-                </View>
-            </View>
+                </TouchableOpacity>
+            </TouchableOpacity>
         </Modal>
     );
 };
@@ -113,7 +132,8 @@ const styles = StyleSheet.create({
     filterModalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '70%',
+        height: '65%',
+        overflow: 'hidden',
     },
     modalHeader: {
         flexDirection: 'row',
@@ -128,9 +148,13 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontFamily: 'Inter-SemiBold',
     },
+    scrollContent: {
+        flex: 1,
+    },
     filterContent: {
         paddingHorizontal: 24,
-        paddingVertical: 20,
+        paddingTop: 20,
+        paddingBottom: 20,
     },
     inputGroup: {
         marginBottom: 20,
@@ -170,6 +194,12 @@ const styles = StyleSheet.create({
     quickFilterText: {
         fontSize: 14,
         fontFamily: 'Inter-Medium',
+    },
+    bottomActions: {
+        paddingHorizontal: 24,
+        paddingTop: 16,
+        paddingBottom: 24,
+        borderTopWidth: 1,
     },
     applyFilterButton: {
         height: 50,

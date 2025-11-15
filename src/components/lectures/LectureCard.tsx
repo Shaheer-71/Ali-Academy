@@ -45,7 +45,7 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
   const translateX = useRef(new Animated.Value(0)).current;
   const [isSwipedLeft, setIsSwipedLeft] = useState(false);
 
-  const SWIPE_THRESHOLD = -80;
+  const SWIPE_THRESHOLD = -100;
   const ACTION_WIDTH = 160;
 
   const panResponder = useRef(
@@ -201,8 +201,8 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
             onPress={handleEdit}
             disabled={isDeleting}
           >
-            <Edit size={20} color="#FF9500" />
-            <Text allowFontScaling={false} style={[styles.actionBtnText, { color: "#FF9500" }]}>Edit</Text>
+            <Edit size={20} color={colors.primary} />
+            <Text allowFontScaling={false} style={[styles.actionBtnText, { color: colors.primary }]}>Edit</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
