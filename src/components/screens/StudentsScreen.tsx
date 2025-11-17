@@ -28,6 +28,9 @@ import {
 } from 'lucide-react-native';
 import { supabase } from '@/src/lib/supabase';
 import TopSection from '../common/TopSections';
+import { Animated } from 'react-native';
+import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+
 
 interface Class {
     id: string;
@@ -62,6 +65,8 @@ export default function StudentsScreen() {
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
     const [loadingSubjects, setLoadingSubjects] = useState(false);
+    const screenStyle = useScreenAnimation();
+    const ButtonAnimation = useButtonAnimation()
 
     const [newStudent, setNewStudent] = useState({
         full_name: '',
@@ -308,473 +313,475 @@ export default function StudentsScreen() {
     return (
         <>
             <TopSection />
-            <View style={[styles.container, { backgroundColor: colors.background }]}>
-                <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
-                    <View style={styles.headerContainer}>
-                        <View style={styles.searchContainer}>
-                            <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                                <Search size={20} color={colors.textSecondary} />
-                                <TextInput
-                                    style={[styles.searchInput, { color: colors.text }]}
-                                    placeholder="Search students..."
-                                    value={searchQuery}
-                                    onChangeText={setSearchQuery}
-                                    placeholderTextColor={colors.textSecondary}
-                                />
-                            </View>
-                            <TouchableOpacity
-                                style={[styles.addButton, { backgroundColor: colors.primary }]}
-                                onPress={() => {
-                                    resetForm();
-                                    setModalVisible(true);
-                                }}
-                            >
-                                <Plus size={20} color="#ffffff" />
-                            </TouchableOpacity>
-                        </View>
-
-                        {/* Pending Registration Banner */}
-                        {studentsWithoutPasswords.length > 0 && (
-                            <TouchableOpacity
-                                style={[styles.alertBanner, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}
-                                onPress={() => setPasswordStatusModalVisible(true)}
-                            >
-                                <AlertCircle size={20} color="#F59E0B" />
-                                <Text allowFontScaling={false} style={[styles.alertText, { color: '#92400E' }]}>
-                                    {studentsWithoutPasswords.length} student(s) pending registration
-                                </Text>
-                                <Text allowFontScaling={false} style={[styles.alertAction, { color: '#F59E0B' }]}>View Details</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-
-                    {/* Student List */}
-                    <ScrollView
-                        style={styles.scrollView}
-                        contentContainerStyle={{ paddingBottom: 50 }}
-                        keyboardShouldPersistTaps="handled"
-                        showsVerticalScrollIndicator={false}
-                    >
-                        {loading ? (
-                            <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="large" color={colors.primary} />
-                                <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>Loading students...</Text>
-                            </View>
-                        ) : filteredStudents.length === 0 ? (
-                            <View style={styles.emptyContainer}>
-                                <Users size={48} color={colors.textSecondary} />
-                                <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>No students found</Text>
-                                <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                                    {searchQuery ? 'Try adjusting your search' : 'Add your first student to get started'}
-                                </Text>
-                            </View>
-                        ) : (
-                            filteredStudents.map((student) => (
+            <Animated.View style={[{ flex: 1 }, screenStyle]}>
+                <View style={[styles.container, { backgroundColor: colors.background }]}>
+                    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
+                        <View style={styles.headerContainer}>
+                            <View style={styles.searchContainer}>
+                                <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                                    <Search size={20} color={colors.textSecondary} />
+                                    <TextInput
+                                        style={[styles.searchInput, { color: colors.text }]}
+                                        placeholder="Search students..."
+                                        value={searchQuery}
+                                        onChangeText={setSearchQuery}
+                                        placeholderTextColor={colors.textSecondary}
+                                    />
+                                </View>
                                 <TouchableOpacity
-                                    key={student.id}
-                                    style={[styles.studentCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-                                    onPress={() => console.log('Student details not implemented yet')}
+                                    style={[styles.addButton, { backgroundColor: colors.primary }]}
+                                    onPress={() => {
+                                        resetForm();
+                                        setModalVisible(true);
+                                    }}
                                 >
-                                    <View style={styles.studentHeader}>
-                                        <View style={[styles.studentAvatar, { backgroundColor: colors.primary }]}>
-                                            <Text allowFontScaling={false} style={styles.studentInitial}>{student.full_name.charAt(0).toUpperCase()}</Text>
-                                        </View>
-                                        <View style={styles.studentInfo}>
-                                            <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]}>{student.full_name}</Text>
-                                            <View style={styles.studentDetails}>
-                                                <View style={styles.detailItem}>
-                                                    <Hash size={14} color={colors.textSecondary} />
-                                                    <Text allowFontScaling={false} style={[styles.detailText, { color: colors.textSecondary }]}>{student.roll_number}</Text>
-                                                </View>
-                                                <View style={styles.detailItem}>
-                                                    <BookOpen size={14} color={colors.textSecondary} />
-                                                    <Text allowFontScaling={false} style={[styles.detailText, { color: colors.textSecondary }]}>{student.classes?.name}</Text>
-                                                </View>
-                                            </View>
-                                        </View>
-                                    </View>
-                                    <View style={[styles.contactInfo, { borderTopColor: colors.border }]}>
-                                        <View style={styles.contactRow}>
-                                            <Phone size={16} color={colors.textSecondary} />
-                                            <Text allowFontScaling={false} style={[styles.contactText, { color: colors.text }]}>{student.phone_number || 'N/A'}</Text>
-                                        </View>
-                                        <View style={styles.contactRow}>
-                                            <Phone size={16} color={colors.textSecondary} />
-                                            <Text allowFontScaling={false} style={[styles.contactText, { color: colors.text }]}>Parent: {student.parent_contact}</Text>
-                                        </View>
-                                    </View>
+                                    <Plus size={20} color="#ffffff" />
                                 </TouchableOpacity>
-                            ))
-                        )}
-                    </ScrollView>
-
-                    {/* Add Student Modal */}
-                    <Modal
-                        animationType="fade"
-                        transparent={true}
-                        visible={modalVisible}
-                        onRequestClose={() => setModalVisible(false)}
-                        statusBarTranslucent={true}  // ← ADD THIS
-                        presentationStyle="overFullScreen"
-                    >
-                        <View style={styles.modalOverlay}>
-                            <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-                                <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                                    <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Add New Student</Text>
-                                    <TouchableOpacity
-                                        style={styles.closeButton}
-                                        onPress={() => setModalVisible(false)}
-                                    >
-                                        <X size={24} color={colors.textSecondary} />
-                                    </TouchableOpacity>
-                                </View>
-
-                                <ScrollView style={styles.modalScrollView}>
-                                    <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Student Information</Text>
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Full Name *</Text>
-                                        <TextInput
-                                            style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                            value={newStudent.full_name}
-                                            onChangeText={(text) => setNewStudent({ ...newStudent, full_name: text })}
-                                            placeholder="Enter student full name"
-                                            placeholderTextColor={colors.textSecondary}
-                                        />
-                                    </View>
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Roll Number *</Text>
-                                        <TextInput
-                                            style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                            value={newStudent.roll_number}
-                                            onChangeText={(text) => setNewStudent({ ...newStudent, roll_number: text })}
-                                            placeholder="Enter roll number"
-                                            placeholderTextColor={colors.textSecondary}
-                                        />
-                                        <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary }]}>
-                                            Email will be: {newStudent.roll_number.toLowerCase()}@aliacademy.edu
-                                        </Text>
-                                    </View>
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Phone Number *</Text>
-                                        <TextInput
-                                            style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                            value={newStudent.phone_number}
-                                            onChangeText={(text) => setNewStudent({ ...newStudent, phone_number: text })}
-                                            placeholder="Student phone number"
-                                            placeholderTextColor={colors.textSecondary}
-                                            keyboardType="phone-pad"
-                                        />
-                                    </View>
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Class *</Text>
-                                        {classes.length === 0 ? (
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.textSecondary }]}>No classes available</Text>
-                                        ) : (
-                                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                                <View style={styles.classOptions}>
-                                                    {classes.map((classItem) => (
-                                                        <TouchableOpacity
-                                                            key={classItem.id}
-                                                            style={[
-                                                                styles.classOption,
-                                                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                                                newStudent.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
-                                                            ]}
-                                                            onPress={
-                                                                () => {
-                                                                    setNewStudent({ ...newStudent, class_id: classItem.id })
-                                                                    fetchSubjectsForClass(classItem.id);
-                                                                }
-                                                            }>
-                                                            <Text
-                                                                style={[
-                                                                    styles.classOptionText,
-                                                                    { color: colors.text },
-                                                                    newStudent.class_id === classItem.id && { color: '#ffffff' },
-                                                                ]}
-                                                            >
-                                                                {classItem.name}
-                                                            </Text>
-                                                        </TouchableOpacity>
-                                                    ))}
-                                                </View>
-                                            </ScrollView>
-                                        )}
-                                    </View>
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
-                                            Subjects * {selectedSubjects.length > 0 && `(${selectedSubjects.length} selected)`}
-                                        </Text>
-
-                                        {!newStudent.class_id ? (
-                                            <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary }]}>
-                                                Please select a class first
-                                            </Text>
-                                        ) : loadingSubjects ? (
-                                            <View style={styles.loadingContainer}>
-                                                <ActivityIndicator size="small" color={colors.primary} />
-                                                <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>
-                                                    Loading subjects...
-                                                </Text>
-                                            </View>
-                                        ) : subjects.length === 0 ? (
-                                            <Text allowFontScaling={false} style={[styles.helpText, { color: colors.error || '#EF4444' }]}>
-                                                No subjects available for this class. Please assign teachers to subjects first.
-                                            </Text>
-                                        ) : (
-                                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                                <View style={styles.classOptions}>
-                                                    {subjects.map((subject) => (
-                                                        <TouchableOpacity
-                                                            key={subject.id}
-                                                            style={[
-                                                                styles.classOption,
-                                                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                                                selectedSubjects.includes(subject.id) && {
-                                                                    backgroundColor: colors.primary,
-                                                                    borderColor: colors.primary
-                                                                },
-                                                            ]}
-                                                            onPress={() => toggleSubject(subject.id)}
-                                                        >
-                                                            <Text
-                                                                style={[
-                                                                    styles.classOptionText,
-                                                                    { color: colors.text },
-                                                                    selectedSubjects.includes(subject.id) && { color: '#ffffff' },
-                                                                ]}
-                                                            >
-                                                                {subject.name}
-                                                            </Text>
-                                                        </TouchableOpacity>
-                                                    ))}
-                                                </View>
-                                            </ScrollView>
-                                        )}
-
-                                        {selectedSubjects.length > 0 && (
-                                            <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary, marginTop: 8 }]}>
-                                                Selected: {subjects
-                                                    .filter(s => selectedSubjects.includes(s.id))
-                                                    .map(s => s.name)
-                                                    .join(', ')}
-                                            </Text>
-                                        )}
-                                    </View>
-
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Parent Contact *</Text>
-                                        <TextInput
-                                            style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                            value={newStudent.parent_contact}
-                                            onChangeText={(text) => setNewStudent({ ...newStudent, parent_contact: text })}
-                                            placeholder="Parent contact number"
-                                            placeholderTextColor={colors.textSecondary}
-                                            keyboardType="phone-pad"
-                                        />
-                                    </View>
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Gender *</Text>
-                                        <View style={styles.genderOptions}>
-                                            {[
-                                                { value: 'male', label: 'Male' },
-                                                { value: 'female', label: 'Female' },
-                                                { value: 'other', label: 'Other' },
-                                            ].map((gender) => (
-                                                <TouchableOpacity
-                                                    key={gender.value}
-                                                    style={[
-                                                        styles.genderOption,
-                                                        { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                                        newStudent.gender === gender.value && { backgroundColor: colors.primary, borderColor: colors.primary },
-                                                    ]}
-                                                    onPress={() => setNewStudent({ ...newStudent, gender: gender.value as any })}
-                                                >
-                                                    <Text
-                                                        style={[
-                                                            styles.genderOptionText,
-                                                            { color: colors.text },
-                                                            newStudent.gender === gender.value && { color: '#ffffff' },
-                                                        ]}
-                                                    >
-                                                        {gender.label}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
-                                    </View>
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Address *</Text>
-                                        <TextInput
-                                            style={[styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                            value={newStudent.address}
-                                            onChangeText={(text) => setNewStudent({ ...newStudent, address: text })}
-                                            placeholder="Student home address"
-                                            placeholderTextColor={colors.textSecondary}
-                                            multiline
-                                            numberOfLines={3}
-                                        />
-                                    </View>
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Admission Date *</Text>
-                                        <TextInput
-                                            style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                            value={newStudent.admission_date}
-                                            onChangeText={(text) => setNewStudent({ ...newStudent, admission_date: text })}
-                                            placeholder="YYYY-MM-DD"
-                                            placeholderTextColor={colors.textSecondary}
-                                        />
-                                    </View>
-
-                                    <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>Additional Information (Optional)</Text>
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Date of Birth</Text>
-                                        <TextInput
-                                            style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                            value={newStudent.date_of_birth}
-                                            onChangeText={(text) => setNewStudent({ ...newStudent, date_of_birth: text })}
-                                            placeholder="YYYY-MM-DD"
-                                            placeholderTextColor={colors.textSecondary}
-                                        />
-                                    </View>
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Emergency Contact</Text>
-                                        <TextInput
-                                            style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                            value={newStudent.emergency_contact}
-                                            onChangeText={(text) => setNewStudent({ ...newStudent, emergency_contact: text })}
-                                            placeholder="Emergency contact number"
-                                            placeholderTextColor={colors.textSecondary}
-                                            keyboardType="phone-pad"
-                                        />
-                                    </View>
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Parent/Guardian Name</Text>
-                                        <TextInput
-                                            style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                            value={newStudent.parent_name}
-                                            onChangeText={(text) => setNewStudent({ ...newStudent, parent_name: text })}
-                                            placeholder="Parent/guardian full name"
-                                            placeholderTextColor={colors.textSecondary}
-                                        />
-                                    </View>
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Medical Conditions</Text>
-                                        <TextInput
-                                            style={[styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                            value={newStudent.medical_conditions}
-                                            onChangeText={(text) => setNewStudent({ ...newStudent, medical_conditions: text })}
-                                            placeholder="Any medical conditions or allergies"
-                                            placeholderTextColor={colors.textSecondary}
-                                            multiline
-                                            numberOfLines={2}
-                                        />
-                                    </View>
-
-                                    <View style={styles.inputGroup}>
-                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Notes</Text>
-                                        <TextInput
-                                            style={[styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                            value={newStudent.notes}
-                                            onChangeText={(text) => setNewStudent({ ...newStudent, notes: text })}
-                                            placeholder="Additional notes about the student"
-                                            placeholderTextColor={colors.textSecondary}
-                                            multiline
-                                            numberOfLines={2}
-                                        />
-                                    </View>
-
-                                    {/* Info box about workflow */}
-                                    <View style={[styles.infoBox, { backgroundColor: '#EBF8FF', borderColor: '#3182CE' }]}>
-                                        <Text allowFontScaling={false} style={[styles.infoTitle, { color: '#2C5282' }]}>How it works:</Text>
-                                        <Text allowFontScaling={false} style={[styles.infoText, { color: '#2A4A6B' }]}>
-                                            1. Student record is created with email: {newStudent.roll_number.toLowerCase()}@aliacademy.edu{'\n'}
-                                            2. Student uses this email in the registration screen{'\n'}
-                                            3. Student sets their own password{'\n'}
-                                            4. Auth account is created automatically
-                                        </Text>
-                                    </View>
-
-                                    <TouchableOpacity
-                                        style={[styles.submitButton, { backgroundColor: colors.primary }]}
-                                        onPress={handleAddStudent}
-                                        disabled={creating}
-                                    >
-                                        {creating ? (
-                                            <ActivityIndicator color="#ffffff" />
-                                        ) : (
-                                            <Text allowFontScaling={false} style={styles.submitButtonText}>Create Student (No Password)</Text>
-                                        )}
-                                    </TouchableOpacity>
-                                </ScrollView>
                             </View>
-                        </View>
-                    </Modal>
 
-                    {/* Pending Registration Modal */}
-                    <Modal
-                        animationType="fade"
-                        transparent={true}
-                        visible={passwordStatusModalVisible}
-                        onRequestClose={() => setPasswordStatusModalVisible(false)}
-                        statusBarTranslucent={true}  // ← ADD THIS
-                        presentationStyle="overFullScreen"
-                    >
-                        <View style={styles.modalOverlay}>
-                            <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-                                <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                                    <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Students Pending Registration</Text>
-                                    <TouchableOpacity
-                                        style={styles.closeButton}
-                                        onPress={() => setPasswordStatusModalVisible(false)}
-                                    >
-                                        <X size={24} color={colors.textSecondary} />
-                                    </TouchableOpacity>
-                                </View>
-                                <ScrollView style={styles.modalScrollView}>
-                                    <Text allowFontScaling={false} style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>
-                                        These students need to use their email to register and set their password.
+                            {/* Pending Registration Banner */}
+                            {studentsWithoutPasswords.length > 0 && (
+                                <TouchableOpacity
+                                    style={[styles.alertBanner, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}
+                                    onPress={() => setPasswordStatusModalVisible(true)}
+                                >
+                                    <AlertCircle size={20} color="#F59E0B" />
+                                    <Text allowFontScaling={false} style={[styles.alertText, { color: '#92400E' }]}>
+                                        {studentsWithoutPasswords.length} student(s) pending registration
                                     </Text>
-                                    {studentsWithoutPasswords.map((student) => (
-                                        <View
-                                            key={student.id}
-                                            style={[styles.pendingStudentCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
-                                        >
-                                            <View style={styles.pendingStudentInfo}>
-                                                <Text allowFontScaling={false} style={[styles.pendingStudentName, { color: colors.text }]}>
-                                                    {student.full_name}
-                                                </Text>
-                                                <Text allowFontScaling={false} style={[styles.pendingStudentDetails, { color: colors.textSecondary }]}>
-                                                    Roll: {student.roll_number} | Class: {student.classes.name}
-                                                </Text>
-                                                <Text allowFontScaling={false} style={[styles.pendingStudentEmail, { color: colors.primary }]}>
-                                                    📧 {student.email}
-                                                </Text>
-                                                <Text allowFontScaling={false} style={[styles.pendingStudentStatus, { color: '#F59E0B' }]}>
-                                                    ⏳ Waiting for registration
-                                                </Text>
+                                    <Text allowFontScaling={false} style={[styles.alertAction, { color: '#F59E0B' }]}>View Details</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
+                        {/* Student List */}
+                        <ScrollView
+                            style={styles.scrollView}
+                            contentContainerStyle={{ paddingBottom: 50 }}
+                            keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator={false}
+                        >
+                            {loading ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="large" color={colors.primary} />
+                                    <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>Loading students...</Text>
+                                </View>
+                            ) : filteredStudents.length === 0 ? (
+                                <View style={styles.emptyContainer}>
+                                    <Users size={48} color={colors.textSecondary} />
+                                    <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>No students found</Text>
+                                    <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+                                        {searchQuery ? 'Try adjusting your search' : 'Add your first student to get started'}
+                                    </Text>
+                                </View>
+                            ) : (
+                                filteredStudents.map((student) => (
+                                    <TouchableOpacity
+                                        key={student.id}
+                                        style={[styles.studentCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                                        onPress={() => console.log('Student details not implemented yet')}
+                                    >
+                                        <View style={styles.studentHeader}>
+                                            <View style={[styles.studentAvatar, { backgroundColor: colors.primary }]}>
+                                                <Text allowFontScaling={false} style={styles.studentInitial}>{student.full_name.charAt(0).toUpperCase()}</Text>
+                                            </View>
+                                            <View style={styles.studentInfo}>
+                                                <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]}>{student.full_name}</Text>
+                                                <View style={styles.studentDetails}>
+                                                    <View style={styles.detailItem}>
+                                                        <Hash size={14} color={colors.textSecondary} />
+                                                        <Text allowFontScaling={false} style={[styles.detailText, { color: colors.textSecondary }]}>{student.roll_number}</Text>
+                                                    </View>
+                                                    <View style={styles.detailItem}>
+                                                        <BookOpen size={14} color={colors.textSecondary} />
+                                                        <Text allowFontScaling={false} style={[styles.detailText, { color: colors.textSecondary }]}>{student.classes?.name}</Text>
+                                                    </View>
+                                                </View>
                                             </View>
                                         </View>
-                                    ))}
-                                </ScrollView>
+                                        <View style={[styles.contactInfo, { borderTopColor: colors.border }]}>
+                                            <View style={styles.contactRow}>
+                                                <Phone size={16} color={colors.textSecondary} />
+                                                <Text allowFontScaling={false} style={[styles.contactText, { color: colors.text }]}>{student.phone_number || 'N/A'}</Text>
+                                            </View>
+                                            <View style={styles.contactRow}>
+                                                <Phone size={16} color={colors.textSecondary} />
+                                                <Text allowFontScaling={false} style={[styles.contactText, { color: colors.text }]}>Parent: {student.parent_contact}</Text>
+                                            </View>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))
+                            )}
+                        </ScrollView>
+
+                        {/* Add Student Modal */}
+                        <Modal
+                            animationType="fade"
+                            transparent={true}
+                            visible={modalVisible}
+                            onRequestClose={() => setModalVisible(false)}
+                            statusBarTranslucent={true}  // ← ADD THIS
+                            presentationStyle="overFullScreen"
+                        >
+                            <View style={styles.modalOverlay}>
+                                <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                                    <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Add New Student</Text>
+                                        <TouchableOpacity
+                                            style={styles.closeButton}
+                                            onPress={() => setModalVisible(false)}
+                                        >
+                                            <X size={24} color={colors.textSecondary} />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <ScrollView style={styles.modalScrollView}>
+                                        <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Student Information</Text>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Full Name *</Text>
+                                            <TextInput
+                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                value={newStudent.full_name}
+                                                onChangeText={(text) => setNewStudent({ ...newStudent, full_name: text })}
+                                                placeholder="Enter student full name"
+                                                placeholderTextColor={colors.textSecondary}
+                                            />
+                                        </View>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Roll Number *</Text>
+                                            <TextInput
+                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                value={newStudent.roll_number}
+                                                onChangeText={(text) => setNewStudent({ ...newStudent, roll_number: text })}
+                                                placeholder="Enter roll number"
+                                                placeholderTextColor={colors.textSecondary}
+                                            />
+                                            <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary }]}>
+                                                Email will be: {newStudent.roll_number.toLowerCase()}@aliacademy.edu
+                                            </Text>
+                                        </View>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Phone Number *</Text>
+                                            <TextInput
+                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                value={newStudent.phone_number}
+                                                onChangeText={(text) => setNewStudent({ ...newStudent, phone_number: text })}
+                                                placeholder="Student phone number"
+                                                placeholderTextColor={colors.textSecondary}
+                                                keyboardType="phone-pad"
+                                            />
+                                        </View>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Class *</Text>
+                                            {classes.length === 0 ? (
+                                                <Text allowFontScaling={false} style={[styles.label, { color: colors.textSecondary }]}>No classes available</Text>
+                                            ) : (
+                                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                                    <View style={styles.classOptions}>
+                                                        {classes.map((classItem) => (
+                                                            <TouchableOpacity
+                                                                key={classItem.id}
+                                                                style={[
+                                                                    styles.classOption,
+                                                                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                                                    newStudent.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
+                                                                ]}
+                                                                onPress={
+                                                                    () => {
+                                                                        setNewStudent({ ...newStudent, class_id: classItem.id })
+                                                                        fetchSubjectsForClass(classItem.id);
+                                                                    }
+                                                                }>
+                                                                <Text
+                                                                    style={[
+                                                                        styles.classOptionText,
+                                                                        { color: colors.text },
+                                                                        newStudent.class_id === classItem.id && { color: '#ffffff' },
+                                                                    ]}
+                                                                >
+                                                                    {classItem.name}
+                                                                </Text>
+                                                            </TouchableOpacity>
+                                                        ))}
+                                                    </View>
+                                                </ScrollView>
+                                            )}
+                                        </View>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
+                                                Subjects * {selectedSubjects.length > 0 && `(${selectedSubjects.length} selected)`}
+                                            </Text>
+
+                                            {!newStudent.class_id ? (
+                                                <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary }]}>
+                                                    Please select a class first
+                                                </Text>
+                                            ) : loadingSubjects ? (
+                                                <View style={styles.loadingContainer}>
+                                                    <ActivityIndicator size="small" color={colors.primary} />
+                                                    <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>
+                                                        Loading subjects...
+                                                    </Text>
+                                                </View>
+                                            ) : subjects.length === 0 ? (
+                                                <Text allowFontScaling={false} style={[styles.helpText, { color: colors.error || '#EF4444' }]}>
+                                                    No subjects available for this class. Please assign teachers to subjects first.
+                                                </Text>
+                                            ) : (
+                                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                                    <View style={styles.classOptions}>
+                                                        {subjects.map((subject) => (
+                                                            <TouchableOpacity
+                                                                key={subject.id}
+                                                                style={[
+                                                                    styles.classOption,
+                                                                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                                                    selectedSubjects.includes(subject.id) && {
+                                                                        backgroundColor: colors.primary,
+                                                                        borderColor: colors.primary
+                                                                    },
+                                                                ]}
+                                                                onPress={() => toggleSubject(subject.id)}
+                                                            >
+                                                                <Text
+                                                                    style={[
+                                                                        styles.classOptionText,
+                                                                        { color: colors.text },
+                                                                        selectedSubjects.includes(subject.id) && { color: '#ffffff' },
+                                                                    ]}
+                                                                >
+                                                                    {subject.name}
+                                                                </Text>
+                                                            </TouchableOpacity>
+                                                        ))}
+                                                    </View>
+                                                </ScrollView>
+                                            )}
+
+                                            {selectedSubjects.length > 0 && (
+                                                <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary, marginTop: 8 }]}>
+                                                    Selected: {subjects
+                                                        .filter(s => selectedSubjects.includes(s.id))
+                                                        .map(s => s.name)
+                                                        .join(', ')}
+                                                </Text>
+                                            )}
+                                        </View>
+
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Parent Contact *</Text>
+                                            <TextInput
+                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                value={newStudent.parent_contact}
+                                                onChangeText={(text) => setNewStudent({ ...newStudent, parent_contact: text })}
+                                                placeholder="Parent contact number"
+                                                placeholderTextColor={colors.textSecondary}
+                                                keyboardType="phone-pad"
+                                            />
+                                        </View>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Gender *</Text>
+                                            <View style={styles.genderOptions}>
+                                                {[
+                                                    { value: 'male', label: 'Male' },
+                                                    { value: 'female', label: 'Female' },
+                                                    { value: 'other', label: 'Other' },
+                                                ].map((gender) => (
+                                                    <TouchableOpacity
+                                                        key={gender.value}
+                                                        style={[
+                                                            styles.genderOption,
+                                                            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                                            newStudent.gender === gender.value && { backgroundColor: colors.primary, borderColor: colors.primary },
+                                                        ]}
+                                                        onPress={() => setNewStudent({ ...newStudent, gender: gender.value as any })}
+                                                    >
+                                                        <Text
+                                                            style={[
+                                                                styles.genderOptionText,
+                                                                { color: colors.text },
+                                                                newStudent.gender === gender.value && { color: '#ffffff' },
+                                                            ]}
+                                                        >
+                                                            {gender.label}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+                                        </View>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Address *</Text>
+                                            <TextInput
+                                                style={[styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                value={newStudent.address}
+                                                onChangeText={(text) => setNewStudent({ ...newStudent, address: text })}
+                                                placeholder="Student home address"
+                                                placeholderTextColor={colors.textSecondary}
+                                                multiline
+                                                numberOfLines={3}
+                                            />
+                                        </View>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Admission Date *</Text>
+                                            <TextInput
+                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                value={newStudent.admission_date}
+                                                onChangeText={(text) => setNewStudent({ ...newStudent, admission_date: text })}
+                                                placeholder="YYYY-MM-DD"
+                                                placeholderTextColor={colors.textSecondary}
+                                            />
+                                        </View>
+
+                                        <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>Additional Information (Optional)</Text>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Date of Birth</Text>
+                                            <TextInput
+                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                value={newStudent.date_of_birth}
+                                                onChangeText={(text) => setNewStudent({ ...newStudent, date_of_birth: text })}
+                                                placeholder="YYYY-MM-DD"
+                                                placeholderTextColor={colors.textSecondary}
+                                            />
+                                        </View>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Emergency Contact</Text>
+                                            <TextInput
+                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                value={newStudent.emergency_contact}
+                                                onChangeText={(text) => setNewStudent({ ...newStudent, emergency_contact: text })}
+                                                placeholder="Emergency contact number"
+                                                placeholderTextColor={colors.textSecondary}
+                                                keyboardType="phone-pad"
+                                            />
+                                        </View>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Parent/Guardian Name</Text>
+                                            <TextInput
+                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                value={newStudent.parent_name}
+                                                onChangeText={(text) => setNewStudent({ ...newStudent, parent_name: text })}
+                                                placeholder="Parent/guardian full name"
+                                                placeholderTextColor={colors.textSecondary}
+                                            />
+                                        </View>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Medical Conditions</Text>
+                                            <TextInput
+                                                style={[styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                value={newStudent.medical_conditions}
+                                                onChangeText={(text) => setNewStudent({ ...newStudent, medical_conditions: text })}
+                                                placeholder="Any medical conditions or allergies"
+                                                placeholderTextColor={colors.textSecondary}
+                                                multiline
+                                                numberOfLines={2}
+                                            />
+                                        </View>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Notes</Text>
+                                            <TextInput
+                                                style={[styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                value={newStudent.notes}
+                                                onChangeText={(text) => setNewStudent({ ...newStudent, notes: text })}
+                                                placeholder="Additional notes about the student"
+                                                placeholderTextColor={colors.textSecondary}
+                                                multiline
+                                                numberOfLines={2}
+                                            />
+                                        </View>
+
+                                        {/* Info box about workflow */}
+                                        <View style={[styles.infoBox, { backgroundColor: '#EBF8FF', borderColor: '#3182CE' }]}>
+                                            <Text allowFontScaling={false} style={[styles.infoTitle, { color: '#2C5282' }]}>How it works:</Text>
+                                            <Text allowFontScaling={false} style={[styles.infoText, { color: '#2A4A6B' }]}>
+                                                1. Student record is created with email: {newStudent.roll_number.toLowerCase()}@aliacademy.edu{'\n'}
+                                                2. Student uses this email in the registration screen{'\n'}
+                                                3. Student sets their own password{'\n'}
+                                                4. Auth account is created automatically
+                                            </Text>
+                                        </View>
+
+                                        <TouchableOpacity
+                                            style={[styles.submitButton, { backgroundColor: colors.primary }]}
+                                            onPress={handleAddStudent}
+                                            disabled={creating}
+                                        >
+                                            {creating ? (
+                                                <ActivityIndicator color="#ffffff" />
+                                            ) : (
+                                                <Text allowFontScaling={false} style={styles.submitButtonText}>Create Student (No Password)</Text>
+                                            )}
+                                        </TouchableOpacity>
+                                    </ScrollView>
+                                </View>
                             </View>
-                        </View>
-                    </Modal>
-                </SafeAreaView>
-            </View>
+                        </Modal>
+
+                        {/* Pending Registration Modal */}
+                        <Modal
+                            animationType="fade"
+                            transparent={true}
+                            visible={passwordStatusModalVisible}
+                            onRequestClose={() => setPasswordStatusModalVisible(false)}
+                            statusBarTranslucent={true}  // ← ADD THIS
+                            presentationStyle="overFullScreen"
+                        >
+                            <View style={styles.modalOverlay}>
+                                <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                                    <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Students Pending Registration</Text>
+                                        <TouchableOpacity
+                                            style={styles.closeButton}
+                                            onPress={() => setPasswordStatusModalVisible(false)}
+                                        >
+                                            <X size={24} color={colors.textSecondary} />
+                                        </TouchableOpacity>
+                                    </View>
+                                    <ScrollView style={styles.modalScrollView}>
+                                        <Text allowFontScaling={false} style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>
+                                            These students need to use their email to register and set their password.
+                                        </Text>
+                                        {studentsWithoutPasswords.map((student) => (
+                                            <View
+                                                key={student.id}
+                                                style={[styles.pendingStudentCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                                            >
+                                                <View style={styles.pendingStudentInfo}>
+                                                    <Text allowFontScaling={false} style={[styles.pendingStudentName, { color: colors.text }]}>
+                                                        {student.full_name}
+                                                    </Text>
+                                                    <Text allowFontScaling={false} style={[styles.pendingStudentDetails, { color: colors.textSecondary }]}>
+                                                        Roll: {student.roll_number} | Class: {student.classes.name}
+                                                    </Text>
+                                                    <Text allowFontScaling={false} style={[styles.pendingStudentEmail, { color: colors.primary }]}>
+                                                        📧 {student.email}
+                                                    </Text>
+                                                    <Text allowFontScaling={false} style={[styles.pendingStudentStatus, { color: '#F59E0B' }]}>
+                                                        ⏳ Waiting for registration
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            </View>
+                        </Modal>
+                    </SafeAreaView>
+                </View>
+            </Animated.View>
         </>
     );
 }
@@ -807,7 +814,7 @@ const styles = StyleSheet.create({
     // Header & Search
     headerContainer: {
         paddingHorizontal: 24,
-        paddingTop: 16,
+        paddingTop: 5,
     },
     searchContainer: {
         flexDirection: 'row',

@@ -292,7 +292,9 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: 'center',
         alignContent: 'center',
-        alignItems: "center"
+        alignItems: "center",
+        marginTop: 4,
+
     },
     searchInputContainer: {
         flexDirection: 'row',

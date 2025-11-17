@@ -32,6 +32,8 @@ import { useDiaryFilters } from '../../hooks/useDiaryFilters';
 import { useDiaryForm } from '../../hooks//useDiaryForm';
 import styles from '../dairy/styles';
 import { useFocusEffect } from '@react-navigation/native';
+import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+import { Animated } from 'react-native';
 
 interface DiaryAssignment {
   id: string;
@@ -58,6 +60,8 @@ export default function DiaryScreen() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<DiaryAssignment | null>(null);
+  const screenStyle = useScreenAnimation();
+  const addButtonAnimation = useButtonAnimation();
 
   // Custom Hooks
   const {
@@ -439,7 +443,7 @@ export default function DiaryScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
       <TopSections />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
 
@@ -578,6 +582,6 @@ export default function DiaryScreen() {
         />
 
       </SafeAreaView>
-    </View>
+    </Animated.View >
   );
 }

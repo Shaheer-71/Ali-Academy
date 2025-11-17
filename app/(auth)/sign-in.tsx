@@ -17,6 +17,10 @@ import { useAuth } from '@/src/contexts/AuthContext';
 import { supabase } from '@/src/lib/supabase';
 import { GraduationCap } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { Image } from 'react-native';
+import { Animated } from 'react-native';
+import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+
 
 export default function SignInScreen() {
   const [email, setEmail] = useState('');
@@ -24,6 +28,9 @@ export default function SignInScreen() {
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const router = useRouter();
+  const screenStyle = useScreenAnimation();
+  const ButtonAnimation = useButtonAnimation();
+  const RegisterButtonAnimation = useButtonAnimation();
 
   // const handleSignIn = async () => {
   //   if (!email || !password) {
@@ -240,57 +247,67 @@ export default function SignInScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <View style={styles.iconContainer}>
-              <GraduationCap size={48} color="#b6d509" />
-            </View>
-            <Text allowFontScaling={false} style={styles.title}>Academy Management</Text>
-            <Text allowFontScaling={false} style={styles.subtitle}>Sign in to your account</Text>
-          </View>
+        <Animated.View style={[{ flex: 1 }, screenStyle]}>
 
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text allowFontScaling={false} style={styles.label}>Email</Text>
-              <TextInput allowFontScaling={false}
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Enter your email"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <View style={styles.header}>
+              <View style={styles.iconContainer}>
+                {/* <GraduationCap size={48} color="#b6d509" /> */}
+                <Image
+                  source={require('@/src/assets/icons/logo.jpg')}
+                  style={{ width: 170, height: 170, resizeMode: 'contain' }}
+                />
+              </View>
+              <Text allowFontScaling={false} style={styles.title}>Academy Management</Text>
+              <Text allowFontScaling={false} style={styles.subtitle}>Sign in to your account</Text>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text allowFontScaling={false} style={styles.label}>Password</Text>
-              <TextInput allowFontScaling={false}
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Enter your password"
-                placeholderTextColor="#9CA3AF"
-                secureTextEntry
-                autoCapitalize="none"
-              />
-            </View>
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text allowFontScaling={false} style={styles.label}>Email</Text>
+                <TextInput allowFontScaling={false}
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Enter your email"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
 
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleSignIn}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text allowFontScaling={false} style={styles.buttonText}>Sign In</Text>
-              )}
-            </TouchableOpacity>
+              <View style={styles.inputGroup}>
+                <Text allowFontScaling={false} style={styles.label}>Password</Text>
+                <TextInput allowFontScaling={false}
+                  style={styles.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#9CA3AF"
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+              </View>
 
-            {/* Debug button - remove this after testing */}
-            {/* {__DEV__ && (
+              <Animated.View style={ButtonAnimation.style}>
+                <TouchableOpacity
+                  style={[styles.button, loading && styles.buttonDisabled]}
+                  onPress={handleSignIn}
+                  onPressIn={ButtonAnimation.onPressIn}
+                  onPressOut={ButtonAnimation.onPressOut}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <Text allowFontScaling={false} style={styles.buttonText}>Sign In</Text>
+                  )}
+                </TouchableOpacity>
+              </Animated.View>
+
+              {/* Debug button - remove this after testing */}
+              {/* {__DEV__ && (
               <TouchableOpacity
                 style={[styles.debugButton]}
                 onPress={debugSignIn}
@@ -298,21 +315,27 @@ export default function SignInScreen() {
                 <Text allowFontScaling={false}  style={styles.debugButtonText}>🐛 Debug Auth</Text>
               </TouchableOpacity>
             )} */}
-          </View>
-
-          <View style={styles.footer}>
-            <Text allowFontScaling={false} style={styles.footerText}>New Student?</Text>
-            <View style={styles.footerButtonRow}>
-              <Text allowFontScaling={false} style={styles.demoText}>Click Here to</Text>
-              <TouchableOpacity
-                onPress={() => router.push("/sign-up")}
-                style={styles.registerButton}
-              >
-                <Text allowFontScaling={false} style={styles.registerButtonText}> Register Now</Text>
-              </TouchableOpacity>
             </View>
-          </View>
-        </ScrollView>
+
+            <View style={styles.footer}>
+              <Text allowFontScaling={false} style={styles.footerText}>New Student?</Text>
+              <View style={styles.footerButtonRow}>
+                <Text allowFontScaling={false} style={styles.demoText}>Click Here to</Text>
+                <Animated.View style={RegisterButtonAnimation.style}>
+                  <TouchableOpacity
+                    onPress={() => router.push("/sign-up")}
+                    onPressIn={RegisterButtonAnimation.onPressIn}
+                    onPressOut={RegisterButtonAnimation.onPressOut}
+                    style={styles.registerButton}
+                  >
+                    <Text allowFontScaling={false} style={styles.registerButtonText}> Register Now</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              </View>
+            </View>
+          </ScrollView>
+        </Animated.View>
+
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -339,8 +362,8 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
     backgroundColor: '#274d71',
     borderRadius: 20,
     alignItems: 'center',

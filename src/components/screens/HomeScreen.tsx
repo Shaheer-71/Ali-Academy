@@ -18,7 +18,8 @@ import { Users, ClipboardCheck, BookOpen, NotebookPen, ChartBar as BarChart3, Ca
 import TopSections from '@/src/components/common/TopSections';
 import AnalyticsScreen from './AnalyticsScreen';
 import { useFocusEffect } from '@react-navigation/native';
-
+import { Animated } from 'react-native';
+import { useScreenAnimation, useButtonAnimation, useCardAnimation } from '@/src/utils/animations';
 
 interface HomeStats {
   students: number;
@@ -54,6 +55,7 @@ export default function HomeScreen() {
     lectures: 0,
   });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const screenStyle = useScreenAnimation();
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -436,7 +438,7 @@ export default function HomeScreen() {
   const statsValues = getStatsValues();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <Animated.View style={[styles.container, screenStyle, { backgroundColor: colors.background }]}>
       <TopSections showNotifications={true} />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right', "bottom"]}>
         <View style={{ flex: 1 }}>
@@ -546,7 +548,7 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
       </SafeAreaView>
-    </View>
+    </Animated.View>
   );
 }
 

@@ -30,6 +30,9 @@ import TopSections from '@/src/components/common/TopSections';
 import { useNotificationForm } from '../../hooks/useNotificationForm';
 import { useNotificationHistory } from '../../hooks/useNotificationHistory';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Animated } from 'react-native';
+import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+
 
 interface NotificationFormData {
     title: string;
@@ -48,6 +51,8 @@ export default function NotificationScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [students, setStudents] = useState<any[]>([]);
     const [refreshing, setRefreshing] = useState(false);
+    const screenStyle = useScreenAnimation();
+    const ButtonAnimation = useButtonAnimation();
 
     const {
         formData,
@@ -141,307 +146,251 @@ export default function NotificationScreen() {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
             <TopSections />
 
-            {/* Header */}
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <View>
-                    <Text allowFontScaling={false} style={[styles.headerTitle, { color: colors.text }]}>You Can</Text>
-                    <Text allowFontScaling={false} style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-                        Create and manage notifications
-                    </Text>
+            <Animated.View style={[{ flex: 1 }, screenStyle]}>
+
+                {/* Header */}
+                <View style={[styles.header, { borderBottomColor: colors.border }]}>
+                    <View>
+                        <Text allowFontScaling={false} style={[styles.headerTitle, { color: colors.text }]}>You Can</Text>
+                        <Text allowFontScaling={false} style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+                            Create and manage notifications
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={[styles.createButton, { backgroundColor: colors.primary }]}
+                        onPress={() => {
+                            resetForm();
+                            setModalVisible(true);
+                        }}
+                    >
+                        <Plus size={24} color="#fff" />
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                    style={[styles.createButton, { backgroundColor: colors.primary }]}
-                    onPress={() => {
-                        resetForm();
-                        setModalVisible(true);
-                    }}
-                >
-                    <Plus size={24} color="#fff" />
-                </TouchableOpacity>
-            </View>
 
-            {/* Notifications List */}
-            <ScrollView
-                style={styles.listContainer}
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={handleRefresh}
-                        colors={[colors.primary]}
-                    />
-                }
-            >
-                {loading ? (
-                    <View style={styles.centerContainer}>
-                        <ActivityIndicator size="large" color={colors.primary} />
-                    </View>
-                ) : notifications.length === 0 ? (
-                    <View style={styles.emptyContainer}>
-                        <Send size={48} color={colors.textSecondary} />
-                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>
-                            No notifications sent yet
-                        </Text>
-                        <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                            Create your first notification to get started
-                        </Text>
-                    </View>
-                ) : (
-                    notifications.map((notif) => (
-                        <NotificationCard
-                            key={notif.id}
-                            notification={notif}
-                            colors={colors}
-                            students={students}
+                {/* Notifications List */}
+                <ScrollView
+                    style={styles.listContainer}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={handleRefresh}
+                            colors={[colors.primary]}
                         />
-                    ))
-                )}
-            </ScrollView>
-
-            {/* Create Notification Modal */}
-            <Modal
-                visible={modalVisible}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-                        <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                            <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>
-                                Create Notification
-                            </Text>
-                            <TouchableOpacity
-                                onPress={() => setModalVisible(false)}
-                                style={styles.closeButton}
-                            >
-                                <X size={24} color={colors.text} />
-                            </TouchableOpacity>
+                    }
+                >
+                    {loading ? (
+                        <View style={styles.centerContainer}>
+                            <ActivityIndicator size="large" color={colors.primary} />
                         </View>
+                    ) : notifications.length === 0 ? (
+                        <View style={styles.emptyContainer}>
+                            <Send size={48} color={colors.textSecondary} />
+                            <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>
+                                No notifications sent yet
+                            </Text>
+                            <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+                                Create your first notification to get started
+                            </Text>
+                        </View>
+                    ) : (
+                        notifications.map((notif) => (
+                            <NotificationCard
+                                key={notif.id}
+                                notification={notif}
+                                colors={colors}
+                                students={students}
+                            />
+                        ))
+                    )}
+                </ScrollView>
 
-                        <ScrollView style={styles.modalScroll}>
-                            {/* Title Input */}
-                            <View style={styles.inputGroup}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Title *</Text>
-                                <TextInput
-                                    style={[
-                                        styles.input,
-                                        {
-                                            backgroundColor: colors.cardBackground,
-                                            color: colors.text,
-                                            borderColor: colors.border,
-                                        },
-                                    ]}
-                                    placeholder="Notification title"
-                                    value={formData.title}
-                                    onChangeText={(text) =>
-                                        setFormData({ ...formData, title: text })
-                                    }
-                                    placeholderTextColor={colors.textSecondary}
-                                    maxLength={100}
-                                />
-                                <Text allowFontScaling={false} style={[styles.charCount, { color: colors.textSecondary }]}>
-                                    {formData.title.length}/100
+                {/* Create Notification Modal */}
+                <Modal
+                    visible={modalVisible}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setModalVisible(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                                <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>
+                                    Create Notification
                                 </Text>
+                                <TouchableOpacity
+                                    onPress={() => setModalVisible(false)}
+                                    style={styles.closeButton}
+                                >
+                                    <X size={24} color={colors.text} />
+                                </TouchableOpacity>
                             </View>
 
-                            {/* Message Input */}
-                            <View style={styles.inputGroup}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Message *</Text>
-                                <TextInput
-                                    style={[
-                                        styles.input,
-                                        styles.textArea,
-                                        {
-                                            backgroundColor: colors.cardBackground,
-                                            color: colors.text,
-                                            borderColor: colors.border,
-                                        },
-                                    ]}
-                                    placeholder="Notification message"
-                                    value={formData.message}
-                                    onChangeText={(text) =>
-                                        setFormData({ ...formData, message: text })
-                                    }
-                                    placeholderTextColor={colors.textSecondary}
-                                    multiline
-                                    numberOfLines={4}
-                                    maxLength={500}
-                                />
-                                <Text allowFontScaling={false} style={[styles.charCount, { color: colors.textSecondary }]}>
-                                    {formData.message.length}/500
-                                </Text>
-                            </View>
-
-                            {/* Type Selector */}
-                            <View style={styles.inputGroup}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Type</Text>
-                                <View style={styles.typeGrid}>
-                                    {[
-                                        { value: 'announcement', label: 'Announcement' },
-                                        { value: 'assignment_added', label: 'Assignment' },
-                                        { value: 'event', label: 'Event' },
-                                        { value: 'reminder', label: 'Reminder' },
-                                    ].map((type) => (
-                                        <TouchableOpacity
-                                            key={type.value}
-                                            style={[
-                                                styles.typeOption,
-                                                {
-                                                    backgroundColor:
-                                                        formData.type === type.value
-                                                            ? colors.primary
-                                                            : colors.cardBackground,
-                                                    borderColor: colors.border,
-                                                },
-                                            ]}
-                                            onPress={() =>
-                                                setFormData({ ...formData, type: type.value as any })
-                                            }
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.typeOptionText,
-                                                    {
-                                                        color:
-                                                            formData.type === type.value
-                                                                ? '#fff'
-                                                                : colors.text,
-                                                    },
-                                                ]}
-                                            >
-                                                {type.label}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </View>
-
-                            {/* Priority Selector */}
-                            <View style={styles.inputGroup}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Priority</Text>
-                                <View style={styles.priorityGrid}>
-                                    {[
-                                        { value: 'low', label: 'Low', color: '#10B981' },
-                                        { value: 'medium', label: 'Medium', color: '#F59E0B' },
-                                        { value: 'high', label: 'High', color: '#EF4444' },
-                                    ].map((priority) => (
-                                        <TouchableOpacity
-                                            key={priority.value}
-                                            style={[
-                                                styles.priorityOption,
-                                                {
-                                                    backgroundColor:
-                                                        formData.priority === priority.value
-                                                            ? priority.color
-                                                            : colors.cardBackground,
-                                                    borderColor:
-                                                        formData.priority === priority.value
-                                                            ? priority.color
-                                                            : colors.border,
-                                                },
-                                            ]}
-                                            onPress={() =>
-                                                setFormData({
-                                                    ...formData,
-                                                    priority: priority.value as any,
-                                                })
-                                            }
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.priorityOptionText,
-                                                    {
-                                                        color:
-                                                            formData.priority === priority.value
-                                                                ? '#fff'
-                                                                : colors.text,
-                                                    },
-                                                ]}
-                                            >
-                                                {priority.label}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </View>
-
-                            {/* Target Type Selector */}
-                            <View style={styles.inputGroup}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
-                                    Send To *
-                                </Text>
-                                <View style={styles.targetGrid}>
-                                    {[
-                                        { value: 'all', label: 'All Users', icon: Globe },
-                                        { value: 'students', label: 'All Students', icon: Users },
-                                        { value: 'individual', label: 'Individual', icon: User },
-                                    ].map(({ value, label, icon: Icon }) => (
-                                        <TouchableOpacity
-                                            key={value}
-                                            style={[
-                                                styles.targetOption,
-                                                {
-                                                    backgroundColor:
-                                                        formData.target_type === value
-                                                            ? colors.primary
-                                                            : colors.cardBackground,
-                                                    borderColor: colors.border,
-                                                },
-                                            ]}
-                                            onPress={() =>
-                                                setFormData({
-                                                    ...formData,
-                                                    target_type: value as any,
-                                                    target_id: '',
-                                                })
-                                            }
-                                        >
-                                            <Icon
-                                                size={20}
-                                                color={
-                                                    formData.target_type === value
-                                                        ? '#fff'
-                                                        : colors.primary
-                                                }
-                                            />
-                                            <Text
-                                                style={[
-                                                    styles.targetOptionText,
-                                                    {
-                                                        color:
-                                                            formData.target_type === value
-                                                                ? '#fff'
-                                                                : colors.text,
-                                                    },
-                                                ]}
-                                            >
-                                                {label}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </View>
-
-                            {/* Individual Student Selection */}
-                            {formData.target_type === 'individual' && (
+                            <ScrollView style={styles.modalScroll}>
+                                {/* Title Input */}
                                 <View style={styles.inputGroup}>
-                                    <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
-                                        Select Student *
+                                    <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Title *</Text>
+                                    <TextInput
+                                        style={[
+                                            styles.input,
+                                            {
+                                                backgroundColor: colors.cardBackground,
+                                                color: colors.text,
+                                                borderColor: colors.border,
+                                            },
+                                        ]}
+                                        placeholder="Notification title"
+                                        value={formData.title}
+                                        onChangeText={(text) =>
+                                            setFormData({ ...formData, title: text })
+                                        }
+                                        placeholderTextColor={colors.textSecondary}
+                                        maxLength={100}
+                                    />
+                                    <Text allowFontScaling={false} style={[styles.charCount, { color: colors.textSecondary }]}>
+                                        {formData.title.length}/100
                                     </Text>
-                                    <ScrollView
-                                        horizontal
-                                        showsHorizontalScrollIndicator={false}
-                                        style={styles.studentScroll}
-                                    >
-                                        {students.map((student) => (
+                                </View>
+
+                                {/* Message Input */}
+                                <View style={styles.inputGroup}>
+                                    <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Message *</Text>
+                                    <TextInput
+                                        style={[
+                                            styles.input,
+                                            styles.textArea,
+                                            {
+                                                backgroundColor: colors.cardBackground,
+                                                color: colors.text,
+                                                borderColor: colors.border,
+                                            },
+                                        ]}
+                                        placeholder="Notification message"
+                                        value={formData.message}
+                                        onChangeText={(text) =>
+                                            setFormData({ ...formData, message: text })
+                                        }
+                                        placeholderTextColor={colors.textSecondary}
+                                        multiline
+                                        numberOfLines={4}
+                                        maxLength={500}
+                                    />
+                                    <Text allowFontScaling={false} style={[styles.charCount, { color: colors.textSecondary }]}>
+                                        {formData.message.length}/500
+                                    </Text>
+                                </View>
+
+                                {/* Type Selector */}
+                                <View style={styles.inputGroup}>
+                                    <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Type</Text>
+                                    <View style={styles.typeGrid}>
+                                        {[
+                                            { value: 'announcement', label: 'Announcement' },
+                                            { value: 'assignment_added', label: 'Assignment' },
+                                            { value: 'event', label: 'Event' },
+                                            { value: 'reminder', label: 'Reminder' },
+                                        ].map((type) => (
                                             <TouchableOpacity
-                                                key={student.id}
+                                                key={type.value}
                                                 style={[
-                                                    styles.studentOption,
+                                                    styles.typeOption,
                                                     {
                                                         backgroundColor:
-                                                            formData.target_id === student.id
+                                                            formData.type === type.value
+                                                                ? colors.primary
+                                                                : colors.cardBackground,
+                                                        borderColor: colors.border,
+                                                    },
+                                                ]}
+                                                onPress={() =>
+                                                    setFormData({ ...formData, type: type.value as any })
+                                                }
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.typeOptionText,
+                                                        {
+                                                            color:
+                                                                formData.type === type.value
+                                                                    ? '#fff'
+                                                                    : colors.text,
+                                                        },
+                                                    ]}
+                                                >
+                                                    {type.label}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
+
+                                {/* Priority Selector */}
+                                <View style={styles.inputGroup}>
+                                    <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Priority</Text>
+                                    <View style={styles.priorityGrid}>
+                                        {[
+                                            { value: 'low', label: 'Low', color: '#10B981' },
+                                            { value: 'medium', label: 'Medium', color: '#F59E0B' },
+                                            { value: 'high', label: 'High', color: '#EF4444' },
+                                        ].map((priority) => (
+                                            <TouchableOpacity
+                                                key={priority.value}
+                                                style={[
+                                                    styles.priorityOption,
+                                                    {
+                                                        backgroundColor:
+                                                            formData.priority === priority.value
+                                                                ? priority.color
+                                                                : colors.cardBackground,
+                                                        borderColor:
+                                                            formData.priority === priority.value
+                                                                ? priority.color
+                                                                : colors.border,
+                                                    },
+                                                ]}
+                                                onPress={() =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        priority: priority.value as any,
+                                                    })
+                                                }
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.priorityOptionText,
+                                                        {
+                                                            color:
+                                                                formData.priority === priority.value
+                                                                    ? '#fff'
+                                                                    : colors.text,
+                                                        },
+                                                    ]}
+                                                >
+                                                    {priority.label}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
+
+                                {/* Target Type Selector */}
+                                <View style={styles.inputGroup}>
+                                    <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
+                                        Send To *
+                                    </Text>
+                                    <View style={styles.targetGrid}>
+                                        {[
+                                            { value: 'all', label: 'All Users', icon: Globe },
+                                            { value: 'students', label: 'All Students', icon: Users },
+                                            { value: 'individual', label: 'Individual', icon: User },
+                                        ].map(({ value, label, icon: Icon }) => (
+                                            <TouchableOpacity
+                                                key={value}
+                                                style={[
+                                                    styles.targetOption,
+                                                    {
+                                                        backgroundColor:
+                                                            formData.target_type === value
                                                                 ? colors.primary
                                                                 : colors.cardBackground,
                                                         borderColor: colors.border,
@@ -450,127 +399,186 @@ export default function NotificationScreen() {
                                                 onPress={() =>
                                                     setFormData({
                                                         ...formData,
-                                                        target_id: student.id,
+                                                        target_type: value as any,
+                                                        target_id: '',
                                                     })
                                                 }
                                             >
+                                                <Icon
+                                                    size={20}
+                                                    color={
+                                                        formData.target_type === value
+                                                            ? '#fff'
+                                                            : colors.primary
+                                                    }
+                                                />
                                                 <Text
                                                     style={[
-                                                        styles.studentOptionText,
+                                                        styles.targetOptionText,
                                                         {
                                                             color:
-                                                                formData.target_id === student.id
+                                                                formData.target_type === value
                                                                     ? '#fff'
                                                                     : colors.text,
                                                         },
                                                     ]}
                                                 >
-                                                    {student.full_name}
+                                                    {label}
                                                 </Text>
                                             </TouchableOpacity>
                                         ))}
-                                    </ScrollView>
+                                    </View>
                                 </View>
-                            )}
 
-                            {/* Preview */}
-                            <View style={styles.inputGroup}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
-                                    Preview
-                                </Text>
-                                <View
-                                    style={[
-                                        styles.previewCard,
-                                        { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                    ]}
-                                >
-                                    <View style={styles.previewHeader}>
-                                        <View
+                                {/* Individual Student Selection */}
+                                {formData.target_type === 'individual' && (
+                                    <View style={styles.inputGroup}>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
+                                            Select Student *
+                                        </Text>
+                                        <ScrollView
+                                            horizontal
+                                            showsHorizontalScrollIndicator={false}
+                                            style={styles.studentScroll}
+                                        >
+                                            {students.map((student) => (
+                                                <TouchableOpacity
+                                                    key={student.id}
+                                                    style={[
+                                                        styles.studentOption,
+                                                        {
+                                                            backgroundColor:
+                                                                formData.target_id === student.id
+                                                                    ? colors.primary
+                                                                    : colors.cardBackground,
+                                                            borderColor: colors.border,
+                                                        },
+                                                    ]}
+                                                    onPress={() =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            target_id: student.id,
+                                                        })
+                                                    }
+                                                >
+                                                    <Text
+                                                        style={[
+                                                            styles.studentOptionText,
+                                                            {
+                                                                color:
+                                                                    formData.target_id === student.id
+                                                                        ? '#fff'
+                                                                        : colors.text,
+                                                            },
+                                                        ]}
+                                                    >
+                                                        {student.full_name}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </ScrollView>
+                                    </View>
+                                )}
+
+                                {/* Preview */}
+                                <View style={styles.inputGroup}>
+                                    <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
+                                        Preview
+                                    </Text>
+                                    <View
+                                        style={[
+                                            styles.previewCard,
+                                            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                        ]}
+                                    >
+                                        <View style={styles.previewHeader}>
+                                            <View
+                                                style={[
+                                                    styles.priorityDot,
+                                                    {
+                                                        backgroundColor:
+                                                            formData.priority === 'high'
+                                                                ? '#EF4444'
+                                                                : formData.priority === 'medium'
+                                                                    ? '#F59E0B'
+                                                                    : '#10B981',
+                                                    },
+                                                ]}
+                                            />
+                                            <View style={styles.previewTitleContainer}>
+                                                <Text
+                                                    style={[styles.previewTitle, { color: colors.text }]}
+                                                    numberOfLines={1}
+                                                >
+                                                    {formData.title || 'Notification Title'}
+                                                </Text>
+                                                <Text
+                                                    style={[
+                                                        styles.previewSubtitle,
+                                                        { color: colors.textSecondary },
+                                                    ]}
+                                                >
+                                                    {formData.type}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <Text
                                             style={[
-                                                styles.priorityDot,
-                                                {
-                                                    backgroundColor:
-                                                        formData.priority === 'high'
-                                                            ? '#EF4444'
-                                                            : formData.priority === 'medium'
-                                                                ? '#F59E0B'
-                                                                : '#10B981',
-                                                },
+                                                styles.previewMessage,
+                                                { color: colors.textSecondary },
                                             ]}
-                                        />
-                                        <View style={styles.previewTitleContainer}>
-                                            <Text
-                                                style={[styles.previewTitle, { color: colors.text }]}
-                                                numberOfLines={1}
-                                            >
-                                                {formData.title || 'Notification Title'}
-                                            </Text>
+                                            numberOfLines={2}
+                                        >
+                                            {formData.message || 'Notification message...'}
+                                        </Text>
+                                        <View style={styles.previewFooter}>
+                                            <Info size={14} color={colors.textSecondary} />
                                             <Text
                                                 style={[
-                                                    styles.previewSubtitle,
+                                                    styles.previewFooterText,
                                                     { color: colors.textSecondary },
                                                 ]}
                                             >
-                                                {formData.type}
+                                                Sending to {getTargetTypeLabel(formData.target_type, formData.target_id)}
                                             </Text>
                                         </View>
                                     </View>
-                                    <Text
-                                        style={[
-                                            styles.previewMessage,
-                                            { color: colors.textSecondary },
-                                        ]}
-                                        numberOfLines={2}
-                                    >
-                                        {formData.message || 'Notification message...'}
-                                    </Text>
-                                    <View style={styles.previewFooter}>
-                                        <Info size={14} color={colors.textSecondary} />
-                                        <Text
-                                            style={[
-                                                styles.previewFooterText,
-                                                { color: colors.textSecondary },
-                                            ]}
-                                        >
-                                            Sending to {getTargetTypeLabel(formData.target_type, formData.target_id)}
-                                        </Text>
-                                    </View>
                                 </View>
-                            </View>
-                        </ScrollView>
+                            </ScrollView>
 
-                        {/* Send Button */}
-                        <View style={styles.modalFooter}>
-                            <TouchableOpacity
-                                style={[styles.cancelButton, { borderColor: colors.border }]}
-                                onPress={() => setModalVisible(false)}
-                            >
-                                <Text allowFontScaling={false} style={[styles.cancelButtonText, { color: colors.text }]}>
-                                    Cancel
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[
-                                    styles.sendButton,
-                                    { backgroundColor: colors.primary },
-                                    sending && styles.sendButtonDisabled,
-                                ]}
-                                onPress={handleSendNotification}
-                                disabled={sending}
-                            >
-                                {sending ? (
-                                    <ActivityIndicator color="#fff" size="small" />
-                                ) : (
-                                    <>
-                                        <Send size={18} color="#fff" />
-                                        <Text allowFontScaling={false} style={styles.sendButtonText}>Send Notification</Text>
-                                    </>
-                                )}
-                            </TouchableOpacity>
+                            {/* Send Button */}
+                            <View style={styles.modalFooter}>
+                                <TouchableOpacity
+                                    style={[styles.cancelButton, { borderColor: colors.border }]}
+                                    onPress={() => setModalVisible(false)}
+                                >
+                                    <Text allowFontScaling={false} style={[styles.cancelButtonText, { color: colors.text }]}>
+                                        Cancel
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.sendButton,
+                                        { backgroundColor: colors.primary },
+                                        sending && styles.sendButtonDisabled,
+                                    ]}
+                                    onPress={handleSendNotification}
+                                    disabled={sending}
+                                >
+                                    {sending ? (
+                                        <ActivityIndicator color="#fff" size="small" />
+                                    ) : (
+                                        <>
+                                            <Send size={18} color="#fff" />
+                                            <Text allowFontScaling={false} style={styles.sendButtonText}>Send Notification</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
-                </View>
-            </Modal>
+                </Modal>
+            </Animated.View>
         </SafeAreaView>
     );
 }

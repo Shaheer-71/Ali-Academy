@@ -24,10 +24,15 @@ import TopSection from '../common/TopSections';
 import { useFocusEffect } from '@react-navigation/native';
 import SubjectFilter from '../common/SubjectFilter';
 import { supabase } from '@/src/lib/supabase';
+import { Animated } from 'react-native';
+import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+
 
 export default function LecturesScreen() {
   const { profile, student } = useAuth();
   const { colors } = useTheme();
+  const screenStyle = useScreenAnimation();
+  const ButtonAnimation = useButtonAnimation();
 
   // State
   const [lectures, setLectures] = useState<Lecture[]>([]);
@@ -232,92 +237,94 @@ export default function LecturesScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
-      <TopSection />
+      <Animated.View style={screenStyle}>
+        <TopSection />
 
-      <View style={styles.header}>
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-            <Search size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder="Search lectures..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor={colors.textSecondary}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <X size={20} color={colors.textSecondary} />
+        <View style={styles.header}>
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <Search size={20} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.searchInput, { color: colors.text }]}
+                placeholder="Search lectures..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor={colors.textSecondary}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <X size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {profile?.role === 'student' && (
+              <SubjectFilter
+                subjects={subjects}
+                selectedSubject={selectedSubject}
+                onSubjectSelect={setSelectedSubject}
+                colors={colors}
+                loading={false}
+              />
+            )}
+
+            {(profile?.role === 'teacher' || profile?.role === 'admin') && (
+              <TouchableOpacity
+                style={[styles.addButton, { backgroundColor: colors.primary }]}
+                onPress={() => setUploadModalVisible(true)}
+              >
+                <Plus size={20} color="white" />
               </TouchableOpacity>
             )}
           </View>
-
-          {profile?.role === 'student' && (
-            <SubjectFilter
-              subjects={subjects}
-              selectedSubject={selectedSubject}
-              onSubjectSelect={setSelectedSubject}
-              colors={colors}
-              loading={false}
-            />
-          )}
-
-          {(profile?.role === 'teacher' || profile?.role === 'admin') && (
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.primary }]}
-              onPress={() => setUploadModalVisible(true)}
-            >
-              <Plus size={20} color="white" />
-            </TouchableOpacity>
-          )}
         </View>
-      </View>
 
-      {/* Lectures List */}
-      <FlatList
-        data={filteredLectures}
-        renderItem={renderLecture}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={!loading ? renderEmpty : null}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      />
+        {/* Lectures List */}
+        <FlatList
+          data={filteredLectures}
+          renderItem={renderLecture}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={!loading ? renderEmpty : null}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        />
 
-      {/* Upload Button (Teachers Only) */}
-      {(profile?.role === 'teacher' || profile?.role === 'admin') && (
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: colors.primary }]}
-          onPress={() => setUploadModalVisible(true)}
-        >
-          <Plus size={24} color="white" />
-        </TouchableOpacity>
-      )}
+        {/* Upload Button (Teachers Only) */}
+        {/* {(profile?.role === 'teacher' || profile?.role === 'admin') && (
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: colors.primary }]}
+            onPress={() => setUploadModalVisible(true)}
+          >
+            <Plus size={24} color="white" />
+          </TouchableOpacity>
+        )} */}
 
-      {/* Upload Modal */}
-      <UploadLectureModal
-        visible={uploadModalVisible}
-        onClose={() => setUploadModalVisible(false)}
-        onSuccess={loadLectures}
-      />
+        {/* Upload Modal */}
+        <UploadLectureModal
+          visible={uploadModalVisible}
+          onClose={() => setUploadModalVisible(false)}
+          onSuccess={loadLectures}
+        />
 
-      {/* Edit Modal */}
-      <EditLectureModal
-        visible={editModalVisible}
-        lecture={selectedLecture}
-        onClose={() => {
-          setEditModalVisible(false);
-          setSelectedLecture(null);
-        }}
-        onSuccess={handleEditSuccess}
-      />
+        {/* Edit Modal */}
+        <EditLectureModal
+          visible={editModalVisible}
+          lecture={selectedLecture}
+          onClose={() => {
+            setEditModalVisible(false);
+            setSelectedLecture(null);
+          }}
+          onSuccess={handleEditSuccess}
+        />
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -326,6 +333,33 @@ import { TextSizes } from '@/src/styles/TextSizes';
 
 
 export const styles = StyleSheet.create({
+  searchContainer: {
+    flexDirection: 'row',
+    paddingVertical: 16,
+    gap: 12,
+  },
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    height: 48,
+  },
+  searchInput: {
+    flex: 1,
+    height: 48,
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  addButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   container: {
     flex: 1,
   },

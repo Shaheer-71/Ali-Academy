@@ -70,7 +70,7 @@ export const StudentAnalyticsView = () => {
             {/* Header */}
             <View style={styles.studentHeaderSection}>
                 <View style={styles.studentHeaderContent}>
-                    <User size={24} color={colors.primary} />
+                    {/* <User size={24} color={colors.primary} /> */}
                     <Text allowFontScaling={false} style={[styles.studentTitle, { color: colors.text }]}>My Performance</Text>
                 </View>
                 <View style={styles.rankContainer}>
@@ -133,7 +133,7 @@ export const StudentAnalyticsView = () => {
                             {getTrendIcon(analytics.improvement_trend)}
                             <Text allowFontScaling={false} style={[styles.trendText, { color: getTrendColor(analytics.improvement_trend) }]}>
                                 {analytics.improvement_trend === 'up' ? 'Improving' :
-                                 analytics.improvement_trend === 'down' ? 'Declining' : 'Stable'}
+                                    analytics.improvement_trend === 'down' ? 'Declining' : 'Stable'}
                             </Text>
                         </View>
                     </View>
@@ -169,7 +169,7 @@ export const StudentAnalyticsView = () => {
                                     {subject.assignments_completed}/{subject.total_assignments} quizzes completed
                                 </Text>
                                 {renderProgressBar(
-                                    (subject.assignments_completed / subject.total_assignments) * 100, 
+                                    (subject.assignments_completed / subject.total_assignments) * 100,
                                     colors.secondary
                                 )}
                             </View>
@@ -181,6 +181,10 @@ export const StudentAnalyticsView = () => {
     );
 };
 
+
+
+import { TextSizes } from '@/src/styles/TextSizes';
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -189,25 +193,25 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 24,
+        paddingHorizontal: 16,
     },
     loadingText: {
-        fontSize: 16,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Regular',
     },
     errorContainer: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 24,
+        paddingHorizontal: 16,
     },
     errorText: {
-        fontSize: 24,
+        fontSize: TextSizes.header,
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 8,
+        marginBottom: 4,
     },
     errorSubtext: {
-        fontSize: 16,
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
     },
@@ -215,82 +219,82 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 24,
-        paddingTop: 16,
-        paddingBottom: 20,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 16,
     },
     studentHeaderContent: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     studentTitle: {
-        fontSize: 20,
+        fontSize: TextSizes.sectionTitle,
         fontFamily: 'Inter-SemiBold',
-        marginLeft: 12,
+        marginLeft: 8,
     },
     rankContainer: {
         alignItems: 'center',
     },
     rankNumber: {
-        fontSize: 28,
+        fontSize: TextSizes.xlarge,
         fontFamily: 'Inter-Bold',
     },
     rankLabel: {
-        fontSize: 12,
+        fontSize: TextSizes.statLabel,
         fontFamily: 'Inter-Medium',
     },
     scrollView: {
         flex: 1,
-        paddingHorizontal: 24,
+        paddingHorizontal: 16,
     },
     overviewContainer: {
-        marginBottom: 24,
-        alignItems: "center",
-        justifyContent: "center",
+        marginBottom: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     overviewCards: {
         flexDirection: 'row',
-        gap: 12,
+        gap: 8,
     },
     overviewCard: {
         width: "31%",
-        borderRadius: 16,
-        padding: 16,
+        borderRadius: 12,
+        padding: 12,
         alignItems: 'center',
         borderWidth: 1,
     },
     overviewIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
+        width: 36,
+        height: 36,
+        borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 12,
+        marginBottom: 8,
     },
     overviewValue: {
-        fontSize: 24,
+        fontSize: TextSizes.statValue,
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     overviewLabel: {
-        fontSize: 12,
+        fontSize: TextSizes.statLabel,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
     },
     trendCard: {
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 24,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 16,
         borderWidth: 1,
     },
     trendHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 12,
     },
     trendTitle: {
-        fontSize: 18,
+        fontSize: TextSizes.sectionTitle,
         fontFamily: 'Inter-SemiBold',
     },
     trendIndicator: {
@@ -298,75 +302,266 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     trendText: {
-        fontSize: 14,
+        fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-Medium',
-        marginLeft: 6,
+        marginLeft: 4,
     },
     recentGrades: {
-        marginTop: 12,
+        marginTop: 8,
     },
     recentGradesLabel: {
-        fontSize: 14,
+        fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-Medium',
-        marginBottom: 8,
+        marginBottom: 6,
     },
     gradesContainer: {
         flexDirection: 'row',
-        gap: 8,
+        gap: 6,
     },
     gradeChip: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
     },
     gradeChipText: {
-        fontSize: 12,
+        fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-Medium',
         color: '#ffffff',
     },
     section: {
-        marginBottom: 32,
+        marginBottom: 24,
     },
     sectionTitle: {
-        fontSize: 20,
+        fontSize: TextSizes.sectionTitle,
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 16,
+        marginBottom: 12,
     },
     subjectCard: {
         borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
+        padding: 12,
+        marginBottom: 8,
         borderWidth: 1,
     },
     subjectHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 8,
     },
     subjectName: {
-        fontSize: 16,
+        fontSize: TextSizes.bannerTitle,
         fontFamily: 'Inter-SemiBold',
     },
     subjectGrade: {
-        fontSize: 18,
+        fontSize: TextSizes.statValue,
         fontFamily: 'Inter-Bold',
     },
     subjectMetrics: {
-        gap: 8,
+        gap: 6,
     },
     assignmentCount: {
-        fontSize: 14,
+        fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-Regular',
-        marginBottom: 6,
+        marginBottom: 4,
     },
     progressBarContainer: {
-        height: 8,
-        borderRadius: 4,
+        height: 6,
+        borderRadius: 3,
         overflow: 'hidden',
     },
     progressBarFill: {
         height: '100%',
-        borderRadius: 4,
+        borderRadius: 3,
     },
 });
+
+
+// const styles = StyleSheet.create({
+//     container: {
+//         flex: 1,
+//     },
+//     loadingContainer: {
+//         flex: 1,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingHorizontal: 24,
+//     },
+//     loadingText: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     errorContainer: {
+//         flex: 1,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingHorizontal: 24,
+//     },
+//     errorText: {
+//         fontSize: 24,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 8,
+//     },
+//     errorSubtext: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//         textAlign: 'center',
+//     },
+//     studentHeaderSection: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         paddingHorizontal: 24,
+//         paddingTop: 16,
+//         paddingBottom: 20,
+//     },
+//     studentHeaderContent: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//     },
+//     studentTitle: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//         marginLeft: 12,
+//     },
+//     rankContainer: {
+//         alignItems: 'center',
+//     },
+//     rankNumber: {
+//         fontSize: 28,
+//         fontFamily: 'Inter-Bold',
+//     },
+//     rankLabel: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     scrollView: {
+//         flex: 1,
+//         paddingHorizontal: 24,
+//     },
+//     overviewContainer: {
+//         marginBottom: 24,
+//         alignItems: "center",
+//         justifyContent: "center",
+//     },
+//     overviewCards: {
+//         flexDirection: 'row',
+//         gap: 12,
+//     },
+//     overviewCard: {
+//         width: "31%",
+//         borderRadius: 16,
+//         padding: 16,
+//         alignItems: 'center',
+//         borderWidth: 1,
+//     },
+//     overviewIcon: {
+//         width: 48,
+//         height: 48,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         marginBottom: 12,
+//     },
+//     overviewValue: {
+//         fontSize: 24,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 4,
+//     },
+//     overviewLabel: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//         textAlign: 'center',
+//     },
+//     trendCard: {
+//         borderRadius: 16,
+//         padding: 20,
+//         marginBottom: 24,
+//         borderWidth: 1,
+//     },
+//     trendHeader: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         marginBottom: 16,
+//     },
+//     trendTitle: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     trendIndicator: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//     },
+//     trendText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//         marginLeft: 6,
+//     },
+//     recentGrades: {
+//         marginTop: 12,
+//     },
+//     recentGradesLabel: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//         marginBottom: 8,
+//     },
+//     gradesContainer: {
+//         flexDirection: 'row',
+//         gap: 8,
+//     },
+//     gradeChip: {
+//         paddingHorizontal: 12,
+//         paddingVertical: 6,
+//         borderRadius: 12,
+//     },
+//     gradeChipText: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//         color: '#ffffff',
+//     },
+//     section: {
+//         marginBottom: 32,
+//     },
+//     sectionTitle: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 16,
+//     },
+//     subjectCard: {
+//         borderRadius: 12,
+//         padding: 16,
+//         marginBottom: 12,
+//         borderWidth: 1,
+//     },
+//     subjectHeader: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         marginBottom: 12,
+//     },
+//     subjectName: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     subjectGrade: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-Bold',
+//     },
+//     subjectMetrics: {
+//         gap: 8,
+//     },
+//     assignmentCount: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//         marginBottom: 6,
+//     },
+//     progressBarContainer: {
+//         height: 8,
+//         borderRadius: 4,
+//         overflow: 'hidden',
+//     },
+//     progressBarFill: {
+//         height: '100%',
+//         borderRadius: 4,
+//     },
+// });

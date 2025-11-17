@@ -12,6 +12,7 @@ import {
   Platform,
   Linking,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -29,11 +30,13 @@ import {
 import TopSections from '@/src/components/common/TopSections';
 import { useRouter } from 'expo-router';
 import { TextSizes } from '@/src/styles/TextSizes';
+import { useScreenAnimation } from '@/src/utils/animations';
 
 export default function SettingsScreen() {
   const { profile, signOut } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
+  const screenStyle = useScreenAnimation();
 
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -226,7 +229,7 @@ export default function SettingsScreen() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <Animated.View style={[styles.container, screenStyle, { backgroundColor: colors.background }]}>
       <TopSections />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
         <ScrollView
@@ -343,7 +346,7 @@ export default function SettingsScreen() {
       </SafeAreaView>
 
       <PasswordChangeModal />
-    </View>
+    </Animated.View>
   );
 }
 

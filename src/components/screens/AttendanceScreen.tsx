@@ -22,6 +22,9 @@ import { ComprehensiveFilterModal } from '@/src/components/attendance/modals/Com
 import { ViewAttendanceFilterModal } from '@/src/components/attendance/modals/ViewAttendanceFilterModal';
 import { useFocusEffect } from '@react-navigation/native';
 import { TextSizes } from '@/src/styles/TextSizes';
+import { Animated } from 'react-native';
+import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+
 
 
 interface Class {
@@ -98,6 +101,9 @@ export default function AttendanceScreen() {
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [viewMode, setViewMode] = useState<'mark' | 'view' | 'reports'>('mark');
+    const screenStyle = useScreenAnimation();
+    const postButtonAnimation = useButtonAnimation();
+
 
     // Filter states for mark/reports modes
     const [filters, setFilters] = useState<FilterData>({
@@ -769,7 +775,7 @@ export default function AttendanceScreen() {
     );
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Animated.View style={[styles.container, screenStyle, { backgroundColor: colors.background }]}>
             <TopSections />
             <SafeAreaView
                 style={[styles.container, { backgroundColor: colors.background }]}
@@ -838,7 +844,7 @@ export default function AttendanceScreen() {
                     onSave={updateAttendance}
                 />
             </SafeAreaView>
-        </View>
+        </Animated.View>
     );
 }
 
