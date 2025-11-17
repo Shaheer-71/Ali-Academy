@@ -32,6 +32,8 @@ import { notificationService } from '@/src/services/feeService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/src/lib/supabase';
 import { sendPushNotification } from '@/src/lib/notifications';
+import { Animated } from 'react-native';
+import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
 
 
 
@@ -70,6 +72,8 @@ export default function FeeScreen() {
     const [selectedStudentName, setSelectedStudentName] = useState<string>('');
     const [feeRecords, setFeeRecords] = useState<FeePayment[]>([]);
     const [feeStructure, setFeeStructure] = useState<any>(null);
+    const screenStyle = useScreenAnimation();
+    const ButtonAnimation = useButtonAnimation();
 
     // Load classes on component mount
     useEffect(() => {
@@ -294,7 +298,7 @@ export default function FeeScreen() {
     const stats = getPaymentStats();
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Animated.View style={[styles.container, { backgroundColor: colors.background } , screenStyle]}>
             <TopSections />
             <SafeAreaView
                 style={[styles.container, { backgroundColor: colors.background }]}
@@ -544,7 +548,7 @@ export default function FeeScreen() {
                     onSendNotification={handleSendNotification}
                 />
             </SafeAreaView>
-        </View>
+        </Animated.View>
     );
 }
 

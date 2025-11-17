@@ -14,6 +14,9 @@ import { Bell, CheckCheck, Filter, Search } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useNotifications } from '@/src/contexts/NotificationContext';
 import { NotificationCard } from '@/src/components/notifications/NotificationCard';
+import { Animated } from 'react-native';
+import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+
 
 export default function NotificationCenter() {
     const { colors } = useTheme();
@@ -28,6 +31,9 @@ export default function NotificationCenter() {
 
     const [filter, setFilter] = useState<'all' | 'unread'>('all');
     const [refreshing, setRefreshing] = useState(false);
+
+    const screenStyle = useScreenAnimation();
+    const ButtonAnimation = useButtonAnimation();
 
     // Notifications from the backend use `is_read` (snake_case).
     // Using `read` here was a bug (undefined), causing the unread filter
@@ -58,6 +64,7 @@ export default function NotificationCenter() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <Animated.View style={[{ flex: 1 }, screenStyle]}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <Text allowFontScaling={false} style={[styles.headerTitle, { color: colors.text }]}>
@@ -135,6 +142,7 @@ export default function NotificationCenter() {
                     }
                 />
             )}
+            </Animated.View>
         </SafeAreaView>
     );
 }

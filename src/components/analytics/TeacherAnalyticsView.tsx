@@ -1,10 +1,11 @@
 // components/TeacherAnalyticsView.tsx
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, RefreshControl, Animated } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
-import { useTeacherAnalytics} from '@/src/hooks/useTeacherAnalytics';
-import { User, Users, Award, ClipboardCheck } from 'lucide-react-native';
+import { useTeacherAnalytics } from '@/src/hooks/useTeacherAnalytics';
+import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+import { User, Users, Award, ClipboardCheck, Sparkle, Sparkles } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -14,6 +15,9 @@ export const TeacherAnalyticsView = () => {
     const [selectedClass, setSelectedClass] = useState('all');
     const [refreshing, setRefreshing] = useState(false);
     const { studentPerformances, classAnalytics, classes, loading, error } = useTeacherAnalytics(profile?.id, selectedClass);
+    
+    const screenStyle = useScreenAnimation();
+    const allClassButtonAnim = useButtonAnimation();
 
     const renderProgressBar = (percentage: number, color: string) => (
         <View style={[styles.progressBarContainer, { backgroundColor: colors.border }]}>
@@ -103,12 +107,15 @@ export const TeacherAnalyticsView = () => {
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Animated.View style={[styles.container, screenStyle, { backgroundColor: colors.background }]}>
             {/* Header */}
             <View style={[styles.filterContainer, { marginTop: 20 }]}>
                 <View style={[styles.studentHeaderContent, { marginBottom: 10 }]}>
-                    <User size={24} color={colors.primary} />
+                    {/* <User size={24} color={colors.primary} /> */}
                     <Text allowFontScaling={false} style={[styles.studentTitle, { color: colors.text }]}>Class Analytics</Text>
+                    <View style={[styles.sectionIcon, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                        <User size={16} color={colors.secondary} />
+                    </View>
                 </View>
 
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} refreshControl={
@@ -122,23 +129,27 @@ export const TeacherAnalyticsView = () => {
                     />
                 }>
                     <View style={styles.filterButtons}>
-                        <TouchableOpacity
-                            style={[
-                                styles.filterButton,
-                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                selectedClass === 'all' && { backgroundColor: colors.primary, borderColor: colors.primary },
-                            ]}
-                            onPress={() => setSelectedClass('all')}
-                        >
-                            <Text allowFontScaling={false} style={[
-                                styles.filterButtonText,
-                                { color: colors.text },
-                                selectedClass === 'all' && { color: '#ffffff' },
-                            ]}>
-                                All Classes
-                            </Text>
-                        </TouchableOpacity>
-                        {classes.map((classItem) => (
+                        <Animated.View style={allClassButtonAnim.style}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.filterButton,
+                                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                    selectedClass === 'all' && { backgroundColor: colors.primary, borderColor: colors.primary },
+                                ]}
+                                onPress={() => setSelectedClass('all')}
+                                onPressIn={allClassButtonAnim.onPressIn}
+                                onPressOut={allClassButtonAnim.onPressOut}
+                            >
+                                <Text allowFontScaling={false} style={[
+                                    styles.filterButtonText,
+                                    { color: colors.text },
+                                    selectedClass === 'all' && { color: '#ffffff' },
+                                ]}>
+                                    All Classes
+                                </Text>
+                            </TouchableOpacity>
+                        </Animated.View>
+                        {classes.map((classItem, idx) => (
                             <TouchableOpacity
                                 key={classItem.id}
                                 style={[
@@ -257,233 +268,219 @@ export const TeacherAnalyticsView = () => {
                     ))}
                 </View>
             </ScrollView>
-        </View>
+        </Animated.View>
     );
 };
+
+import { TextSizes } from '@/src/styles/TextSizes';
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    loadingContainer: {
-        flex: 1,
+    sectionIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 24,
-    },
-    loadingText: {
-        fontSize: 16,
-        fontFamily: 'Inter-Regular',
-    },
-    errorContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 24,
-    },
-    errorText: {
-        fontSize: 24,
-        fontFamily: 'Inter-SemiBold',
-        marginBottom: 8,
-    },
-    errorSubtext: {
-        fontSize: 16,
-        fontFamily: 'Inter-Regular',
-        textAlign: 'center',
+        borderWidth: 1,
     },
     filterContainer: {
-        paddingHorizontal: 24,
-        marginBottom: 20,
+        paddingHorizontal: 16,
+        marginBottom: 16,
     },
     studentHeaderContent: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 16,
     },
     studentTitle: {
-        fontSize: 20,
+        fontSize: TextSizes.sectionTitle,
         fontFamily: 'Inter-SemiBold',
-        marginLeft: 12,
+        marginLeft: 8,
     },
     filterButtons: {
         flexDirection: 'row',
-        gap: 8,
+        gap: 6,
     },
     filterButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
         borderWidth: 1,
         borderRadius: 8,
     },
     filterButtonText: {
-        fontSize: 14,
+        fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-Medium',
     },
     overviewContainer: {
-        marginBottom: 24,
-        alignItems: "center",
-        justifyContent: "center",
-        paddingHorizontal: 24
+        marginBottom: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
     },
     overviewCards: {
         flexDirection: 'row',
-        gap: 12,
+        gap: 8,
     },
     overviewCard: {
         width: "31%",
-        borderRadius: 16,
-        padding: 16,
+        borderRadius: 12,
+        padding: 12,
         alignItems: 'center',
         borderWidth: 1,
     },
     overviewIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
+        width: 36,
+        height: 36,
+        borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 12,
+        marginBottom: 8,
     },
     overviewValue: {
-        fontSize: 24,
+        fontSize: TextSizes.statValue,
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     overviewLabel: {
-        fontSize: 12,
+        fontSize: TextSizes.statLabel,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
     },
     scrollView: {
         flex: 1,
-        paddingHorizontal: 24,
+        paddingHorizontal: 16,
     },
     section: {
-        marginBottom: 32,
+        marginBottom: 24,
     },
     sectionTitle: {
-        fontSize: 20,
+        fontSize: TextSizes.sectionTitle,
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 16,
+        marginBottom: 12,
     },
     horizontalScrollContainer: {
-        paddingRight: 24,
+        paddingRight: 16,
     },
     horizontalCardWrapper: {
-        marginRight: 16,
-        width: width * 0.8,
+        marginRight: 12,
+        width: width * 0.75,
     },
     performanceCard: {
-        borderRadius: 16,
-        padding: 20,
+        borderRadius: 12,
+        padding: 16,
         borderWidth: 1,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        shadowRadius: 2,
+        elevation: 1,
         width: '100%',
     },
     studentHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 12,
     },
     studentAvatar: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
+        width: 36,
+        height: 36,
+        borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 16,
+        marginRight: 12,
     },
     studentInitial: {
-        fontSize: 20,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
-        color: '#ffffff',
+        color: '#fff',
     },
     studentInfo: {
         flex: 1,
     },
     studentName: {
-        fontSize: 18,
+        fontSize: TextSizes.bannerTitle,
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     rollNumber: {
-        fontSize: 14,
+        fontSize: TextSizes.bannerSubtitle,
         fontFamily: 'Inter-Regular',
     },
     gradeContainer: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
     },
     gradeText: {
-        fontSize: 16,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
-        color: '#ffffff',
+        color: '#fff',
     },
     metricsContainer: {
-        gap: 16,
+        gap: 12,
     },
     metric: {
-        gap: 8,
+        gap: 4,
     },
     metricLabel: {
-        fontSize: 14,
+        fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-Medium',
     },
     metricBar: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: 8,
     },
     progressBarContainer: {
         flex: 1,
-        height: 8,
-        borderRadius: 4,
+        height: 6,
+        borderRadius: 3,
         overflow: 'hidden',
     },
     progressBarFill: {
         height: '100%',
-        borderRadius: 4,
+        borderRadius: 3,
     },
     metricValue: {
-        fontSize: 14,
+        fontSize: TextSizes.statValue,
         fontFamily: 'Inter-SemiBold',
-        minWidth: 50,
+        minWidth: 40,
         textAlign: 'right',
     },
     classCard: {
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 12,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 8,
         borderWidth: 1,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        shadowRadius: 2,
+        elevation: 1,
     },
     classHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 12,
     },
     className: {
-        fontSize: 18,
+        fontSize: TextSizes.bannerTitle,
         fontFamily: 'Inter-SemiBold',
     },
     studentCount: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
         borderRadius: 6,
     },
     studentCountText: {
-        fontSize: 12,
+        fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-Medium',
-        color: '#ffffff',
+        color: '#fff',
     },
     classMetrics: {
         flexDirection: 'row',
@@ -495,19 +492,270 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     classMetricValue: {
-        fontSize: 20,
+        fontSize: TextSizes.statValue,
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     classMetricLabel: {
-        fontSize: 12,
+        fontSize: TextSizes.statLabel,
         fontFamily: 'Inter-Regular',
     },
     topPerformer: {
-        fontSize: 12,
+        fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-Medium',
-        marginTop: 4,
+        marginTop: 2,
         textAlign: 'center',
     },
 });
+
+
+// const styles = StyleSheet.create({
+//     container: {
+//         flex: 1,
+//     },
+//     loadingContainer: {
+//         flex: 1,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingHorizontal: 24,
+//     },
+//     loadingText: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     errorContainer: {
+//         flex: 1,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingHorizontal: 24,
+//     },
+//     errorText: {
+//         fontSize: 24,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 8,
+//     },
+//     errorSubtext: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-Regular',
+//         textAlign: 'center',
+//     },
+//     filterContainer: {
+//         paddingHorizontal: 24,
+//         marginBottom: 20,
+//     },
+//     studentHeaderContent: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//     },
+//     studentTitle: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//         marginLeft: 12,
+//     },
+//     filterButtons: {
+//         flexDirection: 'row',
+//         gap: 8,
+//     },
+//     filterButton: {
+//         paddingHorizontal: 16,
+//         paddingVertical: 12,
+//         borderWidth: 1,
+//         borderRadius: 8,
+//     },
+//     filterButtonText: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     overviewContainer: {
+//         marginBottom: 24,
+//         alignItems: "center",
+//         justifyContent: "center",
+//         paddingHorizontal: 24
+//     },
+//     overviewCards: {
+//         flexDirection: 'row',
+//         gap: 12,
+//     },
+//     overviewCard: {
+//         width: "31%",
+//         borderRadius: 16,
+//         padding: 16,
+//         alignItems: 'center',
+//         borderWidth: 1,
+//     },
+//     overviewIcon: {
+//         width: 48,
+//         height: 48,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         marginBottom: 12,
+//     },
+//     overviewValue: {
+//         fontSize: 24,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 4,
+//     },
+//     overviewLabel: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//         textAlign: 'center',
+//     },
+//     scrollView: {
+//         flex: 1,
+//         paddingHorizontal: 24,
+//     },
+//     section: {
+//         marginBottom: 32,
+//     },
+//     sectionTitle: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 16,
+//     },
+//     horizontalScrollContainer: {
+//         paddingRight: 24,
+//     },
+//     horizontalCardWrapper: {
+//         marginRight: 16,
+//         width: width * 0.8,
+//     },
+//     performanceCard: {
+//         borderRadius: 16,
+//         padding: 20,
+//         borderWidth: 1,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.05,
+//         shadowRadius: 4,
+//         elevation: 2,
+//         width: '100%',
+//     },
+//     studentHeader: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         marginBottom: 20,
+//     },
+//     studentAvatar: {
+//         width: 48,
+//         height: 48,
+//         borderRadius: 12,
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         marginRight: 16,
+//     },
+//     studentInitial: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#ffffff',
+//     },
+//     studentInfo: {
+//         flex: 1,
+//     },
+//     studentName: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 4,
+//     },
+//     rollNumber: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     gradeContainer: {
+//         paddingHorizontal: 12,
+//         paddingVertical: 6,
+//         borderRadius: 8,
+//     },
+//     gradeText: {
+//         fontSize: 16,
+//         fontFamily: 'Inter-SemiBold',
+//         color: '#ffffff',
+//     },
+//     metricsContainer: {
+//         gap: 16,
+//     },
+//     metric: {
+//         gap: 8,
+//     },
+//     metricLabel: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-Medium',
+//     },
+//     metricBar: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         gap: 12,
+//     },
+//     progressBarContainer: {
+//         flex: 1,
+//         height: 8,
+//         borderRadius: 4,
+//         overflow: 'hidden',
+//     },
+//     progressBarFill: {
+//         height: '100%',
+//         borderRadius: 4,
+//     },
+//     metricValue: {
+//         fontSize: 14,
+//         fontFamily: 'Inter-SemiBold',
+//         minWidth: 50,
+//         textAlign: 'right',
+//     },
+//     classCard: {
+//         borderRadius: 16,
+//         padding: 20,
+//         marginBottom: 12,
+//         borderWidth: 1,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.05,
+//         shadowRadius: 4,
+//         elevation: 2,
+//     },
+//     classHeader: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         marginBottom: 16,
+//     },
+//     className: {
+//         fontSize: 18,
+//         fontFamily: 'Inter-SemiBold',
+//     },
+//     studentCount: {
+//         paddingHorizontal: 12,
+//         paddingVertical: 4,
+//         borderRadius: 6,
+//     },
+//     studentCountText: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//         color: '#ffffff',
+//     },
+//     classMetrics: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//     },
+//     classMetric: {
+//         alignItems: 'center',
+//         flex: 1,
+//     },
+//     classMetricValue: {
+//         fontSize: 20,
+//         fontFamily: 'Inter-SemiBold',
+//         marginBottom: 4,
+//     },
+//     classMetricLabel: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Regular',
+//     },
+//     topPerformer: {
+//         fontSize: 12,
+//         fontFamily: 'Inter-Medium',
+//         marginTop: 4,
+//         textAlign: 'center',
+//     },
+// });
 

@@ -15,6 +15,9 @@ import MarkingModal from '../exams/MarkingModal';
 import { ComprehensiveExamsFilterModal } from '../exams/modals/ComprehensiveExamsFilterModal';
 import { supabase } from '@/src/lib/supabase';
 import { useFocusEffect } from '@react-navigation/native';
+import { Animated } from 'react-native';
+import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+
 
 interface ExamFilterData {
   selectedClass: string;
@@ -34,6 +37,8 @@ export default function ExamsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [markingModalVisible, setMarkingModalVisible] = useState(false);
   const [selectedResult, setSelectedResult] = useState<any>(null);
+  const screenStyle = useScreenAnimation();
+  const ButtonAnimation = useButtonAnimation();
 
   // Comprehensive filter state
   const [filters, setFilters] = useState<ExamFilterData>({
@@ -183,7 +188,7 @@ export default function ExamsScreen() {
   const getFilteredQuizzes = () => {
     let filtered = quizzes;
 
-    
+
     // Filter by class if selected
     if (filters.selectedClass) {
       filtered = filtered.filter(quiz => quiz.class_id === filters.selectedClass);
@@ -300,7 +305,7 @@ export default function ExamsScreen() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
       <TopSections />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
         <TabNavigation
@@ -359,7 +364,7 @@ export default function ExamsScreen() {
           </>
         )}
       </SafeAreaView>
-    </View>
+    </Animated.View>
   );
 }
 

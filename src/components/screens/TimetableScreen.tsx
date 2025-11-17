@@ -1,6 +1,6 @@
 // TimetableScreen.tsx - COMPLETE FIX
 import React, { useState, useEffect, useCallback } from 'react';
-import { SafeAreaView, ScrollView, RefreshControl, StyleSheet, Alert, View, TouchableOpacity, Text } from 'react-native';
+import { ScrollView, RefreshControl, StyleSheet, Alert, View, TouchableOpacity, Text } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
@@ -20,6 +20,10 @@ import {
     ThemeColors
 } from '@/src/types/timetable';
 import { useFocusEffect } from '@react-navigation/native';
+import { Animated } from 'react-native';
+import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 export default function TimetableScreen() {
     const { profile, student } = useAuth();
@@ -43,6 +47,8 @@ export default function TimetableScreen() {
     const [editingEntry, setEditingEntry] = useState<TimetableEntryWithDetails | null>(null);
     const [currentWeek, setCurrentWeek] = useState(new Date());
     const [refreshing, setRefreshing] = useState(false);
+    const screenStyle = useScreenAnimation();
+    const ButtonAnimation = useButtonAnimation();
 
     const [newEntry, setNewEntry] = useState<Partial<CreateTimetableEntry>>({
         day: undefined,
@@ -347,35 +353,37 @@ export default function TimetableScreen() {
 
     return (
         <>
+
             <TopSection />
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+                <Animated.View style={[{ flex: 1 }, screenStyle]}>
 
-                {/* Class Filter with Add Button (for teachers) */}
-                {isTeacher && classes.length > 0 && (
-                    <View style={styles.filterRow}>
-                        <View style={styles.classFilterWrapper}>
-                            <ClassFilter
-                                classes={classes}
-                                filters={filters}
-                                setFilters={setFilters}
-                                colors={colors}
-                                loading={loading}
-                            />
+                    {/* Class Filter with Add Button (for teachers) */}
+                    {isTeacher && classes.length > 0 && (
+                        <View style={styles.filterRow}>
+                            <View style={styles.classFilterWrapper}>
+                                <ClassFilter
+                                    classes={classes}
+                                    filters={filters}
+                                    setFilters={setFilters}
+                                    colors={colors}
+                                    loading={loading}
+                                />
+                            </View>
+                            {isTeacher && profile.email === "rafeh@aliacademy.edu..." && classes.length > 0 && (
+                                <TouchableOpacity
+                                    style={[styles.addButton, { backgroundColor: colors.primary }]}
+                                    onPress={handleAddButtonPress}
+                                >
+                                    <Plus size={20} color="#ffffff" />
+                                </TouchableOpacity>
+                            )}
+
                         </View>
-                        {isTeacher && profile.email === "rafeh@aliacademy.edu..." && classes.length > 0 && (
-                            <TouchableOpacity
-                                style={[styles.addButton, { backgroundColor: colors.primary }]}
-                                onPress={handleAddButtonPress}
-                            >
-                                <Plus size={20} color="#ffffff" />
-                            </TouchableOpacity>
-                        )}
+                    )}
 
-                    </View>
-                )}
-
-                {/* For students - just show their class name */}
-                {/* {isStudent && student?.class_id && (
+                    {/* For students - just show their class name */}
+                    {/* {isStudent && student?.class_id && (
                     <View style={styles.studentClassInfo}>
                         <Text allowFontScaling={false} style={[styles.studentClassText, { color: colors.text }]}>
                             {classes[0]?.name || 'Your Class Schedule'}
@@ -383,56 +391,58 @@ export default function TimetableScreen() {
                     </View>
                 )} */}
 
-                {/* Empty State for Teachers with No Classes */}
-                {isTeacher && classes.length === 0 && !loading && (
-                    <View style={styles.emptyState}>
-                        <Text allowFontScaling={false} style={[styles.emptyStateText, { color: colors.textSecondary }]}>
-                            No classes assigned to you yet
-                        </Text>
-                    </View>
-                )}
+                    {/* Empty State for Teachers with No Classes */}
+                    {isTeacher && classes.length === 0 && !loading && (
+                        <View style={styles.emptyState}>
+                            <Text allowFontScaling={false} style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+                                No classes assigned to you yet
+                            </Text>
+                        </View>
+                    )}
 
-                <ScrollView
-                    style={styles.scrollView}
-                    showsVerticalScrollIndicator={false}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                >
-                    <View style={styles.timetableContainer}>
-                        {DAYS_ORDER.map((day, dayIndex) => (
-                            <DayRow
-                                key={day}
-                                day={day}
-                                dayIndex={dayIndex}
-                                weekDates={weekDates}
-                                getEntriesForDay={getEntriesForDay}
-                                colors={colors}
-                                profile={profile}
-                                handleEditEntry={handleEditEntry}
-                                handleDeleteEntry={handleDeleteEntry}
-                            />
-                        ))}
-                    </View>
-                </ScrollView>
+                    <ScrollView
+                        style={styles.scrollView}
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                    >
+                        <View style={styles.timetableContainer}>
+                            {DAYS_ORDER.map((day, dayIndex) => (
+                                <DayRow
+                                    key={day}
+                                    day={day}
+                                    dayIndex={dayIndex}
+                                    weekDates={weekDates}
+                                    getEntriesForDay={getEntriesForDay}
+                                    colors={colors}
+                                    profile={profile}
+                                    handleEditEntry={handleEditEntry}
+                                    handleDeleteEntry={handleDeleteEntry}
+                                />
+                            ))}
+                        </View>
+                    </ScrollView>
 
-                {isTeacher && (
-                    <TimetableEntryModal
-                        modalVisible={modalVisible}
-                        setModalVisible={setModalVisible}
-                        editingEntry={editingEntry}
-                        setEditingEntry={setEditingEntry}
-                        newEntry={newEntry}
-                        setNewEntry={setNewEntry}
-                        profile={profile}
-                        colors={colors}
-                        classes={classes}
-                        subjects={subjects}
-                        teachers={[]}
-                        handleAddEntry={handleAddEntry}
-                        handleUpdateEntry={handleUpdateEntry}
-                        handleDeleteEntry={handleDeleteEntry}
-                        resetForm={resetForm}
-                    />
-                )}
+                    {isTeacher && (
+                        <TimetableEntryModal
+                            modalVisible={modalVisible}
+                            setModalVisible={setModalVisible}
+                            editingEntry={editingEntry}
+                            setEditingEntry={setEditingEntry}
+                            newEntry={newEntry}
+                            setNewEntry={setNewEntry}
+                            profile={profile}
+                            colors={colors}
+                            classes={classes}
+                            subjects={subjects}
+                            teachers={[]}
+                            handleAddEntry={handleAddEntry}
+                            handleUpdateEntry={handleUpdateEntry}
+                            handleDeleteEntry={handleDeleteEntry}
+                            resetForm={resetForm}
+                        />
+                    )}
+                </Animated.View>
+
             </SafeAreaView>
         </>
     );
