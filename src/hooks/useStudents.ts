@@ -62,7 +62,7 @@ export const useStudents = (classId?: string) => {
       if (error) throw error;
       setStudents(data || []);
     } catch (error) {
-      console.error('Error fetching students:', error);
+      console.warn('Error fetching students:', error);
     } finally {
       setLoading(false);
     }
@@ -87,7 +87,7 @@ export const useStudents = (classId?: string) => {
       await fetchStudents();
       return { success: true, data };
     } catch (error) {
-      console.error('Error adding student:', error);
+      console.warn('Error adding student:', error);
       return { success: false, error };
     }
   };
@@ -110,7 +110,7 @@ export const useStudents = (classId?: string) => {
       await fetchStudents();
       return { success: true, data };
     } catch (error) {
-      console.error('Error updating student:', error);
+      console.warn('Error updating student:', error);
       return { success: false, error };
     }
   };
@@ -132,7 +132,7 @@ export const useStudents = (classId?: string) => {
       await fetchStudents();
       return { success: true };
     } catch (error) {
-      console.error('Error deleting student:', error);
+      console.warn('Error deleting student:', error);
       return { success: false, error };
     }
   };

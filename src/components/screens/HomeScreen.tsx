@@ -20,6 +20,8 @@ import AnalyticsScreen from './AnalyticsScreen';
 import { useFocusEffect } from '@react-navigation/native';
 import { Animated } from 'react-native';
 import { useScreenAnimation, useButtonAnimation, useCardAnimation } from '@/src/utils/animations';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { handleError, handleDataFetchError } from '@/src/utils/errorHandler/homeErrorHandler';
 
 interface HomeStats {
   students: number;
@@ -57,6 +59,29 @@ export default function HomeScreen() {
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const screenStyle = useScreenAnimation();
 
+  // Error handling state
+  const [errorModal, setErrorModal] = useState({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showError = (title: string, message: string) => {
+    setErrorModal({
+      visible: true,
+      title,
+      message,
+    });
+  };
+
+  const closeErrorModal = () => {
+    setErrorModal({
+      visible: false,
+      title: '',
+      message: '',
+    });
+  };
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good Morning';
@@ -66,33 +91,44 @@ export default function HomeScreen() {
 
   const fetchTeacherStats = async () => {
     try {
-      if (!profile?.id) return;
+      if (!profile?.id) {
+        throw new Error(
+          'Unable to load your profile information. Please try logging in again.',
+        );
+      }
 
       // ========== 1️⃣ Get Teacher's Unique Class IDs ==========
-      let teacherClassIds = [];
       const { data: classes, error: classesError } = await supabase
         .from('teacher_subject_enrollments')
         .select('class_id')
         .eq('teacher_id', profile.id);
 
-      if (classesError) throw classesError;
+      if (classesError) {
+        console.warn('Classes error:', classesError);
+        throw new Error(
+          'We couldn\'t fetch your class information. Please check your internet connection and try again.',
+        );
+      }
 
-      teacherClassIds = [...new Set(classes.map(c => c.class_id))];
+      const teacherClassIds = [...new Set(classes?.map(c => c.class_id) || [])];
       console.log("✅ Unique Class IDs:", teacherClassIds);
 
       // ========== 2️⃣ Get Teacher's Class–Subject Pairs ==========
-      let uniqueClassSubjectPairs = [];
-
       const { data: teacherClassesSubjects, error: teacherClassesSubjectsError } = await supabase
         .from('teacher_subject_enrollments')
         .select('class_id, subject_id')
         .eq('teacher_id', profile.id);
 
-      if (teacherClassesSubjectsError) throw teacherClassesSubjectsError;
+      if (teacherClassesSubjectsError) {
+        console.warn('Subject error:', teacherClassesSubjectsError);
+        throw new Error(
+          'There was a problem loading your subject assignments. Please try refreshing.',
+        );
+      }
 
-      uniqueClassSubjectPairs = Array.from(
+      const uniqueClassSubjectPairs = Array.from(
         new Map(
-          teacherClassesSubjects.map(item => [
+          (teacherClassesSubjects || []).map(item => [
             `${item.class_id}-${item.subject_id}`,
             { class_id: item.class_id, subject_id: item.subject_id }
           ])
@@ -102,17 +138,24 @@ export default function HomeScreen() {
       console.log("✅ Unique Class & Subject pairs:", uniqueClassSubjectPairs);
 
       // ========== 3️⃣ Get Students from These Classes ==========
-      let uniqueStudentIds = [];
+      let uniqueStudentIds: string[] = [];
 
-      const { data: students, error: studentsError } = await supabase
-        .from('student_subject_enrollments')
-        .select('student_id')
-        .in('class_id', teacherClassIds); // ✅ use list of teacher's classes
+      if (teacherClassIds.length > 0) {
+        const { data: students, error: studentsError } = await supabase
+          .from('student_subject_enrollments')
+          .select('student_id')
+          .in('class_id', teacherClassIds);
 
-      if (studentsError) throw studentsError;
+        if (studentsError) {
+          console.warn('Students error:', studentsError);
+          throw new Error(
+            'We couldn\'t fetch student information. Your other data has been loaded successfully.',
+          );
+        }
 
-      uniqueStudentIds = [...new Set(students.map(s => s.student_id))];
-      console.log("✅ Unique Student IDs:", uniqueStudentIds);
+        uniqueStudentIds = [...new Set(students?.map(s => s.student_id) || [])];
+        console.log("✅ Unique Student IDs:", uniqueStudentIds);
+      }
 
       // ========== 4️⃣ Get Total Lectures Uploaded ==========
       const { data: lectures, error: lecturesError } = await supabase
@@ -120,100 +163,155 @@ export default function HomeScreen() {
         .select('id')
         .eq('uploaded_by', profile.id);
 
-      if (lecturesError) throw lecturesError;
+      if (lecturesError) {
+        console.warn('Lectures error:', lecturesError);
+        throw new Error(
+          'There was a problem loading your lecture data. Please try again.',
+        );
+      }
 
       // ========== 5️⃣ Update Stats ==========
       setStats({
         students: uniqueStudentIds.length || 0,
         classes: teacherClassIds.length || 0,
-        lectures: lectures.length || 0,
+        lectures: lectures?.length || 0,
       });
 
       // ========== 6️⃣ Build Recent Activities ==========
-      const activities = [];
+      await fetchRecentActivities();
 
-      // Recent attendance sessions
-      const { data: recentAttendance } = await supabase
-        .from('attendance_sessions')
-        .select(`
-        id,
-        date,
-        posted_at,
-        classes!inner(name)
-      `)
-        .eq('posted_by', profile.id)
-        .order('posted_at', { ascending: false })
-        .limit(2);
+    } catch (error: any) {
+      console.warn('❌ Error fetching teacher stats:', error);
+      const errorResponse = handleDataFetchError(error);
+      showError(errorResponse.title, errorResponse.message);
 
-      recentAttendance?.forEach(session => {
-        activities.push({
-          id: session.id,
-          title: 'Attendance Marked',
-          description: `${session.classes.name} - ${new Date(session.date).toLocaleDateString()}`,
-          time: getTimeAgo(session.posted_at),
-          type: 'success'
-        });
+      // Set default stats to prevent blank screen
+      setStats({
+        students: 0,
+        classes: 0,
+        lectures: 0,
       });
-
-      // Recent lectures
-      const { data: recentLectures } = await supabase
-        .from('lectures')
-        .select(`
-        id,
-        title,
-        created_at,
-        classes!inner(name)
-      `)
-        .eq('uploaded_by', profile.id)
-        .order('created_at', { ascending: false })
-        .limit(2);
-
-      recentLectures?.forEach(lecture => {
-        activities.push({
-          id: lecture.id,
-          title: 'New Lecture Uploaded',
-          description: `${lecture.title} - ${lecture.classes.name}`,
-          time: getTimeAgo(lecture.created_at),
-          type: 'info'
-        });
-      });
-
-      // Recent diary assignments
-      const { data: recentDiary } = await supabase
-        .from('diary_assignments')
-        .select(`
-        id,
-        title,
-        created_at,
-        classes!inner(name)
-      `)
-        .eq('assigned_by', profile.id)
-        .order('created_at', { ascending: false })
-        .limit(2);
-
-      recentDiary?.forEach(diary => {
-        activities.push({
-          id: diary.id,
-          title: 'Homework Assigned',
-          description: `${diary.title} - ${diary.classes.name}`,
-          time: getTimeAgo(diary.created_at),
-          type: 'warning'
-        });
-      });
-
-      // Sort all activities by time and take top 3
-      activities.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-      setRecentActivities(activities.slice(0, 3));
-
-    } catch (error) {
-      console.error('❌ Error fetching teacher stats:', error);
     }
   };
 
+  const fetchRecentActivities = async () => {
+    try {
+      if (!profile?.id) return;
+
+      const activities: RecentActivity[] = [];
+
+      // Recent attendance sessions
+      try {
+        const { data: recentAttendance, error: attendanceError } = await supabase
+          .from('attendance_sessions')
+          .select(`
+            id,
+            date,
+            posted_at,
+            classes!inner(name)
+          `)
+          .eq('posted_by', profile.id)
+          .order('posted_at', { ascending: false })
+          .limit(2);
+
+        if (!attendanceError && recentAttendance) {
+          recentAttendance.forEach(session => {
+            activities.push({
+              id: session.id,
+              title: 'Attendance Marked',
+              description: `${session.classes.name} - ${new Date(session.date).toLocaleDateString()}`,
+              time: getTimeAgo(session.posted_at),
+              type: 'success'
+            });
+          });
+        }
+      } catch (error) {
+        console.warn('Error fetching attendance:', error);
+        // Continue without attendance data
+      }
+
+      // Recent lectures
+      try {
+        const { data: recentLectures, error: lecturesError } = await supabase
+          .from('lectures')
+          .select(`
+            id,
+            title,
+            created_at,
+            classes!inner(name)
+          `)
+          .eq('uploaded_by', profile.id)
+          .order('created_at', { ascending: false })
+          .limit(2);
+
+        if (!lecturesError && recentLectures) {
+          recentLectures.forEach(lecture => {
+            activities.push({
+              id: lecture.id,
+              title: 'New Lecture Uploaded',
+              description: `${lecture.title} - ${lecture.classes.name}`,
+              time: getTimeAgo(lecture.created_at),
+              type: 'info'
+            });
+          });
+        }
+      } catch (error) {
+        console.warn('Error fetching lectures:', error);
+        // Continue without lecture data
+      }
+
+      // Recent diary assignments
+      try {
+        const { data: recentDiary, error: diaryError } = await supabase
+          .from('diary_assignments')
+          .select(`
+            id,
+            title,
+            created_at,
+            classes!inner(name)
+          `)
+          .eq('assigned_by', profile.id)
+          .order('created_at', { ascending: false })
+          .limit(2);
+
+        if (!diaryError && recentDiary) {
+          recentDiary.forEach(diary => {
+            activities.push({
+              id: diary.id,
+              title: 'Homework Assigned',
+              description: `${diary.title} - ${diary.classes.name}`,
+              time: getTimeAgo(diary.created_at),
+              type: 'warning'
+            });
+          });
+        }
+      } catch (error) {
+        console.warn('Error fetching diary:', error);
+        // Continue without diary data
+      }
+
+      // Sort all activities by time and take top 3
+      activities.sort((a, b) => {
+        const timeA = a.time.includes('ago') ? -1 : 1;
+        const timeB = b.time.includes('ago') ? -1 : 1;
+        return timeA - timeB;
+      });
+      setRecentActivities(activities.slice(0, 3));
+
+    } catch (error: any) {
+      console.warn('Error fetching recent activities:', error);
+      // Set empty activities array - not critical enough for error modal
+      setRecentActivities([]);
+    }
+  };
 
   const fetchStudentStats = async () => {
     try {
-      if (!profile?.id) return;
+      if (!profile?.id) {
+        throw new Error(
+          'Unable to load your profile information. Please try logging in again.',
+        );
+      }
 
       // Get student record
       const { data: studentData, error: studentError } = await supabase
@@ -227,36 +325,59 @@ export default function HomeScreen() {
         .eq('is_deleted', false)
         .single();
 
+      if (studentError) {
+        console.warn('Student data error:', studentError);
+        throw new Error(
+          'We couldn\'t fetch your student information. Please check your internet connection and try again.',
+        );
+      }
 
-      if (studentError) throw studentError;
+      if (!studentData) {
+        throw new Error(
+          'Your student record could not be found. Please contact your administrator.',
+        );
+      }
 
       // Get student's attendance rate
-      const { data: attendanceData } = await supabase
+      const { data: attendanceData, error: attendanceError } = await supabase
         .from('attendance')
         .select('status')
         .eq('student_id', studentData.id);
+
+      if (attendanceError) {
+        console.warn('Attendance error:', attendanceError);
+        // Continue without attendance data
+      }
 
       const totalDays = attendanceData?.length || 0;
       const presentDays = attendanceData?.filter(r => r.status === 'present').length || 0;
       const attendanceRate = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
 
-      // Get total assignments completed
-      const { data: assignmentData } = await supabase
+      // Get total assignments
+      const { data: assignmentData, error: assignmentError } = await supabase
         .from('diary_assignments')
-        .select(`
-          *
-        `)
+        .select('*')
         .eq('class_id', studentData.class_id);
 
+      if (assignmentError) {
+        console.warn('Assignment error:', assignmentError);
+        // Continue without assignment data
+      }
+
       // Get total lectures available
-      const { data: lecturesData } = await supabase
+      const { data: lecturesData, error: lecturesError } = await supabase
         .from('lectures')
         .select('id')
         .eq('class_id', studentData.class_id);
 
+      if (lecturesError) {
+        console.warn('Lectures error:', lecturesError);
+        // Continue without lecture data
+      }
+
       setStats({
-        students: attendanceRate, // Show attendance rate instead
-        classes: 0, // Not applicable for students
+        students: attendanceRate,
+        classes: 0,
         lectures: lecturesData?.length || 0,
         attendance: attendanceRate,
         assignments: assignmentData?.length || 0,
@@ -274,62 +395,95 @@ export default function HomeScreen() {
         {
           id: '2',
           title: 'New Lecture Available',
-          description: 'Mathematics - Chapter 5',
+          description: 'Check your lectures section',
           time: '5 hours ago',
           type: 'info'
         },
-        {
-          id: '3',
-          title: 'Assignment Due Soon',
-          description: 'Physics Homework - Due Tomorrow',
-          time: 'Yesterday',
-          type: 'warning'
-        }
       ];
+
+      if (assignmentData && assignmentData.length > 0) {
+        activities.push({
+          id: '3',
+          title: 'Assignments Available',
+          description: `You have ${assignmentData.length} assignments`,
+          time: 'Today',
+          type: 'warning'
+        });
+      }
 
       setRecentActivities(activities);
 
-    } catch (error) {
-      console.error('Error fetching student stats:', error);
-      // Set default stats for students if error
+    } catch (error: any) {
+      console.warn('Error fetching student stats:', error);
+      const errorResponse = handleDataFetchError(error);
+      showError(errorResponse.title, errorResponse.message);
+
+      // Set default stats for students
       setStats({
-        students: 85, // Default attendance
+        students: 0,
         classes: 0,
-        lectures: 8,
-        attendance: 85,
-        assignments: 12,
+        lectures: 0,
+        attendance: 0,
+        assignments: 0,
       });
     }
   };
 
   const getTimeAgo = (timestamp: string): string => {
-    const now = new Date();
-    const past = new Date(timestamp);
-    const diffMs = now.getTime() - past.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
+    try {
+      const now = new Date();
+      const past = new Date(timestamp);
+      const diffMs = now.getTime() - past.getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffHours / 24);
 
-    if (diffDays > 0) {
-      return diffDays === 1 ? 'Yesterday' : `${diffDays} days ago`;
-    } else if (diffHours > 0) {
-      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    } else {
-      return 'Just now';
+      if (diffDays > 0) {
+        return diffDays === 1 ? 'Yesterday' : `${diffDays} days ago`;
+      } else if (diffHours > 0) {
+        return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      } else {
+        return 'Just now';
+      }
+    } catch (error) {
+      return 'Recently';
     }
   };
 
   const fetchData = async () => {
-    if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
-      await fetchTeacherStats();
-    } else {
-      await fetchStudentStats();
+    try {
+      if (!profile) {
+        throw new Error(
+          'Please sign in to view your dashboard.',
+        );
+      }
+
+      if (profile.role === 'teacher' || profile.role === 'admin') {
+        await fetchTeacherStats();
+      } else if (profile.role === 'student') {
+        await fetchStudentStats();
+      } else {
+        throw new Error(
+          'Your account role is not recognized. Please contact support.',
+        );
+      }
+    } catch (error: any) {
+      console.warn('Error in fetchData:', error);
+      const errorResponse = handleError(error);
+      showError(errorResponse.title, errorResponse.message);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchData();
-    setRefreshing(false);
+    try {
+      await fetchData();
+    } catch (error: any) {
+      console.warn('Refresh error:', error);
+      const errorResponse = handleError(error);
+      showError(errorResponse.title, errorResponse.message);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   useFocusEffect(
@@ -354,7 +508,7 @@ export default function HomeScreen() {
         {
           title: 'Upload Lecture',
           icon: BookOpen,
-          color: '#274d71',
+          color: '#204040',
           onPress: () => router.push('/lectures')
         },
         {
@@ -382,7 +536,7 @@ export default function HomeScreen() {
       {
         title: 'Latest Lectures',
         icon: BookOpen,
-        color: '#274d71',
+        color: '#204040',
         onPress: () => router.push('/lectures')
       },
       {
@@ -401,7 +555,7 @@ export default function HomeScreen() {
   };
 
   const getStatsLabels = () => {
-    if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+    if (profile?.role === 'teacher' || profile?.role === 'admin') {
       return ['Students', 'Classes', 'Lectures'];
     } else {
       return ['Attendance', 'Dairy', 'Lectures'];
@@ -409,7 +563,7 @@ export default function HomeScreen() {
   };
 
   const getStatsValues = () => {
-    if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+    if (profile?.role === 'teacher' || profile?.role === 'admin') {
       return [stats.students, stats.classes, stats.lectures];
     } else {
       return [
@@ -459,14 +613,13 @@ export default function HomeScreen() {
               />
             }
           >
-
             <View style={[styles.headerContainer, { backgroundColor: colors.cardBackground }]}>
               {/* Header */}
               <View style={[styles.header, { backgroundColor: colors.cardBackground }]}>
                 <View>
                   <Text allowFontScaling={false} style={[styles.greeting, { color: colors.textSecondary }]}>{getGreeting()}</Text>
-                  <Text allowFontScaling={false} style={[styles.username, { color: colors.text }]}>{profile?.full_name}</Text>
-                  <Text allowFontScaling={false} style={[styles.role, { backgroundColor: colors.primary }]}>{profile?.role?.toUpperCase()}</Text>
+                  <Text allowFontScaling={false} style={[styles.username, { color: colors.text }]}>{profile?.full_name || 'Guest'}</Text>
+                  <Text allowFontScaling={false} style={[styles.role, { backgroundColor: colors.primary }]}>{profile?.role?.toUpperCase() || 'USER'}</Text>
                 </View>
               </View>
 
@@ -474,7 +627,7 @@ export default function HomeScreen() {
               <View style={[styles.statsContainer, { backgroundColor: colors.cardBackground }]}>
                 {statsValues.map((value, index) => (
                   <View key={index} style={[styles.statsCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text allowFontScaling={false} style={[styles.statsNumber, { color: colors.primary }]}>{value}</Text>
+                    <Text allowFontScaling={false} style={[styles.statsNumber, { color: colors.text }]}>{value}</Text>
                     <Text allowFontScaling={false} style={[styles.statsLabel, { color: colors.textSecondary }]}>
                       {statsLabels[index]}
                     </Text>
@@ -548,10 +701,17 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
       </SafeAreaView>
+
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorModal.visible}
+        title={errorModal.title}
+        message={errorModal.message}
+        onClose={closeErrorModal}
+      />
     </Animated.View>
   );
 }
-
 
 import { TextSizes } from '@/src/styles/TextSizes';
 
@@ -663,7 +823,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     textAlign: 'center',
   },
-
   actionIndicator: {
     position: 'absolute',
     bottom: -0.5,
@@ -718,172 +877,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#F59E0B',
   },
 });
-
-
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     paddingTop: -10,
-//   },
-//   headerContainer: {
-//     marginHorizontal: 24,
-//     paddingTop: 8,
-//     marginBottom: 12,
-//     paddingHorizontal: 12,
-//     borderRadius: 16,
-//   },
-//   header: {
-//     paddingTop: 8,
-//     borderRadius: 12,
-//     paddingHorizontal: 16,
-//   },
-//   greeting: {
-//     fontSize: 14,
-//     fontFamily: 'Inter-Regular',
-//   },
-//   username: {
-//     fontSize: 20,
-//     fontFamily: 'Inter-SemiBold',
-//     marginTop: 4,
-//   },
-//   role: {
-//     fontSize: 10,
-//     fontFamily: 'Inter-Medium',
-//     color: '#b6d509',
-//     paddingHorizontal: 8,
-//     paddingVertical: 2,
-//     borderRadius: 4,
-//     marginTop: 8,
-//     alignSelf: 'flex-start',
-//   },
-//   statsContainer: {
-//     flexDirection: 'row',
-//     marginBottom: 16,
-//     gap: 12,
-//     borderRadius: 12,
-//     padding: 12,
-//   },
-//   statsCard: {
-//     flex: 1,
-//     borderRadius: 16,
-//     paddingHorizontal: 20,
-//     paddingVertical: 10,
-//     alignItems: 'center',
-//     borderWidth: 1,
-//   },
-//   statsNumber: {
-//     fontSize: 16,
-//     fontFamily: 'Inter-SemiBold',
-//     marginBottom: 4,
-//   },
-//   statsLabel: {
-//     fontSize: 6,
-//     fontFamily: 'Inter-Regular',
-//     textAlign: 'center',
-//   },
-//   section: {
-//     paddingHorizontal: 24,
-//   },
-//   sectionHeader: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     justifyContent: 'space-between',
-//     marginBottom: 16,
-//   },
-//   sectionTitle: {
-//     fontSize: 16,
-//     fontFamily: 'Inter-SemiBold',
-//   },
-//   sectionIcon: {
-//     width: 32,
-//     height: 32,
-//     borderRadius: 8,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     borderWidth: 1,
-//   },
-//   actionsGrid: {
-//     flexDirection: 'row',
-//     flexWrap: 'wrap',
-//     gap: 12,
-//   },
-//   actionCard: {
-//     width: '48%',
-//     borderRadius: 16,
-//     padding: 15,
-//     alignItems: 'center',
-//     borderWidth: 1,
-//     shadowColor: '#000',
-//     shadowOffset: { width: 0, height: 2 },
-//     shadowOpacity: 0.05,
-//     shadowRadius: 4,
-//     elevation: 2,
-//   },
-//   actionIcon: {
-//     width: 48,
-//     height: 48,
-//     borderRadius: 12,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     marginBottom: 12,
-//   },
-//   actionTitle: {
-//     fontSize: 12,
-//     fontFamily: 'Inter-Medium',
-//     textAlign: 'center',
-//   },
-//   actionIndicator: {
-//     position: 'absolute',
-//     bottom: -0.5,
-//     left: 0,
-//     right: 0,
-//     height: 8,
-//     borderBottomLeftRadius: 16,
-//     borderBottomRightRadius: 16,
-//   },
-//   activityCard: {
-//     borderRadius: 16,
-//     padding: 20,
-//     borderWidth: 1,
-//     shadowColor: '#000',
-//     shadowOffset: { width: 0, height: 2 },
-//     shadowOpacity: 0.05,
-//     shadowRadius: 4,
-//     elevation: 2,
-//   },
-//   activityItem: {
-//     flexDirection: 'row',
-//     alignItems: 'flex-start',
-//     marginBottom: 16,
-//   },
-//   activityDot: {
-//     width: 8,
-//     height: 8,
-//     backgroundColor: '#b6d509',
-//     borderRadius: 4,
-//     marginTop: 6,
-//     marginRight: 12,
-//   },
-//   activityContent: {
-//     flex: 1,
-//   },
-//   activityTitle: {
-//     fontSize: 12,
-//     fontFamily: 'Inter-Medium',
-//     marginBottom: 2,
-//   },
-//   activityTime: {
-//     fontSize: 10,
-//     fontFamily: 'Inter-Regular',
-//   },
-//   activityDotSuccess: {
-//     backgroundColor: '#10B981',
-//   },
-//   activityDotInfo: {
-//     backgroundColor: '#3B82F6',
-//   },
-//   activityDotWarning: {
-//     backgroundColor: '#F59E0B',
-//   },
-// });

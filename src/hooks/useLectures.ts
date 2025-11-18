@@ -64,7 +64,7 @@ export function useLectures(selectedClassId?: string) {
                 setLectures(data || []);
             }
         } catch (error) {
-            console.error('Error fetching lectures:', error);
+            console.warn('Error fetching lectures:', error);
             Alert.alert('Error', 'Failed to load lectures');
         } finally {
             setLoading(false);
@@ -106,7 +106,7 @@ export function useClasses() {
                 if (error) throw error;
                 setClasses(data || []);
             } catch (error) {
-                console.error('Error fetching classes:', error);
+                console.warn('Error fetching classes:', error);
             } finally {
                 setLoading(false);
             }
@@ -136,7 +136,7 @@ export function useSubjects() {
                 if (error) throw error;
                 setSubjects(data || []);
             } catch (error) {
-                console.error('Error fetching subjects:', error);
+                console.warn('Error fetching subjects:', error);
             }
         };
 
@@ -166,7 +166,7 @@ export function useClassSubjects() {
             setClassSubjects(subjects);
             return subjects;
         } catch (error) {
-            console.error('Error fetching class subjects:', error);
+            console.warn('Error fetching class subjects:', error);
             return [];
         }
     };

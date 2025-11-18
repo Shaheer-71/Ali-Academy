@@ -144,7 +144,7 @@ export const useQuizzes = () => {
             if (error) throw error;
             setClassesSubjects(data || []);
         } catch (error) {
-            console.error('❌ Error fetching class-subject relationships:', error);
+            console.warn('❌ Error fetching class-subject relationships:', error);
         }
     };
 
@@ -156,7 +156,7 @@ export const useQuizzes = () => {
                 .eq('teacher_id', profile?.id);
 
             if (classesIDError) {
-                console.error('Enrollments fetch error:', classesIDError);
+                console.warn('Enrollments fetch error:', classesIDError);
                 throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
             }
 
@@ -172,7 +172,7 @@ export const useQuizzes = () => {
             if (error) throw error;
             setSubjects(data || []);
         } catch (error) {
-            console.error('❌ Error fetching subjects:', error);
+            console.warn('❌ Error fetching subjects:', error);
         }
     };
 
@@ -220,7 +220,7 @@ export const useQuizzes = () => {
             if (error) throw error;
             setQuizzes(data || []);
         } catch (err) {
-            console.error('❌ Error fetching quizzes:', err);
+            console.warn('❌ Error fetching quizzes:', err);
             setQuizzes([]);
         }
     };
@@ -266,7 +266,7 @@ export const useQuizzes = () => {
 
             setQuizResults(data || []);
         } catch (error) {
-            console.error('❌ Error fetching quiz results:', error);
+            console.warn('❌ Error fetching quiz results:', error);
         } finally {
             setLoading(false);
         }
@@ -284,7 +284,7 @@ export const useQuizzes = () => {
 
 
             if (studentError) {
-                console.error('❌ Error fetching student record:', studentError);
+                console.warn('❌ Error fetching student record:', studentError);
                 throw studentError;
             }
 
@@ -315,7 +315,7 @@ export const useQuizzes = () => {
             if (error) throw error;
             setQuizResults(data || []);
         } catch (error) {
-            console.error('❌ Error fetching student results:', error);
+            console.warn('❌ Error fetching student results:', error);
         } finally {
             setLoading(false);
         }
@@ -446,7 +446,7 @@ export const useQuizzes = () => {
     //             .single();
 
     //         if (enrollmentError || !enrollment) {
-    //             console.error('❌ Validation failed:', enrollmentError);
+    //             console.warn('❌ Validation failed:', enrollmentError);
     //             throw new Error('You are not assigned to teach this subject in this class');
     //         }
 
@@ -505,7 +505,7 @@ export const useQuizzes = () => {
 
     //         return { success: true, data };
     //     } catch (error) {
-    //         console.error('❌ Error creating quiz:', error);
+    //         console.warn('❌ Error creating quiz:', error);
     //         return { success: false, error };
     //     }
     // };
@@ -535,7 +535,7 @@ export const useQuizzes = () => {
                 .single();
 
             if (enrollmentError || !enrollment) {
-                console.error('❌ Validation failed:', enrollmentError);
+                console.warn('❌ Validation failed:', enrollmentError);
                 throw new Error('You are not assigned to teach this subject in this class');
             }
 
@@ -573,7 +573,7 @@ export const useQuizzes = () => {
                 .eq('is_active', true);
 
             if (studentsError) {
-                console.error('❌ Error fetching enrolled students:', studentsError);
+                console.warn('❌ Error fetching enrolled students:', studentsError);
             } else if (enrolledStudents && enrolledStudents.length > 0) {
                 const resultEntries = enrolledStudents.map(student => ({
                     quiz_id: data.id,
@@ -598,7 +598,7 @@ export const useQuizzes = () => {
 
             return { success: true, data };
         } catch (error) {
-            console.error('❌ Error creating quiz:', error);
+            console.warn('❌ Error creating quiz:', error);
             return { success: false, error };
         }
     };
@@ -656,7 +656,7 @@ export const useQuizzes = () => {
 
             return { success: true, data };
         } catch (error) {
-            console.error('❌ Error marking quiz result:', error);
+            console.warn('❌ Error marking quiz result:', error);
             return { success: false, error };
         }
     };
@@ -677,7 +677,7 @@ export const useQuizzes = () => {
 
             return { success: true };
         } catch (error) {
-            console.error('❌ Error updating quiz status:', error);
+            console.warn('❌ Error updating quiz status:', error);
             return { success: false, error };
         }
     };
@@ -726,13 +726,13 @@ export const useQuizzes = () => {
                 .single();
 
             if (error) {
-                console.error('Error fetching class ID:', error);
+                console.warn('Error fetching class ID:', error);
                 return null;
             }
 
             return data?.class_id || null;
         } catch (err) {
-            console.error('Unexpected error fetching class ID:', err);
+            console.warn('Unexpected error fetching class ID:', err);
             return null;
         }
     };

@@ -33,7 +33,7 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
             try {
                 await onRefresh();
             } catch (error) {
-                console.error('❌ Error refreshing reports:', error);
+                console.warn('❌ Error refreshing reports:', error);
             } finally {
                 setRefreshing(false);
             }

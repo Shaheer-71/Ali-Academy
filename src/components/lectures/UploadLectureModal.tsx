@@ -93,13 +93,13 @@ export default function UploadLectureModal({
     //         try {
     //             subjectsData = await lectureService.fetchClassSubjects(classId , profile?.id , profile?.role);
     //         } catch (err) {
-    //             console.error("Error fetching subjects:", err);
+    //             console.warn("Error fetching subjects:", err);
     //         }
 
     //         try {
     //             studentsData = await lectureService.fetchClassStudents(classId);
     //         } catch (err) {
-    //             console.error("Error fetching students:", err);
+    //             console.warn("Error fetching students:", err);
     //         }
 
 
@@ -113,7 +113,7 @@ export default function UploadLectureModal({
     //             }));
     //         }
     //     } catch (error) {
-    //         console.error("Unexpected error in loadClassData:", error);
+    //         console.warn("Unexpected error in loadClassData:", error);
     //         Alert.alert('Error', 'Failed to load class data');
     //     }
     // };
@@ -128,7 +128,7 @@ export default function UploadLectureModal({
             try {
                 subjectsData = await lectureService.fetchClassSubjects(classId, profile?.id, profile?.role);
             } catch (err) {
-                console.error("Error fetching subjects:", err);
+                console.warn("Error fetching subjects:", err);
             }
 
             // ✅ FIXED: Only fetch students if subject is selected
@@ -136,7 +136,7 @@ export default function UploadLectureModal({
                 try {
                     studentsData = await lectureService.fetchClassStudents(classId, formData.subject_id);
                 } catch (err) {
-                    console.error("Error fetching students:", err);
+                    console.warn("Error fetching students:", err);
                 }
             }
 
@@ -150,7 +150,7 @@ export default function UploadLectureModal({
                 }));
             }
         } catch (error) {
-            console.error("Unexpected error in loadClassData:", error);
+            console.warn("Unexpected error in loadClassData:", error);
             Alert.alert('Error', 'Failed to load class data');
         }
     };
@@ -167,7 +167,7 @@ export default function UploadLectureModal({
             const studentsData = await lectureService.fetchClassStudents(classId, subjectId);
             setStudents(studentsData);
         } catch (err) {
-            console.error("Error fetching students:", err);
+            console.warn("Error fetching students:", err);
         }
     };
 

@@ -147,7 +147,7 @@ export const useNotificationForm = (profile: any) => {
 
                     sentCount++;
                 } catch (pushError) {
-                    console.error(`❌ Failed to send push to ${recipient.id}:`, pushError);
+                    console.warn(`❌ Failed to send push to ${recipient.id}:`, pushError);
                     failedCount++;
                 }
             }
@@ -162,7 +162,7 @@ export const useNotificationForm = (profile: any) => {
             resetForm();
             return true;
         } catch (error: any) {
-            console.error('🔥 Error in sendNotification:', error);
+            console.warn('🔥 Error in sendNotification:', error);
             Alert.alert('Error', error.message || 'Failed to send notification');
             return false;
         } finally {

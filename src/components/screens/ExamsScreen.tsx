@@ -116,7 +116,7 @@ export default function ExamsScreen() {
       setSubjects(subjectsData || []);
 
     } catch (error) {
-      console.error('❌ Error fetching classes and subjects:', error);
+      console.warn('❌ Error fetching classes and subjects:', error);
     }
   };
 
@@ -151,7 +151,7 @@ export default function ExamsScreen() {
 
       return subjectsData || [];
     } catch (error) {
-      console.error('❌ Error fetching subjects for class:', error);
+      console.warn('❌ Error fetching subjects for class:', error);
       return [];
     }
   }, [profile]);
@@ -164,7 +164,7 @@ export default function ExamsScreen() {
         await fetchClassesAndSubjects();
       }
     } catch (error) {
-      console.error('❌ ExamsScreen: Error during refresh:', error);
+      console.warn('❌ ExamsScreen: Error during refresh:', error);
       throw error;
     }
   };

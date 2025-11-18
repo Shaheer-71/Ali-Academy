@@ -45,7 +45,7 @@ export default function TimeSlot({
                         </Text>
                     </View>
                     <View style={[styles.roomBadge, { backgroundColor: colors.secondary }]}>
-                        <MapPin size={10} color="#274d71" />
+                        <MapPin size={10} color="#204040" />
                         <Text allowFontScaling={false} style={styles.roomText}>{entry.room_number}</Text>
                     </View>
                 </View>
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     },
     lastTimeSlot: {
         borderBottomWidth: 3,
-        borderBottomColor: '#274d71',
+        borderBottomColor: '#204040',
     },
     timeSlotContent: {
         padding: 16,
@@ -112,9 +112,9 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     roomText: {
-        fontSize: TextSizes.extraSmall,
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-SemiBold',
-        color: '#274d71',
+        color: '#204040',
     },
     subjectText: {
         fontSize: TextSizes.medium,

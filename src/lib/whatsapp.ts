@@ -27,7 +27,7 @@ export const sendWhatsAppMessage = async (message: WhatsAppMessage): Promise<boo
     // For now, just log the message
     return true;
   } catch (error) {
-    console.error('WhatsApp message error:', error);
+    console.warn('WhatsApp message error:', error);
     return false;
   }
 };

@@ -56,7 +56,7 @@ export async function uploadToCloudinary(file: {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Cloudinary error response:', errorText);
+      console.warn('Cloudinary error response:', errorText);
 
       if (response.status === 400) {
         throw new Error('Invalid file or configuration. Check your Cloudinary settings.');
@@ -76,7 +76,7 @@ export async function uploadToCloudinary(file: {
 
     return data.secure_url;
   } catch (error: any) {
-    console.error('Cloudinary upload error:', error);
+    console.warn('Cloudinary upload error:', error);
     throw new Error(`Upload failed: ${error.message}`);
   }
 }

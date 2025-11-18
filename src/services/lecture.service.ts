@@ -40,7 +40,7 @@ class LectureService {
                     .eq('is_active', true);
 
                 if (enrollmentError) {
-                    console.error('Enrollments fetch error:', enrollmentError);
+                    console.warn('Enrollments fetch error:', enrollmentError);
                     throw new Error('Failed to fetch enrollments: ' + enrollmentError.message);
                 }
 
@@ -94,7 +94,7 @@ class LectureService {
                     .eq('is_active', true);
 
                 if (enrollmentError) {
-                    console.error('Enrollments fetch error:', enrollmentError);
+                    console.warn('Enrollments fetch error:', enrollmentError);
                     throw new Error('Failed to fetch enrollments: ' + enrollmentError.message);
                 }
 
@@ -143,7 +143,7 @@ class LectureService {
 
             return [];
         } catch (error) {
-            console.error('Error fetching lectures:', error);
+            console.warn('Error fetching lectures:', error);
             throw error;
         }
     }
@@ -209,7 +209,7 @@ class LectureService {
 
             return [];
         } catch (error) {
-            console.error('Error fetching classes:', error);
+            console.warn('Error fetching classes:', error);
             throw error;
         }
     }
@@ -277,7 +277,7 @@ class LectureService {
 
             return [];
         } catch (error) {
-            console.error('Error fetching class subjects:', error);
+            console.warn('Error fetching class subjects:', error);
             return [];
         }
     }
@@ -314,7 +314,7 @@ class LectureService {
             if (error) throw error;
             return data || [];
         } catch (err) {
-            console.error("Error fetching students:", err);
+            console.warn("Error fetching students:", err);
             return [];
         }
     }
@@ -403,7 +403,7 @@ class LectureService {
                                 },
                             });
                         } catch (pushError) {
-                            console.error('Push notification error:', pushError);
+                            console.warn('Push notification error:', pushError);
                         }
                     }
                 }
@@ -411,7 +411,7 @@ class LectureService {
 
             return lecture;
         } catch (error) {
-            console.error('Upload error:', error);
+            console.warn('Upload error:', error);
             throw error;
         }
     }
@@ -440,7 +440,7 @@ class LectureService {
             if (error) throw error;
             return data;
         } catch (error) {
-            console.error('Update error:', error);
+            console.warn('Update error:', error);
             throw error;
         }
     }
@@ -458,7 +458,7 @@ class LectureService {
             if (error) throw error;
             return true;
         } catch (error) {
-            console.error('Delete error:', error);
+            console.warn('Delete error:', error);
             throw error;
         }
     }
@@ -502,7 +502,7 @@ class LectureService {
                 viewed_at: new Date().toISOString(),
             });
         } catch (error) {
-            console.error('Error tracking interaction:', error);
+            console.warn('Error tracking interaction:', error);
         }
     }
 
@@ -524,7 +524,7 @@ class LectureService {
                 throw new Error('Invalid YouTube URL');
             }
         } catch (error) {
-            console.error('Error opening YouTube link:', error);
+            console.warn('Error opening YouTube link:', error);
             throw error;
         }
     }

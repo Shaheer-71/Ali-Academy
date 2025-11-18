@@ -1,15 +1,29 @@
 // components/StudentAnalyticsView.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useStudentAnalytics } from '@/src/hooks/useStudentAnalytics';
 import { User, Award, ClipboardCheck, BookOpen, TrendingUp, TrendingDown, Activity } from 'lucide-react-native';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
 
 export const StudentAnalyticsView = () => {
     const { profile } = useAuth();
     const { colors } = useTheme();
     const { analytics, loading, error } = useStudentAnalytics(profile?.id);
+    const [errorModal, setErrorModal] = useState({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showError = (title: string, message: string) => {
+        setErrorModal({ visible: true, title, message });
+    };
+
+    const closeErrorModal = () => {
+        setErrorModal({ visible: false, title: '', message: '' });
+    };
 
 
 
@@ -34,6 +48,11 @@ export const StudentAnalyticsView = () => {
             <View style={[styles.progressBarFill, { width: `${percentage}%`, backgroundColor: color }]} />
         </View>
     );
+
+    if (error) {
+        showError('Unable to Load Performance', error);
+        // Return a minimal UI instead of full error screen
+    }
 
     if (loading) {
         return (
@@ -67,6 +86,13 @@ export const StudentAnalyticsView = () => {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+
+            <ErrorModal
+                visible={errorModal.visible}
+                title={errorModal.title}
+                message={errorModal.message}
+                onClose={closeErrorModal}
+            />
             {/* Header */}
             <View style={styles.studentHeaderSection}>
                 <View style={styles.studentHeaderContent}>

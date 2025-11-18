@@ -40,7 +40,7 @@ export const AssignmentDetailModal = ({
     const handleOpenAttachment = () => {
         if (assignment.file_url) {
             Linking.openURL(assignment.file_url).catch(err =>
-                console.error('Failed to open attachment:', err)
+                console.warn('Failed to open attachment:', err)
             );
         }
     };

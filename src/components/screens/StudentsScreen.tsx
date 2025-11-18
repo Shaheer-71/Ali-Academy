@@ -10,6 +10,7 @@ import {
     Modal,
     Alert,
     ActivityIndicator,
+    Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -28,9 +29,8 @@ import {
 } from 'lucide-react-native';
 import { supabase } from '@/src/lib/supabase';
 import TopSection from '../common/TopSections';
-import { Animated } from 'react-native';
-import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
-
+import { useScreenAnimation } from '@/src/utils/animations';
+import { SwipeableStudentCard } from '@/src/components/students/SwipeableStudentCard';
 
 interface Class {
     id: string;
@@ -66,7 +66,6 @@ export default function StudentsScreen() {
     const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
     const [loadingSubjects, setLoadingSubjects] = useState(false);
     const screenStyle = useScreenAnimation();
-    const ButtonAnimation = useButtonAnimation()
 
     const [newStudent, setNewStudent] = useState({
         full_name: '',
@@ -104,7 +103,7 @@ export default function StudentsScreen() {
                 setNewStudent((prev) => ({ ...prev, class_id: data[0].id }));
             }
         } catch (error) {
-            console.error('Error fetching classes:', error);
+            console.warn('Error fetching classes:', error);
             Alert.alert('Error', 'Failed to load classes');
         }
     };
@@ -118,8 +117,6 @@ export default function StudentsScreen() {
 
         setLoadingSubjects(true);
         try {
-
-            // Get subjects from teacher_subject_enrollments (subjects that have teachers assigned)
             const { data: teacherEnrollments, error: enrollmentError } = await supabase
                 .from('teacher_subject_enrollments')
                 .select('subject_id')
@@ -138,11 +135,8 @@ export default function StudentsScreen() {
                 return;
             }
 
-            // Get unique subject IDs
             const subjectIds = [...new Set(teacherEnrollments.map(e => e.subject_id))];
 
-
-            // Fetch subject details
             const { data: subjectsData, error: subjectsError } = await supabase
                 .from('subjects')
                 .select('id, name')
@@ -153,9 +147,9 @@ export default function StudentsScreen() {
             if (subjectsError) throw subjectsError;
 
             setSubjects(subjectsData || []);
-            setSelectedSubjects([]); // Reset selection when class changes
+            setSelectedSubjects([]);
         } catch (error) {
-            console.error('Error fetching subjects:', error);
+            console.warn('Error fetching subjects:', error);
             Alert.alert('Error', 'Failed to load subjects for selected class');
             setSubjects([]);
         } finally {
@@ -168,7 +162,7 @@ export default function StudentsScreen() {
             const studentsWithoutPass = await getStudentsWithoutPasswords();
             setStudentsWithoutPasswords(studentsWithoutPass);
         } catch (error) {
-            console.error('Error fetching students without passwords:', error);
+            console.warn('Error fetching students without passwords:', error);
         }
     };
 
@@ -179,7 +173,7 @@ export default function StudentsScreen() {
             phone_number: '',
             parent_contact: '',
             class_id: classes.length > 0 ? classes[0].id : '',
-            subject_ids: [], // ✅ Reset subjects
+            subject_ids: [],
             gender: '' as 'male' | 'female' | 'other' | '',
             address: '',
             admission_date: new Date().toISOString().split('T')[0],
@@ -189,12 +183,11 @@ export default function StudentsScreen() {
             medical_conditions: '',
             notes: '',
         });
-        setSelectedSubjects([]); // ✅ Reset selected subjects
-        setSubjects([]); // ✅ Clear subjects
+        setSelectedSubjects([]);
+        setSubjects([]);
     };
 
     const handleAddStudent = async () => {
-        // Validation
         if (!newStudent.full_name.trim()) {
             Alert.alert('Error', 'Student name is required');
             return;
@@ -237,7 +230,6 @@ export default function StudentsScreen() {
             const result = await createStudentSimple(newStudent, profile!.id);
 
             if (result.success) {
-                // Add to local students list
                 await addStudent({
                     full_name: newStudent.full_name,
                     roll_number: newStudent.roll_number,
@@ -246,7 +238,6 @@ export default function StudentsScreen() {
                 });
 
                 const studentEmail = result.data?.email;
-                const enrolledCount = result.data?.enrolledSubjects || 0;
 
                 Alert.alert(
                     'Success',
@@ -273,6 +264,43 @@ export default function StudentsScreen() {
         }
     };
 
+    const handleEditStudent = (student: any) => {
+        Alert.alert('Edit Student', `Editing ${student.full_name} - Feature coming soon!`);
+    };
+
+    const handleDeleteStudent = (student: any) => {
+        Alert.alert(
+            'Delete Student',
+            `Are you sure you want to delete ${student.full_name}?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const { error } = await supabase
+                                .from('students')
+                                .delete()
+                                .eq('id', student.id);
+
+                            if (error) throw error;
+
+                            Alert.alert('Success', 'Student deleted successfully');
+                            refetch();
+                        } catch (error) {
+                            Alert.alert('Error', 'Failed to delete student');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const handleStudentPress = (student: any) => {
+        Alert.alert('Student Details', `Viewing ${student.full_name} - Feature coming soon!`);
+    };
+
     const filteredStudents = students.filter(
         (student) =>
             student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -285,7 +313,6 @@ export default function StudentsScreen() {
                 ? prev.filter(id => id !== subjectId)
                 : [...prev, subjectId];
 
-            // Update newStudent state
             setNewStudent(prevStudent => ({
                 ...prevStudent,
                 subject_ids: newSelection
@@ -295,7 +322,7 @@ export default function StudentsScreen() {
         });
     };
 
-    if (profile?.role !== 'teacher') {
+    if (profile?.role !== 'teacher' && profile?.role !== 'admin') {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -339,7 +366,6 @@ export default function StudentsScreen() {
                                 </TouchableOpacity>
                             </View>
 
-                            {/* Pending Registration Banner */}
                             {studentsWithoutPasswords.length > 0 && (
                                 <TouchableOpacity
                                     style={[styles.alertBanner, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}
@@ -354,7 +380,6 @@ export default function StudentsScreen() {
                             )}
                         </View>
 
-                        {/* Student List */}
                         <ScrollView
                             style={styles.scrollView}
                             contentContainerStyle={{ paddingBottom: 50 }}
@@ -376,40 +401,15 @@ export default function StudentsScreen() {
                                 </View>
                             ) : (
                                 filteredStudents.map((student) => (
-                                    <TouchableOpacity
+                                    <SwipeableStudentCard
                                         key={student.id}
-                                        style={[styles.studentCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-                                        onPress={() => console.log('Student details not implemented yet')}
-                                    >
-                                        <View style={styles.studentHeader}>
-                                            <View style={[styles.studentAvatar, { backgroundColor: colors.primary }]}>
-                                                <Text allowFontScaling={false} style={styles.studentInitial}>{student.full_name.charAt(0).toUpperCase()}</Text>
-                                            </View>
-                                            <View style={styles.studentInfo}>
-                                                <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]}>{student.full_name}</Text>
-                                                <View style={styles.studentDetails}>
-                                                    <View style={styles.detailItem}>
-                                                        <Hash size={14} color={colors.textSecondary} />
-                                                        <Text allowFontScaling={false} style={[styles.detailText, { color: colors.textSecondary }]}>{student.roll_number}</Text>
-                                                    </View>
-                                                    <View style={styles.detailItem}>
-                                                        <BookOpen size={14} color={colors.textSecondary} />
-                                                        <Text allowFontScaling={false} style={[styles.detailText, { color: colors.textSecondary }]}>{student.classes?.name}</Text>
-                                                    </View>
-                                                </View>
-                                            </View>
-                                        </View>
-                                        <View style={[styles.contactInfo, { borderTopColor: colors.border }]}>
-                                            <View style={styles.contactRow}>
-                                                <Phone size={16} color={colors.textSecondary} />
-                                                <Text allowFontScaling={false} style={[styles.contactText, { color: colors.text }]}>{student.phone_number || 'N/A'}</Text>
-                                            </View>
-                                            <View style={styles.contactRow}>
-                                                <Phone size={16} color={colors.textSecondary} />
-                                                <Text allowFontScaling={false} style={[styles.contactText, { color: colors.text }]}>Parent: {student.parent_contact}</Text>
-                                            </View>
-                                        </View>
-                                    </TouchableOpacity>
+                                        student={student}
+                                        colors={colors}
+                                        isTeacher={profile?.role === 'teacher' || profile?.role === 'admin'}
+                                        onEdit={handleEditStudent}
+                                        onDelete={handleDeleteStudent}
+                                        onPress={handleStudentPress}
+                                    />
                                 ))
                             )}
                         </ScrollView>
@@ -436,7 +436,7 @@ export default function StudentsScreen() {
                                     </View>
 
                                     <ScrollView style={styles.modalScrollView}>
-                                        <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Student Information</Text>
+                                        {/* <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Student Information</Text> */}
 
                                         <View style={styles.inputGroup}>
                                             <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Full Name *</Text>
@@ -971,6 +971,7 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         maxHeight: '65%',
+
     },
     modalHeader: {
         flexDirection: 'row',
@@ -993,7 +994,8 @@ const styles = StyleSheet.create({
     },
     modalScrollView: {
         paddingHorizontal: 24,
-        paddingVertical: 24,
+        // paddingTop: 24,
+        
     },
 
     // Form inputs
@@ -1130,13 +1132,10 @@ const styles = StyleSheet.create({
     },
 });
 
-
-
-
-// Updated styles
 // const styles = StyleSheet.create({
 //     container: {
 //         flex: 1,
+//         marginBottom: 10
 //     },
 //     errorContainer: {
 //         flex: 1,
@@ -1145,18 +1144,18 @@ const styles = StyleSheet.create({
 //         paddingHorizontal: 24,
 //     },
 //     errorText: {
-//         fontSize: 24,
+//         fontSize: TextSizes.header,
 //         fontFamily: 'Inter-SemiBold',
 //         marginBottom: 8,
 //     },
 //     errorSubtext: {
-//         fontSize: 16,
+//         fontSize: TextSizes.normal,
 //         fontFamily: 'Inter-Regular',
 //         textAlign: 'center',
 //     },
 //     headerContainer: {
 //         paddingHorizontal: 24,
-//         paddingTop: 16,
+//         paddingTop: 5,
 //     },
 //     searchContainer: {
 //         flexDirection: 'row',
@@ -1168,14 +1167,14 @@ const styles = StyleSheet.create({
 //         flexDirection: 'row',
 //         alignItems: 'center',
 //         borderRadius: 12,
-//         paddingHorizontal: 16,
+//         paddingHorizontal: 12,
 //         borderWidth: 1,
 //         marginRight: 12,
+//         height: 48,
 //     },
 //     searchInput: {
 //         flex: 1,
-//         height: 48,
-//         fontSize: 16,
+//         fontSize: TextSizes.normal + 4,
 //         fontFamily: 'Inter-Regular',
 //         marginLeft: 12,
 //     },
@@ -1196,12 +1195,12 @@ const styles = StyleSheet.create({
 //     },
 //     alertText: {
 //         flex: 1,
-//         fontSize: 14,
+//         fontSize: TextSizes.bannerSubtitle,
 //         fontFamily: 'Inter-Medium',
 //         marginLeft: 8,
 //     },
 //     alertAction: {
-//         fontSize: 14,
+//         fontSize: TextSizes.bannerTitle,
 //         fontFamily: 'Inter-SemiBold',
 //     },
 //     scrollView: {
@@ -1214,7 +1213,7 @@ const styles = StyleSheet.create({
 //         paddingVertical: 60,
 //     },
 //     loadingText: {
-//         fontSize: 16,
+//         fontSize: TextSizes.modalText,
 //         fontFamily: 'Inter-Regular',
 //         marginTop: 12,
 //     },
@@ -1224,79 +1223,15 @@ const styles = StyleSheet.create({
 //         paddingVertical: 60,
 //     },
 //     emptyText: {
-//         fontSize: 18,
+//         fontSize: TextSizes.large,
 //         fontFamily: 'Inter-SemiBold',
 //         marginTop: 16,
 //         marginBottom: 8,
 //     },
 //     emptySubtext: {
-//         fontSize: 14,
+//         fontSize: TextSizes.normal,
 //         fontFamily: 'Inter-Regular',
 //         textAlign: 'center',
-//     },
-//     studentCard: {
-//         borderRadius: 16,
-//         padding: 20,
-//         marginBottom: 12,
-//         borderWidth: 1,
-//         shadowColor: '#000',
-//         shadowOffset: { width: 0, height: 2 },
-//         shadowOpacity: 0.05,
-//         shadowRadius: 4,
-//         elevation: 2,
-//     },
-//     studentHeader: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         marginBottom: 12,
-//     },
-//     studentAvatar: {
-//         width: 48,
-//         height: 48,
-//         borderRadius: 12,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         marginRight: 16,
-//     },
-//     studentInitial: {
-//         fontSize: 20,
-//         fontFamily: 'Inter-SemiBold',
-//         color: '#ffffff',
-//     },
-//     studentInfo: {
-//         flex: 1,
-//     },
-//     studentName: {
-//         fontSize: 18,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     studentDetails: {
-//         flexDirection: 'row',
-//         gap: 16,
-//         flexWrap: 'wrap',
-//     },
-//     detailItem: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//     },
-//     detailText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         marginLeft: 4,
-//     },
-//     contactInfo: {
-//         paddingTop: 12,
-//         borderTopWidth: 1,
-//         gap: 8,
-//     },
-//     contactRow: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//     },
-//     contactText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//         marginLeft: 8,
 //     },
 //     modalOverlay: {
 //         flex: 1,
@@ -1306,7 +1241,7 @@ const styles = StyleSheet.create({
 //     modalContent: {
 //         borderTopLeftRadius: 24,
 //         borderTopRightRadius: 24,
-//         maxHeight: '90%',
+//         maxHeight: '65%',
 //     },
 //     modalHeader: {
 //         flexDirection: 'row',
@@ -1318,7 +1253,7 @@ const styles = StyleSheet.create({
 //         borderBottomWidth: 1,
 //     },
 //     modalTitle: {
-//         fontSize: 20,
+//         fontSize: TextSizes.modalTitle,
 //         fontFamily: 'Inter-SemiBold',
 //     },
 //     closeButton: {
@@ -1331,133 +1266,4 @@ const styles = StyleSheet.create({
 //         paddingHorizontal: 24,
 //         paddingVertical: 24,
 //     },
-//     sectionTitle: {
-//         fontSize: 16,
-//         fontFamily: 'Inter-SemiBold',
-//         marginBottom: 16,
-//     },
-//     inputGroup: {
-//         marginBottom: 20,
-//     },
-//     label: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//         marginBottom: 8,
-//     },
-//     input: {
-//         height: 50,
-//         borderWidth: 1,
-//         borderRadius: 12,
-//         paddingHorizontal: 16,
-//         fontSize: 16,
-//         fontFamily: 'Inter-Regular',
-//     },
-//     textArea: {
-//         borderWidth: 1,
-//         borderRadius: 12,
-//         paddingHorizontal: 16,
-//         paddingVertical: 12,
-//         fontSize: 16,
-//         fontFamily: 'Inter-Regular',
-//         textAlignVertical: 'top',
-//     },
-//     classOptions: {
-//         flexDirection: 'row',
-//         gap: 8,
-//     },
-//     classOption: {
-//         paddingHorizontal: 16,
-//         paddingVertical: 12,
-//         borderWidth: 1,
-//         borderRadius: 8,
-//     },
-//     classOptionText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//     },
-//     genderOptions: {
-//         flexDirection: 'row',
-//         gap: 8,
-//     },
-//     genderOption: {
-//         flex: 1,
-//         paddingHorizontal: 16,
-//         paddingVertical: 12,
-//         borderWidth: 1,
-//         borderRadius: 8,
-//         alignItems: 'center',
-//     },
-//     genderOptionText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//     },
-//     submitButton: {
-//         height: 50,
-//         borderRadius: 12,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         marginTop: 12,
-//         marginBottom: 16,
-//     },
-//     submitButtonText: {
-//         color: '#ffffff',
-//         fontSize: 16,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     infoText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         textAlign: 'center',
-//     },
-//     pendingStudentCard: {
-//         padding: 16,
-//         borderRadius: 12,
-//         borderWidth: 1,
-//         marginBottom: 12,
-//     },
-//     pendingStudentInfo: {
-//         flex: 1,
-//     },
-//     pendingStudentName: {
-//         fontSize: 16,
-//         fontFamily: 'Inter-SemiBold',
-//         marginBottom: 4,
-//     },
-//     pendingStudentDetails: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         marginBottom: 4,
-//     },
-//     pendingStudentEmail: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//         marginBottom: 4,
-//     },
-//     pendingStudentStatus: {
-//         fontSize: 12,
-//         fontFamily: 'Inter-Medium',
-//     },
-//     helpText: {
-//         fontSize: 12,
-//         fontFamily: 'Inter-Regular',
-//         marginTop: 4,
-//         fontStyle: 'italic',
-//     },
-//     infoBox: {
-//         padding: 16,
-//         borderRadius: 8,
-//         borderWidth: 1,
-//         marginBottom: 20,
-//     },
-//     infoTitle: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-SemiBold',
-//         marginBottom: 8,
-//     },
-//     infoText: {
-//         fontSize: 12,
-//         fontFamily: 'Inter-Regular',
-//         lineHeight: 18,
-//     },
-
 // });

@@ -59,7 +59,7 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
     >
       <View style={styles.header}>
         <View style={[styles.iconContainer, overdue && styles.overdueIconContainer]}>
-          <NotebookPen size={20} color={overdue ? "#EF4444" : "#274d71"} />
+          <NotebookPen size={20} color={overdue ? "#EF4444" : "#204040"} />
         </View>
         <View style={styles.info}>
           <Text allowFontScaling={false} style={styles.title} numberOfLines={2}>
@@ -106,7 +106,7 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
 
         {assignment.file_url && (
           <TouchableOpacity style={styles.attachmentButton} onPress={onViewAttachment}>
-            <FileText size={14} color="#274d71" />
+            <FileText size={14} color="#204040" />
             <Text allowFontScaling={false} style={styles.attachmentText}>Attachment</Text>
           </TouchableOpacity>
         )}
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   attachmentText: {
     fontSize: TextSizes.small,       // was 11
     fontFamily: 'Inter-Medium',
-    color: '#274d71',
+    color: '#204040',
   },
 });
 
@@ -316,6 +316,6 @@ const styles = StyleSheet.create({
 //   attachmentText: {
 //     fontSize: 11,
 //     fontFamily: 'Inter-Medium',
-//     color: '#274d71',
+//     color: '#204040',
 //   },
 // });

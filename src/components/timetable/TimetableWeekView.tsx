@@ -69,7 +69,7 @@ export const TimetableWeekView: React.FC<TimetableWeekViewProps> = ({
                     style={styles.weekNavButton}
                     onPress={() => navigateWeek('prev')}
                 >
-                    <ChevronLeft size={20} color="#274d71" />
+                    <ChevronLeft size={20} color="#204040" />
                 </TouchableOpacity>
 
                 <Text allowFontScaling={false} style={styles.weekText}>
@@ -81,7 +81,7 @@ export const TimetableWeekView: React.FC<TimetableWeekViewProps> = ({
                     style={styles.weekNavButton}
                     onPress={() => navigateWeek('next')}
                 >
-                    <ChevronRight size={20} color="#274d71" />
+                    <ChevronRight size={20} color="#204040" />
                 </TouchableOpacity>
             </View>
 

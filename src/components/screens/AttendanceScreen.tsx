@@ -24,7 +24,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { TextSizes } from '@/src/styles/TextSizes';
 import { Animated } from 'react-native';
 import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
-
+import { ErrorModal } from '@/src/components/common/ErrorModal';
 
 
 interface Class {
@@ -103,6 +103,19 @@ export default function AttendanceScreen() {
     const [viewMode, setViewMode] = useState<'mark' | 'view' | 'reports'>('mark');
     const screenStyle = useScreenAnimation();
     const postButtonAnimation = useButtonAnimation();
+    const [errorModal, setErrorModal] = useState({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showError = (title: string, message: string) => {
+        setErrorModal({ visible: true, title, message });
+    };
+
+    const closeErrorModal = () => {
+        setErrorModal({ visible: false, title: '', message: '' });
+    };
 
 
     // Filter states for mark/reports modes
@@ -148,6 +161,7 @@ export default function AttendanceScreen() {
 
     // Use existing hook for mark/reports modes - NOW WITH SUBJECT
     const {
+        error,
         students,
         attendanceRecords,
         attendanceStats,
@@ -167,6 +181,12 @@ export default function AttendanceScreen() {
         isStudentMarkedForDate,
         getStudentRecordForDate,
     } = useAttendance(filters.selectedClass, filters.selectedSubject);
+
+    useEffect(() => {
+        if (error) {
+            showError(error.title, error.message);
+        }
+    }, [error]);
 
     useEffect(() => {
         if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
@@ -227,7 +247,7 @@ export default function AttendanceScreen() {
             // REMOVED: Auto-selection of first class
             // Users must manually select class and subject
         } catch (error) {
-            console.error('Error fetching classes:', error);
+            console.warn('Error fetching classes:', error);
         }
     };
 
@@ -242,7 +262,7 @@ export default function AttendanceScreen() {
                 .eq('is_active', true);
 
             if (subjectIDError) {
-                console.error("Error fetching subject enrollments:", subjectIDError);
+                console.warn("Error fetching subject enrollments:", subjectIDError);
                 throw subjectIDError;
             }
 
@@ -264,7 +284,7 @@ export default function AttendanceScreen() {
                 .order('name');
 
             if (error) {
-                console.error("Error fetching subjects details:", error);
+                console.warn("Error fetching subjects details:", error);
                 throw error;
             }
 
@@ -284,7 +304,7 @@ export default function AttendanceScreen() {
                 setViewFilters(prev => ({ ...prev, selectedSubject: '' }));
             }
         } catch (error) {
-            console.error('Error fetching subjects:', error);
+            console.warn('Error fetching subjects:', error);
             setSubjects([]);
             setFilters(prev => ({ ...prev, selectedSubject: '' }));
             setViewFilters(prev => ({ ...prev, selectedSubject: '' }));
@@ -331,7 +351,7 @@ export default function AttendanceScreen() {
             setViewAttendanceRecords(filteredData);
             calculateViewStats(filteredData);
         } catch (error) {
-            console.error('Error fetching view attendance data:', error);
+            console.warn('Error fetching view attendance data:', error);
             setViewAttendanceRecords([]);
         } finally {
             setViewLoading(false);
@@ -372,7 +392,7 @@ export default function AttendanceScreen() {
         const totalStudents = students.length;
 
         if (markedCount === 0) {
-            Alert.alert('Error', 'Please mark attendance for at least one student');
+            showError('No Students Marked', 'Please mark attendance for at least one student');
             return;
         }
 
@@ -390,18 +410,17 @@ export default function AttendanceScreen() {
                                 Alert.alert('Success', 'Attendance posted successfully');
                                 handleRefresh();
                             } else {
-                                Alert.alert('Error', result.error || 'Failed to post attendance');
+                                showError('Failed to Post', result.error || 'Failed to post attendance');
                             }
-                        } catch (error: any) {
-                            console.error('Error posting attendance:', error);
-                            Alert.alert('Error', error.message || 'Failed to post attendance');
+                        } catch (err: any) {
+                            console.warn('Error posting attendance:', err);
+                            showError('Unexpected Error', err.message || 'Failed to post attendance');
                         }
                     },
                 },
             ]
         );
     };
-
     const handleEditRecord = (record: AttendanceRecord) => {
         setSelectedRecord(record);
         setEditModalVisible(true);
@@ -420,7 +439,7 @@ export default function AttendanceScreen() {
                 }
             }
         } catch (error) {
-            console.error('Error during refresh:', error);
+            console.warn('Error during refresh:', error);
         }
     };
 
@@ -781,6 +800,14 @@ export default function AttendanceScreen() {
                 style={[styles.container, { backgroundColor: colors.background }]}
                 edges={['left', 'right', 'bottom']}
             >
+
+                <ErrorModal
+                    visible={errorModal.visible}
+                    title={errorModal.title}
+                    message={errorModal.message}
+                    onClose={closeErrorModal}
+                />
+                
                 {profile?.role === "teacher" && (
                     <AttendanceHeader
                         userRole={profile?.role || 'student'}

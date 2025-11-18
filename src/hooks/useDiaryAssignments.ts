@@ -128,7 +128,7 @@ export const useDiaryAssignments = (profile: any, student: any) => {
 
             setAssignments([]);
         } catch (err: any) {
-            console.error("❌ fetchAssignments error:", err);
+            console.warn("❌ fetchAssignments error:", err);
             setAssignments([]);
         } finally {
             setLoading(false);
@@ -176,7 +176,7 @@ export const useDiaryAssignments = (profile: any, student: any) => {
             setRefreshing(true);
             await fetchAssignments();
         } catch (error) {
-            console.error('❌ Error refreshing:', error);
+            console.warn('❌ Error refreshing:', error);
         } finally {
             setRefreshing(false);
         }

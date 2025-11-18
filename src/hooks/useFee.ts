@@ -46,7 +46,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .single();
 
                 if (err) {
-                    console.error('Error fetching fee structure:', err);
+                    console.warn('Error fetching fee structure:', err);
                     setError(err.message);
                     return null;
                 }
@@ -55,7 +55,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
             } catch (err: any) {
                 const message = err.message || 'Failed to fetch fee structure';
                 setError(message);
-                console.error('Fetch fee structure error:', err);
+                console.warn('Fetch fee structure error:', err);
                 return null;
             } finally {
                 setLoading(false);
@@ -80,7 +80,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .order('class_id');
 
                 if (err) {
-                    console.error('Error fetching fee structures:', err);
+                    console.warn('Error fetching fee structures:', err);
                     setError(err.message);
                     return [];
                 }
@@ -89,7 +89,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
             } catch (err: any) {
                 const message = err.message || 'Failed to fetch fee structures';
                 setError(message);
-                console.error('Fetch fee structures error:', err);
+                console.warn('Fetch fee structures error:', err);
                 return [];
             } finally {
                 setLoading(false);
@@ -131,7 +131,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .single();
 
                 if (err) {
-                    console.error('Error upserting fee structure:', err);
+                    console.warn('Error upserting fee structure:', err);
                     setError(err.message);
                     return null;
                 }
@@ -140,7 +140,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
             } catch (err: any) {
                 const message = err.message || 'Failed to save fee structure';
                 setError(message);
-                console.error('Upsert fee structure error:', err);
+                console.warn('Upsert fee structure error:', err);
                 return null;
             } finally {
                 setLoading(false);
@@ -177,7 +177,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .single();
 
                 if (err) {
-                    console.error('Error creating student fee:', err);
+                    console.warn('Error creating student fee:', err);
                     setError(err.message);
                     return null;
                 }
@@ -186,7 +186,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
             } catch (err: any) {
                 const message = err.message || 'Failed to create student fee';
                 setError(message);
-                console.error('Create student fee error:', err);
+                console.warn('Create student fee error:', err);
                 return null;
             } finally {
                 setLoading(false);
@@ -217,7 +217,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .order('created_at', { ascending: false });
 
                 if (err) {
-                    console.error('Error fetching fee payments:', err);
+                    console.warn('Error fetching fee payments:', err);
                     setError(err.message);
                     return [];
                 }
@@ -226,7 +226,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
             } catch (err: any) {
                 const message = err.message || 'Failed to fetch fee payments';
                 setError(message);
-                console.error('Fetch fee payments error:', err);
+                console.warn('Fetch fee payments error:', err);
                 return [];
             } finally {
                 setLoading(false);
@@ -252,7 +252,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .order('month', { ascending: false });
 
                 if (err) {
-                    console.error('Error fetching student fee history:', err);
+                    console.warn('Error fetching student fee history:', err);
                     setError(err.message);
                     return [];
                 }
@@ -261,7 +261,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
             } catch (err: any) {
                 const message = err.message || 'Failed to fetch fee history';
                 setError(message);
-                console.error('Fetch student fee history error:', err);
+                console.warn('Fetch student fee history error:', err);
                 return [];
             } finally {
                 setLoading(false);
@@ -300,7 +300,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .single();
 
                 if (err) {
-                    console.error('Error creating fee payment:', err);
+                    console.warn('Error creating fee payment:', err);
                     setError(err.message);
                     return null;
                 }
@@ -309,7 +309,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
             } catch (err: any) {
                 const message = err.message || 'Failed to create fee payment';
                 setError(message);
-                console.error('Create fee payment error:', err);
+                console.warn('Create fee payment error:', err);
                 return null;
             } finally {
                 setLoading(false);
@@ -349,7 +349,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .eq('id', paymentId);
 
                 if (err) {
-                    console.error('Error updating fee payment status:', err);
+                    console.warn('Error updating fee payment status:', err);
                     setError(err.message);
                     return false;
                 }
@@ -358,7 +358,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
             } catch (err: any) {
                 const message = err.message || 'Failed to update payment status';
                 setError(message);
-                console.error('Update fee payment error:', err);
+                console.warn('Update fee payment error:', err);
                 return false;
             } finally {
                 setLoading(false);
@@ -388,7 +388,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .order('full_name');
 
                 if (studentsError) {
-                    console.error('Error fetching students:', studentsError);
+                    console.warn('Error fetching students:', studentsError);
                     setError(studentsError.message);
                     return [];
                 }
@@ -406,7 +406,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .eq('year', year);
 
                 if (feesError) {
-                    console.error('Error fetching fees:', feesError);
+                    console.warn('Error fetching fees:', feesError);
                     setError(feesError.message);
                     return [];
                 }
@@ -436,7 +436,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
             } catch (err: any) {
                 const message = err.message || 'Failed to fetch students with fee status';
                 setError(message);
-                console.error('Fetch students with fee status error:', err);
+                console.warn('Fetch students with fee status error:', err);
                 return [];
             } finally {
                 setLoading(false);
@@ -466,7 +466,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .eq('year', year);
 
                 if (feesError) {
-                    console.error('Error fetching statistics:', feesError);
+                    console.warn('Error fetching statistics:', feesError);
                     setError(feesError.message);
                     return null;
                 }
@@ -477,7 +477,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .eq('class_id', classId);
 
                 if (studentsError) {
-                    console.error('Error fetching students count:', studentsError);
+                    console.warn('Error fetching students count:', studentsError);
                     setError(studentsError.message);
                     return null;
                 }
@@ -499,7 +499,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
             } catch (err: any) {
                 const message = err.message || 'Failed to calculate statistics';
                 setError(message);
-                console.error('Calculate statistics error:', err);
+                console.warn('Calculate statistics error:', err);
                 return null;
             } finally {
                 setLoading(false);
@@ -540,7 +540,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
 
 
                 if (notifError) {
-                    console.error("❌ [FEE] Error inserting notification:", notifError);
+                    console.warn("❌ [FEE] Error inserting notification:", notifError);
                     setError(notifError.message);
                     return null;
                 }
@@ -568,7 +568,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
 
 
                 if (recipientError) {
-                    console.error("❌ [FEE] Error inserting recipients:", recipientError);
+                    console.warn("❌ [FEE] Error inserting recipients:", recipientError);
                 } 
                 // 📱 6️⃣ SEND PUSH NOTIFICATIONS TO ALL STUDENTS
                 let sentCount = 0;
@@ -594,7 +594,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
 
                         sentCount++;
                     } catch (studentError) {
-                        console.error(`❌ [FEE] Failed to send notification to student ${i + 1}:`, studentError);
+                        console.warn(`❌ [FEE] Failed to send notification to student ${i + 1}:`, studentError);
                         failedCount++;
                         // Continue with next student instead of stopping
                         continue;
@@ -603,7 +603,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
 
                 return notif as FeeNotification;
             } catch (err: any) {
-                console.error("🔥 [FEE] Unexpected error in createFeeNotification:", err);
+                console.warn("🔥 [FEE] Unexpected error in createFeeNotification:", err);
                 setError(err.message || "Failed to create fee notification");
                 return null;
             } finally {
@@ -635,7 +635,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .eq('year', year);
 
                 if (feesError) {
-                    console.error('Error fetching monthly summary:', feesError);
+                    console.warn('Error fetching monthly summary:', feesError);
                     setError(feesError.message);
                     return null;
                 }
@@ -659,7 +659,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
             } catch (err: any) {
                 const message = err.message || 'Failed to fetch monthly summary';
                 setError(message);
-                console.error('Fetch monthly summary error:', err);
+                console.warn('Fetch monthly summary error:', err);
                 return null;
             } finally {
                 setLoading(false);
@@ -694,7 +694,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
                     .in('id', paymentIds);
 
                 if (err) {
-                    console.error('Error bulk updating payments:', err);
+                    console.warn('Error bulk updating payments:', err);
                     setError(err.message);
                     return false;
                 }
@@ -703,7 +703,7 @@ export const useFee = (dependencies?: UseFeeDependencies) => {
             } catch (err: any) {
                 const message = err.message || 'Failed to bulk update payments';
                 setError(message);
-                console.error('Bulk update error:', err);
+                console.warn('Bulk update error:', err);
                 return false;
             } finally {
                 setLoading(false);

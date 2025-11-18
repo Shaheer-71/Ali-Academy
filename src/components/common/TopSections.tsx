@@ -143,7 +143,7 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
 
             {/* Notifications Modal - 50% BOTTOM SHEET */}
             <Modal
-                animationType="slide"
+                animationType="fade"
                 transparent
                 visible={notificationsVisible}
                 onRequestClose={() => setNotificationsVisible(false)}
@@ -290,8 +290,9 @@ const styles = StyleSheet.create({
     },
     title: {
         fontWeight: 'bold',
-        fontSize: TextSizes.header + 6,
+        fontSize: TextSizes.header + 10,
         fontFamily: 'Inter-SemiBold',
+        alignSelf: 'center',
     },
     rightSection: {
         flexDirection: 'row',

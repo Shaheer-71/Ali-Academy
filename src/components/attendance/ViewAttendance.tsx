@@ -11,9 +11,20 @@ import { EmptyState } from '@/src/components/attendance/EmptyState';
 import { LoadingState } from '@/src/components/attendance/LoadingState';
 import { AttendanceRecordCard } from '@/src/components/attendance/AttendanceRecordCard';
 import { ViewAttendanceFilterModal } from '@/src/components/attendance/modals/ViewAttendanceFilterModal';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
 import { TextSizes } from '@/src/styles/TextSizes';
+import {
+    handleClassFetchError,
+    handleStudentFetchError,
+    handleAttendanceFetchError,
+} from '@/src/utils/errorHandler/attendanceErrorHandler';
 
 interface Class {
+    id: string;
+    name: string;
+}
+
+interface Subject {
     id: string;
     name: string;
 }
@@ -30,6 +41,7 @@ interface AttendanceRecord {
     id: string;
     student_id: string;
     class_id: string;
+    subject_id: string;
     date: string;
     arrival_time?: string;
     status: 'present' | 'late' | 'absent';
@@ -38,11 +50,15 @@ interface AttendanceRecord {
         full_name: string;
         roll_number: string;
     };
+    subjects?: {
+        name: string;
+    };
     created_at: string;
 }
 
 interface ViewFilterData {
     selectedClass: string;
+    selectedSubject: string;
     startDate: string;
     endDate: string;
     status: 'all' | 'present' | 'late' | 'absent';
@@ -59,15 +75,32 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
     const { profile } = useAuth();
     const { colors } = useTheme();
     const [classes, setClasses] = useState<Class[]>([]);
+    const [subjects, setSubjects] = useState<Subject[]>([]);
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [filterModalVisible, setFilterModalVisible] = useState(false);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
 
+    // Error modal state
+    const [errorModal, setErrorModal] = useState({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showError = (title: string, message: string) => {
+        setErrorModal({ visible: true, title, message });
+    };
+
+    const closeErrorModal = () => {
+        setErrorModal({ visible: false, title: '', message: '' });
+    };
+
     // Filter states
     const [filters, setFilters] = useState<ViewFilterData>({
         selectedClass: '',
+        selectedSubject: '',
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0],
         status: 'all',
@@ -79,7 +112,15 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
     const {
         attendanceStats,
         getStudentAttendanceStats,
-    } = useAttendance(filters.selectedClass);
+        error: hookError, // Get error from hook
+    } = useAttendance(filters.selectedClass, filters.selectedSubject);
+
+    // Watch for errors from the hook
+    useEffect(() => {
+        if (hookError) {
+            showError(hookError.title, hookError.message);
+        }
+    }, [hookError]);
 
     useEffect(() => {
         initializeData();
@@ -87,6 +128,14 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
 
     useEffect(() => {
         if (filters.selectedClass) {
+            fetchSubjectsForClass(filters.selectedClass);
+        } else {
+            setSubjects([]);
+        }
+    }, [filters.selectedClass]);
+
+    useEffect(() => {
+        if (filters.selectedClass && filters.selectedSubject) {
             fetchAttendanceData();
         }
     }, [filters]);
@@ -99,7 +148,7 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
                 fetchAllStudents(),
             ]);
         } catch (error) {
-            console.error('Error initializing data:', error);
+            console.warn('Error initializing data:', error);
         } finally {
             setLoading(false);
         }
@@ -107,38 +156,123 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
 
     const fetchClasses = async () => {
         try {
+            if (!profile?.id) {
+                throw new Error('User profile not found');
+            }
+
+            // Fetch classes assigned to teacher
+            const { data: enrollmentData, error: enrollmentError } = await supabase
+                .from('teacher_subject_enrollments')
+                .select('class_id')
+                .eq('teacher_id', profile.id)
+                .eq('is_active', true);
+
+            if (enrollmentError) throw enrollmentError;
+
+            const classIds = [...new Set(enrollmentData?.map(e => e.class_id) || [])];
+
+            if (classIds.length === 0) {
+                const errorResponse = handleClassFetchError(new Error('No classes assigned'));
+                showError(errorResponse.title, errorResponse.message);
+                setClasses([]);
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('classes')
                 .select('id, name')
+                .in('id', classIds)
                 .order('name');
 
             if (error) throw error;
+
             setClasses(data || []);
-            if (data && data.length > 0 && !filters.selectedClass) {
-                setFilters(prev => ({ ...prev, selectedClass: data[0].id }));
-            }
-        } catch (error) {
-            console.error('Error fetching classes:', error);
+        } catch (err) {
+            console.warn('Error fetching classes:', err);
+            const errorResponse = handleClassFetchError(err);
+            showError(errorResponse.title, errorResponse.message);
+            setClasses([]);
         }
     };
 
     const fetchAllStudents = async () => {
         try {
+            if (!profile?.id) {
+                throw new Error('User profile not found');
+            }
+
+            // Get all students from classes the teacher is enrolled in
+            const { data: enrollmentData, error: enrollmentError } = await supabase
+                .from('teacher_subject_enrollments')
+                .select('class_id')
+                .eq('teacher_id', profile.id)
+                .eq('is_active', true);
+
+            if (enrollmentError) throw enrollmentError;
+
+            const classIds = [...new Set(enrollmentData?.map(e => e.class_id) || [])];
+
+            if (classIds.length === 0) {
+                setAllStudents([]);
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('students')
                 .select('id, full_name, roll_number, parent_contact, class_id')
+                .in('class_id', classIds)
                 .eq('is_deleted', false)
                 .order('full_name');
 
             if (error) throw error;
+
             setAllStudents(data || []);
-        } catch (error) {
-            console.error('Error fetching students:', error);
+        } catch (err) {
+            console.warn('Error fetching students:', err);
+            const errorResponse = handleStudentFetchError(err);
+            showError(errorResponse.title, errorResponse.message);
+            setAllStudents([]);
+        }
+    };
+
+    // Fetch subjects when class changes
+    const fetchSubjectsForClass = async (classId: string) => {
+        if (!profile?.id || !classId) return;
+
+        try {
+            const { data: subjectIDData, error: subjectIDError } = await supabase
+                .from('teacher_subject_enrollments')
+                .select('subject_id')
+                .eq('teacher_id', profile.id)
+                .eq('class_id', classId)
+                .eq('is_active', true);
+
+            if (subjectIDError) throw subjectIDError;
+
+            const enrolledSubjects = [...new Set(subjectIDData?.map(item => item.subject_id) || [])];
+
+            if (enrolledSubjects.length === 0) {
+                setSubjects([]);
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from('subjects')
+                .select('id, name')
+                .in('id', enrolledSubjects)
+                .order('name');
+
+            if (error) throw error;
+
+            setSubjects(data || []);
+        } catch (err) {
+            console.warn('Error fetching subjects:', err);
+            setSubjects([]);
         }
     };
 
     const fetchAttendanceData = async () => {
-        if (!filters.selectedClass) return;
+        if (!filters.selectedClass || !filters.selectedSubject) return;
 
         setLoading(true);
         try {
@@ -150,9 +284,11 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
                         full_name,
                         roll_number,
                         parent_contact
-                    )
+                    ),
+                    subjects (name)
                 `)
                 .eq('class_id', filters.selectedClass)
+                .eq('subject_id', filters.selectedSubject)
                 .gte('date', filters.startDate)
                 .lte('date', filters.endDate)
                 .order('date', { ascending: false });
@@ -171,8 +307,10 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
             if (error) throw error;
 
             setAttendanceData(data || []);
-        } catch (error) {
-            console.error('Error fetching attendance data:', error);
+        } catch (err) {
+            console.warn('Error fetching attendance data:', err);
+            const errorResponse = handleAttendanceFetchError(err);
+            showError(errorResponse.title, errorResponse.message);
             setAttendanceData([]);
         } finally {
             setLoading(false);
@@ -181,11 +319,14 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
 
     const handleRefresh = async () => {
         setRefreshing(true);
+        closeErrorModal(); // Close any existing errors
         try {
             await initializeData();
-            await fetchAttendanceData();
+            if (filters.selectedClass && filters.selectedSubject) {
+                await fetchAttendanceData();
+            }
         } catch (error) {
-            console.error('Error during refresh:', error);
+            console.warn('Error during refresh:', error);
         } finally {
             setRefreshing(false);
         }
@@ -193,6 +334,7 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
 
     const handleApplyFilters = (newFilters: ViewFilterData) => {
         setFilters(newFilters);
+        closeErrorModal(); // Close error when applying new filters
     };
 
     const hasActiveFilters = () => {
@@ -229,7 +371,6 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
             attendanceRate: 0,
         };
 
-        // Calculate stats for the selected date range
         const uniqueDates = [...new Set(attendanceData.map(record => record.date))];
 
         if (uniqueDates.length > 0) {
@@ -245,6 +386,7 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
 
     const renderViewTypeHeader = () => {
         const selectedClass = classes.find(c => c.id === filters.selectedClass);
+        const selectedSubject = subjects.find(s => s.id === filters.selectedSubject);
         const selectedStudent = getSelectedStudent();
 
         return (
@@ -256,7 +398,9 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
                             <View>
                                 <Text allowFontScaling={false} style={[styles.viewTypeTitle, { color: colors.text }]}>Class View</Text>
                                 <Text allowFontScaling={false} style={[styles.viewTypeSubtitle, { color: colors.textSecondary }]}>
-                                    {selectedClass?.name} ({getClassStudents().length} students)
+                                    {selectedClass?.name && selectedSubject?.name
+                                        ? `${selectedClass.name} - ${selectedSubject.name} (${getClassStudents().length} students)`
+                                        : 'Select filters'}
                                 </Text>
                             </View>
                         </>
@@ -351,7 +495,6 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
                 </View>
             );
         } else {
-            // Individual student stats
             const selectedStudent = getSelectedStudent();
             if (!selectedStudent) return null;
 
@@ -400,6 +543,16 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
             return <LoadingState message="Loading attendance records..." />;
         }
 
+        if (!filters.selectedClass || !filters.selectedSubject) {
+            return (
+                <EmptyState
+                    icon={<Users size={48} color={colors.textSecondary} />}
+                    title="Select Filters"
+                    subtitle="Please select a class and subject to view attendance records"
+                />
+            );
+        }
+
         if (attendanceData.length === 0) {
             return (
                 <EmptyState
@@ -413,7 +566,7 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
         return (
             <View style={styles.recordsContainer}>
                 <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>
-                    {/* Attendance Records ({attendanceData.length}) */}
+                    Attendance Records ({attendanceData.length})
                 </Text>
                 {attendanceData.map((record) => (
                     <AttendanceRecordCard
@@ -428,6 +581,14 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            {/* Error Modal */}
+            <ErrorModal
+                visible={errorModal.visible}
+                title={errorModal.title}
+                message={errorModal.message}
+                onClose={closeErrorModal}
+            />
+
             {renderViewTypeHeader()}
 
             <ScrollView
@@ -454,6 +615,7 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
                 visible={filterModalVisible}
                 onClose={() => setFilterModalVisible(false)}
                 classes={classes}
+                subjects={subjects}
                 students={allStudents}
                 currentFilters={filters}
                 onApplyFilters={handleApplyFilters}
@@ -461,7 +623,6 @@ export const ViewAttendance: React.FC<ViewAttendanceProps> = ({ onBack }) => {
         </SafeAreaView>
     );
 };
-
 
 const styles = StyleSheet.create({
     container: {
@@ -485,7 +646,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     viewTypeTitle: {
-        fontSize: TextSizes.medium, // smaller than before
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
     viewTypeSubtitle: {
@@ -583,126 +744,3 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
 });
-
-
-
-// const styles = StyleSheet.create({
-//     container: {
-//         flex: 1,
-//     },
-//     scrollView: {
-//         flex: 1,
-//         paddingHorizontal: 24,
-//     },
-//     viewHeader: {
-//         flexDirection: 'row',
-//         justifyContent: 'space-between',
-//         alignItems: 'center',
-//         padding: 20,
-//         borderBottomWidth: 1,
-//     },
-//     viewTypeInfo: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         gap: 12,
-//         flex: 1,
-//     },
-//     viewTypeTitle: {
-//         fontSize: 18,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     viewTypeSubtitle: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         marginTop: 2,
-//     },
-//     filterButton: {
-//         paddingHorizontal: 16,
-//         paddingVertical: 10,
-//         borderRadius: 12,
-//         position: 'relative',
-//     },
-//     filterButtonText: {
-//         color: '#ffffff',
-//         fontSize: 14,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     activeFilterDot: {
-//         position: 'absolute',
-//         top: -2,
-//         right: -2,
-//         width: 12,
-//         height: 12,
-//         borderRadius: 6,
-//         backgroundColor: '#EF4444',
-//     },
-//     activeFiltersContainer: {
-//         borderRadius: 12,
-//         padding: 16,
-//         marginTop: 20,
-//         marginBottom: 20,
-//         borderWidth: 1,
-//     },
-//     activeFiltersTitle: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-SemiBold',
-//         marginBottom: 8,
-//     },
-//     filterTagsContainer: {
-//         flexDirection: 'row',
-//         flexWrap: 'wrap',
-//         gap: 8,
-//     },
-//     filterTag: {
-//         paddingHorizontal: 12,
-//         paddingVertical: 6,
-//         borderRadius: 16,
-//         borderWidth: 1,
-//     },
-//     filterTagText: {
-//         fontSize: 12,
-//         fontFamily: 'Inter-Medium',
-//     },
-//     statsContainer: {
-//         marginBottom: 24,
-//     },
-//     statsCard: {
-//         borderRadius: 16,
-//         padding: 20,
-//         borderWidth: 1,
-//         shadowColor: '#000',
-//         shadowOffset: { width: 0, height: 2 },
-//         shadowOpacity: 0.05,
-//         shadowRadius: 4,
-//         elevation: 2,
-//     },
-//     statsCardTitle: {
-//         fontSize: 18,
-//         fontFamily: 'Inter-SemiBold',
-//         marginBottom: 16,
-//     },
-//     statsGrid: {
-//         flexDirection: 'row',
-//         justifyContent: 'space-between',
-//     },
-//     statItem: {
-//         alignItems: 'center',
-//         gap: 8,
-//     },
-//     statValue: {
-//         fontSize: 20,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     statLabel: {
-//         fontSize: 12,
-//         fontFamily: 'Inter-Medium',
-//     },
-//     recordsContainer: {
-//         marginBottom: 24,
-//     },
-//     sectionTitle: {
-//         fontSize: 20,
-//         fontFamily: 'Inter-SemiBold',
-//         marginBottom: 16,
-//     },
-// });

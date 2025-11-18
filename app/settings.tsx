@@ -76,7 +76,7 @@ export default function SettingsScreen() {
     try {
       (router as any).push('/notifications');
     } catch (err) {
-      console.error('Navigation to /notifications failed:', err);
+      console.warn('Navigation to /notifications failed:', err);
     }
   };
 

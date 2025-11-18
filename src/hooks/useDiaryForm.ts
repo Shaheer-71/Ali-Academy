@@ -117,7 +117,7 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                     .eq('class_id', newAssignment.class_id);
 
                 if (studentError) {
-                    console.error('❌ Error fetching class students:', studentError);
+                    console.warn('❌ Error fetching class students:', studentError);
                 } else if (!students || students.length === 0) {
                     console.warn('⚠️ No students found for this class');
                 } else {
@@ -141,7 +141,7 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                         .single();
 
                     if (notifError) {
-                        console.error('❌ Error creating class assignment notification:', notifError);
+                        console.warn('❌ Error creating class assignment notification:', notifError);
                     } else {
                         const recipientRows = students.map((s) => ({
                             notification_id: notif.id,
@@ -155,7 +155,7 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                             .insert(recipientRows);
 
                         if (recipientError) {
-                            console.error('❌ Error adding assignment recipients:', recipientError);
+                            console.warn('❌ Error adding assignment recipients:', recipientError);
                         } else {
 
                             let sentCount = 0;
@@ -181,7 +181,7 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                                     });
                                     sentCount++;
                                 } catch (pushError) {
-                                    console.error(`❌ Failed to send push to ${student.full_name}:`, pushError);
+                                    console.warn(`❌ Failed to send push to ${student.full_name}:`, pushError);
                                     failedCount++;
                                     continue;
                                 }
@@ -211,7 +211,7 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                     .single();
 
                 if (notifError) {
-                    console.error('❌ Error creating individual assignment notification:', notifError);
+                    console.warn('❌ Error creating individual assignment notification:', notifError);
                 } else {
                     const recipientRow = {
                         notification_id: notif.id,
@@ -225,7 +225,7 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                         .insert([recipientRow]);
 
                     if (recipientError) {
-                        console.error('❌ Error adding recipient:', recipientError);
+                        console.warn('❌ Error adding recipient:', recipientError);
                     } else {
 
                         try {
@@ -243,7 +243,7 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                                 },
                             });
                         } catch (pushError) {
-                            console.error('❌ Failed to send push notification:', pushError);
+                            console.warn('❌ Failed to send push notification:', pushError);
                         }
                     }
                 }
@@ -254,7 +254,7 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
             onSuccess();
             return true;
         } catch (error: any) {
-            console.error('🔥 Fatal Error in createAssignment:', error);
+            console.warn('🔥 Fatal Error in createAssignment:', error);
             Alert.alert('Error', error.message);
             return false;
         } finally {

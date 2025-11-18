@@ -90,7 +90,7 @@ export default function NotificationScreen() {
             if (error) throw error;
             setStudents(data || []);
         } catch (error) {
-            console.error('Error fetching students:', error);
+            console.warn('Error fetching students:', error);
         }
     };
 
@@ -211,6 +211,7 @@ export default function NotificationScreen() {
                     transparent
                     animationType="fade"
                     onRequestClose={() => setModalVisible(false)}
+                    statusBarTranslucent={true}
                 >
                     <View style={styles.modalOverlay}>
                         <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
@@ -805,7 +806,7 @@ const styles = StyleSheet.create({
     modalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '95%',
+        maxHeight: '65%',
     },
     modalHeader: {
         flexDirection: 'row',

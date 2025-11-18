@@ -85,7 +85,7 @@ export class NotificationService {
 
             return { success: true, notification };
         } catch (error) {
-            console.error('Failed to create notification:', error);
+            console.warn('Failed to create notification:', error);
             return { success: false, error };
         }
     }

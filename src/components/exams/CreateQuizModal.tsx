@@ -107,7 +107,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                     // Reset subject selection when class changes
                     setNewQuiz(prev => ({ ...prev, subject_id: '' }));
                 } catch (error) {
-                    console.error("❌ Error loading subjects:", error);
+                    console.warn("❌ Error loading subjects:", error);
                     setAvailableSubjects([]);
                 } finally {
                     setLoadingSubjects(false);
@@ -180,7 +180,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                     .eq('class_id', newQuiz.class_id);
 
                 if (studentError) {
-                    console.error('Error fetching students:', studentError);
+                    console.warn('Error fetching students:', studentError);
                     return;
                 }
 
@@ -209,7 +209,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                     .single();
 
                 if (notifError) {
-                    console.error('Error creating notification:', notifError);
+                    console.warn('Error creating notification:', notifError);
                     return;
                 }
 
@@ -250,21 +250,21 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
 
                         sentCount++;
                     } catch (studentError) {
-                        console.error(`❌ [QUIZ] Failed to send notification to student ${i + 1}:`, studentError);
+                        console.warn(`❌ [QUIZ] Failed to send notification to student ${i + 1}:`, studentError);
                         failedCount++;
                         continue;
                     }
                 }
 
                 if (recipientError) {
-                    console.error('Error adding recipients:', recipientError);
+                    console.warn('Error adding recipients:', recipientError);
                 }
             } else {
                 Alert.alert('Error', result.error?.message || 'Failed to create quiz');
             }
 
         } catch (error: any) {
-            console.error('Error creating quiz:', error);
+            console.warn('Error creating quiz:', error);
             Alert.alert('Error', error.message);
         } finally {
             setCreating(false);

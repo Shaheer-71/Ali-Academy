@@ -79,7 +79,7 @@ export default function TimetableScreen() {
                     .eq('is_active', true);
 
                 if (enrollmentError) {
-                    console.error('Error fetching teacher enrollments:', enrollmentError);
+                    console.warn('Error fetching teacher enrollments:', enrollmentError);
                     throw enrollmentError;
                 }
 
@@ -118,7 +118,7 @@ export default function TimetableScreen() {
                 }
             }
         } catch (error) {
-            console.error('Error fetching classes:', error);
+            console.warn('Error fetching classes:', error);
         }
     };
 
@@ -133,7 +133,7 @@ export default function TimetableScreen() {
                     .eq('is_active', true);
 
                 if (enrollmentError) {
-                    console.error('Error fetching teacher subject enrollments:', enrollmentError);
+                    console.warn('Error fetching teacher subject enrollments:', enrollmentError);
                     throw enrollmentError;
                 }
 
@@ -162,7 +162,7 @@ export default function TimetableScreen() {
                     .eq('is_active', true);
 
                 if (enrollmentError) {
-                    console.error('Error fetching student enrollments:', enrollmentError);
+                    console.warn('Error fetching student enrollments:', enrollmentError);
                     throw enrollmentError;
                 }
 
@@ -184,7 +184,7 @@ export default function TimetableScreen() {
                 setSubjects(data || []);
             }
         } catch (error) {
-            console.error('Error fetching subjects:', error);
+            console.warn('Error fetching subjects:', error);
         }
     };
 
