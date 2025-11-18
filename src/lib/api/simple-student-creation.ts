@@ -95,7 +95,7 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
             .eq('is_active', true);
 
         if (teacherError) {
-            console.error('Error fetching teachers:', teacherError);
+            console.warn('Error fetching teachers:', teacherError);
             throw new Error('Failed to fetch teachers for selected subjects');
         }
 
@@ -136,7 +136,7 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
             .single();
 
         if (error) {
-            console.error('Student creation error:', error);
+            console.warn('Student creation error:', error);
             throw new Error(`Failed to create student record: ${error.message}`);
         }
 
@@ -158,7 +158,7 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
             .insert(enrollments);
 
         if (enrollmentError) {
-            console.error('Enrollment creation error:', enrollmentError);
+            console.warn('Enrollment creation error:', enrollmentError);
 
             // ✅ Rollback: Delete the student if enrollments fail
             await supabase
@@ -182,7 +182,7 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
         };
 
     } catch (error: any) {
-        console.error('Error creating student:', error);
+        console.warn('Error creating student:', error);
         return { success: false, error: error.message };
     }
 };
@@ -208,7 +208,7 @@ export const getStudentsWithoutPasswords = async (): Promise<StudentsWithoutPass
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error('Error fetching unregistered students:', error);
+            console.warn('Error fetching unregistered students:', error);
             return [];
         }
 
@@ -226,7 +226,7 @@ export const getStudentsWithoutPasswords = async (): Promise<StudentsWithoutPass
         return studentsWithoutPasswords;
 
     } catch (error: any) {
-        console.error('Error fetching students without passwords:', error.message);
+        console.warn('Error fetching students without passwords:', error.message);
         return [];
     }
 };

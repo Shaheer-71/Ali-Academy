@@ -88,12 +88,13 @@ export const SwipeableAssignmentCard = ({
         }
     };
 
+
     return (
         <TouchableOpacity style={styles.swipeContainer}>
             {isTeacher && (
                 <View style={styles.actionButtons}>
                     <TouchableOpacity
-                        style={[styles.actionButton, { backgroundColor: '#fff' }]}
+                        style={[styles.actionButton, { backgroundColor: colors.background }]}
                         onPress={() => {
                             closeSwipe();
                             onEdit(assignment);
@@ -103,7 +104,7 @@ export const SwipeableAssignmentCard = ({
                         <Text allowFontScaling={false} style={[styles.actionBtnText, { color: colors.primary }]}>Edit</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.actionButton, { backgroundColor: '#fff' }]}
+                        style={[styles.actionButton, { backgroundColor: colors.background }]}
                         onPress={() => {
                             closeSwipe();
                             onDelete(assignment);
@@ -129,15 +130,15 @@ export const SwipeableAssignmentCard = ({
             >
                 <TouchableOpacity activeOpacity={1} onPress={() => { closeSwipe(); onPress(assignment); }}>
                     <View style={styles.assignmentHeader}>
-                        <View style={[styles.iconContainer, { backgroundColor: colors.primary + '15' }]}>
-                            <NotebookPen size={20} color={colors.primary} />
+                        <View style={[styles.quizIcon, { backgroundColor: colors.primary }]}>
+                            <NotebookPen size={20} color="#ffffff" />
                         </View>
                         <View style={styles.assignmentInfo}>
                             <Text allowFontScaling={false} style={[styles.assignmentTitle, { color: colors.text }]}>
                                 {assignment.title}
                             </Text>
                             <View style={styles.assignmentDetails}>
-                                <View style={styles.detailItem}>
+                                {/* <View style={styles.detailItem}>
                                     <Calendar size={12} color={colors.textSecondary} />
                                     <Text
                                         style={[
@@ -148,12 +149,20 @@ export const SwipeableAssignmentCard = ({
                                     >
                                         {formatDate(assignment.due_date)}
                                     </Text>
-                                </View>
+                                </View> */}
                                 {assignment.classes?.name && (
                                     <View style={styles.detailItem}>
-                                        <Users size={12} color={colors.textSecondary} />
+                                        <BookOpen size={12} color={colors.textSecondary} />
                                         <Text allowFontScaling={false} style={[styles.detailText, { color: colors.textSecondary }]}>
                                             {assignment.classes.name}
+                                        </Text>
+                                    </View>
+                                )}
+                                {assignment.subjects?.name && (
+                                    <View style={styles.detailItem}>
+                                        <BookOpen size={12} color={colors.textSecondary} />
+                                        <Text allowFontScaling={false} style={[styles.detailText, { color: colors.textSecondary }]}>
+                                            {assignment.subjects.name}
                                         </Text>
                                     </View>
                                 )}
@@ -165,11 +174,56 @@ export const SwipeableAssignmentCard = ({
                                         </Text>
                                     </View>
                                 )}
+
+
                             </View>
+
+
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 5 }}>
+
+                                <View style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        // borderWidth : 1,
+                                        // borderColor : "#000"   // ⭐ Center here
+                                    }}>
+                                    <Text allowFontScaling={false} style={[{ fontSize: 11, fontFamily: 'Inter-Italic', color: colors.textSecondary }]}>
+                                        By : {assignment?.profiles?.full_name}
+                                    </Text>
+                                </View>
+
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'center', 
+                                        // marginBottom: 8,
+                                        // borderWidth : 1,
+                                        // borderColor : "#000", 
+                             
+                                    }}
+                                >
+                                    <Calendar size={12} color={colors.textSecondary} />
+                                    <Text allowFontScaling={false} style={[styles.detailText, { color: colors.textSecondary }]}>
+                                        {formatDate(assignment.created_at)}
+                                    </Text>
+                                </View>
+
+                            </View>
+
+
                         </View>
+
+
                     </View>
 
-                    <Text allowFontScaling={false} style={[styles.assignmentDescription, { color: colors.textSecondary }]}>
+
+                    <Text
+                        allowFontScaling={false}
+                        style={[{ fontSize: 13, lineHeight: 18, fontFamily: 'Inter-Regular', marginBottom: 4, color: colors.textSecondary }]}
+                        numberOfLines={2}
+                    >
                         {assignment.description}
                     </Text>
 
@@ -183,6 +237,7 @@ export const SwipeableAssignmentCard = ({
                             </Text>
                         </TouchableOpacity>
                     )}
+
 
                     {isOverdue(assignment.due_date) && (
                         <View style={styles.overdueLabel}>

@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import { TextSizes } from '@/src/styles/TextSizes';
 
 const styles = StyleSheet.create({
+    
     container: {
         flex: 1,
     },
@@ -93,13 +94,23 @@ const styles = StyleSheet.create({
         elevation: 1,
     },
 
+    quizIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+
     overdueCard: {
         borderColor: '#FEE2E2',
         backgroundColor: '#FEF2F2',
     },
     assignmentHeader: {
         flexDirection: 'row',
-        marginBottom: 12,
+        marginBottom: 0,
+
     },
     iconContainer: {
         width: 40,
@@ -120,6 +131,7 @@ const styles = StyleSheet.create({
     assignmentDetails: {
         flexDirection: 'row',
         gap: 16,
+        justifyContent: 'space-between',
     },
     detailItem: {
         flexDirection: 'row',

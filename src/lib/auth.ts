@@ -140,7 +140,7 @@ export const validateStudentEmail = async (email: string) => {
     };
 
   } catch (error: any) {
-    console.error('Error validating email:', error);
+    console.warn('Error validating email:', error);
     return {
       isValid: false,
       message: 'Error validating email. Please try again.',
@@ -187,7 +187,7 @@ export const completeStudentRegistration = async (email: string, password: strin
     });
 
     if (authError) {
-      console.error('Auth signup error:', authError);
+      console.warn('Auth signup error:', authError);
       
       // Check if user already exists (shouldn't happen in this workflow but just in case)
       if (authError.message.includes('already registered') || authError.message.includes('already been registered')) {
@@ -213,7 +213,7 @@ export const completeStudentRegistration = async (email: string, password: strin
       .eq('email', email);
 
     if (updateError) {
-      console.error('Error updating student record:', updateError);
+      console.warn('Error updating student record:', updateError);
       // Don't throw - registration was successful
     }
 
@@ -232,7 +232,7 @@ export const completeStudentRegistration = async (email: string, password: strin
       });
 
     if (profileError) {
-      console.error('Error updating profile:', profileError);
+      console.warn('Error updating profile:', profileError);
       // Don't throw - registration was successful
     }
 
@@ -243,7 +243,7 @@ export const completeStudentRegistration = async (email: string, password: strin
     };
 
   } catch (error: any) {
-    console.error('Error completing registration:', error);
+    console.warn('Error completing registration:', error);
     return {
       success: false,
       message: error.message || 'Failed to complete registration'

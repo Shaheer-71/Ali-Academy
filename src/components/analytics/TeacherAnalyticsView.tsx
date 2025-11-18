@@ -6,6 +6,7 @@ import { useTheme } from '@/src/contexts/ThemeContext';
 import { useTeacherAnalytics } from '@/src/hooks/useTeacherAnalytics';
 import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
 import { User, Users, Award, ClipboardCheck, Sparkle, Sparkles } from 'lucide-react-native';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
 
 const { width } = Dimensions.get('window');
 
@@ -15,7 +16,21 @@ export const TeacherAnalyticsView = () => {
     const [selectedClass, setSelectedClass] = useState('all');
     const [refreshing, setRefreshing] = useState(false);
     const { studentPerformances, classAnalytics, classes, loading, error } = useTeacherAnalytics(profile?.id, selectedClass);
-    
+
+    const [errorModal, setErrorModal] = useState({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showError = (title: string, message: string) => {
+        setErrorModal({ visible: true, title, message });
+    };
+
+    const closeErrorModal = () => {
+        setErrorModal({ visible: false, title: '', message: '' });
+    };
+
     const screenStyle = useScreenAnimation();
     const allClassButtonAnim = useButtonAnimation();
 
@@ -29,7 +44,15 @@ export const TeacherAnalyticsView = () => {
         setRefreshing(true);
         // await fetchAllData();
         setRefreshing(false);
+
     };
+
+
+    if (error) {
+        showError('Unable to Load Performance', error);
+        // Return a minimal UI instead of full error screen
+    }
+
 
 
     const renderPerformanceCard = (student: any) => (
@@ -110,6 +133,14 @@ export const TeacherAnalyticsView = () => {
         <Animated.View style={[styles.container, screenStyle, { backgroundColor: colors.background }]}>
             {/* Header */}
             <View style={[styles.filterContainer, { marginTop: 20 }]}>
+
+                <ErrorModal
+                    visible={errorModal.visible}
+                    title={errorModal.title}
+                    message={errorModal.message}
+                    onClose={closeErrorModal}
+                />
+
                 <View style={[styles.studentHeaderContent, { marginBottom: 10 }]}>
                     {/* <User size={24} color={colors.primary} /> */}
                     <Text allowFontScaling={false} style={[styles.studentTitle, { color: colors.text }]}>Class Analytics</Text>

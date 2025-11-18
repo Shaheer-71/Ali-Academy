@@ -32,7 +32,7 @@ const ClassFilter: React.FC<ClassFilterProps> = ({
                             <Text allowFontScaling={false} style={[
                                 styles.classButtonText,
                                 { color: colors.text },
-                                selectedClass === classItem.id && { color: '#274d71' },
+                                selectedClass === classItem.id && { color: '#204040' },
                             ]}>
                                 {classItem.name}
                             </Text>

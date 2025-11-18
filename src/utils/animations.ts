@@ -27,40 +27,68 @@ export const EASING = {
 // ============================================
 // 1. SCREEN NAVIGATION ANIMATION (ENHANCED)
 // ============================================
+// ============================================
+// 1. SCREEN NAVIGATION ANIMATION (SUPER SMOOTH + SPICY)
+// ============================================
 export const createScreenAnimation = (animatedValue: Animated.Value) => {
     return {
         start: () => {
             animatedValue.setValue(0);
+
             Animated.spring(animatedValue, {
                 toValue: 1,
-                friction: 8,
-                tension: 40,
+                damping: 14,        // smoother spring
+                mass: 0.6,          // lighter feel
+                stiffness: 120,     // premium snappiness
+                velocity: 0.5,      // natural push
+                overshootClamping: false,
                 useNativeDriver: true,
             }).start();
         },
 
         style: {
             opacity: animatedValue.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0, 0.3, 1],
+                inputRange: [0, 1],
+                outputRange: [0, 1], // clean fade
             }),
+
             transform: [
+                // LAYER 1: Smooth slide
                 {
                     translateX: animatedValue.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [50, 0], // Slide from right
+                        outputRange: [55, 0], // deeper slide = premium feel
                     }),
                 },
+
+                // LAYER 2: Parallax depth (subtle vertical)
+                {
+                    translateY: animatedValue.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [18, 0], // floating entry
+                    }),
+                },
+
+                // LAYER 3: Scale depth
                 {
                     scale: animatedValue.interpolate({
+                        inputRange: [0, 0.7, 1],
+                        outputRange: [0.93, 0.98, 1], // luxurious zoom-in
+                    }),
+                },
+
+                // LAYER 4: Tiny rotation for cinematic effect
+                {
+                    rotateZ: animatedValue.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [0.95, 1], // Slight zoom in
+                        outputRange: ['2deg', '0deg'], // subtle tilt
                     }),
                 },
             ],
         },
     };
 };
+
 
 // ============================================
 // 2. BUTTON PRESS ANIMATION

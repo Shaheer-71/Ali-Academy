@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 40,
     height: 40,
-    backgroundColor: '#274d71',
+    backgroundColor: '#204040',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
 //   avatar: {
 //     width: 40,
 //     height: 40,
-//     backgroundColor: '#274d71',
+//     backgroundColor: '#204040',
 //     borderRadius: 10,
 //     alignItems: 'center',
 //     justifyContent: 'center',

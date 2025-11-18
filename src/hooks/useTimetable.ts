@@ -99,7 +99,7 @@ export const useTimetable = (): UseTimetableReturn => {
 
             setTimetable(data || []);
         } catch (err: any) {
-            console.error('Error fetching timetable:', err);
+            console.warn('Error fetching timetable:', err);
             setError(err.message || 'Failed to fetch timetable');
         } finally {
             setLoading(false);
@@ -216,7 +216,7 @@ export const useTimetable = (): UseTimetableReturn => {
             }
             return null;
         } catch (err: any) {
-            console.error('Error creating entry:', err);
+            console.warn('Error creating entry:', err);
             Alert.alert('Error', err.message || 'Failed to create entry');
             return null;
         }
@@ -291,7 +291,7 @@ export const useTimetable = (): UseTimetableReturn => {
             }
             return null;
         } catch (err: any) {
-            console.error('Error updating entry:', err);
+            console.warn('Error updating entry:', err);
             Alert.alert('Error', err.message || 'Failed to update entry');
             return null;
         }
@@ -315,7 +315,7 @@ export const useTimetable = (): UseTimetableReturn => {
             Alert.alert('Success', 'Entry deleted');
             return true;
         } catch (err: any) {
-            console.error('Error deleting entry:', err);
+            console.warn('Error deleting entry:', err);
             Alert.alert('Error', err.message || 'Failed to delete entry');
             return false;
         }
@@ -370,7 +370,7 @@ export const useTimetable = (): UseTimetableReturn => {
                     });
                 }
             } catch (err) {
-                console.error('Error checking conflicts:', err);
+                console.warn('Error checking conflicts:', err);
                 errors.push('Unable to validate time conflicts');
             }
         }

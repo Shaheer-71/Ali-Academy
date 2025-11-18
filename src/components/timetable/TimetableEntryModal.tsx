@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, StyleSheet } from 'react-native';
 import { X, Trash2 } from 'lucide-react-native';
-import { 
-    DAYS_ORDER, 
-    DAYS_SHORT, 
-    TimetableEntryWithDetails, 
-    CreateTimetableEntry, 
+import {
+    DAYS_ORDER,
+    DAYS_SHORT,
+    TimetableEntryWithDetails,
+    CreateTimetableEntry,
     UserProfile,
     Class,
     Subject,
@@ -70,6 +70,8 @@ export default function TimetableEntryModal({
             transparent={true}
             visible={modalVisible}
             onRequestClose={closeModal}
+            statusBarTranslucent={true}
+            presentationStyle="overFullScreen"
         >
             <View style={styles.modalOverlay}>
                 <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
@@ -81,7 +83,7 @@ export default function TimetableEntryModal({
                             <X size={24} color={colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
-                    
+
                     <ScrollView style={styles.modalScrollView}>
                         <View style={styles.inputGroup}>
                             <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Day</Text>
@@ -109,7 +111,7 @@ export default function TimetableEntryModal({
                                 </View>
                             </ScrollView>
                         </View>
-                        
+
                         <View style={styles.timeRow}>
                             <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
                                 <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Start Time</Text>
@@ -132,7 +134,7 @@ export default function TimetableEntryModal({
                                 />
                             </View>
                         </View>
-                        
+
                         <View style={styles.inputGroup}>
                             <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Subject</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -159,7 +161,7 @@ export default function TimetableEntryModal({
                                 </View>
                             </ScrollView>
                         </View>
-                        
+
                         <View style={styles.inputGroup}>
                             <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Room Number</Text>
                             <TextInput
@@ -170,7 +172,7 @@ export default function TimetableEntryModal({
                                 placeholderTextColor={colors.textSecondary}
                             />
                         </View>
-                        
+
                         <View style={styles.inputGroup}>
                             <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Class</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -197,7 +199,7 @@ export default function TimetableEntryModal({
                                 </View>
                             </ScrollView>
                         </View>
-                        
+
                         <View style={styles.buttonContainer}>
                             <TouchableOpacity
                                 style={[styles.submitButton, { backgroundColor: colors.primary }]}
@@ -209,7 +211,7 @@ export default function TimetableEntryModal({
                             </TouchableOpacity>
                             {editingEntry && canDelete && (
                                 <TouchableOpacity
-                                    style={[styles.deleteButton, { backgroundColor: colors.error }]}
+                                    style={[styles.deleteButton, { backgroundColor: "red" }]}
                                     onPress={() => handleDeleteEntry(editingEntry)}
                                 >
                                     <Trash2 size={20} color="#ffffff" />

@@ -97,7 +97,7 @@ export const createStudentWithAuth = async (studentData: StudentData, createdBy:
         });
 
         if (authError || !authData.user) {
-            console.error('Auth creation error:', authError);
+            console.warn('Auth creation error:', authError);
             throw new Error(`Failed to create auth user: ${authError?.message}`);
         }
 
@@ -149,7 +149,7 @@ export const createStudentWithAuth = async (studentData: StudentData, createdBy:
                 .single();
 
             if (studentError) {
-                console.error('Student creation error:', studentError);
+                console.warn('Student creation error:', studentError);
                 throw new Error(`Failed to create student record: ${studentError.message}`);
             }
 
@@ -165,14 +165,14 @@ export const createStudentWithAuth = async (studentData: StudentData, createdBy:
             };
 
         } catch (error: any) {
-            console.error('Error in student creation, auth user may need manual cleanup...');
-            console.error('Auth user ID that may need cleanup:', userId);
+            console.warn('Error in student creation, auth user may need manual cleanup...');
+            console.warn('Auth user ID that may need cleanup:', userId);
 
             throw error;
         }
 
     } catch (error: any) {
-        console.error('Error in createStudentWithAuth:', error.message);
+        console.warn('Error in createStudentWithAuth:', error.message);
         return { success: false, error: error.message };
     }
 };
@@ -183,7 +183,7 @@ export const getStudentsWithoutPasswords = async (): Promise<StudentsWithoutPass
         // console.log('getStudentsWithoutPasswords called - returning empty array (using client-side auth)');
         return [];
     } catch (error: any) {
-        console.error('Error fetching students without passwords:', error.message);
+        console.warn('Error fetching students without passwords:', error.message);
         return [];
     }
 };

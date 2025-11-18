@@ -144,7 +144,7 @@ export default function DiaryScreen() {
 
       setSubjects(uniqueSubjects);
     } catch (error) {
-      console.error('❌ Error fetching teacher subjects:', error);
+      console.warn('❌ Error fetching teacher subjects:', error);
       setSubjects([]);
     }
   };
@@ -217,7 +217,7 @@ export default function DiaryScreen() {
 
       setSubjects(subjectsList);
     } catch (error) {
-      console.error('❌ Error fetching subjects:', error);
+      console.warn('❌ Error fetching subjects:', error);
       setSubjects([]);
     }
   };
@@ -250,7 +250,7 @@ export default function DiaryScreen() {
 
       setClasses(uniqueClasses);
     } catch (error) {
-      console.error('❌ Error fetching classes:', error);
+      console.warn('❌ Error fetching classes:', error);
       setClasses([]);
     }
   };
@@ -293,7 +293,7 @@ export default function DiaryScreen() {
 
       setStudents(data || []);
     } catch (error) {
-      console.error('❌ Error fetching students:', error);
+      console.warn('❌ Error fetching students:', error);
       setStudents([]);
     }
   };
@@ -312,7 +312,7 @@ export default function DiaryScreen() {
         }));
       }
     } catch (error) {
-      console.error('Error picking document:', error);
+      console.warn('Error picking document:', error);
     }
   };
 

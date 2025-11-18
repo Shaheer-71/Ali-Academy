@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const getSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
-        console.error('Error fetching session:', error);
+        console.warn('Error fetching session:', error);
       }
       setUser(session?.user ?? null);
       setLoading(false);
@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(data);
         setProfileFetched(true);
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.warn('Error fetching profile:', error);
         setProfile(null);
       } finally {
         setLoading(false);
@@ -117,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setStudent(data);
         setProfileStudentFetched(true);
       } catch (error) {
-        console.error('🔥 Error fetching student info:', error);
+        console.warn('🔥 Error fetching student info:', error);
         setStudent(null);
       } finally {
         setLoading(false);

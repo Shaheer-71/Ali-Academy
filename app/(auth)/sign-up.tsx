@@ -5,7 +5,6 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -15,6 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { validateStudentEmail, completeStudentRegistration } from '@/src/lib/auth';
 import { GraduationCap, Eye, EyeOff, CheckCircle, User, BookOpen } from 'lucide-react-native';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import {
+    handleEmailValidationError,
+    handlePasswordSetError,
+    handleSignInAfterRegistrationError,
+    getEmailValidationError,
+    getPasswordValidationError,
+} from '@/src/utils/errorHandler/signUpErrorHandler';
 
 interface StudentData {
     id: string;
@@ -35,18 +42,34 @@ export default function SignUpScreen() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [studentData, setStudentData] = useState<StudentData | null>(null);
+    const [errorModal, setErrorModal] = useState({
+        visible: false,
+        title: '',
+        message: '',
+    });
     const { signIn } = useAuth();
 
-    const handleEmailValidation = async () => {
-        if (!email.trim()) {
-            Alert.alert('Error', 'Please enter your email address');
-            return;
-        }
+    const showError = (title: string, message: string) => {
+        setErrorModal({
+            visible: true,
+            title,
+            message,
+        });
+    };
 
-        // Basic email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            Alert.alert('Error', 'Please enter a valid email address');
+    const closeErrorModal = () => {
+        setErrorModal({
+            visible: false,
+            title: '',
+            message: '',
+        });
+    };
+
+    const handleEmailValidation = async () => {
+        // Validate email format first
+        const validationError = getEmailValidationError(email);
+        if (validationError) {
+            showError(validationError.title, validationError.message);
             return;
         }
 
@@ -58,29 +81,21 @@ export default function SignUpScreen() {
                 setStudentData(result?.student);
                 setStep(2);
             } else {
-                Alert.alert('Email Not Found', result.message);
+                showError('Email Not Found', result.message);
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to validate email');
+            const userError = handleEmailValidationError(error);
+            showError(userError.title, userError.message);
         } finally {
             setLoading(false);
         }
     };
 
     const handlePasswordSet = async () => {
-        // Validation
-        if (!password.trim()) {
-            Alert.alert('Error', 'Please enter a password');
-            return;
-        }
-
-        if (password.length < 6) {
-            Alert.alert('Error', 'Password must be at least 6 characters long');
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            Alert.alert('Error', 'Passwords do not match');
+        // Validate password fields
+        const validationError = getPasswordValidationError(password, confirmPassword);
+        if (validationError) {
+            showError(validationError.title, validationError.message);
             return;
         }
 
@@ -91,10 +106,12 @@ export default function SignUpScreen() {
             if (result.success) {
                 setStep(3);
             } else {
-                Alert.alert('Error', result.message);
+                const userError = handlePasswordSetError({ message: result.message });
+                showError(userError.title, userError.message);
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to set password');
+            const userError = handlePasswordSetError(error);
+            showError(userError.title, userError.message);
         } finally {
             setLoading(false);
         }
@@ -105,7 +122,8 @@ export default function SignUpScreen() {
             setLoading(true);
             await signIn(email, password);
         } catch (error: any) {
-            Alert.alert('Sign In Failed', error.message);
+            const userError = handleSignInAfterRegistrationError(error);
+            showError(userError.title, userError.message);
         } finally {
             setLoading(false);
         }
@@ -124,7 +142,7 @@ export default function SignUpScreen() {
     const renderEmailStep = () => (
         <View style={styles.stepContainer}>
             <View style={styles.stepHeader}>
-                <GraduationCap size={32} color="#274d71" />
+                <GraduationCap size={32} color="#204040" />
                 <Text allowFontScaling={false} style={styles.stepTitle}>Student Registration</Text>
                 <Text allowFontScaling={false} style={styles.stepDescription}>
                     Enter the email address provided by your teacher
@@ -177,7 +195,7 @@ export default function SignUpScreen() {
             {studentData && (
                 <View style={styles.studentInfoCard}>
                     <View style={styles.studentInfoHeader}>
-                        <User size={20} color="#274d71" />
+                        <User size={20} color="#204040" />
                         <Text allowFontScaling={false} style={styles.studentInfoTitle}>Student Information</Text>
                     </View>
                     <Text allowFontScaling={false} style={styles.studentName}>{studentData.full_name}</Text>
@@ -284,7 +302,7 @@ export default function SignUpScreen() {
 
             {studentData && (
                 <View style={styles.successCard}>
-                    <BookOpen size={32} color="#274d71" />
+                    <BookOpen size={32} color="#204040" />
                     <Text allowFontScaling={false} style={styles.successName}>Welcome, {studentData.full_name}!</Text>
                     <Text allowFontScaling={false} style={styles.successDetails}>
                         You can now access your student portal
@@ -320,7 +338,7 @@ export default function SignUpScreen() {
                         <View style={styles.progressSteps}>
                             <View style={[
                                 styles.progressStep,
-                                { backgroundColor: step >= 1 ? '#274d71' : '#E5E7EB' }
+                                { backgroundColor: step >= 1 ? '#204040' : '#E5E7EB' }
                             ]}>
                                 <Text allowFontScaling={false} style={[
                                     styles.progressStepText,
@@ -329,11 +347,11 @@ export default function SignUpScreen() {
                             </View>
                             <View style={[
                                 styles.progressLine,
-                                { backgroundColor: step >= 2 ? '#274d71' : '#E5E7EB' }
+                                { backgroundColor: step >= 2 ? '#204040' : '#E5E7EB' }
                             ]} />
                             <View style={[
                                 styles.progressStep,
-                                { backgroundColor: step >= 2 ? '#274d71' : '#E5E7EB' }
+                                { backgroundColor: step >= 2 ? '#204040' : '#E5E7EB' }
                             ]}>
                                 <Text allowFontScaling={false} style={[
                                     styles.progressStepText,
@@ -342,11 +360,11 @@ export default function SignUpScreen() {
                             </View>
                             <View style={[
                                 styles.progressLine,
-                                { backgroundColor: step >= 3 ? '#274d71' : '#E5E7EB' }
+                                { backgroundColor: step >= 3 ? '#204040' : '#E5E7EB' }
                             ]} />
                             <View style={[
                                 styles.progressStep,
-                                { backgroundColor: step >= 3 ? '#274d71' : '#E5E7EB' }
+                                { backgroundColor: step >= 3 ? '#204040' : '#E5E7EB' }
                             ]}>
                                 <Text allowFontScaling={false} style={[
                                     styles.progressStepText,
@@ -367,10 +385,17 @@ export default function SignUpScreen() {
                     {step === 3 && renderSuccessStep()}
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            {/* Error Modal */}
+            <ErrorModal
+                visible={errorModal.visible}
+                title={errorModal.title}
+                message={errorModal.message}
+                onClose={closeErrorModal}
+            />
         </SafeAreaView>
     );
 }
-
 
 import { TextSizes } from '@/src/styles/TextSizes';
 
@@ -404,7 +429,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     progressStepText: {
-        fontSize: TextSizes.small, // from 14
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-SemiBold',
     },
     progressLine: {
@@ -417,7 +442,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     progressLabel: {
-        fontSize: TextSizes.extraSmall, // from 12
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
         color: '#6B7280',
     },
@@ -429,14 +454,14 @@ const styles = StyleSheet.create({
         marginBottom: 32,
     },
     stepTitle: {
-        fontSize: TextSizes.large, // from 24
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
-        color: '#274d71',
+        color: '#204040',
         marginTop: 16,
         marginBottom: 8,
     },
     stepDescription: {
-        fontSize: TextSizes.medium, // from 16
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
         color: '#6B7280',
         textAlign: 'center',
@@ -449,7 +474,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     label: {
-        fontSize: TextSizes.small, // from 14
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
         color: '#374151',
         marginBottom: 8,
@@ -461,7 +486,7 @@ const styles = StyleSheet.create({
         borderColor: '#E5E7EB',
         borderRadius: 12,
         paddingHorizontal: 16,
-        fontSize: TextSizes.medium, // from 16
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
         color: '#111827',
     },
@@ -477,7 +502,7 @@ const styles = StyleSheet.create({
         flex: 1,
         height: 50,
         paddingHorizontal: 16,
-        fontSize: TextSizes.medium, // from 16
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
         color: '#111827',
     },
@@ -498,25 +523,25 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     studentInfoTitle: {
-        fontSize: TextSizes.small, // from 14
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
         color: '#374151',
         marginLeft: 8,
     },
     studentName: {
-        fontSize: TextSizes.large, // from 18
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
-        color: '#274d71',
+        color: '#204040',
         marginBottom: 4,
     },
     studentDetails: {
-        fontSize: TextSizes.small, // from 14
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         color: '#6B7280',
         marginBottom: 2,
     },
     studentEmail: {
-        fontSize: TextSizes.small, // from 14
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         color: '#6B7280',
     },
@@ -524,13 +549,13 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     requirementsTitle: {
-        fontSize: TextSizes.small, // from 14
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
         color: '#374151',
         marginBottom: 8,
     },
     requirementItem: {
-        fontSize: TextSizes.small, // from 14
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         color: '#6B7280',
         marginBottom: 4,
@@ -541,7 +566,7 @@ const styles = StyleSheet.create({
     },
     button: {
         height: 50,
-        backgroundColor: '#274d71',
+        backgroundColor: '#204040',
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
@@ -552,7 +577,7 @@ const styles = StyleSheet.create({
     },
     buttonText: {
         color: '#ffffff',
-        fontSize: TextSizes.medium, // from 16
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
     secondaryButton: {
@@ -568,7 +593,7 @@ const styles = StyleSheet.create({
     },
     secondaryButtonText: {
         color: '#374151',
-        fontSize: TextSizes.medium, // from 16
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Medium',
     },
     successCard: {
@@ -581,238 +606,16 @@ const styles = StyleSheet.create({
         marginBottom: 32,
     },
     successName: {
-        fontSize: TextSizes.large, // from 20
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
-        color: '#274d71',
+        color: '#204040',
         marginTop: 16,
         marginBottom: 8,
     },
     successDetails: {
-        fontSize: TextSizes.medium, // from 16
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
         color: '#6B7280',
         textAlign: 'center',
     },
 });
-
-
-// const styles = StyleSheet.create({
-//     container: {
-//         flex: 1,
-//         backgroundColor: '#ffffff',
-//     },
-//     keyboardView: {
-//         flex: 1,
-//     },
-//     scrollContent: {
-//         flexGrow: 1,
-//         paddingHorizontal: 24,
-//         paddingTop: 40,
-//     },
-//     progressContainer: {
-//         marginBottom: 40,
-//     },
-//     progressSteps: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         marginBottom: 12,
-//     },
-//     progressStep: {
-//         width: 32,
-//         height: 32,
-//         borderRadius: 16,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//     },
-//     progressStepText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     progressLine: {
-//         width: 60,
-//         height: 2,
-//     },
-//     progressLabels: {
-//         flexDirection: 'row',
-//         justifyContent: 'space-between',
-//         paddingHorizontal: 16,
-//     },
-//     progressLabel: {
-//         fontSize: 12,
-//         fontFamily: 'Inter-Medium',
-//         color: '#6B7280',
-//     },
-//     stepContainer: {
-//         flex: 1,
-//     },
-//     stepHeader: {
-//         alignItems: 'center',
-//         marginBottom: 32,
-//     },
-//     stepTitle: {
-//         fontSize: 24,
-//         fontFamily: 'Inter-SemiBold',
-//         color: '#274d71',
-//         marginTop: 16,
-//         marginBottom: 8,
-//     },
-//     stepDescription: {
-//         fontSize: 16,
-//         fontFamily: 'Inter-Regular',
-//         color: '#6B7280',
-//         textAlign: 'center',
-//         lineHeight: 24,
-//     },
-//     inputContainer: {
-//         marginBottom: 24,
-//     },
-//     inputGroup: {
-//         marginBottom: 20,
-//     },
-//     label: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//         color: '#374151',
-//         marginBottom: 8,
-//     },
-//     input: {
-//         height: 50,
-//         backgroundColor: '#F9FAFB',
-//         borderWidth: 1,
-//         borderColor: '#E5E7EB',
-//         borderRadius: 12,
-//         paddingHorizontal: 16,
-//         fontSize: 16,
-//         fontFamily: 'Inter-Regular',
-//         color: '#111827',
-//     },
-//     passwordContainer: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         backgroundColor: '#F9FAFB',
-//         borderWidth: 1,
-//         borderColor: '#E5E7EB',
-//         borderRadius: 12,
-//     },
-//     passwordInput: {
-//         flex: 1,
-//         height: 50,
-//         paddingHorizontal: 16,
-//         fontSize: 16,
-//         fontFamily: 'Inter-Regular',
-//         color: '#111827',
-//     },
-//     eyeButton: {
-//         padding: 15,
-//     },
-//     studentInfoCard: {
-//         backgroundColor: '#F0F9FF',
-//         borderWidth: 1,
-//         borderColor: '#0EA5E9',
-//         borderRadius: 12,
-//         padding: 16,
-//         marginBottom: 24,
-//     },
-//     studentInfoHeader: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         marginBottom: 12,
-//     },
-//     studentInfoTitle: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//         color: '#374151',
-//         marginLeft: 8,
-//     },
-//     studentName: {
-//         fontSize: 18,
-//         fontFamily: 'Inter-SemiBold',
-//         color: '#274d71',
-//         marginBottom: 4,
-//     },
-//     studentDetails: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         color: '#6B7280',
-//         marginBottom: 2,
-//     },
-//     studentEmail: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         color: '#6B7280',
-//     },
-//     passwordRequirements: {
-//         marginBottom: 24,
-//     },
-//     requirementsTitle: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//         color: '#374151',
-//         marginBottom: 8,
-//     },
-//     requirementItem: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         color: '#6B7280',
-//         marginBottom: 4,
-//     },
-//     buttonContainer: {
-//         flexDirection: 'row',
-//         gap: 12,
-//     },
-//     button: {
-//         height: 50,
-//         backgroundColor: '#274d71',
-//         borderRadius: 12,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         marginTop: 12,
-//     },
-//     buttonDisabled: {
-//         opacity: 0.6,
-//     },
-//     buttonText: {
-//         color: '#ffffff',
-//         fontSize: 16,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     secondaryButton: {
-//         height: 50,
-//         backgroundColor: '#F9FAFB',
-//         borderWidth: 1,
-//         borderColor: '#E5E7EB',
-//         borderRadius: 12,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         marginTop: 12,
-//         minWidth: 80,
-//     },
-//     secondaryButtonText: {
-//         color: '#374151',
-//         fontSize: 16,
-//         fontFamily: 'Inter-Medium',
-//     },
-//     successCard: {
-//         backgroundColor: '#F0F9FF',
-//         borderWidth: 1,
-//         borderColor: '#0EA5E9',
-//         borderRadius: 16,
-//         padding: 24,
-//         alignItems: 'center',
-//         marginBottom: 32,
-//     },
-//     successName: {
-//         fontSize: 20,
-//         fontFamily: 'Inter-SemiBold',
-//         color: '#274d71',
-//         marginTop: 16,
-//         marginBottom: 8,
-//     },
-//     successDetails: {
-//         fontSize: 16,
-//         fontFamily: 'Inter-Regular',
-//         color: '#6B7280',
-//         textAlign: 'center',
-//     },
-// });

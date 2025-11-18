@@ -52,7 +52,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                 await onRefresh();
                 // console.log('✅ Results tab refreshed successfully');
             } catch (error) {
-                console.error('❌ Error refreshing results:', error);
+                console.warn('❌ Error refreshing results:', error);
             } finally {
                 setRefreshing(false);
             }
@@ -313,33 +313,9 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
 import { TextSizes } from '@/src/styles/TextSizes'; // <--- import TextSizes
 
 const styles = StyleSheet.create({
-    resultsContainer: {
-        flex: 1,
-    },
-    filterSummary: {
+     resultCard: {
         borderRadius: 12,
         padding: 16,
-        marginBottom: 16,
-        borderWidth: 1,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    filterSummaryText: {
-        fontSize: TextSizes.medium,
-        fontFamily: 'Inter-Regular',
-        flex: 1,
-    },
-    resultCount: {
-        fontSize: TextSizes.medium,
-        fontFamily: 'Inter-SemiBold',
-    },
-    resultsList: {
-        flex: 1,
-    },
-    resultCard: {
-        borderRadius: 16,
-        padding: 20,
         marginBottom: 12,
         borderWidth: 1,
         shadowColor: '#000',
@@ -363,11 +339,6 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     resultSubject: {
-        fontSize: TextSizes.small,
-        fontFamily: 'Inter-Regular',
-        marginBottom: 2,
-    },
-    resultClass: {
         fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         marginBottom: 2,
@@ -407,6 +378,100 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-SemiBold',
         color: '#ffffff',
     },
+    resultsContainer: {
+        flex: 1,
+    },
+    filterSummary: {
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    filterSummaryText: {
+        fontSize: TextSizes.medium,
+        fontFamily: 'Inter-Regular',
+        flex: 1,
+    },
+    resultCount: {
+        fontSize: TextSizes.medium,
+        fontFamily: 'Inter-SemiBold',
+    },
+    resultsList: {
+        flex: 1,
+    },
+    // resultCard: {
+    //     borderRadius: 16,
+    //     padding: 20,
+    //     marginBottom: 12,
+    //     borderWidth: 1,
+    //     shadowColor: '#000',
+    //     shadowOffset: { width: 0, height: 2 },
+    //     shadowOpacity: 0.05,
+    //     shadowRadius: 4,
+    //     elevation: 2,
+    // },
+    // resultHeader: {
+    //     flexDirection: 'row',
+    //     justifyContent: 'space-between',
+    //     alignItems: 'center',
+    //     marginBottom: 12,
+    // },
+    // resultInfo: {
+    //     flex: 1,
+    // },
+    // resultTitle: {
+    //     fontSize: TextSizes.large,
+    //     fontFamily: 'Inter-SemiBold',
+    //     marginBottom: 4,
+    // },
+    // resultSubject: {
+    //     fontSize: TextSizes.small,
+    //     fontFamily: 'Inter-Regular',
+    //     marginBottom: 2,
+    // },
+    // resultClass: {
+    //     fontSize: TextSizes.small,
+    //     fontFamily: 'Inter-Regular',
+    //     marginBottom: 2,
+    // },
+    // studentName: {
+    //     fontSize: TextSizes.medium,
+    //     fontFamily: 'Inter-Regular',
+    // },
+    // resultStatus: {
+    //     marginLeft: 12,
+    // },
+    // resultDetails: {
+    //     flexDirection: 'row',
+    //     justifyContent: 'space-between',
+    //     marginBottom: 12,
+    // },
+    // resultDetail: {
+    //     alignItems: 'center',
+    // },
+    // resultLabel: {
+    //     fontSize: TextSizes.small,
+    //     fontFamily: 'Inter-Regular',
+    //     marginBottom: 4,
+    // },
+    // resultValue: {
+    //     fontSize: TextSizes.medium,
+    //     fontFamily: 'Inter-SemiBold',
+    // },
+    // gradeContainer: {
+    //     paddingHorizontal: 12,
+    //     paddingVertical: 6,
+    //     borderRadius: 8,
+    //     alignItems: 'center',
+    // },
+    // gradeText: {
+    //     fontSize: TextSizes.medium,
+    //     fontFamily: 'Inter-SemiBold',
+    //     color: '#ffffff',
+    // },
     pendingResult: {
         alignItems: 'center',
         paddingVertical: 12,

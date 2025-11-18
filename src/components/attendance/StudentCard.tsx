@@ -138,7 +138,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
             )} */}
 
             {recordSource === 'none' && (
-                <View style={[styles.noRecordInfo, { backgroundColor: '#F3F4F6' }]}>
+                <View style={[styles.noRecordInfo, { backgroundColor: colors.background }]}>
                     <Text allowFontScaling={false} style={[styles.noRecordText, { color: colors.textSecondary }]}>
                         ⏳ No attendance marked for {new Date(selectedDate).toLocaleDateString()}
                     </Text>
@@ -222,7 +222,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
 
             {/* Helper text for disabled buttons */}
             {buttonsDisabled && (
-                <View style={[styles.disabledInfo, { backgroundColor: '#FEF2F2' }]}>
+                <View style={[styles.disabledInfo, { backgroundColor: colors.background }]}>
                     <Text allowFontScaling={false} style={[styles.disabledInfoText, { color: '#991B1B' }]}>
                         🔒 Buttons disabled - attendance already recorded in database
                     </Text>
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#10B981',
     },
     customTimeButton: {
-        backgroundColor: '#274d71',
+        backgroundColor: '#204040',
     },
     absentButton: {
         backgroundColor: '#EF4444',
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
 //         backgroundColor: '#10B981',
 //     },
 //     customTimeButton: {
-//         backgroundColor: '#274d71',
+//         backgroundColor: '#204040',
 //     },
 //     absentButton: {
 //         backgroundColor: '#EF4444',

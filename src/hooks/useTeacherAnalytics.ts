@@ -38,10 +38,10 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     .from('teacher_subject_enrollments')
                     .select('class_id , subject_id')
                     .eq('teacher_id', profileId)
-                
+
                 if (classesIDError) {
-                    console.error('Enrollments fetch error:', classesIDError);
-                    throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+                    console.warn('Enrollments fetch error:', classesIDError);
+                    throw new Error('Unable to load your class assignments. Please check your internet connection and try again.');
                 }
 
                 let classIDs = classesIDData?.map(item => item.class_id) || [];
@@ -65,8 +65,8 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     .order('name');
 
                 if (classesError) {
-                    console.error('Classes fetch error:', classesError);
-                    throw new Error('Failed to fetch classes: ' + classesError.message);
+                    console.warn('Classes fetch error:', classesError);
+                    throw new Error('Unable to load class information. Please try refreshing the page.');
                 }
 
                 const teacherClasses = (classesData || []) as Class[];
@@ -89,7 +89,7 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     if (selectedClassExists) {
                         classIds = [selectedClass];
                     } else {
-                        console.error('Selected class not found or not assigned to teacher');
+                        console.warn('Selected class not found or not assigned to teacher');
                         classIds = teacherClasses.map(c => c.id);
                     }
                 }
@@ -117,8 +117,8 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     .eq('is_deleted', false);
 
                 if (studentsError) {
-                    console.error('Students fetch error:', studentsError);
-                    throw new Error('Failed to fetch students: ' + studentsError.message);
+                    console.warn('Students fetch error:', studentsError);
+                    throw new Error('Unable to load student information from the selected classes. Please try again.');
                 }
 
                 // CRITICAL FIX: Transform the data to ensure correct structure
@@ -145,7 +145,7 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                 const performanceData: StudentPerformance[] = [];
 
                 for (const student of students) {
-                    
+
                     try {
                         // Get attendance for this student
                         const { data: attendanceData } = await supabase
@@ -169,7 +169,7 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
 
                         const quizResults = quizResultsData || [];
                         const percentages = quizResults.map((r: any) => r.percentage || 0);
-                        const average_grade = percentages.length > 0 ? 
+                        const average_grade = percentages.length > 0 ?
                             Math.round(percentages.reduce((sum, p) => sum + p, 0) / percentages.length) : 0;
 
                         // Get total quizzes for this class
@@ -195,7 +195,7 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                         performanceData.push(studentPerformance);
 
                     } catch (studentError) {
-                        console.error(`Error fetching data for student ${student.full_name}:`, studentError);
+                        console.warn(`Error fetching data for student ${student.full_name}:`, studentError);
                         // Add default data for this student
                         performanceData.push({
                             id: student.id,
@@ -218,18 +218,18 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                 for (const classId of classIds) {
                     const className = teacherClasses.find(c => c.id === classId)?.name || 'Unknown Class';
                     const classStudents = students.filter(s => s.class_id === classId);
-                    const classPerformances = performanceData.filter(p => 
+                    const classPerformances = performanceData.filter(p =>
                         classStudents.some(s => s.id === p.id)
                     );
 
                     const total_students = classStudents.length;
-                    const average_attendance = classPerformances.length > 0 ? 
+                    const average_attendance = classPerformances.length > 0 ?
                         Math.round(classPerformances.reduce((sum, p) => sum + p.attendance_rate, 0) / classPerformances.length) : 0;
-                    const average_grade = classPerformances.length > 0 ? 
+                    const average_grade = classPerformances.length > 0 ?
                         Math.round(classPerformances.reduce((sum, p) => sum + p.average_grade, 0) / classPerformances.length) : 0;
 
-                    const topPerformer = classPerformances.length > 0 ? 
-                        classPerformances.reduce((top, current) => 
+                    const topPerformer = classPerformances.length > 0 ?
+                        classPerformances.reduce((top, current) =>
                             current.average_grade > top.average_grade ? current : top
                         ) : null;
 
@@ -249,8 +249,8 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
 
 
             } catch (err) {
-                console.error('Error in fetchAllData:', err);
-                setError(err instanceof Error ? err.message : 'Failed to fetch analytics data');
+                console.warn('Error in fetchAllData:', err);
+                setError(err instanceof Error ? err.message : 'Unable to load analytics data. Please check your internet connection and try again.');
             } finally {
                 setLoading(false);
             }
@@ -259,11 +259,11 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
         fetchAllData();
     }, [profileId, selectedClass]);
 
-    return { 
-        studentPerformances, 
-        classAnalytics, 
-        classes, 
-        loading, 
-        error 
+    return {
+        studentPerformances,
+        classAnalytics,
+        classes,
+        loading,
+        error
     };
 };

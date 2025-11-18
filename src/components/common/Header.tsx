@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
       <View style={styles.leftSection}>
         {onMenuPress && (
           <TouchableOpacity style={styles.menuButton} onPress={onMenuPress}>
-            <Menu size={24} color="#274d71" />
+            <Menu size={24} color="#204040" />
           </TouchableOpacity>
         )}
         <View>
@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
         {rightComponent || (
           showNotifications && (
             <TouchableOpacity style={styles.notificationButton}>
-              <Bell size={20} color="#274d71" />
+              <Bell size={20} color="#204040" />
               <View style={styles.notificationBadge}>
                 <SmallText color="#ffffff">3</SmallText>
               </View>
@@ -49,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
       <View style={styles.leftSection}>
         {onMenuPress && (
           <TouchableOpacity style={styles.menuButton} onPress={onMenuPress}>
-            <Menu size={24} color="#274d71" />
+            <Menu size={24} color="#204040" />
           </TouchableOpacity>
         )}
         <View>

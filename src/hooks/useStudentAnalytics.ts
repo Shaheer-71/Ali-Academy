@@ -49,8 +49,8 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     .single();
 
                 if (profileError) {
-                    console.error('Profile error:', profileError);
-                    throw new Error('Profile not found');
+                    console.warn('Profile error:', profileError);
+                    throw new Error('Unable to load your profile. Please try signing in again.');
                 }
 
                 // Find student record by email
@@ -67,18 +67,18 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     .eq('is_deleted', false)
                     .single();
 
-                    console.log("HELLO : " ,studentData)
+                console.log("HELLO : ", studentData)
 
 
                 if (studentError) {
-                    console.error('Student error:', studentError);
-                    throw new Error('Student record not found. Please contact administrator.');
+                    console.warn('Student error:', studentError);
+                    throw new Error('Your student record could not be found. Please contact your class teacher or administrator.');
                 }
 
                 const student = studentData;
 
                 if (!student.class_id) {
-                    throw new Error('Student is not assigned to any class.');
+                    throw new Error('You are not assigned to any class yet. Please contact your administrator.');
                 }
 
                 // Get student's attendance
@@ -88,7 +88,7 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     .eq('student_id', student.id);
 
                 if (attendanceError) {
-                    console.error('Attendance error:', attendanceError);
+                    console.warn('Attendance error:', attendanceError);
                 }
 
                 const totalAttendanceDays = attendanceData?.length || 0;
@@ -115,7 +115,7 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     .order('created_at', { ascending: false });
 
                 if (quizError) {
-                    console.error('Quiz results error:', quizError);
+                    console.warn('Quiz results error:', quizError);
                 }
 
                 // CRITICAL FIX: Cast the data properly to override TypeScript inference
@@ -136,7 +136,7 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
 
                 // Calculate average grade from percentages
                 const percentages = typedQuizResults.map(result => result.percentage || 0);
-                const average_grade = percentages.length > 0 ? 
+                const average_grade = percentages.length > 0 ?
                     Math.round(percentages.reduce((sum, percentage) => sum + percentage, 0) / percentages.length) : 0;
 
                 // Get recent grades (last 5)
@@ -150,7 +150,7 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     if (firstHalf.length > 0 && secondHalf.length > 0) {
                         const firstAvg = firstHalf.reduce((sum, grade) => sum + grade, 0) / firstHalf.length;
                         const secondAvg = secondHalf.reduce((sum, grade) => sum + grade, 0) / secondHalf.length;
-                        
+
                         if (secondAvg > firstAvg + 5) improvement_trend = 'up';
                         else if (secondAvg < firstAvg - 5) improvement_trend = 'down';
                     }
@@ -163,7 +163,7 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     .eq('class_id', student.class_id);
 
                 if (totalQuizzesError) {
-                    console.error('Total quizzes error:', totalQuizzesError);
+                    console.warn('Total quizzes error:', totalQuizzesError);
                 }
 
                 const total_assignments = totalQuizzes?.length || 0;
@@ -171,7 +171,7 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
 
                 // Group results by subject - NOW THIS WILL WORK
                 const subjectGroups: Record<string, { name: string; percentages: number[]; completed: number }> = {};
-                
+
                 typedQuizResults.forEach(result => {
                     // This now works because we properly cast the data structure
                     const subjectName = result.quizzes.subjects.name;
@@ -198,7 +198,7 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     .eq('class_id', student.class_id);
 
                 if (subjectQuizzesError) {
-                    console.error('Subject quizzes error:', subjectQuizzesError);
+                    console.warn('Subject quizzes error:', subjectQuizzesError);
                 }
 
                 // CRITICAL FIX: Cast the subject quiz data properly
@@ -219,7 +219,7 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
 
                 const subjects = Object.keys(subjectGroups).map(subjectName => ({
                     name: subjectName,
-                    grade: subjectGroups[subjectName].percentages.length > 0 ? 
+                    grade: subjectGroups[subjectName].percentages.length > 0 ?
                         Math.round(subjectGroups[subjectName].percentages.reduce((sum, p) => sum + p, 0) / subjectGroups[subjectName].percentages.length) : 0,
                     assignments_completed: subjectGroups[subjectName].completed,
                     total_assignments: subjectTotals[subjectName] || 0
@@ -233,7 +233,7 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     .eq('is_deleted', false);
 
                 if (classStudentsError) {
-                    console.error('Class students error:', classStudentsError);
+                    console.warn('Class students error:', classStudentsError);
                 }
 
                 const total_students = classStudents?.length || 0;
@@ -249,7 +249,7 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                     .eq('quizzes.class_id', student.class_id);
 
                 if (rankingError) {
-                    console.error('Ranking error:', rankingError);
+                    console.warn('Ranking error:', rankingError);
                 }
 
                 const studentAverages: Record<string, number[]> = {};
@@ -284,8 +284,8 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                 setAnalytics(analyticsResult);
 
             } catch (err) {
-                console.error('Error fetching student analytics:', err);
-                setError(err instanceof Error ? err.message : 'Failed to fetch analytics');
+                console.warn('Error fetching student analytics:', err);
+                setError(err instanceof Error ? err.message : 'Unable to load your performance data. Please check your internet connection and try again.');
             } finally {
                 setLoading(false);
             }

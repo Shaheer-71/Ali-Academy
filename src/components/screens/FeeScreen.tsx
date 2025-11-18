@@ -98,7 +98,7 @@ export default function FeeScreen() {
                 setSelectedClass(classesData[0].id);
             }
         } catch (error) {
-            console.error('Error loading classes:', error);
+            console.warn('Error loading classes:', error);
             Alert.alert('Error', 'Failed to load classes');
         } finally {
             setLoading(false);
@@ -115,7 +115,7 @@ export default function FeeScreen() {
             );
             setStudents(studentsData);
         } catch (error) {
-            console.error('Error loading students and fees:', error);
+            console.warn('Error loading students and fees:', error);
             Alert.alert('Error', 'Failed to load fee data');
         } finally {
             setLoading(false);
@@ -127,7 +127,7 @@ export default function FeeScreen() {
             const structure = await feeService.getFeeStructure(selectedClass);
             setFeeStructure(structure);
         } catch (error) {
-            console.error('Error loading fee structure:', error);
+            console.warn('Error loading fee structure:', error);
         }
     };
 
@@ -139,7 +139,7 @@ export default function FeeScreen() {
             setFeeRecords(payments);
             setModalVisible(true);
         } catch (error) {
-            console.error('Error fetching student fee records:', error);
+            console.warn('Error fetching student fee records:', error);
             Alert.alert('Error', 'Failed to fetch fee records');
         }
     };
@@ -153,7 +153,7 @@ export default function FeeScreen() {
             // Refresh students list
             await loadStudentsAndFees();
         } catch (error) {
-            console.error('Error refreshing data:', error);
+            console.warn('Error refreshing data:', error);
         }
     };
 
@@ -257,7 +257,7 @@ export default function FeeScreen() {
                     // console.log(`✅ [FEE_REMINDER] Push sent to student ${i + 1}: ${student.full_name}`);
                     sentCount++;
                 } catch (pushError) {
-                    console.error(`❌ [FEE_REMINDER] Failed to send push to student ${i + 1} (${student.full_name}):`, pushError);
+                    console.warn(`❌ [FEE_REMINDER] Failed to send push to student ${i + 1} (${student.full_name}):`, pushError);
                     failedCount++;
                     // Continue with next student instead of stopping
                     continue;
@@ -267,7 +267,7 @@ export default function FeeScreen() {
             Alert.alert('Success', `Fee reminder sent to ${recipientList.length} student(s)`);
             await loadStudentsAndFees();
         } catch (error: any) {
-            console.error('Error sending notifications:', error);
+            console.warn('Error sending notifications:', error);
             Alert.alert('Error', error.message || 'Failed to send notifications');
         }
     };

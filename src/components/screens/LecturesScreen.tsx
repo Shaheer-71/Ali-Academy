@@ -80,7 +80,7 @@ export default function LecturesScreen() {
           .single();
 
         if (studentError) {
-          console.error('Error fetching student class:', studentError);
+          console.warn('Error fetching student class:', studentError);
           return;
         }
 
@@ -99,7 +99,7 @@ export default function LecturesScreen() {
         .eq('is_active', true);
 
       if (enrollmentError) {
-        console.error('Error fetching enrollments:', enrollmentError);
+        console.warn('Error fetching enrollments:', enrollmentError);
         return;
       }
 
@@ -124,7 +124,7 @@ export default function LecturesScreen() {
 
       setSubjects(subjectsData || []);
     } catch (error) {
-      console.error('Error fetching subjects:', error);
+      console.warn('Error fetching subjects:', error);
       setSubjects([]);
     }
   };
@@ -187,7 +187,7 @@ export default function LecturesScreen() {
       setLectures(data || []);
       setFilteredLectures(data || []);
     } catch (error) {
-      console.error('Error loading lectures:', error);
+      console.warn('Error loading lectures:', error);
       Alert.alert('Error', 'Failed to load lectures');
       setLectures([]);
       setFilteredLectures([]);

@@ -25,7 +25,7 @@ export const useNotificationHistory = (profile: any) => {
             console.log(`✅ Fetched ${data?.length || 0} notifications`);
             setNotifications(data || []);
         } catch (error) {
-            console.error('❌ Error fetching notifications:', error);
+            console.warn('❌ Error fetching notifications:', error);
             setNotifications([]);
         } finally {
             setLoading(false);

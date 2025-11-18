@@ -150,7 +150,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         )
       );
     } catch (err) {
-      console.error('Failed to mark notification as read:', err);
+      console.warn('Failed to mark notification as read:', err);
       setError(err instanceof Error ? err.message : 'Failed to mark as read');
     }
   }, []);
@@ -185,7 +185,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }))
       );
     } catch (err) {
-      console.error('Failed to mark all as read:', err);
+      console.warn('Failed to mark all as read:', err);
       setError(err instanceof Error ? err.message : 'Failed to mark all as read');
     }
   }, [notifications]);
@@ -205,7 +205,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
     } catch (err) {
-      console.error('Failed to delete notification:', err);
+      console.warn('Failed to delete notification:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete');
     }
   }, []);
@@ -224,7 +224,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       setNotifications([]);
     } catch (err) {
-      console.error('Failed to clear notifications:', err);
+      console.warn('Failed to clear notifications:', err);
       setError(err instanceof Error ? err.message : 'Failed to clear all');
     }
   }, []);

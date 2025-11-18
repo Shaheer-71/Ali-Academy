@@ -71,7 +71,7 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
                   ]}
                   onPress={() => handleTimeSelect(time)}
                 >
-                  <Clock size={16} color={value === time ? "#ffffff" : "#274d71"} />
+                  <Clock size={16} color={value === time ? "#ffffff" : "#204040"} />
                   <Text allowFontScaling={false} style={[
                     styles.timeOptionText,
                     value === time && styles.selectedTimeOptionText,
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   selectedTimeOption: {
-    backgroundColor: '#274d71',
+    backgroundColor: '#204040',
   },
   timeOptionText: {
     fontSize: 16,

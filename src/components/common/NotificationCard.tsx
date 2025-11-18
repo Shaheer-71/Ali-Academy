@@ -125,7 +125,7 @@ export const styles = StyleSheet.create({
   },
   unreadContainer: {
     backgroundColor: '#F8FAFC',
-    borderColor: '#274d71',
+    borderColor: '#204040',
   },
   iconContainer: {
     width: 38,

@@ -28,6 +28,7 @@ import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { Lecture } from '@/src/types/lectures';
 import { lectureService } from '@/src/services/lecture.service';
+import { TextSizes } from '@/src/styles/TextSizes';
 
 interface LectureCardProps {
   lecture: Lecture;
@@ -46,12 +47,11 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
   const [isSwipedLeft, setIsSwipedLeft] = useState(false);
 
   const SWIPE_THRESHOLD = -100;
-  const ACTION_WIDTH = 160;
+  const ACTION_WIDTH = 150;
 
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gesture) => {
-        // Only allow swipe if user is teacher/admin and horizontal swipe
         return (
           (profile?.role === 'teacher' || profile?.role === 'admin') &&
           Math.abs(gesture.dx) > Math.abs(gesture.dy) &&
@@ -59,7 +59,6 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
         );
       },
       onPanResponderMove: (_, gesture) => {
-        // Only allow left swipe
         if (gesture.dx < 0) {
           translateX.setValue(Math.max(gesture.dx, -ACTION_WIDTH));
         } else if (isSwipedLeft) {
@@ -68,22 +67,20 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
       },
       onPanResponderRelease: (_, gesture) => {
         if (gesture.dx < SWIPE_THRESHOLD) {
-          // Swipe left - show actions
           setIsSwipedLeft(true);
           Animated.spring(translateX, {
             toValue: -ACTION_WIDTH,
             useNativeDriver: true,
-            tension: 100,
-            friction: 10,
+            tension: 50,
+            friction: 8,
           }).start();
         } else {
-          // Return to original position
           setIsSwipedLeft(false);
           Animated.spring(translateX, {
             toValue: 0,
             useNativeDriver: true,
-            tension: 100,
-            friction: 10,
+            tension: 50,
+            friction: 8,
           }).start();
         }
       },
@@ -95,11 +92,13 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
     Animated.spring(translateX, {
       toValue: 0,
       useNativeDriver: true,
+      tension: 50,
+      friction: 8,
     }).start();
   };
 
   const getFileIcon = () => {
-    const iconProps = { size: 20, color: '#fff' };
+    const iconProps = { size: 20, color: "#ffffff" };
 
     if (lecture.file_type.includes('video')) return <Video {...iconProps} />;
     if (lecture.file_type.includes('image')) return <ImageIcon {...iconProps} />;
@@ -186,6 +185,14 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
     );
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   const canSwipe = profile?.role === 'teacher' || profile?.role === 'admin';
 
   return (
@@ -194,30 +201,29 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
       {canSwipe && (
         <View style={styles.actionsBackground}>
           <TouchableOpacity
-            style={[styles.actionBtn,
-              // { backgroundColor: colors.warning || '#FF9500' }
-
-            ]}
+            style={[styles.actionBtn, { backgroundColor: colors.background }]}
             onPress={handleEdit}
             disabled={isDeleting}
           >
             <Edit size={20} color={colors.primary} />
-            <Text allowFontScaling={false} style={[styles.actionBtnText, { color: colors.primary }]}>Edit</Text>
+            <Text allowFontScaling={false} style={[styles.actionBtnText, { color: colors.primary }]}>
+              Edit
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionBtn,
-              // { backgroundColor: colors.error || '#FF3B30' }
-            ]}
+            style={[styles.actionBtn, { backgroundColor: colors.background }]}
             onPress={handleDelete}
             disabled={isDeleting}
           >
             {isDeleting ? (
-              <ActivityIndicator size="small" color="white" />
+              <ActivityIndicator size="small" color="#EF4444" />
             ) : (
               <>
-                <Trash2 size={20} color="#FF3B30" />
-                <Text allowFontScaling={false} style={[styles.actionBtnText, { color: "#FF3B30" }]}>Delete</Text>
+                <Trash2 size={20} color="#EF4444" />
+                <Text allowFontScaling={false} style={[styles.actionBtnText, { color: '#EF4444' }]}>
+                  Delete
+                </Text>
               </>
             )}
           </TouchableOpacity>
@@ -234,10 +240,17 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
         ]}
         {...(canSwipe ? panResponder.panHandlers : {})}
       >
-        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={resetSwipe}
+          style={[
+            styles.card,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border }
+          ]}
+        >
           {/* Header */}
           <View style={styles.header}>
-            <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
+            <View style={[styles.quizIcon, { backgroundColor: colors.primary }]}>
               {getFileIcon()}
             </View>
 
@@ -262,22 +275,15 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
                   </Text>
                 </View>
 
-                {lecture.file_size && (
+                {/* {lecture.file_size && (
                   <Text allowFontScaling={false} style={[styles.sizeText, { color: colors.textSecondary }]}>
                     {formatFileSize(lecture.file_size)}
                   </Text>
-                )}
+                )} */}
               </View>
 
               {/* Description */}
-              {lecture.description && (
-                <Text
-                  style={[styles.description, { color: colors.textSecondary }]}
-                  numberOfLines={2}
-                >
-                  {lecture.description}
-                </Text>
-              )}
+
 
               {/* Upload Info */}
               <View style={styles.uploadInfo}>
@@ -287,20 +293,33 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
                 <View style={styles.metaItem}>
                   <Calendar size={10} color={colors.textSecondary} />
                   <Text allowFontScaling={false} style={[styles.dateText, { color: colors.textSecondary }]}>
-                    {new Date(lecture.created_at).toLocaleDateString()}
+                    {formatDate(lecture.created_at)}
                   </Text>
                 </View>
               </View>
             </View>
           </View>
 
+          {lecture.description && (
+            <Text
+              allowFontScaling={false}
+              style={[styles.description, { color: colors.textSecondary }]}
+              numberOfLines={2}
+            >
+              {lecture.description}
+            </Text>
+          )}
+
           {/* Actions */}
           <View style={styles.actions}>
             <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+              style={[
+                styles.actionButton,
+                { backgroundColor: colors.primary + '10', borderColor: colors.border }
+              ]}
               onPress={handleView}
             >
-              <Eye size={13} color={lecture.has_viewed ? colors.success : colors.primary} />
+              <Eye size={14} color={lecture.has_viewed ? colors.success : colors.primary} />
               <Text allowFontScaling={false} style={[styles.actionText, { color: colors.primary }]}>
                 {lecture.has_viewed ? 'Viewed' : 'View'}
               </Text>
@@ -310,7 +329,7 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
               style={[
                 styles.actionButton,
                 {
-                  backgroundColor: colors.background,
+                  backgroundColor: colors.primary + '10',
                   borderColor: colors.border,
                   opacity: lecture.youtube_link ? 1 : 0.5
                 }
@@ -318,31 +337,49 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
               onPress={handleYouTube}
               disabled={!lecture.youtube_link}
             >
-              <Youtube size={13} color={lecture.youtube_link ? '#FF0000' : colors.textSecondary} />
-              <Text allowFontScaling={false} style={[styles.actionText, { color: lecture.youtube_link ? colors.text : colors.textSecondary }]}>
+              <Youtube size={14} color={lecture.youtube_link ? '#FF0000' : colors.textSecondary} />
+              <Text
+                allowFontScaling={false}
+                style={[
+                  styles.actionText,
+                  { color: lecture.youtube_link ? colors.primary : colors.textSecondary }
+                ]}
+              >
                 YouTube
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+              style={[
+                styles.actionButton,
+                { backgroundColor: colors.primary + '10', borderColor: colors.border }
+              ]}
               onPress={handleShare}
             >
-              <Share2 size={13} color={colors.primary} />
-              <Text allowFontScaling={false} style={[styles.actionText, { color: colors.primary }]}>Share</Text>
+              <Share2 size={14} color={colors.primary} />
+              <Text allowFontScaling={false} style={[styles.actionText, { color: colors.primary }]}>
+                Share
+              </Text>
             </TouchableOpacity>
           </View>
-        </View>
+
+        </TouchableOpacity>
       </Animated.View>
     </View>
   );
 }
 
-import { TextSizes } from '@/src/styles/TextSizes';
-
 const styles = StyleSheet.create({
+  quizIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
   container: {
-    marginBottom: 8,
+    marginBottom: 12,
     position: 'relative',
   },
   actionsBackground: {
@@ -353,211 +390,105 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
+    backgroundColor: '#fff',
   },
   actionBtn: {
-    width: 70,
+    width: 75,
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: 4,
+    backgroundColor: '#fff',
   },
   actionBtnText: {
-    fontSize: TextSizes.buttonText,
+    fontSize: 12,
     fontFamily: 'Inter-SemiBold',
-    textAlign: 'center',
   },
   cardWrapper: {
     width: '100%',
   },
   card: {
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
   },
   header: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 6,
+    width: 40,
+    height: 40,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 12,
   },
   info: {
     flex: 1,
   },
   title: {
-    fontSize: TextSizes.header,
+    fontSize: TextSizes.xlarge,
     fontFamily: 'Inter-SemiBold',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   metaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 2,
+    gap: 12,
+    marginBottom: 4,
+    justifyContent: 'space-between',
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
   },
   metaText: {
-    fontSize: TextSizes.normal,
+    fontSize: 11,
     fontFamily: 'Inter-Regular',
   },
   sizeText: {
-    fontSize: TextSizes.small,
+    fontSize: 10,
     fontFamily: 'Inter-Regular',
   },
   description: {
-    fontSize: TextSizes.xlarge,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     fontFamily: 'Inter-Regular',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   uploadInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 4,
   },
   uploadedBy: {
-    fontSize: TextSizes.small,
+    fontSize: 11,
     fontFamily: 'Inter-Italic',
   },
   dateText: {
-    fontSize: TextSizes.tiny,
+    fontSize: 10,
     fontFamily: 'Inter-Regular',
   },
   actions: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 8,
+    marginTop: 12,
   },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 6,
     borderWidth: 1,
-    gap: 2,
+    gap: 4,
   },
   actionText: {
-    fontSize: TextSizes.buttonText,
+    fontSize: 11,
     fontFamily: 'Inter-SemiBold',
   },
 });
-
-
-
-// const styles = StyleSheet.create({
-//   container: {
-//     marginBottom: 12,
-//     position: 'relative',
-//   },
-//   actionsBackground: {
-//     position: 'absolute',
-//     right: 0,
-//     top: 0,
-//     bottom: 0,
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     justifyContent: 'flex-end',
-//   },
-//   actionBtn: {
-//     width: 80,
-//     height: '100%',
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     gap: 4,
-//   },
-//   actionBtnText: {
-//     color: 'white',
-//     fontSize: 12,
-//     fontWeight: '600',
-//   },
-//   cardWrapper: {
-//     width: '100%',
-//   },
-//   card: {
-//     borderRadius: 12,
-//     padding: 16,
-//     borderWidth: 1,
-//   },
-//   header: {
-//     flexDirection: 'row',
-//     marginBottom: 12,
-//   },
-//   iconContainer: {
-//     width: 40,
-//     height: 40,
-//     borderRadius: 8,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     marginRight: 12,
-//   },
-//   info: {
-//     flex: 1,
-//   },
-//   title: {
-//     fontSize: 16,
-//     fontWeight: '600',
-//     marginBottom: 4,
-//   },
-//   metaRow: {
-//     flexDirection: 'row',
-//     flexWrap: 'wrap',
-//     gap: 12,
-//     marginBottom: 4,
-//   },
-//   metaItem: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     gap: 4,
-//   },
-//   metaText: {
-//     fontSize: 11,
-//   },
-//   sizeText: {
-//     fontSize: 10,
-//   },
-//   description: {
-//     fontSize: 13,
-//     lineHeight: 18,
-//     marginBottom: 4,
-//   },
-//   uploadInfo: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//     alignItems: 'center',
-//   },
-//   uploadedBy: {
-//     fontSize: 11,
-//     fontStyle: 'italic',
-//   },
-//   dateText: {
-//     fontSize: 10,
-//   },
-//   actions: {
-//     flexDirection: 'row',
-//     gap: 8,
-//   },
-//   actionButton: {
-//     flex: 1,
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     paddingVertical: 8,
-//     borderRadius: 6,
-//     borderWidth: 1,
-//     gap: 4,
-//   },
-//   actionText: {
-//     fontSize: 11,
-//     fontWeight: '500',
-//   },
-// });
