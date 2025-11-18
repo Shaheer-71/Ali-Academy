@@ -26,11 +26,119 @@ import {
   X,
   ChevronRight,
   Send,
+  User,
 } from 'lucide-react-native';
 import TopSections from '@/src/components/common/TopSections';
 import { useRouter } from 'expo-router';
 import { TextSizes } from '@/src/styles/TextSizes';
 import { useScreenAnimation } from '@/src/utils/animations';
+import { supabase } from '@/src/lib/supabase';
+
+
+function PasswordChangeModal({
+  visible,
+  colors,
+  isLoading,
+  passwordData,
+  setPasswordData,
+  handlePasswordChange,
+  setPasswordModalVisible
+}) {
+  return (
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent={true}
+      onRequestClose={() => setPasswordModalVisible(false)}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalContainer}
+      >
+        <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Change Password
+            </Text>
+            <TouchableOpacity onPress={() => setPasswordModalVisible(false)}>
+              <X size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.modalBody}>
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>
+                Current Password
+              </Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
+                value={passwordData.currentPassword}
+                onChangeText={(text) => setPasswordData(prev => ({ ...prev, currentPassword: text }))}
+                placeholder="Enter current password"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>
+                New Password
+              </Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
+                value={passwordData.newPassword}
+                onChangeText={(text) => setPasswordData(prev => ({ ...prev, newPassword: text }))}
+                placeholder="Enter new password"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>
+                Confirm New Password
+              </Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
+                value={passwordData.confirmPassword}
+                onChangeText={(text) => setPasswordData(prev => ({ ...prev, confirmPassword: text }))}
+                placeholder="Confirm new password"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+              />
+            </View>
+          </View>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.background }]}
+              onPress={() => setPasswordModalVisible(false)}
+            >
+              <Text style={[styles.buttonText, { color: colors.text }]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.primary }]}
+              onPress={handlePasswordChange}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#b6d509" />
+              ) : (
+                <Text style={[styles.buttonText, { color: '#b6d509' }]}>
+                  Change Password
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 
 export default function SettingsScreen() {
   const { profile, signOut } = useAuth();
@@ -60,13 +168,17 @@ export default function SettingsScreen() {
 
     setIsLoading(true);
     try {
-      // Call your API to change password
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase.auth.updateUser({
+        password: passwordData.newPassword,
+      });
+
+      if (error) throw error;
+
       Alert.alert('Success', 'Password changed successfully');
       setPasswordModalVisible(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
-      Alert.alert('Error', 'Failed to change password');
+      Alert.alert('Error', error.message || 'Failed to change password');
     } finally {
       setIsLoading(false);
     }
@@ -75,6 +187,14 @@ export default function SettingsScreen() {
   const handleNavigateToNotifications = () => {
     try {
       (router as any).push('/notifications');
+    } catch (err) {
+      console.warn('Navigation to /notifications failed:', err);
+    }
+  };
+
+  const handleNavigateToStudents = () => {
+    try {
+      (router as any).push('/students');
     } catch (err) {
       console.warn('Navigation to /notifications failed:', err);
     }
@@ -120,6 +240,22 @@ export default function SettingsScreen() {
           icon: Lock,
           onPress: () => setPasswordModalVisible(true),
         },
+        ...(profile?.role === 'teacher' && profile?.email === 'rafeh@aliacademy.edu'
+          ? [
+            {
+              title: 'Manage Students',
+              subtitle: 'Manage your students here',
+              icon: User,
+              onPress: handleNavigateToStudents,
+            },
+            {
+              title: 'Create Notification',
+              subtitle: 'Send notifications to users',
+              icon: Send,
+              onPress: handleNavigateToNotifications,
+            },
+          ]
+          : []),
       ],
     },
     {
@@ -135,98 +271,6 @@ export default function SettingsScreen() {
     },
   ];
 
-  const PasswordChangeModal = () => (
-    <Modal
-      visible={passwordModalVisible}
-      animationType="fade"
-      transparent={true}
-      onRequestClose={() => setPasswordModalVisible(false)}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.modalContainer}
-      >
-        <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-          <View style={styles.modalHeader}>
-            <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>
-              Change Password
-            </Text>
-            <TouchableOpacity onPress={() => setPasswordModalVisible(false)}>
-              <X size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.modalBody}>
-            <View style={styles.inputGroup}>
-              <Text allowFontScaling={false} style={[styles.inputLabel, { color: colors.text }]}>
-                Current Password
-              </Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
-                value={passwordData.currentPassword}
-                onChangeText={(text) => setPasswordData({ ...passwordData, currentPassword: text })}
-                placeholder="Enter current password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text allowFontScaling={false} style={[styles.inputLabel, { color: colors.text }]}>
-                New Password
-              </Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
-                value={passwordData.newPassword}
-                onChangeText={(text) => setPasswordData({ ...passwordData, newPassword: text })}
-                placeholder="Enter new password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text allowFontScaling={false} style={[styles.inputLabel, { color: colors.text }]}>
-                Confirm New Password
-              </Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
-                value={passwordData.confirmPassword}
-                onChangeText={(text) => setPasswordData({ ...passwordData, confirmPassword: text })}
-                placeholder="Confirm new password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-              />
-            </View>
-          </View>
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.background }]}
-              onPress={() => setPasswordModalVisible(false)}
-            >
-              <Text allowFontScaling={false} style={[styles.buttonText, { color: colors.text }]}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.primary }]}
-              onPress={handlePasswordChange}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#b6d509" />
-              ) : (
-                <Text allowFontScaling={false} style={[styles.buttonText, { color: '#b6d509' }]}>
-                  Change Password
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
 
   return (
     <Animated.View style={[styles.container, screenStyle, { backgroundColor: colors.background }]}>
@@ -275,8 +319,24 @@ export default function SettingsScreen() {
           </View>
 
           {/* Create Notification Button - Visible only to superadmins */}
-          {(profile?.role === 'teacher' && profile?.email === 'rafeh@aliacademy.edu') && (
+          {/* {(profile?.role === 'teacher' && profile?.email === 'rafeh@aliacademy.edu') && (
             <View style={styles.section}>
+              <TouchableOpacity
+                style={[styles.settingButton, { backgroundColor: colors.cardBackground }]}
+                onPress={handleNavigateToStudents}
+              >
+                <User size={20} color={colors.primary} />
+                <View style={styles.buttonContent}>
+                  <Text allowFontScaling={false} style={[styles.buttonTitle, { color: colors.text }]}>
+                    Manage Students
+                  </Text>
+                  <Text allowFontScaling={false} style={[styles.buttonSubtitle, { color: colors.textSecondary }]}>
+                    Manage your students here
+                  </Text>
+                </View>
+                <ChevronRight size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={[styles.settingButton, { backgroundColor: colors.cardBackground }]}
                 onPress={handleNavigateToNotifications}
@@ -293,7 +353,7 @@ export default function SettingsScreen() {
                 <ChevronRight size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-          )}
+          )} */}
 
           {/* Settings Sections */}
           {settingsOptions.map((section, sectionIndex) => (
@@ -345,7 +405,16 @@ export default function SettingsScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      <PasswordChangeModal />
+      <PasswordChangeModal
+        visible={passwordModalVisible}
+        colors={colors}
+        isLoading={isLoading}
+        passwordData={passwordData}
+        setPasswordData={setPasswordData}
+        handlePasswordChange={handlePasswordChange}
+        setPasswordModalVisible={setPasswordModalVisible}
+      />
+
     </Animated.View>
   );
 }

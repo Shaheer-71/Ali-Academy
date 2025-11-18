@@ -57,7 +57,8 @@ function RootLayoutNav() {
     const inStudentGroup = segments[0] === '(student)';
     const inSettings = segments[0] === 'settings';
     const inFee = segments[0] === 'fee';
-  const inNotifications = segments[0] === 'notifications';
+    const inNotifications = segments[0] === 'notifications';
+    const inStudents = segments[0] === 'students';
 
 
     if (!user || !profile) {
@@ -69,8 +70,8 @@ function RootLayoutNav() {
     }
 
     // Allow access to settings/fee/notifications for authenticated users - STOP HERE
-    if (inSettings || inFee || inNotifications) {
-      console.log('User is in settings/fee/notifications, allowing access');
+    if (inSettings || inFee || inNotifications || inStudents) {
+      console.log('User is in settings/fee/notifications/students, allowing access');
       return; // This will stop the redirect
     }
 
@@ -90,7 +91,7 @@ function RootLayoutNav() {
     }
 
     // Only redirect to role groups if user is NOT in settings and NOT already in correct group
-    if (profile.role === 'teacher' && !inTeacherGroup && !inSettings && !inNotifications) {
+    if (profile.role === 'teacher' && !inTeacherGroup && !inSettings && !inNotifications && !inStudents) {
       // console.log('Redirecting teacher to teacher group');
       router.replace('/(teacher)');
     } else if (profile.role === 'student' && !inStudentGroup && !inSettings) {
@@ -105,10 +106,12 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" options={{ headerShown: false}} />
       <Stack.Screen name="(teacher)" options={{ headerShown: false }} />
-      <Stack.Screen name="(student)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="(student)" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="fee" options={{ headerShown: false }} />
+      <Stack.Screen name="notifications" options={{ headerShown: false }} />
+      <Stack.Screen name="students" options={{ headerShown: false }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );
