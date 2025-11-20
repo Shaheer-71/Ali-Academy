@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import { TextSizes } from '@/src/styles/TextSizes';
 
 const styles = StyleSheet.create({
-    
+
     container: {
         flex: 1,
     },
@@ -161,6 +161,8 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start',
         gap: 6,
         marginBottom: 8,
+        width: '100%',
+        justifyContent: "center"
     },
     attachmentText: {
         fontSize: TextSizes.medium,

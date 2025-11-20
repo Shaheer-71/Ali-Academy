@@ -1,8 +1,14 @@
+// ===================================
 // hooks/useDiaryForm.ts
-import { useState, useCallback } from 'react';
-import { supabase } from '@/src/lib/supabase';
+// ===================================
 import { uploadToCloudinary } from '@/src/lib/cloudinary';
 import { sendPushNotification } from '@/src/lib/notifications';
+import {
+    handleAssignmentCreateError,
+    handleCloudinaryUploadErrorForDiary,
+    handleNotificationErrorForDiary,
+} from '@/src/utils/errorHandler/diaryErrorHandler';
+import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 
 interface FormState {
@@ -30,7 +36,11 @@ interface DiaryAssignment {
     students?: { full_name: string };
 }
 
-export const useDiaryForm = (profile: any, onSuccess: () => void) => {
+export const useDiaryForm = (
+    profile: any,
+    onSuccess: () => void,
+    showError?: (error: any, handler?: (error: any) => any) => void
+) => {
     const [uploading, setUploading] = useState(false);
     const [editingAssignment, setEditingAssignment] = useState<DiaryAssignment | null>(null);
     const [newAssignment, setNewAssignment] = useState<FormState>({
@@ -62,18 +72,31 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
         classes: any[],
         subjects: any[],
     ) => {
+        // Validation
         if (!newAssignment.title || !newAssignment.description || !newAssignment.due_date) {
-            Alert.alert('Error', 'Please fill in all required fields');
+            if (showError) {
+                showError({ message: 'Please fill in all required fields' });
+            } else {
+                Alert.alert('Error', 'Please fill in all required fields');
+            }
             return false;
         }
 
         if (newAssignment.assignTo === 'class' && !newAssignment.class_id) {
-            Alert.alert('Error', 'Please select a class');
+            if (showError) {
+                showError({ message: 'Please select a class' });
+            } else {
+                Alert.alert('Error', 'Please select a class');
+            }
             return false;
         }
 
         if (newAssignment.assignTo === 'student' && !newAssignment.student_id) {
-            Alert.alert('Error', 'Please select a student');
+            if (showError) {
+                showError({ message: 'Please select a student' });
+            } else {
+                Alert.alert('Error', 'Please select a student');
+            }
             return false;
         }
 
@@ -82,9 +105,22 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
         try {
             let fileUrl: string | undefined;
 
+            // Upload file if present
             if (newAssignment.file) {
-                const uploadResult = await uploadToCloudinary(newAssignment.file, 'raw');
-                fileUrl = uploadResult.secure_url;
+                try {
+                    const uploadResult = await uploadToCloudinary(newAssignment.file, 'raw');
+                    fileUrl = uploadResult.secure_url;
+                } catch (uploadError: any) {
+                    console.warn('❌ File upload error:', uploadError);
+
+                    if (showError) {
+                        showError(uploadError, handleCloudinaryUploadErrorForDiary);
+                    } else {
+                        Alert.alert('Upload Error', uploadError.message || 'Failed to upload file');
+                    }
+
+                    return false;
+                }
             }
 
             const assignmentData = {
@@ -98,7 +134,6 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                 assigned_by: profile!.id,
             };
 
-
             const { data: assignment, error } = await supabase
                 .from('diary_assignments')
                 .insert([assignmentData])
@@ -107,62 +142,47 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
 
             if (error) throw error;
 
+            // Handle notifications (non-blocking)
+            try {
+                if (newAssignment.assignTo === 'class' && newAssignment.class_id) {
+                    const { data: students, error: studentError } = await supabase
+                        .from('students')
+                        .select('id, full_name')
+                        .eq('class_id', newAssignment.class_id);
 
-            // CASE 1: Class-wide assignment
-            if (newAssignment.assignTo === 'class' && newAssignment.class_id) {
+                    if (studentError) {
+                        console.warn('❌ Error fetching class students:', studentError);
+                    } else if (students && students.length > 0) {
+                        const { data: notif, error: notifError } = await supabase
+                            .from('notifications')
+                            .insert([
+                                {
+                                    type: 'assignment_added',
+                                    title: `New Assignment: ${newAssignment.title}`,
+                                    message: `A new assignment has been added for your class. Due date: ${newAssignment.due_date}.`,
+                                    entity_type: 'assignment',
+                                    entity_id: assignment.id,
+                                    created_by: profile!.id,
+                                    target_type: 'students',
+                                    target_id: newAssignment.class_id,
+                                    priority: 'medium',
+                                },
+                            ])
+                            .select('id')
+                            .single();
 
-                const { data: students, error: studentError } = await supabase
-                    .from('students')
-                    .select('id, full_name')
-                    .eq('class_id', newAssignment.class_id);
+                        if (!notifError && notif) {
+                            const recipientRows = students.map((s) => ({
+                                notification_id: notif.id,
+                                user_id: s.id,
+                                is_read: false,
+                                is_deleted: false,
+                            }));
 
-                if (studentError) {
-                    console.warn('❌ Error fetching class students:', studentError);
-                } else if (!students || students.length === 0) {
-                    console.warn('⚠️ No students found for this class');
-                } else {
+                            await supabase.from('notification_recipients').insert(recipientRows);
 
-                    const { data: notif, error: notifError } = await supabase
-                        .from('notifications')
-                        .insert([
-                            {
-                                type: 'assignment_added',
-                                title: `New Assignment: ${newAssignment.title}`,
-                                message: `A new assignment has been added for your class. Due date: ${newAssignment.due_date}.`,
-                                entity_type: 'assignment',
-                                entity_id: assignment.id,
-                                created_by: profile!.id,
-                                target_type: 'students',
-                                target_id: newAssignment.class_id,
-                                priority: 'medium',
-                            },
-                        ])
-                        .select('id')
-                        .single();
-
-                    if (notifError) {
-                        console.warn('❌ Error creating class assignment notification:', notifError);
-                    } else {
-                        const recipientRows = students.map((s) => ({
-                            notification_id: notif.id,
-                            user_id: s.id,
-                            is_read: false,
-                            is_deleted: false,
-                        }));
-
-                        const { error: recipientError } = await supabase
-                            .from('notification_recipients')
-                            .insert(recipientRows);
-
-                        if (recipientError) {
-                            console.warn('❌ Error adding assignment recipients:', recipientError);
-                        } else {
-
-                            let sentCount = 0;
-                            let failedCount = 0;
-
-                            for (let i = 0; i < students.length; i++) {
-                                const student = students[i];
+                            // Send push notifications
+                            for (const student of students) {
                                 try {
                                     await sendPushNotification({
                                         userId: student.id,
@@ -179,54 +199,40 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                                             timestamp: new Date().toISOString(),
                                         },
                                     });
-                                    sentCount++;
                                 } catch (pushError) {
                                     console.warn(`❌ Failed to send push to ${student.full_name}:`, pushError);
-                                    failedCount++;
-                                    continue;
                                 }
                             }
-
                         }
                     }
-                }
-            } else if (newAssignment.assignTo === 'student' && newAssignment.student_id) {
+                } else if (newAssignment.assignTo === 'student' && newAssignment.student_id) {
+                    const { data: notif, error: notifError } = await supabase
+                        .from('notifications')
+                        .insert([
+                            {
+                                type: 'assignment_added',
+                                title: `Assignment: ${newAssignment.title}`,
+                                message: `You have received a new assignment. Due date: ${newAssignment.due_date}.`,
+                                entity_type: 'assignment',
+                                entity_id: assignment.id,
+                                created_by: profile!.id,
+                                target_type: 'individual',
+                                target_id: newAssignment.student_id,
+                                priority: 'medium',
+                            },
+                        ])
+                        .select('id')
+                        .single();
 
-                const { data: notif, error: notifError } = await supabase
-                    .from('notifications')
-                    .insert([
-                        {
-                            type: 'assignment_added',
-                            title: `Assignment: ${newAssignment.title}`,
-                            message: `You have received a new assignment. Due date: ${newAssignment.due_date}.`,
-                            entity_type: 'assignment',
-                            entity_id: assignment.id,
-                            created_by: profile!.id,
-                            target_type: 'individual',
-                            target_id: newAssignment.student_id,
-                            priority: 'medium',
-                        },
-                    ])
-                    .select('id')
-                    .single();
+                    if (!notifError && notif) {
+                        const recipientRow = {
+                            notification_id: notif.id,
+                            user_id: newAssignment.student_id,
+                            is_read: false,
+                            is_deleted: false,
+                        };
 
-                if (notifError) {
-                    console.warn('❌ Error creating individual assignment notification:', notifError);
-                } else {
-                    const recipientRow = {
-                        notification_id: notif.id,
-                        user_id: newAssignment.student_id,
-                        is_read: false,
-                        is_deleted: false,
-                    };
-
-                    const { error: recipientError } = await supabase
-                        .from('notification_recipients')
-                        .insert([recipientRow]);
-
-                    if (recipientError) {
-                        console.warn('❌ Error adding recipient:', recipientError);
-                    } else {
+                        await supabase.from('notification_recipients').insert([recipientRow]);
 
                         try {
                             await sendPushNotification({
@@ -247,20 +253,32 @@ export const useDiaryForm = (profile: any, onSuccess: () => void) => {
                         }
                     }
                 }
+            } catch (notificationError: any) {
+                // Non-blocking: just log and show warning if handler exists
+                console.warn('⚠️ Notification error (non-blocking):', notificationError);
+
+                if (showError) {
+                    showError(notificationError, handleNotificationErrorForDiary);
+                }
             }
 
-            Alert.alert('Success', 'Assignment created successfully');
             resetForm();
             onSuccess();
             return true;
         } catch (error: any) {
             console.warn('🔥 Fatal Error in createAssignment:', error);
-            Alert.alert('Error', error.message);
+
+            if (showError) {
+                showError(error, handleAssignmentCreateError);
+            } else {
+                Alert.alert('Error', error.message || 'Failed to create assignment');
+            }
+
             return false;
         } finally {
             setUploading(false);
         }
-    }, [newAssignment, profile, resetForm, onSuccess]);
+    }, [newAssignment, profile, resetForm, onSuccess, showError]);
 
     return {
         uploading,

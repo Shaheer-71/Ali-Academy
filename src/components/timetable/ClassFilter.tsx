@@ -2,6 +2,8 @@
 import React from 'react';
 import { View, ScrollView, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { Class, TimetableFilters, ThemeColors } from '@/src/types/timetable';
+import { handleFilterError, ErrorResponse } from '@/src/utils/errorHandler/timetableErrorHandler';
+
 
 interface ClassFilterProps {
     classes: Class[];
@@ -12,6 +14,7 @@ interface ClassFilterProps {
 }
 
 export default function ClassFilter({ classes, filters, setFilters, colors, loading }: ClassFilterProps) {
+    
     return (
         <View style={styles.classFilter}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>

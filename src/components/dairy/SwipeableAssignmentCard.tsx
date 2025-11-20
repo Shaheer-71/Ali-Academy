@@ -182,12 +182,12 @@ export const SwipeableAssignmentCard = ({
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 5 }}>
 
                                 <View style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        // borderWidth : 1,
-                                        // borderColor : "#000"   // ⭐ Center here
-                                    }}>
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    // borderWidth : 1,
+                                    // borderColor : "#000"   // ⭐ Center here
+                                }}>
                                     <Text allowFontScaling={false} style={[{ fontSize: 11, fontFamily: 'Inter-Italic', color: colors.textSecondary }]}>
                                         By : {assignment?.profiles?.full_name}
                                     </Text>
@@ -197,11 +197,11 @@ export const SwipeableAssignmentCard = ({
                                     style={{
                                         flexDirection: 'row',
                                         alignItems: 'center',
-                                        justifyContent: 'center', 
+                                        justifyContent: 'center',
                                         // marginBottom: 8,
                                         // borderWidth : 1,
                                         // borderColor : "#000", 
-                             
+
                                     }}
                                 >
                                     <Calendar size={12} color={colors.textSecondary} />
@@ -227,16 +227,36 @@ export const SwipeableAssignmentCard = ({
                         {assignment.description}
                     </Text>
 
-                    {assignment.file_url && (
-                        <TouchableOpacity
-                            style={[styles.attachmentButton, { backgroundColor: colors.primary + '10' }]}
+                    {/* {assignment.file_url && ( */}
+                    <TouchableOpacity
+                        style={[
+                            styles.attachmentButton,
+                            {
+                                backgroundColor: colors.primary + '10',
+                                borderColor: colors.border,
+                                opacity: assignment.file_url ? 1 : 0.5
+                            }
+                        ]}
+                        onPress={() => { closeSwipe(); onPress(assignment); }}
+                        disabled={!assignment.file_url}
+                    >
+                        <FileText
+                            size={14}
+                            color={assignment.file_url ? colors.primary : colors.textSecondary}
+                        />
+
+                        <Text
+                            allowFontScaling={false}
+                            style={[
+                                styles.attachmentText,
+                                { color: assignment.file_url ? colors.primary : colors.textSecondary }
+                            ]}
                         >
-                            <FileText size={14} color={colors.primary} />
-                            <Text allowFontScaling={false} style={[styles.attachmentText, { color: colors.primary }]}>
-                                View Attachment
-                            </Text>
-                        </TouchableOpacity>
-                    )}
+                            Attachment
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* )} */}
 
 
                     {isOverdue(assignment.due_date) && (

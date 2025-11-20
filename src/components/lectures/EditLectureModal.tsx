@@ -16,6 +16,9 @@ import { X, Save, Youtube } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { lectureService } from '@/src/services/lecture.service';
 import { Lecture } from '@/src/types/lectures';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { handleLectureUpdateError } from '@/src/utils/errorHandler/lectureErrorHandler';
+import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
 
 interface EditLectureModalProps {
     visible: boolean;
@@ -36,6 +39,21 @@ export default function EditLectureModal({
     const [description, setDescription] = useState('');
     const [youtubeLink, setYoutubeLink] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
+
+    const [errorModal, setErrorModal] = useState({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showError = (error: any, handler?: (error: any) => any) => {
+        const errorInfo = handler ? handler(error) : handleError(error);
+        setErrorModal({
+            visible: true,
+            title: errorInfo.title,
+            message: errorInfo.message,
+        });
+    };
 
     useEffect(() => {
         if (lecture) {
@@ -83,7 +101,7 @@ export default function EditLectureModal({
                 }
             ]);
         } catch (error: any) {
-            Alert.alert('Update Failed', error.message || 'Failed to update lecture');
+            showError(error, handleLectureUpdateError);
         } finally {
             setIsUpdating(false);
         }
@@ -116,6 +134,16 @@ export default function EditLectureModal({
 
                     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                         {/* Title */}
+
+
+                        <ErrorModal
+                            visible={errorModal.visible}
+                            title={errorModal.title}
+                            message={errorModal.message}
+                            onClose={() => setErrorModal({ ...errorModal, visible: false })}
+                        />
+
+
                         <View style={styles.field}>
                             <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
                                 Title *

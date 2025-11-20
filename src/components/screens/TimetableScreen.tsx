@@ -23,6 +23,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Animated } from 'react-native';
 import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+    handleClassesFetchError,
+    handleSubjectsFetchError,
+    handleTimetableCreateError,
+    handleTimetableUpdateError,
+    handleTimetableDeleteError,
+    ErrorResponse
+} from '@/src/utils/errorHandler/timetableErrorHandler';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
 
 
 export default function TimetableScreen() {
@@ -49,6 +58,7 @@ export default function TimetableScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const screenStyle = useScreenAnimation();
     const ButtonAnimation = useButtonAnimation();
+    const [errorModal, setErrorModal] = useState<ErrorResponse | null>(null);
 
     const [newEntry, setNewEntry] = useState<Partial<CreateTimetableEntry>>({
         day: undefined,
@@ -123,7 +133,9 @@ export default function TimetableScreen() {
                 }
             }
         } catch (error) {
-            console.warn('Error fetching classes:', error);
+            console.warn('Error fetching classes:', err);
+            const errorResponse = handleClassesFetchError(err);
+            setErrorModal(errorResponse);
         }
     };
 
@@ -199,7 +211,9 @@ export default function TimetableScreen() {
                 setSubjects(data || []);
             }
         } catch (error) {
-            console.warn('Error fetching subjects:', error);
+            console.warn('Error fetching subjects:', err);
+            const errorResponse = handleSubjectsFetchError(err);
+            setErrorModal(errorResponse);
         }
     };
 
@@ -218,70 +232,85 @@ export default function TimetableScreen() {
     };
 
     const handleAddEntry = async () => {
-        if (!validateEntry()) {
-            Alert.alert('Error', 'Please fill in all fields');
-            return;
-        }
+        try {
+            if (!validateEntry()) {
+                Alert.alert('Error', 'Please fill in all fields');
+                return;
+            }
 
-        const entryData: CreateTimetableEntry = {
-            day: newEntry.day!,
-            start_time: formatTime(newEntry.start_time!),
-            end_time: formatTime(newEntry.end_time!),
-            subject: newEntry.subject!,
-            room_number: newEntry.room_number!,
-            class_id: newEntry.class_id!,
-            teacher_id: newEntry.teacher_id || profile.id,
-        };
+            const entryData: CreateTimetableEntry = {
+                day: newEntry.day!,
+                start_time: formatTime(newEntry.start_time!),
+                end_time: formatTime(newEntry.end_time!),
+                subject: newEntry.subject!,
+                room_number: newEntry.room_number!,
+                class_id: newEntry.class_id!,
+                teacher_id: newEntry.teacher_id || profile.id,
+            };
 
-        const result = await createEntry(entryData);
-        if (result) {
-            setModalVisible(false);
-            resetForm();
+            const result = await createEntry(entryData);
+            if (result) {
+                setModalVisible(false);
+                resetForm();
+            }
+        } catch (err: any) {
+            const errorResponse = handleTimetableCreateError(err);
+            setErrorModal(errorResponse);
         }
     };
 
     const handleUpdateEntry = async () => {
-        if (!editingEntry || !validateEntry()) return;
+        try {
+            if (!editingEntry || !validateEntry()) return;
 
-        const entryData = {
-            id: editingEntry.id,
-            day: newEntry.day,
-            start_time: newEntry.start_time ? formatTime(newEntry.start_time) : undefined,
-            end_time: newEntry.end_time ? formatTime(newEntry.end_time) : undefined,
-            subject: newEntry.subject,
-            room_number: newEntry.room_number,
-            class_id: newEntry.class_id,
-            teacher_id: newEntry.teacher_id,
-        };
+            const entryData = {
+                id: editingEntry.id,
+                day: newEntry.day,
+                start_time: newEntry.start_time ? formatTime(newEntry.start_time) : undefined,
+                end_time: newEntry.end_time ? formatTime(newEntry.end_time) : undefined,
+                subject: newEntry.subject,
+                room_number: newEntry.room_number,
+                class_id: newEntry.class_id,
+                teacher_id: newEntry.teacher_id,
+            };
 
-        const result = await updateEntry(entryData);
-        if (result) {
-            setModalVisible(false);
-            setEditingEntry(null);
-            resetForm();
+            const result = await updateEntry(entryData);
+            if (result) {
+                setModalVisible(false);
+                setEditingEntry(null);
+                resetForm();
+            }
+        } catch (err: any) {
+            const errorResponse = handleTimetableUpdateError(err);
+            setErrorModal(errorResponse);
         }
     };
 
     const handleDeleteEntry = async (entry: TimetableEntryWithDetails) => {
-        Alert.alert(
-            'Delete Entry',
-            `Delete ${entry.subject_name} class?`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        const success = await deleteEntry(entry.id);
-                        if (success) {
-                            setModalVisible(false);
-                            setEditingEntry(null);
-                            resetForm();
-                        }
+        try {
+            Alert.alert(
+                'Delete Entry',
+                `Delete ${entry.subject_name} class?`,
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: async () => {
+                            const success = await deleteEntry(entry.id);
+                            if (success) {
+                                setModalVisible(false);
+                                setEditingEntry(null);
+                                resetForm();
+                            }
+                        },
                     },
-                },
-            ]
-        );
+                ]
+            );
+        } catch (err: any) {
+            const errorResponse = handleTimetableDeleteError(err);
+            setErrorModal(errorResponse);
+        }
     };
 
     const resetForm = () => {
@@ -358,6 +387,14 @@ export default function TimetableScreen() {
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
                 <Animated.View style={[{ flex: 1 }, screenStyle]}>
 
+
+                    <ErrorModal
+                        visible={!!errorModal}
+                        title={errorModal?.title || 'Error'}
+                        message={errorModal?.message || 'An error occurred'}
+                        onClose={() => setErrorModal(null)}
+                    />
+
                     {/* Class Filter with Add Button (for teachers) */}
                     {isTeacher && classes.length > 0 && (
                         <View style={styles.filterRow}>
@@ -367,7 +404,7 @@ export default function TimetableScreen() {
                                     filters={filters}
                                     setFilters={setFilters}
                                     colors={colors}
-                                    // loading={loading}
+                                // loading={loading}
                                 />
                             </View>
                             {isTeacher && profile.email === "rafeh@aliacademy.edu..." && classes.length > 0 && (

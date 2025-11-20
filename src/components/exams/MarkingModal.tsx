@@ -13,6 +13,9 @@ import {
     Keyboard
 } from 'react-native';
 import { X, Save } from 'lucide-react-native';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { handleMarkingError } from '@/src/utils/errorHandler/quizErrorHandler';
+import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
 
 interface MarkingModalProps {
     colors: any;
@@ -20,7 +23,7 @@ interface MarkingModalProps {
     setMarkingModalVisible: (visible: boolean) => void;
     selectedResult: any;
     setSelectedResult: (result: any) => void;
-    markQuizResult: (resultId: string, marks: number, remarks?: string) => Promise<{ success: boolean }>;
+    markQuizResult: (resultId: string, marks: number, remarks?: string) => { success: boolean };
 }
 
 const MarkingModal: React.FC<MarkingModalProps> = ({
@@ -36,6 +39,20 @@ const MarkingModal: React.FC<MarkingModalProps> = ({
         marks: '',
         remarks: '',
     });
+    const [errorModal, setErrorModal] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+    }>({ visible: false, title: '', message: '' });
+
+    const showError = (error: any, handler?: (error: any) => any) => {
+        const errorInfo = handler ? handler(error) : handleError(error);
+        setErrorModal({
+            visible: true,
+            title: errorInfo.title,
+            message: errorInfo.message,
+        });
+    };
 
     // Update marking data when selectedResult changes
     useEffect(() => {
@@ -53,13 +70,15 @@ const MarkingModal: React.FC<MarkingModalProps> = ({
 
     const handleMarkResult = async () => {
         if (!selectedResult || !markingData.marks) {
-            Alert.alert('Error', 'Please enter marks');
+            showError({ message: 'Please enter marks' });
             return;
         }
 
         const marks = parseInt(markingData.marks);
         if (marks < 0 || marks > selectedResult.total_marks) {
-            Alert.alert('Error', `Marks must be between 0 and ${selectedResult.total_marks}`);
+            showError({
+                message: `Marks must be between 0 and ${selectedResult.total_marks}`
+            });
             return;
         }
 
@@ -77,10 +96,10 @@ const MarkingModal: React.FC<MarkingModalProps> = ({
                 setSelectedResult(null);
                 setMarkingData({ marks: '', remarks: '' });
             } else {
-                Alert.alert('Error', 'Failed to mark quiz');
+                showError(result.error, handleMarkingError);
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message);
+            showError(error, handleMarkingError);
         } finally {
             setMarking(false);
         }
@@ -101,6 +120,14 @@ const MarkingModal: React.FC<MarkingModalProps> = ({
             statusBarTranslucent={true}
             presentationStyle="overFullScreen"
         >
+
+            <ErrorModal
+                visible={errorModal.visible}
+                title={errorModal.title}
+                message={errorModal.message}
+                onClose={() => setErrorModal({ ...errorModal, visible: false })}
+            />
+
             <TouchableOpacity
                 style={styles.modalOverlay}
                 activeOpacity={1}

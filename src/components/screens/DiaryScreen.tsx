@@ -3,11 +3,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Modal,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -34,6 +32,17 @@ import styles from '../dairy/styles';
 import { useFocusEffect } from '@react-navigation/native';
 import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
 import { Animated } from 'react-native';
+import {
+  handleClassFetchErrorForDiary,
+  handleSubjectFetchErrorForDiary,
+  handleStudentFetchErrorForDiary,
+  handleAssignmentCreateError,
+  handleAssignmentUpdateError,
+  handleFileDownloadErrorForDiary,
+} from '@/src/utils/errorHandler/diaryErrorHandler';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
+
 
 interface DiaryAssignment {
   id: string;
@@ -62,6 +71,21 @@ export default function DiaryScreen() {
   const [selectedAssignment, setSelectedAssignment] = useState<DiaryAssignment | null>(null);
   const screenStyle = useScreenAnimation();
   const addButtonAnimation = useButtonAnimation();
+
+  const [errorModal, setErrorModal] = useState({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showError = (error: any, handler?: (error: any) => any) => {
+    const errorInfo = handler ? handler(error) : handleError(error);
+    setErrorModal({
+      visible: true,
+      title: errorInfo.title,
+      message: errorInfo.message,
+    });
+  };
 
   // Custom Hooks
   const {
@@ -145,6 +169,7 @@ export default function DiaryScreen() {
       setSubjects(uniqueSubjects);
     } catch (error) {
       console.warn('❌ Error fetching teacher subjects:', error);
+      showError(error, handleSubjectFetchErrorForDiary);
       setSubjects([]);
     }
   };
@@ -185,6 +210,7 @@ export default function DiaryScreen() {
       setSubjects(uniqueSubjects);
     } catch (error) {
       console.log('❌ Error fetching subjects for class:', error);
+      showError(error, handleSubjectFetchErrorForDiary);
       setSubjects([]);
     }
   };
@@ -218,6 +244,7 @@ export default function DiaryScreen() {
       setSubjects(subjectsList);
     } catch (error) {
       console.warn('❌ Error fetching subjects:', error);
+      showError(error, handleSubjectFetchErrorForDiary);
       setSubjects([]);
     }
   };
@@ -251,6 +278,7 @@ export default function DiaryScreen() {
       setClasses(uniqueClasses);
     } catch (error) {
       console.warn('❌ Error fetching classes:', error);
+      showError(error, handleClassFetchErrorForDiary);
       setClasses([]);
     }
   };
@@ -294,6 +322,7 @@ export default function DiaryScreen() {
       setStudents(data || []);
     } catch (error) {
       console.warn('❌ Error fetching students:', error);
+      showError(error, handleStudentFetchErrorForDiary);
       setStudents([]);
     }
   };
@@ -313,6 +342,7 @@ export default function DiaryScreen() {
       }
     } catch (error) {
       console.warn('Error picking document:', error);
+      showError(error, handleFileDownloadErrorForDiary);
     }
   };
 
@@ -370,7 +400,7 @@ export default function DiaryScreen() {
       resetForm();
       fetchAssignments();
     } catch (error: any) {
-      alert(error.message);
+      showError(error, handleAssignmentUpdateError);
     }
   };
 
@@ -438,7 +468,7 @@ export default function DiaryScreen() {
       resetForm();
       fetchAssignments();
     } catch (error: any) {
-      alert(error.message);
+      showError(error, handleAssignmentCreateError);
     }
   };
 
@@ -459,6 +489,14 @@ export default function DiaryScreen() {
               placeholderTextColor={colors.textSecondary}
             />
           </View>
+
+          <ErrorModal
+            visible={errorModal.visible}
+            title={errorModal.title}
+            message={errorModal.message}
+            onClose={() => setErrorModal({ ...errorModal, visible: false })}
+          />
+
 
           {profile?.role === 'student' && (
             <SubjectFilter
@@ -547,6 +585,7 @@ export default function DiaryScreen() {
             pickDocument={pickDocument}
             fetchStudents={fetchStudents}
             fetchSubjectsForClass={fetchSubjectsForClass}
+            showError={showError}
           />
         )}
 

@@ -254,21 +254,27 @@ export default function SettingsScreen() {
               icon: Send,
               onPress: handleNavigateToNotifications,
             },
+            {
+              title: 'Help Center',
+              subtitle: 'Get help and find answers',
+              icon: HelpCircle,
+              onPress: handleSupport,
+            },
           ]
           : []),
       ],
     },
-    {
-      title: 'Support',
-      items: [
-        {
-          title: 'Help Center',
-          subtitle: 'Get help and find answers',
-          icon: HelpCircle,
-          onPress: handleSupport,
-        },
-      ],
-    },
+    // {
+    //   title: 'Support',
+    //   items: [
+    //     {
+    //       title: 'Help Center',
+    //       subtitle: 'Get help and find answers',
+    //       icon: HelpCircle,
+    //       onPress: handleSupport,
+    //     },
+    //   ],
+    // },
   ];
 
 

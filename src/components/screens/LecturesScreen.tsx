@@ -26,6 +26,11 @@ import SubjectFilter from '../common/SubjectFilter';
 import { supabase } from '@/src/lib/supabase';
 import { Animated } from 'react-native';
 import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import {
+  handleLectureFetchError,
+  handleSubjectFetchErrorForLectures
+} from '@/src/utils/errorHandler/lectureErrorHandler';
 
 
 export default function LecturesScreen() {
@@ -46,6 +51,21 @@ export default function LecturesScreen() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+
+  const [errorModal, setErrorModal] = useState({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showError = (error: any, handler?: (error: any) => any) => {
+    const errorInfo = handler ? handler(error) : handleError(error);
+    setErrorModal({
+      visible: true,
+      title: errorInfo.title,
+      message: errorInfo.message,
+    });
+  };
 
   // Initialize
   useEffect(() => {
@@ -125,6 +145,7 @@ export default function LecturesScreen() {
       setSubjects(subjectsData || []);
     } catch (error) {
       console.warn('Error fetching subjects:', error);
+      showError(error, handleSubjectFetchErrorForLectures);
       setSubjects([]);
     }
   };
@@ -188,7 +209,7 @@ export default function LecturesScreen() {
       setFilteredLectures(data || []);
     } catch (error) {
       console.warn('Error loading lectures:', error);
-      Alert.alert('Error', 'Failed to load lectures');
+      showError(error, handleLectureFetchError);
       setLectures([]);
       setFilteredLectures([]);
     } finally {
@@ -199,7 +220,9 @@ export default function LecturesScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadLectures();
+    loadLectures().catch(error => {
+      showError(error, handleLectureFetchError);
+    });
   }, [profile?.id, profile?.role]);
 
   const handleEdit = (lecture: Lecture) => {
@@ -258,6 +281,14 @@ export default function LecturesScreen() {
                 </TouchableOpacity>
               )}
             </View>
+
+
+            <ErrorModal
+              visible={errorModal.visible}
+              title={errorModal.title}
+              message={errorModal.message}
+              onClose={() => setErrorModal({ ...errorModal, visible: false })}
+            />
 
             {profile?.role === 'student' && (
               <SubjectFilter
