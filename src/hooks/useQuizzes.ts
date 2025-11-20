@@ -2,6 +2,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/contexts/AuthContext';
+import {
+    handleFilterApplicationError,
+    handleQuizFetchError,
+    handleQuizResultFetchError,
+    handleQuizStatsError,
+    handleSubjectFetchForClassError
+} from '@/src/utils/errorHandler/quizErrorHandler';
+import { handleError, handleSubjectFetchError } from '../utils/errorHandler/attendanceErrorHandler';
 
 export interface Subject {
     id: string;
@@ -145,6 +153,7 @@ export const useQuizzes = () => {
             setClassesSubjects(data || []);
         } catch (error) {
             console.warn('❌ Error fetching class-subject relationships:', error);
+            throw handleSubjectFetchError(error);
         }
     };
 
@@ -173,6 +182,7 @@ export const useQuizzes = () => {
             setSubjects(data || []);
         } catch (error) {
             console.warn('❌ Error fetching subjects:', error);
+            throw handleSubjectFetchError(error);
         }
     };
 
@@ -221,6 +231,7 @@ export const useQuizzes = () => {
             setQuizzes(data || []);
         } catch (err) {
             console.warn('❌ Error fetching quizzes:', err);
+            throw handleQuizFetchError(err);
             setQuizzes([]);
         }
     };
@@ -267,6 +278,7 @@ export const useQuizzes = () => {
             setQuizResults(data || []);
         } catch (error) {
             console.warn('❌ Error fetching quiz results:', error);
+            throw handleQuizResultFetchError(error);
         } finally {
             setLoading(false);
         }
@@ -316,29 +328,35 @@ export const useQuizzes = () => {
             setQuizResults(data || []);
         } catch (error) {
             console.warn('❌ Error fetching student results:', error);
+            throw handleQuizResultFetchError(error);
         } finally {
             setLoading(false);
         }
     };
 
-    const getSubjectsForClass = (selectedClass: string) => {
-        if (!selectedClass || selectedClass === 'all') {
-            const subjectsWithQuizzes = subjects.filter(subject =>
-                quizzes.some(quiz => quiz.subject_id === subject.id)
-            );
-            return subjectsWithQuizzes;
-        } else {
-            const classSubjectRelations = classesSubjects.filter(cs =>
-                String(cs.class_id) === String(selectedClass) && cs.is_active
-            );
+    const getSubjectsForClass = async (selectedClass: string) => {
+        try {
+            if (!selectedClass || selectedClass === 'all') {
+                const subjectsWithQuizzes = subjects.filter(subject =>
+                    quizzes.some(quiz => quiz.subject_id === subject.id)
+                );
+                return subjectsWithQuizzes;
+            } else {
+                const classSubjectRelations = classesSubjects.filter(cs =>
+                    String(cs.class_id) === String(selectedClass) && cs.is_active
+                );
 
-            const subjectIdsInClass = classSubjectRelations.map(cs => cs.subject_id);
+                const subjectIdsInClass = classSubjectRelations.map(cs => cs.subject_id);
 
-            const subjectsInClass = subjects.filter(subject =>
-                subjectIdsInClass.includes(subject.id)
-            );
+                const subjectsInClass = subjects.filter(subject =>
+                    subjectIdsInClass.includes(subject.id)
+                );
 
-            return subjectsInClass;
+                return subjectsInClass;
+            }
+        } catch (error) {
+            console.warn('❌ Error getting subjects for class:', error);
+            throw handleSubjectFetchForClassError(error);
         }
     };
 
@@ -367,46 +385,51 @@ export const useQuizzes = () => {
     };
 
     const getFilteredResults = (selectedClass: string, selectedSubject: string, checkedFilter: 'all' | 'checked' | 'unchecked') => {
-        let filteredResults = [...quizResults];
+        try {
+            let filteredResults = [...quizResults];
 
-        if (selectedClass !== 'all') {
-            const classQuizIds = quizzes
-                .filter(quiz => String(quiz.class_id) === String(selectedClass))
-                .map(quiz => quiz.id);
-
-            filteredResults = filteredResults.filter(result =>
-                classQuizIds.includes(result.quiz_id)
-            );
-        }
-
-        if (selectedSubject !== 'all') {
-            let subjectQuizIds: string[];
-
-            if (selectedClass === 'all') {
-                subjectQuizIds = quizzes
-                    .filter(quiz => String(quiz.subject_id) === String(selectedSubject))
+            if (selectedClass !== 'all') {
+                const classQuizIds = quizzes
+                    .filter(quiz => String(quiz.class_id) === String(selectedClass))
                     .map(quiz => quiz.id);
-            } else {
-                subjectQuizIds = quizzes
-                    .filter(quiz =>
-                        String(quiz.subject_id) === String(selectedSubject) &&
-                        String(quiz.class_id) === String(selectedClass)
-                    )
-                    .map(quiz => quiz.id);
+
+                filteredResults = filteredResults.filter(result =>
+                    classQuizIds.includes(result.quiz_id)
+                );
             }
 
-            filteredResults = filteredResults.filter(result =>
-                subjectQuizIds.includes(result.quiz_id)
-            );
-        }
+            if (selectedSubject !== 'all') {
+                let subjectQuizIds: string[];
 
-        if (checkedFilter === 'checked') {
-            filteredResults = filteredResults.filter(result => result.is_checked);
-        } else if (checkedFilter === 'unchecked') {
-            filteredResults = filteredResults.filter(result => !result.is_checked);
-        }
+                if (selectedClass === 'all') {
+                    subjectQuizIds = quizzes
+                        .filter(quiz => String(quiz.subject_id) === String(selectedSubject))
+                        .map(quiz => quiz.id);
+                } else {
+                    subjectQuizIds = quizzes
+                        .filter(quiz =>
+                            String(quiz.subject_id) === String(selectedSubject) &&
+                            String(quiz.class_id) === String(selectedClass)
+                        )
+                        .map(quiz => quiz.id);
+                }
 
-        return filteredResults;
+                filteredResults = filteredResults.filter(result =>
+                    subjectQuizIds.includes(result.quiz_id)
+                );
+            }
+
+            if (checkedFilter === 'checked') {
+                filteredResults = filteredResults.filter(result => result.is_checked);
+            } else if (checkedFilter === 'unchecked') {
+                filteredResults = filteredResults.filter(result => !result.is_checked);
+            }
+
+            return filteredResults;
+        } catch (error) {
+            console.warn('❌ Error filtering results:', error);
+            throw handleFilterApplicationError(error);
+        }
     };
 
     const areAllResultsMarked = (quizId: string) => {
@@ -682,6 +705,7 @@ export const useQuizzes = () => {
         }
     };
 
+
     const getQuizResultsBySubject = (subjectId: string, checkedFilter?: 'all' | 'checked' | 'unchecked') => {
         let filtered = quizResults.filter(result =>
             result.quizzes?.subjects?.name === subjects.find(s => s.id === subjectId)?.name
@@ -697,23 +721,28 @@ export const useQuizzes = () => {
     };
 
     const getStudentQuizStats = (studentId?: string) => {
-        const studentResults = studentId
-            ? quizResults.filter(r => r.student_id === studentId)
-            : quizResults.filter(r => r.student_id === profile?.id);
+        try {
+            const studentResults = studentId
+                ? quizResults.filter(r => r.student_id === studentId)
+                : quizResults.filter(r => r.student_id === profile?.id);
 
-        const checkedResults = studentResults.filter(r => r.is_checked && r.marks_obtained !== null);
-        const totalMarks = checkedResults.reduce((sum, r) => sum + (r.marks_obtained || 0), 0);
-        const totalPossible = checkedResults.reduce((sum, r) => sum + r.total_marks, 0);
-        const averagePercentage = totalPossible > 0 ? (totalMarks / totalPossible) * 100 : 0;
+            const checkedResults = studentResults.filter(r => r.is_checked && r.marks_obtained !== null);
+            const totalMarks = checkedResults.reduce((sum, r) => sum + (r.marks_obtained || 0), 0);
+            const totalPossible = checkedResults.reduce((sum, r) => sum + r.total_marks, 0);
+            const averagePercentage = totalPossible > 0 ? (totalMarks / totalPossible) * 100 : 0;
 
-        return {
-            totalQuizzes: studentResults.length,
-            checkedQuizzes: checkedResults.length,
-            uncheckedQuizzes: studentResults.length - checkedResults.length,
-            averagePercentage: Math.round(averagePercentage),
-            totalMarks,
-            totalPossible,
-        };
+            return {
+                totalQuizzes: studentResults.length,
+                checkedQuizzes: checkedResults.length,
+                uncheckedQuizzes: studentResults.length - checkedResults.length,
+                averagePercentage: Math.round(averagePercentage),
+                totalMarks,
+                totalPossible,
+            };
+        } catch (error) {
+            console.warn('❌ Error calculating quiz stats:', error);
+            throw handleQuizStatsError(error);
+        }
     };
 
     const fetchStudentClassId = async (studentId?: string) => {
@@ -733,6 +762,7 @@ export const useQuizzes = () => {
             return data?.class_id || null;
         } catch (err) {
             console.warn('Unexpected error fetching class ID:', err);
+            throw handleError(err);
             return null;
         }
     };

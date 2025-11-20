@@ -2,6 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Text, StyleSheet, RefreshControl } from 'react-native';
 import { TrendingUp, Target, Users, BookOpen } from 'lucide-react-native';
+import {
+    handleError,
+} from '@/src/utils/errorHandler/attendanceErrorHandler';
 
 interface ReportsTabProps {
     colors: any;
@@ -11,7 +14,7 @@ interface ReportsTabProps {
     subjects: any[];
     quizzes: any[];
     quizResults: any[];
-    onRefresh?: () => Promise<void>;
+    onRefresh?: () => void;
 }
 
 const ReportsTab: React.FC<ReportsTabProps> = ({
@@ -25,6 +28,20 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
     onRefresh,
 }) => {
     const [refreshing, setRefreshing] = useState(false);
+    const [errorModal, setErrorModal] = useState({
+    visible: false,
+    title: '',
+    message: '',
+});
+
+    const showError = (error: any, handler?: (error: any) => any) => {
+        const errorInfo = handler ? handler(error) : handleError(error);
+        setErrorModal({
+            visible: true,
+            title: errorInfo.title,
+            message: errorInfo.message,
+        });
+    };
 
     // Handle pull-to-refresh
     const handleRefresh = async () => {
@@ -34,6 +51,7 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                 await onRefresh();
             } catch (error) {
                 console.warn('❌ Error refreshing reports:', error);
+                showError(error);
             } finally {
                 setRefreshing(false);
             }

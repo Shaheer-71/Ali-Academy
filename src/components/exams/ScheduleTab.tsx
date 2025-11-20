@@ -1,7 +1,9 @@
 // components/ScheduleTab.tsx - Updated without filter UI (filters now centralized)
-import React from 'react';
+import React, { useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Text, StyleSheet, Alert, RefreshControl } from 'react-native';
 import { Calendar, Clock, Target, GraduationCap, Edit3, Users, Play, Square } from 'lucide-react-native';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
 
 interface ScheduleTabProps {
     colors: any;
@@ -14,7 +16,7 @@ interface ScheduleTabProps {
     selectedClass: string;
     quizResults: any[];
     areAllResultsMarked: (quizId: string) => boolean;
-    onRefresh?: () => Promise<void>;
+    onRefresh?: () => void
 }
 
 const ScheduleTab: React.FC<ScheduleTabProps> = ({
@@ -31,6 +33,20 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
     onRefresh,
 }) => {
     const [refreshing, setRefreshing] = React.useState(false);
+    const [errorModal, setErrorModal] = useState({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showError = (error: any) => {
+        const errorInfo = handleError(error);
+        setErrorModal({
+            visible: true,
+            title: errorInfo.title,
+            message: errorInfo.message,
+        });
+    };
 
     const filteredQuizzes = getFilteredQuizzes();
 
@@ -120,6 +136,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 await onRefresh();
             } catch (error) {
                 console.warn('Error refreshing data:', error);
+                showError(error);
             } finally {
                 setRefreshing(false);
             }
@@ -167,6 +184,14 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                     />
                 }
             >
+
+                <ErrorModal
+                    visible={errorModal.visible}
+                    title={errorModal.title}
+                    message={errorModal.message}
+                    onClose={() => setErrorModal({ ...errorModal, visible: false })}
+                />
+
                 {filteredQuizzes.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <Calendar size={48} color={colors.textSecondary} />

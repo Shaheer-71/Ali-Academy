@@ -17,6 +17,10 @@ import { supabase } from '@/src/lib/supabase';
 import { useFocusEffect } from '@react-navigation/native';
 import { Animated } from 'react-native';
 import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { handleError } from '@/src/utils/errorHandler/homeErrorHandler';
+import { handleClassFetchError, handleSubjectFetchError } from '@/src/utils/errorHandler/attendanceErrorHandler';
+
 
 
 interface ExamFilterData {
@@ -39,6 +43,26 @@ export default function ExamsScreen() {
   const [selectedResult, setSelectedResult] = useState<any>(null);
   const screenStyle = useScreenAnimation();
   const ButtonAnimation = useButtonAnimation();
+
+  const [errorModal, setErrorModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showError = (error: any, handler?: (error: any) => any) => {
+    const errorInfo = handler ? handler(error) : handleError(error);
+    setErrorModal({
+      visible: true,
+      title: errorInfo.title,
+      message: errorInfo.message,
+    });
+  };
+
 
   // Comprehensive filter state
   const [filters, setFilters] = useState<ExamFilterData>({
@@ -117,6 +141,7 @@ export default function ExamsScreen() {
 
     } catch (error) {
       console.warn('❌ Error fetching classes and subjects:', error);
+      showError(error, handleClassFetchError);
     }
   };
 
@@ -165,7 +190,7 @@ export default function ExamsScreen() {
       }
     } catch (error) {
       console.warn('❌ ExamsScreen: Error during refresh:', error);
-      throw error;
+      showError(error);
     }
   };
 
@@ -308,6 +333,15 @@ export default function ExamsScreen() {
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
       <TopSections />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
+
+
+        <ErrorModal
+          visible={errorModal.visible}
+          title={errorModal.title}
+          message={errorModal.message}
+          onClose={() => setErrorModal({ ...errorModal, visible: false })}
+        />
+
         <TabNavigation
           colors={colors}
           profile={profile}

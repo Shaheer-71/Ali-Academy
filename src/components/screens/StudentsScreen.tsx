@@ -31,6 +31,7 @@ import { supabase } from '@/src/lib/supabase';
 import TopSection from '../common/TopSections';
 import { useScreenAnimation } from '@/src/utils/animations';
 import { SwipeableStudentCard } from '@/src/components/students/SwipeableStudentCard';
+import StudentDetailModal from '../students/StudentDetailModal';
 
 interface Class {
     id: string;
@@ -66,6 +67,9 @@ export default function StudentsScreen() {
     const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
     const [loadingSubjects, setLoadingSubjects] = useState(false);
     const screenStyle = useScreenAnimation();
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [showStudentModal, setShowStudentModal] = useState(false);
+
 
     const [newStudent, setNewStudent] = useState({
         full_name: '',
@@ -297,9 +301,11 @@ export default function StudentsScreen() {
         );
     };
 
-    const handleStudentPress = (student: any) => {
-        Alert.alert('Student Details', `Viewing ${student.full_name} - Feature coming soon!`);
+    const handleStudentPress = (student) => {
+        setSelectedStudent(student);
+        setShowStudentModal(true);
     };
+
 
     const filteredStudents = students.filter(
         (student) =>
@@ -412,6 +418,13 @@ export default function StudentsScreen() {
                                     />
                                 ))
                             )}
+
+                            <StudentDetailModal
+                                visible={showStudentModal}
+                                onClose={() => setShowStudentModal(false)}
+                                student={selectedStudent}
+                            />
+
                         </ScrollView>
 
                         {/* Add Student Modal */}
@@ -788,6 +801,7 @@ export default function StudentsScreen() {
 
 import { TextSizes } from '@/src/styles/TextSizes';
 
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -995,7 +1009,7 @@ const styles = StyleSheet.create({
     modalScrollView: {
         paddingHorizontal: 24,
         // paddingTop: 24,
-        
+
     },
 
     // Form inputs

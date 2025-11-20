@@ -2,6 +2,10 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { Alert } from 'react-native';
+import {
+    handleAssignmentFetchError,
+    handleAssignmentDeleteError
+} from '@/src/utils/errorHandler/diaryErrorHandler';
 
 interface DiaryAssignment {
     id: string;
@@ -20,7 +24,11 @@ interface DiaryAssignment {
     profiles?: { full_name: string };
 }
 
-export const useDiaryAssignments = (profile: any, student: any) => {
+export const useDiaryAssignments = (
+    profile: any,
+    student: any,
+    showError?: (error: any, handler?: (error: any) => any) => void
+) => {
     const [assignments, setAssignments] = useState<DiaryAssignment[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -28,11 +36,13 @@ export const useDiaryAssignments = (profile: any, student: any) => {
     const fetchAssignments = useCallback(async () => {
         try {
             setLoading(true);
-            if (!profile) return setAssignments([]);
+            if (!profile) {
+                setAssignments([]);
+                return;
+            }
 
-            // -------------------- TEACHER --------------------
+            // TEACHER
             if (profile.role === "teacher") {
-                // 1️⃣ Get teacher's active class-subject pairs
                 const { data: teacherEnrollments, error: teacherErr } = await supabase
                     .from("teacher_subject_enrollments")
                     .select("class_id, subject_id")
@@ -40,23 +50,25 @@ export const useDiaryAssignments = (profile: any, student: any) => {
                     .eq("is_active", true);
 
                 if (teacherErr) throw teacherErr;
-                if (!teacherEnrollments || teacherEnrollments.length === 0) return setAssignments([]);
 
-                // 2️⃣ Build OR expression for class-subject combinations
+                if (!teacherEnrollments || teacherEnrollments.length === 0) {
+                    setAssignments([]);
+                    return;
+                }
+
                 const orExpr = teacherEnrollments
                     .map(p => `and(class_id.eq.${p.class_id},subject_id.eq.${p.subject_id})`)
                     .join(',');
 
-                // 3️⃣ Fetch assignments for teacher's class-subject pairs
                 const { data: assignmentsData, error: assignErr } = await supabase
                     .from("diary_assignments")
                     .select(`
-                        *,
-                        classes(name),
-                        students(full_name),
-                        subjects(name),
-                        profiles:assigned_by(full_name)
-                    `)
+            *,
+            classes(name),
+            students(full_name),
+            subjects(name),
+            profiles:assigned_by(full_name)
+          `)
                     .or(orExpr)
                     .order("created_at", { ascending: false });
 
@@ -66,9 +78,8 @@ export const useDiaryAssignments = (profile: any, student: any) => {
                 return;
             }
 
-            // -------------------- STUDENT --------------------
+            // STUDENT
             if (profile.role === "student" && profile?.id) {
-                // 1️⃣ Get student's active class-subject enrollments
                 const { data: studentEnrollments, error: enrollErr } = await supabase
                     .from("student_subject_enrollments")
                     .select("class_id, subject_id")
@@ -76,49 +87,48 @@ export const useDiaryAssignments = (profile: any, student: any) => {
                     .eq("is_active", true);
 
                 if (enrollErr) throw enrollErr;
-                if (!studentEnrollments || studentEnrollments.length === 0) return setAssignments([]);
 
-                // 2️⃣ Separate: 
-                // - assignments for this student
-                // - class-wide assignments (student_id IS NULL) but only for enrolled class+subject
+                if (!studentEnrollments || studentEnrollments.length === 0) {
+                    setAssignments([]);
+                    return;
+                }
+
                 const classWideOrExpr = studentEnrollments
                     .map(p => `and(class_id.eq.${p.class_id},subject_id.eq.${p.subject_id},student_id.is.null)`)
                     .join(',');
 
-                // 3️⃣ Fetch assignments assigned specifically to student
                 const { data: personalAssignments, error: personalErr } = await supabase
                     .from("diary_assignments")
                     .select(`
-                        *,
-                        classes(name),
-                        students(full_name),
-                        subjects(name),
-                        profiles:assigned_by(full_name)
-                    `)
+            *,
+            classes(name),
+            students(full_name),
+            subjects(name),
+            profiles:assigned_by(full_name)
+          `)
                     .eq("student_id", profile?.id)
                     .order("created_at", { ascending: false });
 
                 if (personalErr) throw personalErr;
 
-                // 4️⃣ Fetch class-wide assignments for student's enrolled subjects
                 let classAssignments: DiaryAssignment[] = [];
                 if (classWideOrExpr) {
                     const { data, error: classErr } = await supabase
                         .from("diary_assignments")
                         .select(`
-                            *,
-                            classes(name),
-                            students(full_name),
-                            subjects(name),
-                            profiles:assigned_by(full_name)
-                        `)
+              *,
+              classes(name),
+              students(full_name),
+              subjects(name),
+              profiles:assigned_by(full_name)
+            `)
                         .or(classWideOrExpr)
                         .order("created_at", { ascending: false });
+
                     if (classErr) throw classErr;
                     classAssignments = data || [];
                 }
 
-                // 5️⃣ Combine and sort by newest first
                 const combined = [...(personalAssignments || []), ...classAssignments]
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -129,11 +139,18 @@ export const useDiaryAssignments = (profile: any, student: any) => {
             setAssignments([]);
         } catch (err: any) {
             console.warn("❌ fetchAssignments error:", err);
+
+            if (showError) {
+                showError(err, handleAssignmentFetchError);
+            } else {
+                Alert.alert('Error', 'Failed to load assignments. Please try again.');
+            }
+
             setAssignments([]);
         } finally {
             setLoading(false);
         }
-    }, [profile, student]);
+    }, [profile, student, showError]);
 
     const deleteAssignment = useCallback(async (assignment: DiaryAssignment) => {
         return new Promise((resolve) => {
@@ -157,11 +174,19 @@ export const useDiaryAssignments = (profile: any, student: any) => {
                                     .eq('id', assignment.id);
 
                                 if (error) throw error;
+
                                 Alert.alert('Success', 'Assignment deleted successfully');
                                 await fetchAssignments();
                                 resolve(true);
                             } catch (error: any) {
-                                Alert.alert('Error', error.message);
+                                console.warn('❌ Delete assignment error:', error);
+
+                                if (showError) {
+                                    showError(error, handleAssignmentDeleteError);
+                                } else {
+                                    Alert.alert('Error', error.message || 'Failed to delete assignment');
+                                }
+
                                 resolve(false);
                             }
                         },
@@ -169,7 +194,7 @@ export const useDiaryAssignments = (profile: any, student: any) => {
                 ],
             );
         });
-    }, [fetchAssignments]);
+    }, [fetchAssignments, showError]);
 
     const handleRefresh = useCallback(async () => {
         try {
@@ -177,10 +202,14 @@ export const useDiaryAssignments = (profile: any, student: any) => {
             await fetchAssignments();
         } catch (error) {
             console.warn('❌ Error refreshing:', error);
+
+            if (showError) {
+                showError(error, handleAssignmentFetchError);
+            }
         } finally {
             setRefreshing(false);
         }
-    }, [fetchAssignments]);
+    }, [fetchAssignments, showError]);
 
     return {
         assignments,

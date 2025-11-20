@@ -29,6 +29,17 @@ import { useAuth } from '@/src/contexts/AuthContext';
 import { Lecture } from '@/src/types/lectures';
 import { lectureService } from '@/src/services/lecture.service';
 import { TextSizes } from '@/src/styles/TextSizes';
+import {
+  handleLectureDeleteError,
+  handleFileDownloadError,
+  handleFileShareError,
+  handleYouTubeLinkError
+} from '@/src/utils/errorHandler/lectureErrorHandler';
+import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
+import { ErrorModal } from '../common/ErrorModal';
+import { LectureDetailModal } from '@/src/components/lectures/LectureDetailModal';
+
+
 
 interface LectureCardProps {
   lecture: Lecture;
@@ -41,10 +52,28 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
   const { profile } = useAuth();
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+
 
   // Swipe animation
   const translateX = useRef(new Animated.Value(0)).current;
   const [isSwipedLeft, setIsSwipedLeft] = useState(false);
+
+  // Add error modal state at the top
+  const [errorModal, setErrorModal] = useState({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showError = (error: any, handler?: (error: any) => any) => {
+    const errorInfo = handler ? handler(error) : handleError(error);
+    setErrorModal({
+      visible: true,
+      title: errorInfo.title,
+      message: errorInfo.message,
+    });
+  };
 
   const SWIPE_THRESHOLD = -100;
   const ACTION_WIDTH = 150;
@@ -116,7 +145,7 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
       await lectureService.viewLecture(lecture, profile!.id);
       onRefresh?.();
     } catch (error) {
-      Alert.alert('Error', 'Failed to open the file');
+      showError(error, handleFileDownloadError);
     }
   };
 
@@ -129,7 +158,7 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
       Alert.alert('Success', 'File downloaded successfully');
       onRefresh?.();
     } catch (error) {
-      Alert.alert('Error', 'Failed to download the file');
+      showError(error, handleFileDownloadError);
     } finally {
       setIsDownloading(false);
     }
@@ -139,7 +168,7 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
     try {
       await lectureService.shareLecture(lecture);
     } catch (error) {
-      Alert.alert('Error', 'Failed to share the lecture');
+      showError(error, handleFileShareError);
     }
   };
 
@@ -149,7 +178,7 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
     try {
       await lectureService.openYouTubeLink(lecture.youtube_link);
     } catch (error) {
-      Alert.alert('Error', 'Failed to open YouTube link');
+      showError(error, handleYouTubeLinkError);
     }
   };
 
@@ -174,7 +203,7 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
               Alert.alert('Success', 'Lecture deleted successfully');
               onRefresh?.();
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete lecture');
+              showError(error, handleLectureDeleteError);
             } finally {
               setIsDeleting(false);
               resetSwipe();
@@ -194,6 +223,7 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
   };
 
   const canSwipe = profile?.role === 'teacher' || profile?.role === 'admin';
+
 
   return (
     <View style={styles.container}>
@@ -240,9 +270,32 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
         ]}
         {...(canSwipe ? panResponder.panHandlers : {})}
       >
+
+        <ErrorModal
+          visible={errorModal.visible}
+          title={errorModal.title}
+          message={errorModal.message}
+          onClose={() => setErrorModal({ ...errorModal, visible: false })}
+        />
+
+        <LectureDetailModal
+          visible={showDetails}
+          lecture={lecture}
+          onClose={() => setShowDetails(false)}
+          colors={colors}
+          formatDate={formatDate}
+        />
+
+
         <TouchableOpacity
           activeOpacity={1}
-          onPress={resetSwipe}
+          onPress={() => {
+            if (isSwipedLeft) {
+              resetSwipe();
+            } else {
+              setShowDetails(true);
+            }
+          }}
           style={[
             styles.card,
             { backgroundColor: colors.cardBackground, borderColor: colors.border }
@@ -319,9 +372,12 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
               ]}
               onPress={handleView}
             >
-              <Eye size={14} color={lecture.has_viewed ? colors.success : colors.primary} />
+              <FileText
+                size={14}
+                color={lecture.file_url ? colors.primary : colors.textSecondary}
+              />
               <Text allowFontScaling={false} style={[styles.actionText, { color: colors.primary }]}>
-                {lecture.has_viewed ? 'Viewed' : 'View'}
+                Attachment
               </Text>
             </TouchableOpacity>
 
@@ -349,7 +405,7 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={[
                 styles.actionButton,
                 { backgroundColor: colors.primary + '10', borderColor: colors.border }
@@ -360,7 +416,7 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
               <Text allowFontScaling={false} style={[styles.actionText, { color: colors.primary }]}>
                 Share
               </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
 
         </TouchableOpacity>
