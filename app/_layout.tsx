@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/src/hooks/useFrameworkReady';
@@ -10,6 +10,7 @@ import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '
 import * as SplashScreen from 'expo-splash-screen';
 import '@/src/constants/TextScaling';
 import { registerDeviceForNotifications, setupNotificationHandlers } from '@/src/lib/notifications';
+import { AppSplashScreen } from '@/src/components/common/AppSplashScreen';
 
 
 SplashScreen.preventAutoHideAsync();
@@ -93,7 +94,7 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" options={{ headerShown: false}} />
       <Stack.Screen name="(teacher)" options={{ headerShown: false }} />
-<Stack.Screen name="(student)" options={{ headerShown: false }} />
+      <Stack.Screen name="(student)" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="fee" options={{ headerShown: false }} />
       <Stack.Screen name="notifications" options={{ headerShown: false }} />
@@ -112,9 +113,14 @@ export default function RootLayout() {
     'Inter-SemiBold': Inter_600SemiBold,
   });
 
+  const [splashVisible, setSplashVisible] = useState(true);
+
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
+      // Keep custom splash visible for at least 1.5s after fonts load
+      const t = setTimeout(() => setSplashVisible(false), 1500);
+      return () => clearTimeout(t);
     }
   }, [fontsLoaded, fontError]);
 
@@ -122,16 +128,13 @@ export default function RootLayout() {
     return null;
   }
 
-
-
   return (
     <ThemeProvider>
       <AuthProvider>
         <NotificationProvider>
-          {/* <LoadingProvider> */}
           <RootLayoutNav />
+          <AppSplashScreen visible={splashVisible} />
           <StatusBar style="auto" />
-          {/* </LoadingProvider> */}
         </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -141,10 +141,10 @@ export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterCha
             <Modal
                 visible={filterVisible}
                 transparent
-                animationType="slide"
-                onRequestClose={() => setFilterVisible(false)}
+                animationType="fade"
+                onRequestClose={onFilterClose}
             >
-                <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
+                <TouchableWithoutFeedback onPress={onFilterClose}>
                     <View style={styles.modalOverlay} />
                 </TouchableWithoutFeedback>
 
