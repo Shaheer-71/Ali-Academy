@@ -13,11 +13,13 @@ interface DiaryAssignment {
     file_url?: string;
     class_id?: string;
     student_id?: string;
+    student_ids?: string[];
     subject_id?: string;
     created_at: string;
     classes?: { name: string };
     students?: { full_name: string };
     subjects?: { name: string };
+    profiles?: { full_name: string };
 }
 
 export const AssignmentDetailModal = ({
@@ -27,6 +29,7 @@ export const AssignmentDetailModal = ({
     colors,
     isOverdue,
     formatDate,
+    studentsMap = {},
 }: {
     visible: boolean;
     assignment: DiaryAssignment | null;
@@ -34,6 +37,7 @@ export const AssignmentDetailModal = ({
     colors: any;
     isOverdue: (date: string) => boolean;
     formatDate: (date: string) => string;
+    studentsMap?: Record<string, string>;
 }) => {
     if (!assignment) return null;
 
@@ -97,35 +101,34 @@ export const AssignmentDetailModal = ({
                             </Text>
                         </View>
 
-                        {/* Class Info */}
-                        {assignment.classes?.name && (
-                            <View style={styles.detailSection}>
-                                <View style={styles.detailRow}>
-                                    <Users size={16} color={colors.primary} />
-                                    <Text allowFontScaling={false} style={[styles.detailLabel, { color: colors.textSecondary, marginLeft: 8 }]}>
-                                        Class
-                                    </Text>
-                                </View>
-                                <Text allowFontScaling={false} style={[styles.detailValue, { color: colors.text, marginLeft: 24 }]}>
-                                    {assignment.classes.name}
-                                </Text>
-                            </View>
-                        )}
-
-                        {/* Student Info */}
-                        {assignment.students?.full_name && (
+{/* Assigned To */}
+                        {assignment.student_ids && assignment.student_ids.length > 0 ? (
                             <View style={styles.detailSection}>
                                 <View style={styles.detailRow}>
                                     <User size={16} color={colors.primary} />
                                     <Text allowFontScaling={false} style={[styles.detailLabel, { color: colors.textSecondary, marginLeft: 8 }]}>
-                                        Student
+                                        Assigned To
+                                    </Text>
+                                </View>
+                                {assignment.student_ids.map((id) => (
+                                    <Text key={id} allowFontScaling={false} style={[styles.detailValue, { color: colors.text, marginLeft: 24 }]}>
+                                        {studentsMap[id] ?? id}
+                                    </Text>
+                                ))}
+                            </View>
+                        ) : assignment.classes?.name ? (
+                            <View style={styles.detailSection}>
+                                <View style={styles.detailRow}>
+                                    <Users size={16} color={colors.primary} />
+                                    <Text allowFontScaling={false} style={[styles.detailLabel, { color: colors.textSecondary, marginLeft: 8 }]}>
+                                        Assigned To
                                     </Text>
                                 </View>
                                 <Text allowFontScaling={false} style={[styles.detailValue, { color: colors.text, marginLeft: 24 }]}>
-                                    {assignment.students.full_name}
+                                    {assignment.classes.name} (Whole Class)
                                 </Text>
                             </View>
-                        )}
+                        ) : null}
 
                         {/* Subject */}
                         {assignment.subjects?.name && (

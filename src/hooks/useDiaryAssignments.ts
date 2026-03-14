@@ -30,8 +30,18 @@ export const useDiaryAssignments = (
     showError?: (error: any, handler?: (error: any) => any) => void
 ) => {
     const [assignments, setAssignments] = useState<DiaryAssignment[]>([]);
+    const [studentsMap, setStudentsMap] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+
+    const fetchStudentNames = useCallback(async (list: any[]) => {
+        const ids = [...new Set(list.flatMap((a: any) => a.student_ids || []))];
+        if (ids.length === 0) { setStudentsMap({}); return; }
+        const { data } = await supabase.from('profiles').select('id, full_name').in('id', ids);
+        const map: Record<string, string> = {};
+        data?.forEach((p: any) => { map[p.id] = p.full_name; });
+        setStudentsMap(map);
+    }, []);
 
     const fetchAssignments = useCallback(async () => {
         try {
@@ -70,11 +80,14 @@ export const useDiaryAssignments = (
             profiles:assigned_by(full_name)
           `)
                     .or(orExpr)
+                    .eq("is_deleted", false)
                     .order("created_at", { ascending: false });
 
                 if (assignErr) throw assignErr;
 
-                setAssignments(assignmentsData || []);
+                const data = assignmentsData || [];
+                setAssignments(data);
+                await fetchStudentNames(data);
                 return;
             }
 
@@ -108,7 +121,8 @@ export const useDiaryAssignments = (
             subjects(name),
             profiles:assigned_by(full_name)
           `)
-                    .eq("student_id", profile?.id)
+                    .contains("student_ids", [profile?.id])
+                    .eq("is_deleted", false)
                     .order("created_at", { ascending: false });
 
                 if (personalErr) throw personalErr;
@@ -125,6 +139,7 @@ export const useDiaryAssignments = (
               profiles:assigned_by(full_name)
             `)
                         .or(classWideOrExpr)
+                        .eq("is_deleted", false)
                         .order("created_at", { ascending: false });
 
                     if (classErr) throw classErr;
@@ -135,6 +150,7 @@ export const useDiaryAssignments = (
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
                 setAssignments(combined);
+                await fetchStudentNames(combined);
                 return;
             }
 
@@ -172,7 +188,7 @@ export const useDiaryAssignments = (
                             try {
                                 const { error } = await supabase
                                     .from('diary_assignments')
-                                    .delete()
+                                    .update({ is_deleted: true })
                                     .eq('id', assignment.id);
 
                                 if (error) throw error;
@@ -216,6 +232,7 @@ export const useDiaryAssignments = (
     return {
         assignments,
         setAssignments,
+        studentsMap,
         loading,
         refreshing,
         fetchAssignments,

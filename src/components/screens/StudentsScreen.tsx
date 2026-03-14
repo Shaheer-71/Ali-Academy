@@ -11,6 +11,8 @@ import {
     Alert,
     ActivityIndicator,
     Animated,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -640,7 +642,7 @@ export default function StudentsScreen() {
             <Modal
                 visible={filterVisible}
                 transparent
-                animationType="slide"
+                animationType="fade"
                 onRequestClose={() => setFilterVisible(false)}
             >
                 <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
@@ -651,16 +653,14 @@ export default function StudentsScreen() {
 
                     {/* Add Student — always at top */}
                     <TouchableOpacity
-                        style={[styles.addStudentRow, { borderBottomColor: colors.border }]}
+                        style={[styles.addStudentRow, { borderColor: colors.primary }]}
                         onPress={() => {
                             setFilterVisible(false);
                             resetForm();
                             setModalVisible(true);
                         }}
                     >
-                        <View style={[styles.addStudentIcon, { backgroundColor: colors.primary + '15' }]}>
-                            <Plus size={18} color={colors.primary} />
-                        </View>
+                        <Plus size={18} color={colors.primary} />
                         <Text allowFontScaling={false} style={[styles.addStudentText, { color: colors.primary }]}>
                             Add New Student
                         </Text>
@@ -850,6 +850,10 @@ export default function StudentsScreen() {
                             statusBarTranslucent={true}  // ← ADD THIS
                             presentationStyle="overFullScreen"
                         >
+                            <KeyboardAvoidingView
+                                style={{ flex: 1 }}
+                                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                            >
                             <View style={styles.modalOverlay}>
                                 <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                                     <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
@@ -862,7 +866,7 @@ export default function StudentsScreen() {
                                         </TouchableOpacity>
                                     </View>
 
-                                    <ScrollView style={styles.modalScrollView}>
+                                    <ScrollView style={styles.modalScrollView} keyboardShouldPersistTaps="handled">
                                         {/* <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Student Information</Text> */}
 
                                         <View style={styles.inputGroup}>
@@ -1158,6 +1162,7 @@ export default function StudentsScreen() {
                                     </ScrollView>
                                 </View>
                             </View>
+                            </KeyboardAvoidingView>
                         </Modal>
 
                         {/* Pending Registration Modal */}
@@ -1578,17 +1583,13 @@ const styles = StyleSheet.create({
     addStudentRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginHorizontal: 16,
+        marginBottom: 12,
+        paddingVertical: 12,
         paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        gap: 12,
-    },
-    addStudentIcon: {
-        width: 32,
-        height: 32,
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
+        borderRadius: 10,
+        borderWidth: 1,
+        gap: 8,
     },
     addStudentText: {
         fontSize: TextSizes.medium,

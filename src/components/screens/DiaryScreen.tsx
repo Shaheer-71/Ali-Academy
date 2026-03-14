@@ -1,13 +1,15 @@
 // screens/DiaryScreen.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   RefreshControl,
   StyleSheet,
+  Modal,
+  TouchableWithoutFeedback,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -15,13 +17,9 @@ import { useTheme } from '@/src/contexts/ThemeContext';
 import { supabase } from '@/src/lib/supabase';
 import { uploadToCloudinary } from '@/src/lib/cloudinary';
 import * as DocumentPicker from 'expo-document-picker';
-import {
-  Plus,
-  BookOpen,
-  Search,
-} from 'lucide-react-native';
+import { Plus, BookOpen, ChevronRight, Check } from 'lucide-react-native';
+import { SkeletonBox } from '@/src/components/common/Skeleton';
 import TopSections from '@/src/components/common/TopSections';
-import SubjectFilter from '../common/SubjectFilter';
 import { SwipeableAssignmentCard } from '../dairy/SwipeableAssignmentCard';
 import { AssignmentDetailModal } from '../dairy/AssignmentDetailModal';
 import { CreateAssignmentModal } from '../dairy/CreateAssignmentModal';
@@ -31,7 +29,7 @@ import { useDiaryFilters } from '../../hooks/useDiaryFilters';
 import { useDiaryForm } from '../../hooks//useDiaryForm';
 import styles from '../dairy/styles';
 import { useFocusEffect } from '@react-navigation/native';
-import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+import { useScreenAnimation } from '@/src/utils/animations';
 import { Animated } from 'react-native';
 import {
   handleClassFetchErrorForDiary,
@@ -43,7 +41,11 @@ import {
 } from '@/src/utils/errorHandler/diaryErrorHandler';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
 import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
+import { TextSizes } from '@/src/styles/TextSizes';
 
+const { height } = Dimensions.get('window');
+
+type DateFilter = 'all' | 'today' | 'week' | 'overdue';
 
 interface DiaryAssignment {
   id: string;
@@ -71,36 +73,29 @@ export default function DiaryScreen() {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<DiaryAssignment | null>(null);
   const screenStyle = useScreenAnimation();
-  const addButtonAnimation = useButtonAnimation();
 
-  const [errorModal, setErrorModal] = useState({
-    visible: false,
-    title: '',
-    message: '',
-  });
+  // Filter bottom sheet state
+  const [openCardId, setOpenCardId] = useState<string | null>(null);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [filterStep, setFilterStep] = useState<'class' | 'subject'>('class');
+  const [pendingClass, setPendingClass] = useState<string | null>(null);
+  const [pendingSubject, setPendingSubject] = useState<string | null>(null);
+  const [pendingDate, setPendingDate] = useState<DateFilter>('all');
+  const [selectedDate, setSelectedDate] = useState<DateFilter>('all');
+
+  const [errorModal, setErrorModal] = useState({ visible: false, title: '', message: '' });
 
   const showError = (error: any, handler?: (error: any) => any) => {
     const errorInfo = handler ? handler(error) : handleError(error);
-    setErrorModal({
-      visible: true,
-      title: errorInfo.title,
-      message: errorInfo.message,
-    });
+    setErrorModal({ visible: true, title: errorInfo.title, message: errorInfo.message });
   };
 
   // Custom Hooks
-  const {
-    assignments,
-    loading,
-    refreshing,
-    fetchAssignments,
-    deleteAssignment,
-    handleRefresh,
-  } = useDiaryAssignments(profile, student);
+  const { assignments, studentsMap, loading, refreshing, fetchAssignments, deleteAssignment, handleRefresh } =
+    useDiaryAssignments(profile, student);
 
   const {
-    searchQuery,
-    setSearchQuery,
     selectedClass: filterClass,
     setSelectedClass: setFilterClass,
     selectedSubject,
@@ -108,235 +103,200 @@ export default function DiaryScreen() {
     filteredAssignments,
   } = useDiaryFilters(assignments, profile);
 
+  const { uploading, editingAssignment, setEditingAssignment, newAssignment, setNewAssignment, resetForm, createAssignment } =
+    useDiaryForm(profile, fetchAssignments);
+
+  // Sync pending state when filter modal opens
+  useEffect(() => {
+    if (filterVisible) {
+      setPendingClass(filterClass);
+      setPendingSubject(selectedSubject);
+      setPendingDate(selectedDate);
+      setFilterStep('class');
+    }
+  }, [filterVisible]);
+
   // When teacher changes class filter, reload subjects for that class
   useEffect(() => {
     setSelectedSubject(null);
     if (profile?.role === 'teacher') {
-      if (filterClass) {
-        fetchSubjectsForClass(filterClass);
-      } else {
-        fetchTeacherSubjects();
-      }
+      if (filterClass) fetchSubjectsForClass(filterClass);
+      else fetchTeacherSubjects();
     }
   }, [filterClass]);
-
-  const {
-    uploading,
-    editingAssignment,
-    setEditingAssignment,
-    newAssignment,
-    setNewAssignment,
-    resetForm,
-    createAssignment,
-  } = useDiaryForm(profile, fetchAssignments);
 
   // Fetch initial data
   useEffect(() => {
     fetchAssignments();
-    if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
-      fetchClasses();
-    }
+    if (profile?.role === 'teacher' || profile?.role === 'admin') fetchClasses();
   }, [profile]);
 
   // Fetch subjects
   useEffect(() => {
-    if (profile?.role === 'student' && student?.class_id) {
-      fetchSubjects();
-    } else if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
-      fetchTeacherSubjects();
-    }
+    if (profile?.role === 'student' && student?.class_id) fetchSubjects();
+    else if (profile?.role === 'teacher' || profile?.role === 'admin') fetchTeacherSubjects();
   }, [profile, student?.class_id]);
 
   // Auto refresh on focus
-  useFocusEffect(
-    useCallback(() => {
-      handleRefresh();
-    }, [profile])
-  );
+  useFocusEffect(useCallback(() => { handleRefresh(); }, [profile]));
 
-  // ✅ FIXED: Fetch teacher subjects from teacher_subject_enrollments
+  // Apply date filter on top of class/subject filtered assignments
+  const displayAssignments = useMemo(() => {
+    return filteredAssignments.filter(a => {
+      if (selectedDate === 'all') return true;
+      const due = new Date(a.due_date);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      if (selectedDate === 'today') {
+        const dueDay = new Date(due);
+        dueDay.setHours(0, 0, 0, 0);
+        return dueDay.getTime() === now.getTime();
+      }
+      if (selectedDate === 'week') {
+        const weekEnd = new Date(now);
+        weekEnd.setDate(now.getDate() + 7);
+        return due >= now && due <= weekEnd;
+      }
+      if (selectedDate === 'overdue') return due < now;
+      return true;
+    });
+  }, [filteredAssignments, selectedDate]);
+
+  // Active filter label
+  const activeParts: string[] = [];
+  if (filterClass) {
+    const cls = classes.find(c => c.id === filterClass);
+    if (cls) activeParts.push(cls.name);
+  }
+  if (selectedSubject) {
+    const sub = subjects.find(s => s.id === selectedSubject);
+    if (sub) activeParts.push(sub.name);
+  }
+  if (selectedDate !== 'all') {
+    activeParts.push(selectedDate === 'today' ? 'Today' : selectedDate === 'week' ? 'This Week' : 'Overdue');
+  }
+  const filterLabel = activeParts.join(' • ');
+  const isFiltered = filterClass !== null || selectedSubject !== null || selectedDate !== 'all';
+
+  const applyDiaryFilter = () => {
+    setFilterClass(pendingClass);
+    setSelectedSubject(pendingSubject);
+    setSelectedDate(pendingDate);
+    setFilterVisible(false);
+  };
+
+  const resetDiaryFilter = () => {
+    setPendingClass(null);
+    setPendingSubject(null);
+    setPendingDate('all');
+    setFilterClass(null);
+    setSelectedSubject(null);
+    setSelectedDate('all');
+    setFilterVisible(false);
+  };
+
+  const handleModalClassSelect = (classId: string | null) => {
+    setPendingClass(classId);
+    setPendingSubject(null);
+    setFilterStep('subject');
+    if (classId) fetchSubjectsForClass(classId);
+    else fetchTeacherSubjects();
+  };
+
   const fetchTeacherSubjects = async () => {
     try {
       const { data, error } = await supabase
         .from('teacher_subject_enrollments')
-        .select(`
-          subject_id,
-          subjects (
-            id,
-            name
-          )
-        `)
+        .select('subject_id, subjects (id, name)')
         .eq('teacher_id', profile?.id)
         .eq('is_active', true);
-
       if (error) throw error;
-
-      // Extract unique subjects
       const uniqueSubjects = Array.from(
-        new Map(
-          data
-            ?.map(item => item.subjects)
-            .filter(Boolean)
-            .map(subject => [subject.id, subject])
-        ).values()
+        new Map(data?.map(item => item.subjects).filter(Boolean).map((s: any) => [s.id, s])).values()
       );
-
       setSubjects(uniqueSubjects);
     } catch (error) {
-      console.warn('❌ Error fetching teacher subjects:', error);
       showError(error, handleSubjectFetchErrorForDiary);
       setSubjects([]);
     }
   };
 
-  // ✅ FIXED: Fetch subjects for selected class from teacher_subject_enrollments
   const fetchSubjectsForClass = async (classId: string) => {
     try {
-      if (!classId) {
-        console.warn('⚠️ No class selected');
-        setSubjects([]);
-        return;
-      }
-
+      if (!classId) { setSubjects([]); return; }
       const { data, error } = await supabase
         .from('teacher_subject_enrollments')
-        .select(`
-          subjects (
-            id,
-            name
-          )
-        `)
+        .select('subjects (id, name)')
         .eq('teacher_id', profile?.id)
         .eq('class_id', classId)
         .eq('is_active', true);
-
       if (error) throw error;
-
-
       const uniqueSubjects = Array.from(
-        new Map(
-          data
-            ?.map(item => item.subjects)
-            .filter(Boolean)
-            .map(subject => [subject.id, subject])
-        ).values()
+        new Map(data?.map(item => item.subjects).filter(Boolean).map((s: any) => [s.id, s])).values()
       );
-
       setSubjects(uniqueSubjects);
     } catch (error) {
-      console.log('❌ Error fetching subjects for class:', error);
       showError(error, handleSubjectFetchErrorForDiary);
       setSubjects([]);
     }
   };
 
-  // Student subjects - unchanged
   const fetchSubjects = async () => {
     try {
-      if (!student?.id) {
-        console.warn('No student ID found');
-        return;
-      }
-
+      if (!student?.id) return;
       const { data, error } = await supabase
         .from('student_subject_enrollments')
-        .select(`
-          subjects (
-            id,
-            name
-          )
-        `)
+        .select('subjects (id, name)')
         .eq('student_id', student.id)
         .eq('is_active', true);
-
       if (error) throw error;
-
-
-      const subjectsList = data
-        ?.map(item => item.subjects)
-        .filter(Boolean) || [];
-
-      setSubjects(subjectsList);
+      setSubjects(data?.map((item: any) => item.subjects).filter(Boolean) || []);
     } catch (error) {
-      console.warn('❌ Error fetching subjects:', error);
       showError(error, handleSubjectFetchErrorForDiary);
       setSubjects([]);
     }
   };
 
-  // ✅ FIXED: Fetch classes from teacher_subject_enrollments
   const fetchClasses = async () => {
     try {
       const { data, error } = await supabase
         .from('teacher_subject_enrollments')
-        .select(`
-          classes (
-            id,
-            name
-          )
-        `)
+        .select('classes (id, name)')
         .eq('teacher_id', profile?.id)
         .eq('is_active', true);
-
       if (error) throw error;
-
-
       const uniqueClasses = Array.from(
-        new Map(
-          data
-            ?.map(item => item.classes)
-            .filter(Boolean)
-            .map(cls => [cls.id, cls])
-        ).values()
+        new Map(data?.map((item: any) => item.classes).filter(Boolean).map((c: any) => [c.id, c])).values()
       );
-
       setClasses(uniqueClasses);
     } catch (error) {
-      console.warn('❌ Error fetching classes:', error);
       showError(error, handleClassFetchErrorForDiary);
       setClasses([]);
     }
   };
 
-  // ✅ FIXED: Fetch students from student_subject_enrollments based on teacher's class-subject
-  const fetchStudents = async (classId: string) => {
+  const fetchStudents = async (classId: string, subjectId?: string) => {
     try {
-      if (!newAssignment.subject_id) {
-        console.warn('⚠️ No subject selected');
-        setStudents([]);
-        return;
-      }
-
-      // Get student IDs enrolled in this class-subject combination
+      const sid = subjectId ?? newAssignment.subject_id;
+      if (!sid) { setStudents([]); return; }
       const { data: enrollmentsData, error: enrollError } = await supabase
         .from('student_subject_enrollments')
         .select('student_id')
         .eq('class_id', classId)
-        .eq('subject_id', newAssignment.subject_id)
+        .eq('subject_id', sid)
         .eq('is_active', true);
-
       if (enrollError) throw enrollError;
-
-      const studentIds = enrollmentsData?.map(e => e.student_id) || [];
-
-      if (studentIds.length === 0) {
-        setStudents([]);
-        return;
-      }
-
-      // Fetch student details from profiles
+      const studentIds = enrollmentsData?.map((e: any) => e.student_id) || [];
+      if (studentIds.length === 0) { setStudents([]); return; }
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, email')
         .in('id', studentIds)
         .eq('role', 'student')
         .order('full_name');
-
       if (error) throw error;
-
       setStudents(data || []);
     } catch (error) {
-      console.warn('❌ Error fetching students:', error);
       showError(error, handleStudentFetchErrorForDiary);
       setStudents([]);
     }
@@ -344,19 +304,9 @@ export default function DiaryScreen() {
 
   const pickDocument = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*'],
-        copyToCacheDirectory: true,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setNewAssignment(prev => ({
-          ...prev,
-          file: result.assets[0],
-        }));
-      }
+      const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], copyToCacheDirectory: true });
+      if (!result.canceled && result.assets[0]) setNewAssignment(prev => ({ ...prev, file: result.assets[0] }));
     } catch (error) {
-      console.warn('Error picking document:', error);
       showError(error, handleFileDownloadErrorForDiary);
     }
   };
@@ -368,8 +318,8 @@ export default function DiaryScreen() {
       description: assignment.description,
       due_date: assignment.due_date,
       class_id: assignment.class_id || '',
-      student_id: assignment.student_id || '',
-      assignTo: assignment.class_id ? 'class' : 'student',
+      student_ids: (assignment as any).student_ids || [],
+      assignTo: ((assignment as any).student_ids?.length > 0) ? 'students' : 'class',
       file: null,
       subject_id: assignment.subject_id || '',
     });
@@ -378,37 +328,27 @@ export default function DiaryScreen() {
 
   const handleUpdateAssignment = async () => {
     if (!editingAssignment) return;
-
     if (!newAssignment.title || !newAssignment.description || !newAssignment.due_date) {
       alert('Please fill in all required fields');
       return;
     }
-
     try {
       let fileUrl: string | undefined = editingAssignment.file_url;
-
       if (newAssignment.file) {
         const uploadResult = await uploadToCloudinary(newAssignment.file, 'raw');
         fileUrl = uploadResult.secure_url;
       }
-
-      const updateData = {
+      const updateData: any = {
         title: newAssignment.title,
         description: newAssignment.description,
         due_date: newAssignment.due_date,
         file_url: fileUrl,
-        class_id: newAssignment.assignTo === 'class' ? newAssignment.class_id : null,
-        student_id: newAssignment.assignTo === 'student' ? newAssignment.student_id : null,
+        class_id: newAssignment.class_id || null,
+        student_ids: newAssignment.assignTo === 'students' ? newAssignment.student_ids : [],
         subject_id: newAssignment.subject_id || null,
       };
-
-      const { error } = await supabase
-        .from('diary_assignments')
-        .update(updateData)
-        .eq('id', editingAssignment.id);
-
+      const { error } = await (supabase.from('diary_assignments') as any).update(updateData).eq('id', editingAssignment.id);
       if (error) throw error;
-
       alert('Assignment updated successfully');
       setEditModalVisible(false);
       setEditingAssignment(null);
@@ -424,60 +364,36 @@ export default function DiaryScreen() {
     setDetailModalVisible(true);
   };
 
-  // Utility functions
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
-  const isOverdue = (dueDate: string) => {
-    return new Date(dueDate) < new Date();
-  };
+  const isOverdue = (dueDate: string) => new Date(dueDate) < new Date();
 
   const handleCreateAssignment = async () => {
     if (!newAssignment.title || !newAssignment.description || !newAssignment.due_date) {
       alert('Please fill in all required fields');
       return;
     }
-
-    if (newAssignment.assignTo === 'class' && !newAssignment.class_id) {
-      alert('Please select a class');
-      return;
-    }
-
-    if (newAssignment.assignTo === 'student' && !newAssignment.student_id) {
-      alert('Please select a student');
-      return;
-    }
-
+    if (!newAssignment.class_id) { alert('Please select a class'); return; }
+    if (newAssignment.assignTo === 'students' && newAssignment.student_ids.length === 0) { alert('Please select at least one student'); return; }
     try {
       let fileUrl: string | undefined;
-
       if (newAssignment.file) {
         const uploadResult = await uploadToCloudinary(newAssignment.file, 'raw');
         fileUrl = uploadResult.secure_url;
       }
-
-      const assignmentData = {
+      const assignmentData: any = {
         title: newAssignment.title,
         description: newAssignment.description,
         due_date: newAssignment.due_date,
         file_url: fileUrl,
-        class_id: newAssignment.assignTo === 'class' ? newAssignment.class_id : null,
-        student_id: newAssignment.assignTo === 'student' ? newAssignment.student_id : null,
+        class_id: newAssignment.class_id || null,
+        student_ids: newAssignment.assignTo === 'students' ? newAssignment.student_ids : [],
         subject_id: newAssignment.subject_id || null,
         assigned_by: profile?.id,
       };
-
-      const { error } = await supabase
-        .from('diary_assignments')
-        .insert([assignmentData]);
-
+      const { error } = await (supabase.from('diary_assignments') as any).insert([assignmentData]);
       if (error) throw error;
-
       alert('Assignment created successfully');
       setModalVisible(false);
       resetForm();
@@ -487,104 +403,197 @@ export default function DiaryScreen() {
     }
   };
 
-  return (
-    <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TopSections />
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
+  const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin';
 
-        {/* Search & Filter Bar */}
-        <View style={styles.searchContainer}>
-          <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border, marginRight: 8 }]}>
-            <Search size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder="Search assignments..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor={colors.textSecondary}
-            />
-          </View>
+  const renderFilterModal = () => (
+    <Modal
+      visible={filterVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setFilterVisible(false)}
+    >
+      <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
+        <View style={localStyles.modalOverlay} />
+      </TouchableWithoutFeedback>
 
-          <ErrorModal
-            visible={errorModal.visible}
-            title={errorModal.title}
-            message={errorModal.message}
-            onClose={() => setErrorModal({ ...errorModal, visible: false })}
-          />
+      <View style={[localStyles.bottomSheet, { backgroundColor: colors.cardBackground }]}>
+        {/* Handle */}
+        <View style={[localStyles.sheetHandle, { backgroundColor: colors.border }]} />
 
+        {/* Add Assignment (teacher only) */}
+        {isTeacher && (
+          <TouchableOpacity
+            style={[localStyles.addAssignmentBtn, { borderColor: colors.primary }]}
+            onPress={() => { setFilterVisible(false); resetForm(); setModalVisible(true); }}
+          >
+            <Plus size={18} color={colors.primary} />
+            <Text allowFontScaling={false} style={[localStyles.addAssignmentText, { color: colors.primary }]}>
+              Add New Assignment
+            </Text>
+          </TouchableOpacity>
+        )}
 
-          {profile?.role === 'student' && (
-            <SubjectFilter
-              subjects={subjects}
-              selectedSubject={selectedSubject}
-              onSubjectSelect={setSelectedSubject}
-              colors={colors}
-              loading={false}
-            />
+        {/* Sheet header */}
+        <View style={localStyles.sheetHeader}>
+          {isTeacher && filterStep === 'subject' && (
+            <TouchableOpacity onPress={() => setFilterStep('class')} style={localStyles.backBtn}>
+              <ChevronRight size={20} color={colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
+            </TouchableOpacity>
           )}
-
-          {(profile?.role === 'teacher') && (
-            <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: colors.primary }]}
-              onPress={() => setModalVisible(true)}
-            >
-              <Plus size={24} color="#ffffff" />
+          <Text allowFontScaling={false} style={[localStyles.sheetTitle, { color: colors.text }]}>
+            {isTeacher
+              ? filterStep === 'class' ? 'Select Class' : 'Select Subject'
+              : 'Filter Assignments'}
+          </Text>
+          {(pendingClass !== null || pendingSubject !== null || pendingDate !== 'all') && (
+            <TouchableOpacity onPress={resetDiaryFilter}>
+              <Text allowFontScaling={false} style={[localStyles.resetText, { color: '#EF4444' }]}>Reset</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Teacher: class + subject filter rows */}
-        {profile?.role === 'teacher' && classes.length > 0 && (
-          <View style={diaryFilterStyles.filterContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={diaryFilterStyles.filterButtons}>
+        <ScrollView style={localStyles.sheetScroll} showsVerticalScrollIndicator={false}>
+          {/* Class / Subject list */}
+          {isTeacher ? (
+            filterStep === 'class' ? (
+              <>
                 <TouchableOpacity
-                  style={[diaryFilterStyles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }, filterClass === null && { backgroundColor: colors.primary, borderColor: colors.primary }]}
-                  onPress={() => setFilterClass(null)}
+                  style={[localStyles.sheetOption, { borderBottomColor: colors.border }]}
+                  onPress={() => handleModalClassSelect(null)}
                 >
-                  <Text allowFontScaling={false} style={[diaryFilterStyles.filterText, { color: filterClass === null ? '#fff' : colors.text }]}>All Classes</Text>
+                  <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>All Classes</Text>
+                  <View style={localStyles.sheetOptionRight}>
+                    {pendingClass === null && <Check size={16} color={colors.primary} />}
+                    <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} />
+                  </View>
                 </TouchableOpacity>
-                {classes.map(cls => (
+                {classes.map(c => (
                   <TouchableOpacity
-                    key={cls.id}
-                    style={[diaryFilterStyles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }, filterClass === cls.id && { backgroundColor: colors.primary, borderColor: colors.primary }]}
-                    onPress={() => setFilterClass(cls.id)}
+                    key={c.id}
+                    style={[localStyles.sheetOption, { borderBottomColor: colors.border }]}
+                    onPress={() => handleModalClassSelect(c.id)}
                   >
-                    <Text allowFontScaling={false} style={[diaryFilterStyles.filterText, { color: filterClass === cls.id ? '#fff' : colors.text }]}>{cls.name}</Text>
+                    <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>{c.name}</Text>
+                    <View style={localStyles.sheetOptionRight}>
+                      {pendingClass === c.id && <Check size={16} color={colors.primary} />}
+                      <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} />
+                    </View>
                   </TouchableOpacity>
                 ))}
-              </View>
-            </ScrollView>
-
-            {filterClass !== null && subjects.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
-                <View style={diaryFilterStyles.filterButtons}>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[localStyles.sheetOption, { borderBottomColor: colors.border }]}
+                  onPress={() => setPendingSubject(null)}
+                >
+                  <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>All Subjects</Text>
+                  {pendingSubject === null && <Check size={16} color={colors.primary} />}
+                </TouchableOpacity>
+                {subjects.map(s => (
                   <TouchableOpacity
-                    style={[diaryFilterStyles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }, selectedSubject === null && { backgroundColor: colors.secondary, borderColor: colors.secondary }]}
-                    onPress={() => setSelectedSubject(null)}
+                    key={s.id}
+                    style={[localStyles.sheetOption, { borderBottomColor: colors.border }]}
+                    onPress={() => setPendingSubject(s.id)}
                   >
-                    <Text allowFontScaling={false} style={[diaryFilterStyles.filterText, { color: selectedSubject === null ? '#fff' : colors.text }]}>All Subjects</Text>
+                    <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>{s.name}</Text>
+                    {pendingSubject === s.id && <Check size={16} color={colors.primary} />}
                   </TouchableOpacity>
-                  {subjects.map(sub => (
-                    <TouchableOpacity
-                      key={sub.id}
-                      style={[diaryFilterStyles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }, selectedSubject === sub.id && { backgroundColor: colors.secondary, borderColor: colors.secondary }]}
-                      onPress={() => setSelectedSubject(sub.id)}
-                    >
-                      <Text allowFontScaling={false} style={[diaryFilterStyles.filterText, { color: selectedSubject === sub.id ? '#fff' : colors.text }]}>{sub.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-            )}
+                ))}
+              </>
+            )
+          ) : (
+            // Student: subject filter
+            <>
+              <TouchableOpacity
+                style={[localStyles.sheetOption, { borderBottomColor: colors.border }]}
+                onPress={() => setPendingSubject(null)}
+              >
+                <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>All Subjects</Text>
+                {pendingSubject === null && <Check size={16} color={colors.primary} />}
+              </TouchableOpacity>
+              {subjects.map(s => (
+                <TouchableOpacity
+                  key={s.id}
+                  style={[localStyles.sheetOption, { borderBottomColor: colors.border }]}
+                  onPress={() => setPendingSubject(s.id)}
+                >
+                  <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>{s.name}</Text>
+                  {pendingSubject === s.id && <Check size={16} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
+
+          {/* Date filter — always visible */}
+          <View style={[localStyles.dateSectionHeader, { borderTopColor: colors.border }]}>
+            <Text allowFontScaling={false} style={[localStyles.dateSectionTitle, { color: colors.textSecondary }]}>
+              Filter by Date
+            </Text>
           </View>
-        )}
+          <View style={localStyles.dateChips}>
+            {(['all', 'today', 'week', 'overdue'] as DateFilter[]).map(opt => (
+              <TouchableOpacity
+                key={opt}
+                style={[
+                  localStyles.dateChip,
+                  { borderColor: colors.border, backgroundColor: colors.cardBackground },
+                  pendingDate === opt && { backgroundColor: colors.primary, borderColor: colors.primary },
+                ]}
+                onPress={() => setPendingDate(opt)}
+              >
+                <Text
+                  allowFontScaling={false}
+                  style={[localStyles.dateChipText, { color: pendingDate === opt ? '#fff' : colors.text }]}
+                >
+                  {opt === 'all' ? 'All' : opt === 'today' ? 'Today' : opt === 'week' ? 'This Week' : 'Overdue'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+
+        {/* Apply button */}
+        <TouchableOpacity
+          style={[localStyles.applyBtn, { backgroundColor: colors.primary }]}
+          onPress={applyDiaryFilter}
+        >
+          <Text allowFontScaling={false} style={localStyles.applyBtnText}>Apply Filter</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+
+  return (
+    <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
+      <TopSections
+        onFilterPress={() => setFilterVisible(true)}
+        isFiltered={isFiltered}
+      />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
+        <ErrorModal
+          visible={errorModal.visible}
+          title={errorModal.title}
+          message={errorModal.message}
+          onClose={() => setErrorModal({ ...errorModal, visible: false })}
+        />
+        {renderFilterModal()}
+
+        {/* Active filter label */}
+        {filterLabel ? (
+          <View style={localStyles.filterRow}>
+            <Text allowFontScaling={false} style={[localStyles.activeFilterLabel, { color: colors.textSecondary }]}>
+              {filterLabel}
+            </Text>
+          </View>
+        ) : null}
 
         {/* Assignments List */}
         <ScrollView
-          style={styles.scrollView}
+          style={[styles.scrollView, { paddingHorizontal: 16 }]}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          scrollEnabled={scrollEnabled}
+          contentContainerStyle={{ paddingTop: filterLabel ? 0 : 12, paddingBottom: 100 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -595,30 +604,62 @@ export default function DiaryScreen() {
           }
         >
           {loading ? (
-            <View style={styles.loadingContainer}>
-              <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>
-                Loading assignments...
-              </Text>
-            </View>
-          ) : filteredAssignments.length === 0 ? (
+            <>
+              {[...Array(5)].map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    skeletonStyles.card,
+                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                  ]}
+                >
+                  {/* Icon + title + meta row */}
+                  <View style={skeletonStyles.cardHeader}>
+                    <SkeletonBox width={40} height={40} borderRadius={8} style={{ marginRight: 12 }} />
+                    <View style={{ flex: 1 }}>
+                      <SkeletonBox width="65%" height={12} borderRadius={6} style={{ marginBottom: 8 }} />
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <SkeletonBox width={56} height={10} borderRadius={5} />
+                        <SkeletonBox width={56} height={10} borderRadius={5} />
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                        <SkeletonBox width={72} height={10} borderRadius={5} />
+                        <SkeletonBox width={72} height={10} borderRadius={5} />
+                      </View>
+                    </View>
+                  </View>
+                  {/* Description lines */}
+                  <SkeletonBox width="100%" height={10} borderRadius={5} style={{ marginBottom: 6 }} />
+                  <SkeletonBox width="75%" height={10} borderRadius={5} style={{ marginBottom: 12 }} />
+                  {/* Attachment button */}
+                  <SkeletonBox width="100%" height={34} borderRadius={8} />
+                </View>
+              ))}
+            </>
+          ) : displayAssignments.length === 0 ? (
             <View style={styles.emptyContainer}>
               <BookOpen size={48} color={colors.textSecondary} />
               <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>
                 No assignments yet
               </Text>
               <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                {(profile?.role === 'teacher' || profile?.role === 'admin')
+                {isTeacher
                   ? 'Create your first assignment to get started'
                   : 'Your assignments will appear here'}
               </Text>
             </View>
           ) : (
-            filteredAssignments.map(assignment => (
+            displayAssignments.map(assignment => (
               <SwipeableAssignmentCard
                 key={assignment.id}
                 assignment={assignment}
                 colors={colors}
-                isTeacher={(profile?.role === 'teacher')}
+                isTeacher={isTeacher}
+                isOpen={openCardId === assignment.id}
+                onSwipeOpen={(id) => setOpenCardId(id)}
+                onSwipeClose={() => setOpenCardId(null)}
+                onGestureStart={() => setScrollEnabled(false)}
+                onGestureEnd={() => setScrollEnabled(true)}
                 onEdit={handleEditAssignment}
                 onDelete={deleteAssignment}
                 onPress={handleDetailPress}
@@ -630,13 +671,10 @@ export default function DiaryScreen() {
         </ScrollView>
 
         {/* Create Assignment Modal */}
-        {profile?.role === 'teacher' && (
+        {isTeacher && (
           <CreateAssignmentModal
             visible={modalVisible}
-            onClose={() => {
-              setModalVisible(false);
-              resetForm();
-            }}
+            onClose={() => { setModalVisible(false); resetForm(); }}
             colors={colors}
             newAssignment={newAssignment}
             setNewAssignment={setNewAssignment}
@@ -653,14 +691,10 @@ export default function DiaryScreen() {
         )}
 
         {/* Edit Assignment Modal */}
-        {(profile?.role === 'teacher') && (
+        {isTeacher && (
           <EditAssignmentModal
             visible={editModalVisible}
-            onClose={() => {
-              setEditModalVisible(false);
-              setEditingAssignment(null);
-              resetForm();
-            }}
+            onClose={() => { setEditModalVisible(false); setEditingAssignment(null); resetForm(); }}
             colors={colors}
             newAssignment={newAssignment}
             setNewAssignment={setNewAssignment}
@@ -674,39 +708,155 @@ export default function DiaryScreen() {
         <AssignmentDetailModal
           visible={detailModalVisible}
           assignment={selectedAssignment}
-          onClose={() => {
-            setDetailModalVisible(false);
-            setSelectedAssignment(null);
-          }}
+          onClose={() => { setDetailModalVisible(false); setSelectedAssignment(null); }}
           colors={colors}
           isOverdue={isOverdue}
           formatDate={formatDate}
+          studentsMap={studentsMap}
         />
-
       </SafeAreaView>
-    </Animated.View >
+    </Animated.View>
   );
 }
 
-import { TextSizes } from '@/src/styles/TextSizes';
-
-const diaryFilterStyles = StyleSheet.create({
-  filterContainer: {
+const localStyles = StyleSheet.create({
+  filterRow: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  activeFilterLabel: {
+    fontSize: TextSizes.small,
+    fontFamily: 'Inter-Regular',
+  },
+  // ── Bottom sheet ──────────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  bottomSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 12,
+    paddingBottom: 32,
+    maxHeight: height * 0.65,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  addAssignmentBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 8,
+  },
+  addAssignmentText: {
+    fontSize: TextSizes.medium,
+    fontFamily: 'Inter-SemiBold',
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     marginBottom: 8,
   },
-  filterButtons: {
-    flexDirection: 'row',
-    gap: 6,
+  backBtn: {
+    marginRight: 8,
+    padding: 2,
   },
-  filterButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderRadius: 8,
+  sheetTitle: {
+    flex: 1,
+    fontSize: TextSizes.sectionTitle,
+    fontFamily: 'Inter-SemiBold',
   },
-  filterText: {
+  resetText: {
     fontSize: TextSizes.filterLabel,
     fontFamily: 'Inter-Medium',
+  },
+  sheetScroll: {
+    maxHeight: height * 0.38,
+  },
+  sheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  sheetOptionText: {
+    fontSize: TextSizes.medium,
+    fontFamily: 'Inter-Regular',
+    flex: 1,
+  },
+  sheetOptionRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateSectionHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 4,
+  },
+  dateSectionTitle: {
+    fontSize: TextSizes.filterLabel,
+    fontFamily: 'Inter-Medium',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dateChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    gap: 8,
+    paddingBottom: 8,
+  },
+  dateChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  dateChipText: {
+    fontSize: TextSizes.filterLabel,
+    fontFamily: 'Inter-Medium',
+  },
+  applyBtn: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  applyBtnText: {
+    fontSize: TextSizes.medium,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
+  },
+});
+
+const skeletonStyles = StyleSheet.create({
+  card: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
   },
 });

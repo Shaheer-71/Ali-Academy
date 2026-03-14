@@ -16,8 +16,8 @@ interface FormState {
     description: string;
     due_date: string;
     class_id: string;
-    student_id: string;
-    assignTo: 'class' | 'student';
+    student_ids: string[];
+    assignTo: 'class' | 'students';
     file: any;
     subject_id: string;
 }
@@ -48,7 +48,7 @@ export const useDiaryForm = (
         description: '',
         due_date: '',
         class_id: '',
-        student_id: '',
+        student_ids: [],
         assignTo: 'class',
         file: null,
         subject_id: '',
@@ -60,7 +60,7 @@ export const useDiaryForm = (
             description: '',
             due_date: '',
             class_id: '',
-            student_id: '',
+            student_ids: [],
             assignTo: 'class',
             file: null,
             subject_id: '',
@@ -91,11 +91,11 @@ export const useDiaryForm = (
             return false;
         }
 
-        if (newAssignment.assignTo === 'student' && !newAssignment.student_id) {
+        if (newAssignment.assignTo === 'students' && newAssignment.student_ids.length === 0) {
             if (showError) {
-                showError({ message: 'Please select a student' });
+                showError({ message: 'Please select at least one student' });
             } else {
-                Alert.alert('Error', 'Please select a student');
+                Alert.alert('Error', 'Please select at least one student');
             }
             return false;
         }
@@ -128,8 +128,8 @@ export const useDiaryForm = (
                 description: newAssignment.description,
                 due_date: newAssignment.due_date,
                 file_url: fileUrl,
-                class_id: newAssignment.assignTo === 'class' ? newAssignment.class_id : null,
-                student_id: newAssignment.assignTo === 'student' ? newAssignment.student_id : null,
+                class_id: newAssignment.class_id || null,
+                student_ids: newAssignment.assignTo === 'students' ? newAssignment.student_ids : [],
                 subject_id: newAssignment.subject_id || null,
                 assigned_by: profile!.id,
             };
@@ -205,11 +205,11 @@ export const useDiaryForm = (
                             }
                         }
                     }
-                } else if (newAssignment.assignTo === 'student' && newAssignment.student_id) {
-                    const { data: notif, error: notifError } = await supabase
-                        .from('notifications')
-                        .insert([
-                            {
+                } else if (newAssignment.assignTo === 'students' && newAssignment.student_ids.length > 0) {
+                    for (const studentId of newAssignment.student_ids) {
+                        const { data: notif, error: notifError } = await supabase
+                            .from('notifications')
+                            .insert([{
                                 type: 'assignment_added',
                                 title: `Assignment: ${newAssignment.title}`,
                                 message: `You have received a new assignment. Due date: ${newAssignment.due_date}.`,
@@ -217,39 +217,36 @@ export const useDiaryForm = (
                                 entity_id: assignment.id,
                                 created_by: profile!.id,
                                 target_type: 'individual',
-                                target_id: newAssignment.student_id,
+                                target_id: studentId,
                                 priority: 'medium',
-                            },
-                        ])
-                        .select('id')
-                        .single();
+                            }])
+                            .select('id')
+                            .single();
 
-                    if (!notifError && notif) {
-                        const recipientRow = {
-                            notification_id: notif.id,
-                            user_id: newAssignment.student_id,
-                            is_read: false,
-                            is_deleted: false,
-                        };
-
-                        await supabase.from('notification_recipients').insert([recipientRow]);
-
-                        try {
-                            await sendPushNotification({
-                                userId: newAssignment.student_id,
-                                title: `📝 New Assignment: ${newAssignment.title}`,
-                                body: `You have a new assignment due on ${newAssignment.due_date}.`,
-                                data: {
-                                    type: 'assignment_added',
-                                    notificationId: notif.id,
-                                    assignmentId: assignment.id,
-                                    studentId: newAssignment.student_id,
-                                    dueDate: newAssignment.due_date,
-                                    timestamp: new Date().toISOString(),
-                                },
-                            });
-                        } catch (pushError) {
-                            console.warn('❌ Failed to send push notification:', pushError);
+                        if (!notifError && notif) {
+                            await supabase.from('notification_recipients').insert([{
+                                notification_id: notif.id,
+                                user_id: studentId,
+                                is_read: false,
+                                is_deleted: false,
+                            }]);
+                            try {
+                                await sendPushNotification({
+                                    userId: studentId,
+                                    title: `📝 New Assignment: ${newAssignment.title}`,
+                                    body: `You have a new assignment due on ${newAssignment.due_date}.`,
+                                    data: {
+                                        type: 'assignment_added',
+                                        notificationId: notif.id,
+                                        assignmentId: assignment.id,
+                                        studentId,
+                                        dueDate: newAssignment.due_date,
+                                        timestamp: new Date().toISOString(),
+                                    },
+                                });
+                            } catch (pushError) {
+                                console.warn('❌ Failed to send push notification:', pushError);
+                            }
                         }
                     }
                 }

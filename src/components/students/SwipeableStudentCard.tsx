@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     actionBtnText: {
-        fontSize: 11,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
     cardWrapper: {
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     title: {
-        fontSize: 16,
+        fontSize: TextSizes.header,
         fontFamily: 'Inter-SemiBold',
         marginBottom: 4,
     },
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     metaText: {
-        fontSize: 11,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
     },
     actions: {
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     actionText: {
-        fontSize: 11,
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
     },
 });
