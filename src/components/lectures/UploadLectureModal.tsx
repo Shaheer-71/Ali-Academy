@@ -1,5 +1,4 @@
 // src/components/lectures/UploadLectureModal.tsx
-
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -11,39 +10,44 @@ import {
     Alert,
     StyleSheet,
     ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
-import { X, Upload, Youtube, Users, User } from 'lucide-react-native';
+import { X, Upload, Youtube } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { lectureService } from '@/src/services/lecture.service';
-import { LectureFormData, Class, Subject, Student } from '@/src/types/lectures';
+import { Lecture, LectureFormData, Class, Subject, Student } from '@/src/types/lectures';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
 import {
     handleClassFetchErrorForLectures,
     handleSubjectFetchErrorForLectures,
     handleStudentFetchErrorForLectures,
     handleFilePickError,
-    handleLectureUploadError
+    handleLectureUploadError,
+    handleLectureUpdateError,
 } from '@/src/utils/errorHandler/lectureErrorHandler';
 import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
 import { TextSizes } from '@/src/styles/TextSizes';
-
 
 interface UploadLectureModalProps {
     visible: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    editLecture?: Lecture | null;
 }
 
 export default function UploadLectureModal({
     visible,
     onClose,
-    onSuccess
+    onSuccess,
+    editLecture,
 }: UploadLectureModalProps) {
-
     const { colors } = useTheme();
     const { profile } = useAuth();
+
+    const isEditMode = !!editLecture;
 
     const [formData, setFormData] = useState<LectureFormData>({
         title: '',
@@ -59,26 +63,16 @@ export default function UploadLectureModal({
     const [classes, setClasses] = useState<Class[]>([]);
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
-    const [isUploading, setIsUploading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [errorModal, setErrorModal] = useState({
-        visible: false,
-        title: '',
-        message: '',
-    });
+    const [errorModal, setErrorModal] = useState({ visible: false, title: '', message: '' });
 
     const showError = (error: any, handler?: (error: any) => any) => {
-        const errorInfo = handler ? handler(error) : handleError(error);
-        setErrorModal({
-            visible: true,
-            title: errorInfo.title,
-            message: errorInfo.message,
-        });
+        const info = handler ? handler(error) : handleError(error);
+        setErrorModal({ visible: true, title: info.title, message: info.message });
     };
 
-    /* ------------------------------------------
-     * RESET FORM
-     -------------------------------------------*/
+    /* ── Reset ────────────────────────────────────────────────────────────── */
     const resetForm = () => {
         setFormData({
             title: '',
@@ -94,24 +88,19 @@ export default function UploadLectureModal({
         setStudents([]);
     };
 
-    /* ------------------------------------------
-     * FILE PICKER
-     -------------------------------------------*/
+    /* ── File picker ──────────────────────────────────────────────────────── */
     const pickFile = async () => {
         try {
             const result = await DocumentPicker.getDocumentAsync({
                 type: ['application/pdf', 'video/*', 'image/*'],
                 copyToCacheDirectory: true,
             });
-
             if (!result.canceled && result.assets[0]) {
                 const file = result.assets[0];
-
                 if (file.size && file.size > 50 * 1024 * 1024) {
                     showError({ message: 'File size must be less than 50MB' });
                     return;
                 }
-
                 setFormData(prev => ({ ...prev, file }));
             }
         } catch (error) {
@@ -119,190 +108,169 @@ export default function UploadLectureModal({
         }
     };
 
-    /* ------------------------------------------
-     * YOUTUBE VALIDATION
-     -------------------------------------------*/
+    /* ── YouTube validation ────────────────────────────────────────────────── */
     const validateYouTubeLink = (link: string) => {
-        const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
-        return !link || youtubeRegex.test(link);
+        const re = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
+        return !link || re.test(link);
     };
 
-    /* ------------------------------------------
-     * UPLOAD HANDLER
-     -------------------------------------------*/
-    const handleUpload = async () => {
-        if (!formData.title.trim()) {
-            Alert.alert('Error', 'Please enter a title');
-            return;
-        }
-        if (!formData.class_id) {
-            Alert.alert('Error', 'Please select a class');
-            return;
-        }
-        if (!formData.subject_id) {
-            Alert.alert('Error', 'Please select a subject');
-            return;
-        }
-        if (!formData.file) {
-            Alert.alert('Error', 'Please select a file');
-            return;
-        }
+    /* ── Submit ───────────────────────────────────────────────────────────── */
+    const handleSubmit = async () => {
+        if (!formData.title.trim()) { Alert.alert('Error', 'Please enter a title'); return; }
         if (formData.youtube_link && !validateYouTubeLink(formData.youtube_link)) {
-            Alert.alert('Error', 'Please enter a valid YouTube link');
-            return;
-        }
-        if (formData.access_type === 'individual' && formData.selected_students.length === 0) {
-            Alert.alert('Error', 'Please select at least one student');
-            return;
+            Alert.alert('Error', 'Please enter a valid YouTube link'); return;
         }
 
-        setIsUploading(true);
-        try {
-            await lectureService.uploadLecture(formData, profile!.id);
-            Alert.alert('Success', 'Lecture uploaded successfully', [
-                { text: 'OK', onPress: () => { onSuccess(); onClose(); } }
-            ]);
-        } catch (error: any) {
-            Alert.alert('Upload Failed', error.message || 'Failed to upload lecture');
-        } finally {
-            setIsUploading(false);
+        if (isEditMode) {
+            // ── Edit mode ──────────────────────────────────────────────────
+            setIsSubmitting(true);
+            try {
+                await lectureService.updateLecture(editLecture!.id, {
+                    title: formData.title.trim(),
+                    description: formData.description.trim(),
+                    youtube_link: formData.youtube_link.trim(),
+                });
+                Alert.alert('Success', 'Lecture updated successfully', [
+                    { text: 'OK', onPress: () => { onSuccess(); onClose(); } },
+                ]);
+            } catch (error) {
+                showError(error, handleLectureUpdateError);
+            } finally {
+                setIsSubmitting(false);
+            }
+        } else {
+            // ── Create mode ────────────────────────────────────────────────
+            if (!formData.class_id) { Alert.alert('Error', 'Please select a class'); return; }
+            if (!formData.subject_id) { Alert.alert('Error', 'Please select a subject'); return; }
+            if (!formData.file) { Alert.alert('Error', 'Please select a file'); return; }
+            if (formData.access_type === 'individual' && formData.selected_students.length === 0) {
+                Alert.alert('Error', 'Please select at least one student'); return;
+            }
+            setIsSubmitting(true);
+            try {
+                await lectureService.uploadLecture(formData, profile!.id);
+                Alert.alert('Success', 'Lecture uploaded successfully', [
+                    { text: 'OK', onPress: () => { onSuccess(); onClose(); } },
+                ]);
+            } catch (error) {
+                showError(error, handleLectureUploadError);
+            } finally {
+                setIsSubmitting(false);
+            }
         }
     };
 
-    /* ------------------------------------------
-     * STUDENT TOGGLE
-     -------------------------------------------*/
+    /* ── Student toggle ───────────────────────────────────────────────────── */
     const toggleStudent = (studentId: string) => {
         setFormData(prev => ({
             ...prev,
             selected_students: prev.selected_students.includes(studentId)
                 ? prev.selected_students.filter(id => id !== studentId)
-                : [...prev.selected_students, studentId]
+                : [...prev.selected_students, studentId],
         }));
     };
 
-    /* ------------------------------------------
-     * LOAD STUDENTS FOR SUBJECT
-     -------------------------------------------*/
+    /* ── Load helpers ─────────────────────────────────────────────────────── */
     const loadStudentsForSubject = async (classId: string, subjectId: string) => {
         try {
-            const studentsData = await lectureService.fetchClassStudents(classId, subjectId);
-            setStudents(studentsData);
+            const data = await lectureService.fetchClassStudents(classId, subjectId);
+            setStudents(data);
         } catch (err) {
-            console.warn("Error fetching students:", err);
             showError(err, handleStudentFetchErrorForLectures);
         }
     };
 
-    /* ------------------------------------------
-     * LOAD CLASSES
-     -------------------------------------------*/
     const loadClasses = async () => {
         try {
-            const data = await lectureService.fetchClasses(profile.id, profile?.role);
+            const data = await lectureService.fetchClasses(profile!.id, profile?.role);
             setClasses(data);
-
-            if (data.length > 0) {
-                setFormData(prev => ({
-                    ...prev,
-                    class_id: data[0].id,
-                    subject_id: ''
-                }));
+            if (!isEditMode && data.length > 0) {
+                setFormData(prev => ({ ...prev, class_id: data[0].id, subject_id: '' }));
             }
         } catch (error) {
             showError(error, handleClassFetchErrorForLectures);
         }
     };
 
-    /* ------------------------------------------
-     * LOAD SUBJECTS + OPTIONAL STUDENTS
-     -------------------------------------------*/
     const loadClassData = async (classId: string) => {
         try {
-            let subjectsData = [];
-            let studentsData = [];
-
-            try {
-                subjectsData = await lectureService.fetchClassSubjects(classId, profile?.id, profile?.role);
-            } catch (err) {
-                showError(err, handleSubjectFetchErrorForLectures);
-            }
-
-            if (formData.subject_id) {
-                try {
-                    studentsData = await lectureService.fetchClassStudents(classId, formData.subject_id);
-                } catch (err) {
-                    console.warn("Error fetching students:", err);
-                }
-            }
-
+            const subjectsData = await lectureService.fetchClassSubjects(classId, profile?.id, profile?.role);
             setSubjects(subjectsData);
-            setStudents(studentsData);
-
-            if (subjectsData.length > 0) {
-                setFormData(prev => ({
-                    ...prev,
-                    subject_id: subjectsData[0].id
-                }));
+            if (!isEditMode && subjectsData.length > 0) {
+                setFormData(prev => ({ ...prev, subject_id: subjectsData[0].id }));
             }
         } catch (err) {
-            console.warn("Error fetching students:", err);
-            showError(err, handleStudentFetchErrorForLectures);
+            showError(err, handleSubjectFetchErrorForLectures);
+            setSubjects([]);
         }
     };
 
-    /* ------------------------------------------
-     * EFFECT: WHEN MODAL OPENS
-     -------------------------------------------*/
+    /* ── Effects ──────────────────────────────────────────────────────────── */
     useEffect(() => {
         if (visible && profile) {
-            loadClasses();
-        } else {
+            if (isEditMode && editLecture) {
+                // Pre-populate for edit
+                setFormData({
+                    title: editLecture.title || '',
+                    description: editLecture.description || '',
+                    file: null,
+                    youtube_link: editLecture.youtube_link || '',
+                    class_id: editLecture.class_id || '',
+                    subject_id: editLecture.subject_id || '',
+                    access_type: 'class',
+                    selected_students: [],
+                });
+                // Load classes/subjects for display (read-only chips)
+                loadClasses();
+                if (editLecture.class_id) loadClassData(editLecture.class_id);
+            } else {
+                resetForm();
+                loadClasses();
+            }
+        } else if (!visible) {
             resetForm();
         }
-    }, [visible, profile]);
+    }, [visible, editLecture]);
 
-    /* ------------------------------------------
-     * EFFECT: WHEN CLASS CHANGES
-     -------------------------------------------*/
     useEffect(() => {
-        if (formData.class_id) {
+        if (!isEditMode && formData.class_id) {
             loadClassData(formData.class_id);
         }
     }, [formData.class_id]);
 
-    /* ------------------------------------------
-     * EFFECT: WHEN SUBJECT CHANGES → LOAD STUDENTS
-     -------------------------------------------*/
     useEffect(() => {
-        if (formData.class_id && formData.subject_id) {
+        if (!isEditMode && formData.class_id && formData.subject_id) {
             loadStudentsForSubject(formData.class_id, formData.subject_id);
         }
     }, [formData.subject_id]);
 
-    /* ------------------------------------------
-     * UI RETURN
-     -------------------------------------------*/
+    /* ── UI ───────────────────────────────────────────────────────────────── */
     return (
         <Modal
             visible={visible}
             animationType="fade"
             transparent
-            statusBarTranslucent={true}
-            presentationStyle="overFullScreen">
-            <View style={styles.overlay}>
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+        >
+            <KeyboardAvoidingView
+                style={styles.keyboardView}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <View style={styles.backdrop} />
                 <View style={[styles.modal, { backgroundColor: colors.background }]}>
 
                     {/* Header */}
                     <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                        <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>Upload Lecture</Text>
-                        <TouchableOpacity onPress={onClose} disabled={isUploading}>
+                        <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>
+                            {isEditMode ? 'Edit Lecture' : 'Upload Lecture'}
+                        </Text>
+                        <TouchableOpacity onPress={onClose} disabled={isSubmitting}>
                             <X size={24} color={colors.text} />
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-
+                    <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                         <ErrorModal
                             visible={errorModal.visible}
                             title={errorModal.title}
@@ -352,7 +320,9 @@ export default function UploadLectureModal({
 
                         {/* Class Selection */}
                         <View style={styles.field}>
-                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Select Class *</Text>
+                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
+                                {isEditMode ? 'Class' : 'Select Class *'}
+                            </Text>
                             <View style={styles.options}>
                                 {classes.map(cls => (
                                     <TouchableOpacity
@@ -360,14 +330,16 @@ export default function UploadLectureModal({
                                         style={[
                                             styles.option,
                                             { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                            formData.class_id === cls.id && { backgroundColor: colors.primary }
+                                            formData.class_id === cls.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                                         ]}
-                                        onPress={() => setFormData(prev => ({ ...prev, class_id: cls.id, subject_id: '' }))}
+                                        onPress={() => {
+                                            if (!isEditMode) setFormData(prev => ({ ...prev, class_id: cls.id, subject_id: '' }));
+                                        }}
+                                        disabled={isEditMode}
                                     >
                                         <Text allowFontScaling={false} style={[
                                             styles.optionText,
-                                            { color: colors.text },
-                                            formData.class_id === cls.id && { color: 'white' }
+                                            { color: formData.class_id === cls.id ? '#fff' : colors.text },
                                         ]}>
                                             {cls.name}
                                         </Text>
@@ -379,7 +351,9 @@ export default function UploadLectureModal({
                         {/* Subject Selection */}
                         {subjects.length > 0 && (
                             <View style={styles.field}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Select Subject *</Text>
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
+                                    {isEditMode ? 'Subject' : 'Select Subject *'}
+                                </Text>
                                 <View style={styles.options}>
                                     {subjects.map(subject => (
                                         <TouchableOpacity
@@ -387,14 +361,16 @@ export default function UploadLectureModal({
                                             style={[
                                                 styles.option,
                                                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                                formData.subject_id === subject.id && { backgroundColor: colors.primary }
+                                                formData.subject_id === subject.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                                             ]}
-                                            onPress={() => setFormData(prev => ({ ...prev, subject_id: subject.id }))}
+                                            onPress={() => {
+                                                if (!isEditMode) setFormData(prev => ({ ...prev, subject_id: subject.id }));
+                                            }}
+                                            disabled={isEditMode}
                                         >
                                             <Text allowFontScaling={false} style={[
                                                 styles.optionText,
-                                                { color: colors.text },
-                                                formData.subject_id === subject.id && { color: 'white' }
+                                                { color: formData.subject_id === subject.id ? '#fff' : colors.text },
                                             ]}>
                                                 {subject.name}
                                             </Text>
@@ -404,8 +380,8 @@ export default function UploadLectureModal({
                             </View>
                         )}
 
-                        {/* Students (Only if access type individual) */}
-                        {formData.access_type === 'individual' && students.length > 0 && (
+                        {/* Students (create mode only) */}
+                        {!isEditMode && formData.access_type === 'individual' && students.length > 0 && (
                             <View style={styles.field}>
                                 <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
                                     Select Students ({formData.selected_students.length}/{students.length})
@@ -419,15 +395,12 @@ export default function UploadLectureModal({
                                                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
                                                 formData.selected_students.includes(student.user_id) && {
                                                     backgroundColor: colors.primary + '20',
-                                                    borderColor: colors.primary
-                                                }
+                                                    borderColor: colors.primary,
+                                                },
                                             ]}
                                             onPress={() => toggleStudent(student.user_id)}
                                         >
-                                            <Text allowFontScaling={false} style={[
-                                                styles.studentName,
-                                                { color: colors.text }
-                                            ]}>
+                                            <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]}>
                                                 {student.profiles?.full_name || `Roll: ${student.roll_number}`}
                                             </Text>
                                         </TouchableOpacity>
@@ -436,61 +409,73 @@ export default function UploadLectureModal({
                             </View>
                         )}
 
-                        {/* File Picker */}
-                        <View style={styles.field}>
-                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Select File *</Text>
-                            <TouchableOpacity
-                                style={[styles.filePicker, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-                                onPress={pickFile}
-                            >
-                                <Upload size={20} color={colors.primary} />
-                                <Text allowFontScaling={false} style={[styles.fileText, { color: formData.file ? colors.text : colors.textSecondary }]}>
-                                    {formData.file ? formData.file.name : 'Tap to select file (PDF, Image, Video)'}
-                                </Text>
-                            </TouchableOpacity>
-                            {formData.file && (
-                                <Text allowFontScaling={false} style={[styles.fileSize, { color: colors.textSecondary }]}>
-                                    Size: {((formData.file.size || 0) / (1024 * 1024)).toFixed(1)} MB
-                                </Text>
-                            )}
-                        </View>
+                        {/* File Picker — create mode only */}
+                        {!isEditMode && (
+                            <View style={styles.field}>
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Select File *</Text>
+                                <TouchableOpacity
+                                    style={[styles.filePicker, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                                    onPress={pickFile}
+                                >
+                                    <Upload size={20} color={colors.primary} />
+                                    <Text allowFontScaling={false} style={[styles.fileText, { color: formData.file ? colors.text : colors.textSecondary }]}>
+                                        {formData.file ? formData.file.name : 'Tap to select file (PDF, Image, Video)'}
+                                    </Text>
+                                </TouchableOpacity>
+                                {formData.file && (
+                                    <Text allowFontScaling={false} style={[styles.fileSize, { color: colors.textSecondary }]}>
+                                        Size: {((formData.file.size || 0) / (1024 * 1024)).toFixed(1)} MB
+                                    </Text>
+                                )}
+                            </View>
+                        )}
 
-                        {/* Upload Button */}
+                        {/* Edit mode note */}
+                        {isEditMode && (
+                            <View style={[styles.infoBox, { backgroundColor: colors.cardBackground }]}>
+                                <Text allowFontScaling={false} style={[styles.infoText, { color: colors.textSecondary }]}>
+                                    Class, subject, and file cannot be changed after uploading.
+                                </Text>
+                            </View>
+                        )}
+
+                        {/* Submit Button */}
                         <TouchableOpacity
-                            style={[
-                                styles.uploadButton,
-                                { backgroundColor: isUploading ? colors.textSecondary : colors.primary }
-                            ]}
-                            onPress={handleUpload}
-                            disabled={isUploading}
+                            style={[styles.submitButton, { backgroundColor: isSubmitting ? colors.textSecondary : colors.primary }]}
+                            onPress={handleSubmit}
+                            disabled={isSubmitting}
                         >
-                            {isUploading ? (
+                            {isSubmitting ? (
                                 <ActivityIndicator size="small" color="white" />
                             ) : (
                                 <>
                                     <Upload size={20} color="white" />
-                                    <Text allowFontScaling={false} style={styles.uploadButtonText}>Upload Lecture</Text>
+                                    <Text allowFontScaling={false} style={styles.submitButtonText}>
+                                        {isEditMode ? 'Update Lecture' : 'Upload Lecture'}
+                                    </Text>
                                 </>
                             )}
                         </TouchableOpacity>
-
                     </ScrollView>
                 </View>
-            </View>
+            </KeyboardAvoidingView>
         </Modal>
     );
 }
 
 const styles = StyleSheet.create({
-    overlay: {
+    keyboardView: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
     },
+    backdrop: {
+        flex: 1,
+    },
     modal: {
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        maxHeight: '65%',
+        maxHeight: '75%',
     },
     header: {
         flexDirection: 'row',
@@ -523,7 +508,6 @@ const styles = StyleSheet.create({
     textArea: {
         minHeight: 70,
         textAlignVertical: 'top',
-        fontSize: TextSizes.medium,
     },
     options: {
         flexDirection: 'row',
@@ -571,17 +555,27 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-Regular',
         marginTop: 4,
     },
-    uploadButton: {
+    infoBox: {
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 16,
+    },
+    infoText: {
+        fontSize: TextSizes.small,
+        fontFamily: 'Inter-Regular',
+        lineHeight: 18,
+    },
+    submitButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 12,
         borderRadius: 8,
         gap: 6,
-        marginTop: 10,
-        marginBottom: 40,
+        marginTop: 6,
+        marginBottom: 24,
     },
-    uploadButtonText: {
+    submitButtonText: {
         color: 'white',
         fontSize: TextSizes.buttonText,
         fontFamily: 'Inter-SemiBold',

@@ -162,20 +162,6 @@ export default function DiaryScreen() {
     });
   }, [filteredAssignments, selectedDate]);
 
-  // Active filter label
-  const activeParts: string[] = [];
-  if (filterClass) {
-    const cls = classes.find(c => c.id === filterClass);
-    if (cls) activeParts.push(cls.name);
-  }
-  if (selectedSubject) {
-    const sub = subjects.find(s => s.id === selectedSubject);
-    if (sub) activeParts.push(sub.name);
-  }
-  if (selectedDate !== 'all') {
-    activeParts.push(selectedDate === 'today' ? 'Today' : selectedDate === 'week' ? 'This Week' : 'Overdue');
-  }
-  const filterLabel = activeParts.join(' • ');
   const isFiltered = filterClass !== null || selectedSubject !== null || selectedDate !== 'all';
 
   const applyDiaryFilter = () => {
@@ -579,21 +565,12 @@ export default function DiaryScreen() {
         />
         {renderFilterModal()}
 
-        {/* Active filter label */}
-        {filterLabel ? (
-          <View style={localStyles.filterRow}>
-            <Text allowFontScaling={false} style={[localStyles.activeFilterLabel, { color: colors.textSecondary }]}>
-              {filterLabel}
-            </Text>
-          </View>
-        ) : null}
-
         {/* Assignments List */}
         <ScrollView
           style={[styles.scrollView, { paddingHorizontal: 16 }]}
           showsVerticalScrollIndicator={false}
           scrollEnabled={scrollEnabled}
-          contentContainerStyle={{ paddingTop: filterLabel ? 0 : 12, paddingBottom: 100 }}
+          contentContainerStyle={{ paddingTop: 12, paddingBottom: 100 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -720,15 +697,6 @@ export default function DiaryScreen() {
 }
 
 const localStyles = StyleSheet.create({
-  filterRow: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  activeFilterLabel: {
-    fontSize: TextSizes.small,
-    fontFamily: 'Inter-Regular',
-  },
   // ── Bottom sheet ──────────────────────────────────────────────────────
   modalOverlay: {
     flex: 1,

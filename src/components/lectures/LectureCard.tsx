@@ -1,28 +1,11 @@
 // src/components/lectures/LectureCard.tsx
-
-import React, { useState, useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  Animated,
-  PanResponder,
+  View, Text, TouchableOpacity, StyleSheet, Alert,
+  ActivityIndicator, Animated, PanResponder,
 } from 'react-native';
 import {
-  FileText,
-  Video,
-  Image as ImageIcon,
-  Download,
-  Eye,
-  Share2,
-  Youtube,
-  Calendar,
-  BookOpen,
-  Edit,
-  Trash2,
+  FileText, Youtube, Calendar, BookOpen, Edit, Trash2,
 } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -30,172 +13,115 @@ import { Lecture } from '@/src/types/lectures';
 import { lectureService } from '@/src/services/lecture.service';
 import { TextSizes } from '@/src/styles/TextSizes';
 import {
-  handleLectureDeleteError,
-  handleFileDownloadError,
-  handleFileShareError,
-  handleYouTubeLinkError
+  handleLectureDeleteError, handleFileDownloadError, handleYouTubeLinkError,
 } from '@/src/utils/errorHandler/lectureErrorHandler';
 import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
 import { ErrorModal } from '../common/ErrorModal';
 import { LectureDetailModal } from '@/src/components/lectures/LectureDetailModal';
 
-
+const ACTION_WIDTH = 90;
+const SWIPE_THRESHOLD = -8;
 
 interface LectureCardProps {
   lecture: Lecture;
+  isOpen: boolean;
+  onSwipeOpen: (id: string) => void;
+  onSwipeClose: () => void;
+  onGestureStart: () => void;
+  onGestureEnd: () => void;
   onRefresh?: () => void;
   onEdit?: (lecture: Lecture) => void;
 }
 
-export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardProps) {
+export default function LectureCard({
+  lecture, isOpen, onSwipeOpen, onSwipeClose,
+  onGestureStart, onGestureEnd, onRefresh, onEdit,
+}: LectureCardProps) {
   const { colors } = useTheme();
   const { profile } = useAuth();
-  const [isDownloading, setIsDownloading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-
-
-  // Swipe animation
-  const translateX = useRef(new Animated.Value(0)).current;
-  const [isSwipedLeft, setIsSwipedLeft] = useState(false);
-
-  // Add error modal state at the top
-  const [errorModal, setErrorModal] = useState({
-    visible: false,
-    title: '',
-    message: '',
-  });
+  const [errorModal, setErrorModal] = useState({ visible: false, title: '', message: '' });
 
   const showError = (error: any, handler?: (error: any) => any) => {
-    const errorInfo = handler ? handler(error) : handleError(error);
-    setErrorModal({
-      visible: true,
-      title: errorInfo.title,
-      message: errorInfo.message,
-    });
+    const info = handler ? handler(error) : handleError(error);
+    setErrorModal({ visible: true, title: info.title, message: info.message });
   };
 
-  const SWIPE_THRESHOLD = -100;
-  const ACTION_WIDTH = 150;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
+
+  const snap = (toValue: number) => {
+    Animated.spring(translateX, { toValue, useNativeDriver: true, bounciness: 0, speed: 20 }).start();
+  };
+
+  useEffect(() => { snap(isOpen ? -ACTION_WIDTH : 0); }, [isOpen]);
+
+  const onGestureStartRef = useRef(onGestureStart);
+  const onGestureEndRef = useRef(onGestureEnd);
+  onGestureStartRef.current = onGestureStart;
+  onGestureEndRef.current = onGestureEnd;
+
+  const canSwipe = profile?.role === 'teacher' || profile?.role === 'admin';
 
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) => {
-        return (
-          (profile?.role === 'teacher' || profile?.role === 'admin') &&
-          Math.abs(gesture.dx) > Math.abs(gesture.dy) &&
-          Math.abs(gesture.dx) > 10
-        );
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, g) =>
+        canSwipe && Math.abs(g.dx) > Math.abs(g.dy) * 1.5 && Math.abs(g.dx) > 5,
+
+      onPanResponderGrant: () => {
+        onGestureStartRef.current();
+        translateX.stopAnimation();
+        translateX.setOffset((translateX as any)._value);
+        translateX.setValue(0);
       },
-      onPanResponderMove: (_, gesture) => {
-        if (gesture.dx < 0) {
-          translateX.setValue(Math.max(gesture.dx, -ACTION_WIDTH));
-        } else if (isSwipedLeft) {
-          translateX.setValue(Math.max(gesture.dx - ACTION_WIDTH, -ACTION_WIDTH));
-        }
+
+      onPanResponderMove: (_, g) => {
+        const base = isOpenRef.current ? -ACTION_WIDTH : 0;
+        const next = base + g.dx;
+        if (next <= 0 && next >= -ACTION_WIDTH) translateX.setValue(g.dx);
       },
-      onPanResponderRelease: (_, gesture) => {
-        if (gesture.dx < SWIPE_THRESHOLD) {
-          setIsSwipedLeft(true);
-          Animated.spring(translateX, {
-            toValue: -ACTION_WIDTH,
-            useNativeDriver: true,
-            tension: 50,
-            friction: 8,
-          }).start();
+
+      onPanResponderRelease: (_, g) => {
+        translateX.flattenOffset();
+        onGestureEndRef.current();
+        if (g.dx < SWIPE_THRESHOLD && !isOpenRef.current) {
+          snap(-ACTION_WIDTH);
+          onSwipeOpen(lecture.id);
+        } else if (g.dx > -SWIPE_THRESHOLD && isOpenRef.current) {
+          snap(0);
+          onSwipeClose();
         } else {
-          setIsSwipedLeft(false);
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 50,
-            friction: 8,
-          }).start();
+          snap(isOpenRef.current ? -ACTION_WIDTH : 0);
         }
+      },
+
+      onPanResponderTerminate: () => {
+        translateX.flattenOffset();
+        onGestureEndRef.current();
+        snap(isOpenRef.current ? -ACTION_WIDTH : 0);
       },
     })
   ).current;
 
-  const resetSwipe = () => {
-    setIsSwipedLeft(false);
-    Animated.spring(translateX, {
-      toValue: 0,
-      useNativeDriver: true,
-      tension: 50,
-      friction: 8,
-    }).start();
+  const handleCardPress = () => {
+    if (isOpen) { onSwipeClose(); return; }
+    setShowDetails(true);
   };
 
-  const getFileIcon = () => {
-    const iconProps = { size: 20, color: "#ffffff" };
-
-    if (lecture.file_type.includes('video')) return <Video {...iconProps} />;
-    if (lecture.file_type.includes('image')) return <ImageIcon {...iconProps} />;
-    return <FileText {...iconProps} />;
-  };
-
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return '';
-    const mb = bytes / (1024 * 1024);
-    return mb < 1 ? `${Math.round(bytes / 1024)}KB` : `${mb.toFixed(1)}MB`;
-  };
-
-  const handleView = async () => {
-    try {
-      await lectureService.viewLecture(lecture, profile!.id);
-      onRefresh?.();
-    } catch (error) {
-      showError(error, handleFileDownloadError);
-    }
-  };
-
-  const handleDownload = async () => {
-    if (isDownloading) return;
-
-    setIsDownloading(true);
-    try {
-      await lectureService.downloadLecture(lecture, profile!.id);
-      Alert.alert('Success', 'File downloaded successfully');
-      onRefresh?.();
-    } catch (error) {
-      showError(error, handleFileDownloadError);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  const handleShare = async () => {
-    try {
-      await lectureService.shareLecture(lecture);
-    } catch (error) {
-      showError(error, handleFileShareError);
-    }
-  };
-
-  const handleYouTube = async () => {
-    if (!lecture.youtube_link) return;
-
-    try {
-      await lectureService.openYouTubeLink(lecture.youtube_link);
-    } catch (error) {
-      showError(error, handleYouTubeLinkError);
-    }
-  };
-
-  const handleEdit = () => {
-    resetSwipe();
-    onEdit?.(lecture);
-  };
+  const handleEdit = () => { onSwipeClose(); onEdit?.(lecture); };
 
   const handleDelete = () => {
+    onSwipeClose();
     Alert.alert(
       'Delete Lecture',
       `Are you sure you want to delete "${lecture.title}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
-          style: 'destructive',
+          text: 'Delete', style: 'destructive',
           onPress: async () => {
             setIsDeleting(true);
             try {
@@ -206,7 +132,6 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
               showError(error, handleLectureDeleteError);
             } finally {
               setIsDeleting(false);
-              resetSwipe();
             }
           },
         },
@@ -214,70 +139,60 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
     );
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  const handleView = async () => {
+    try { await lectureService.viewLecture(lecture, profile!.id); onRefresh?.(); }
+    catch (error) { showError(error, handleFileDownloadError); }
   };
 
-  const canSwipe = profile?.role === 'teacher' || profile?.role === 'admin';
+  const handleYouTube = async () => {
+    if (!lecture.youtube_link) return;
+    try { await lectureService.openYouTubeLink(lecture.youtube_link); }
+    catch (error) { showError(error, handleYouTubeLinkError); }
+  };
 
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
   return (
-    <View style={styles.container}>
-      {/* Action buttons (shown when swiped) */}
+    <View style={s.container}>
+      {/* Actions behind card */}
       {canSwipe && (
-        <View style={styles.actionsBackground}>
+        <View style={s.actionsBackground}>
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: colors.background }]}
+            style={[s.actionBtn, { backgroundColor: colors.cardBackground }]}
             onPress={handleEdit}
             disabled={isDeleting}
           >
             <Edit size={20} color={colors.primary} />
-            <Text allowFontScaling={false} style={[styles.actionBtnText, { color: colors.primary }]}>
-              Edit
-            </Text>
+            <Text allowFontScaling={false} style={[s.actionBtnText, { color: colors.primary }]}>Edit</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: colors.background }]}
+            style={[s.actionBtn, { backgroundColor: colors.cardBackground }]}
             onPress={handleDelete}
             disabled={isDeleting}
           >
-            {isDeleting ? (
-              <ActivityIndicator size="small" color="#EF4444" />
-            ) : (
-              <>
-                <Trash2 size={20} color="#EF4444" />
-                <Text allowFontScaling={false} style={[styles.actionBtnText, { color: '#EF4444' }]}>
-                  Delete
-                </Text>
-              </>
-            )}
+            {isDeleting
+              ? <ActivityIndicator size="small" color="#EF4444" />
+              : <>
+                  <Trash2 size={20} color="#EF4444" />
+                  <Text allowFontScaling={false} style={[s.actionBtnText, { color: '#EF4444' }]}>Delete</Text>
+                </>
+            }
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Main card */}
+      {/* Sliding card */}
       <Animated.View
-        style={[
-          styles.cardWrapper,
-          {
-            transform: [{ translateX }],
-          },
-        ]}
+        style={[s.cardWrapper, { transform: [{ translateX }] }]}
         {...(canSwipe ? panResponder.panHandlers : {})}
       >
-
         <ErrorModal
           visible={errorModal.visible}
           title={errorModal.title}
           message={errorModal.message}
           onClose={() => setErrorModal({ ...errorModal, visible: false })}
         />
-
         <LectureDetailModal
           visible={showDetails}
           lecture={lecture}
@@ -286,66 +201,45 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
           formatDate={formatDate}
         />
 
-
         <TouchableOpacity
           activeOpacity={1}
-          onPress={() => {
-            if (isSwipedLeft) {
-              resetSwipe();
-            } else {
-              setShowDetails(true);
-            }
-          }}
-          style={[
-            styles.card,
-            { backgroundColor: colors.cardBackground, borderColor: colors.border }
-          ]}
+          onPress={handleCardPress}
+          style={[s.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
         >
           {/* Header */}
-          <View style={styles.header}>
-            <View style={[styles.quizIcon, { backgroundColor: colors.primary }]}>
-              {getFileIcon()}
+          <View style={s.header}>
+            <View style={[s.iconBox, { backgroundColor: colors.primary }]}>
+              <FileText size={20} color="#ffffff" />
             </View>
-
-            <View style={styles.info}>
-              <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>
+            <View style={s.info}>
+              <Text allowFontScaling={false} style={[s.title, { color: colors.text }]}>
                 {lecture.title}
               </Text>
-
-              {/* Meta Info */}
-              <View style={styles.metaRow}>
-                <View style={styles.metaItem}>
-                  <BookOpen size={12} color={colors.textSecondary} />
-                  <Text allowFontScaling={false} style={[styles.metaText, { color: colors.textSecondary }]}>
-                    {lecture.classes?.name}
-                  </Text>
-                </View>
-
-                <View style={styles.metaItem}>
-                  <FileText size={12} color={colors.textSecondary} />
-                  <Text allowFontScaling={false} style={[styles.metaText, { color: colors.textSecondary }]}>
-                    {lecture.subjects?.name}
-                  </Text>
-                </View>
-
-                {/* {lecture.file_size && (
-                  <Text allowFontScaling={false} style={[styles.sizeText, { color: colors.textSecondary }]}>
-                    {formatFileSize(lecture.file_size)}
-                  </Text>
-                )} */}
+              <View style={s.metaRow}>
+                {lecture.classes?.name && (
+                  <View style={s.metaItem}>
+                    <BookOpen size={12} color={colors.textSecondary} />
+                    <Text allowFontScaling={false} style={[s.metaText, { color: colors.textSecondary }]}>
+                      {lecture.classes.name}
+                    </Text>
+                  </View>
+                )}
+                {lecture.subjects?.name && (
+                  <View style={s.metaItem}>
+                    <FileText size={12} color={colors.textSecondary} />
+                    <Text allowFontScaling={false} style={[s.metaText, { color: colors.textSecondary }]}>
+                      {lecture.subjects.name}
+                    </Text>
+                  </View>
+                )}
               </View>
-
-              {/* Description */}
-
-
-              {/* Upload Info */}
-              <View style={styles.uploadInfo}>
-                <Text allowFontScaling={false} style={[styles.uploadedBy, { color: colors.textSecondary }]}>
-                  By {lecture.profiles?.full_name}
+              <View style={s.byDateRow}>
+                <Text allowFontScaling={false} style={[s.byText, { color: colors.textSecondary }]}>
+                  By: {lecture.profiles?.full_name ?? '—'}
                 </Text>
-                <View style={styles.metaItem}>
-                  <Calendar size={10} color={colors.textSecondary} />
-                  <Text allowFontScaling={false} style={[styles.dateText, { color: colors.textSecondary }]}>
+                <View style={s.metaItem}>
+                  <Calendar size={12} color={colors.textSecondary} />
+                  <Text allowFontScaling={false} style={[s.metaText, { color: colors.textSecondary }]}>
                     {formatDate(lecture.created_at)}
                   </Text>
                 </View>
@@ -353,198 +247,67 @@ export default function LectureCard({ lecture, onRefresh, onEdit }: LectureCardP
             </View>
           </View>
 
-          {lecture.description && (
+          {lecture.description ? (
             <Text
               allowFontScaling={false}
-              style={[styles.description, { color: colors.textSecondary }]}
+              style={[s.description, { color: colors.textSecondary }]}
               numberOfLines={2}
             >
               {lecture.description}
             </Text>
-          )}
+          ) : null}
 
-          {/* Actions */}
-          <View style={styles.actions}>
+          {/* Action buttons */}
+          <View style={s.actions}>
             <TouchableOpacity
-              style={[
-                styles.actionButton,
-                { backgroundColor: colors.primary + '10', borderColor: colors.border }
-              ]}
+              style={[s.actionButton, { backgroundColor: colors.primary + '10', borderColor: colors.border }]}
               onPress={handleView}
             >
-              <FileText
-                size={14}
-                color={lecture.file_url ? colors.primary : colors.textSecondary}
-              />
-              <Text allowFontScaling={false} style={[styles.actionText, { color: colors.primary }]}>
-                Attachment
-              </Text>
+              <FileText size={14} color={colors.primary} />
+              <Text allowFontScaling={false} style={[s.actionText, { color: colors.primary }]}>Attachment</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
-              style={[
-                styles.actionButton,
-                {
-                  backgroundColor: colors.primary + '10',
-                  borderColor: colors.border,
-                  opacity: lecture.youtube_link ? 1 : 0.5
-                }
-              ]}
+              style={[s.actionButton, { backgroundColor: colors.primary + '10', borderColor: colors.border, opacity: lecture.youtube_link ? 1 : 0.5 }]}
               onPress={handleYouTube}
               disabled={!lecture.youtube_link}
             >
               <Youtube size={14} color={lecture.youtube_link ? '#FF0000' : colors.textSecondary} />
-              <Text
-                allowFontScaling={false}
-                style={[
-                  styles.actionText,
-                  { color: lecture.youtube_link ? colors.primary : colors.textSecondary }
-                ]}
-              >
+              <Text allowFontScaling={false} style={[s.actionText, { color: lecture.youtube_link ? colors.primary : colors.textSecondary }]}>
                 YouTube
               </Text>
             </TouchableOpacity>
-
-            {/* <TouchableOpacity
-              style={[
-                styles.actionButton,
-                { backgroundColor: colors.primary + '10', borderColor: colors.border }
-              ]}
-              onPress={handleShare}
-            >
-              <Share2 size={14} color={colors.primary} />
-              <Text allowFontScaling={false} style={[styles.actionText, { color: colors.primary }]}>
-                Share
-              </Text>
-            </TouchableOpacity> */}
           </View>
-
         </TouchableOpacity>
       </Animated.View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  quizIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  container: {
-    marginBottom: 12,
-    position: 'relative',
-  },
+const s = StyleSheet.create({
+  container: { marginBottom: 12, position: 'relative' },
   actionsBackground: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    backgroundColor: '#fff',
+    position: 'absolute', right: 0, top: 0, bottom: 0,
+    width: ACTION_WIDTH, flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center',
   },
-  actionBtn: {
-    width: 75,
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    backgroundColor: '#fff',
-  },
-  actionBtnText: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-  },
-  cardWrapper: {
-    width: '100%',
-  },
-  card: {
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  info: {
-    flex: 1,
-  },
-  title: {
-    fontSize: TextSizes.xlarge,
-    fontFamily: 'Inter-SemiBold',
-    marginBottom: 4,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 4,
-    justifyContent: 'space-between',
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
-    fontSize: 11,
-    fontFamily: 'Inter-Regular',
-  },
-  sizeText: {
-    fontSize: 10,
-    fontFamily: 'Inter-Regular',
-  },
-  description: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: 'Inter-Regular',
-    marginBottom: 4,
-  },
-  uploadInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  uploadedBy: {
-    fontSize: 11,
-    fontFamily: 'Inter-Italic',
-  },
-  dateText: {
-    fontSize: 10,
-    fontFamily: 'Inter-Regular',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-  },
+  actionBtn: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  actionBtnText: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold' },
+  cardWrapper: { width: '100%' },
+  card: { borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1 },
+  header: { flexDirection: 'row', marginBottom: 8 },
+  iconBox: { width: 40, height: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  info: { flex: 1 },
+  title: { fontSize: TextSizes.header, fontFamily: 'Inter-SemiBold', marginBottom: 4 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 4 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaText: { fontSize: TextSizes.medium, fontFamily: 'Inter-Regular' },
+  byDateRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  byText: { fontSize: TextSizes.medium, fontFamily: 'Inter-Italic' },
+  description: { fontSize: TextSizes.large, fontFamily: 'Inter-Regular', lineHeight: 18, marginBottom: 10 },
+  actions: { flexDirection: 'row', gap: 8, marginTop: 4 },
   actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    gap: 4,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 8, borderRadius: 8, borderWidth: 1, gap: 6,
   },
-  actionText: {
-    fontSize: 11,
-    fontFamily: 'Inter-SemiBold',
-  },
+  actionText: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold' },
 });

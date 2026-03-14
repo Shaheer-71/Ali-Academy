@@ -185,7 +185,7 @@ export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterCha
                                         <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} />
                                     </View>
                                 </TouchableOpacity>
-                                {classes.map((c) => (
+                                {[...classes].sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
                                     <TouchableOpacity
                                         key={c.id}
                                         style={[styles.sheetOption, { borderBottomColor: colors.border }]}
@@ -292,16 +292,6 @@ export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterCha
         );
     }
 
-    // ── Active filter label ───────────────────────────────────────────────────
-    const activeClassName = selectedClass === 'all'
-        ? null
-        : classes.find(c => c.id === selectedClass)?.name;
-    const activeSubjectName = selectedSubject === 'all'
-        ? null
-        : subjects.find(s => s.id === selectedSubject)?.name;
-
-    const filterLabel = [activeClassName, activeSubjectName].filter(Boolean).join(' • ');
-
     // ── Main render ───────────────────────────────────────────────────────────
     return (
         <Animated.View style={[styles.container, screenStyle, { backgroundColor: colors.background }]}>
@@ -312,15 +302,6 @@ export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterCha
                 onClose={closeErrorModal}
             />
             {renderFilterModal()}
-
-            {/* Active filter label */}
-            {filterLabel ? (
-                <View style={styles.filterRow}>
-                    <Text allowFontScaling={false} style={[styles.activeFilterLabel, { color: colors.textSecondary }]}>
-                        {filterLabel}
-                    </Text>
-                </View>
-            ) : null}
 
             {/* Overview Cards */}
             <View style={styles.overviewContainer}>
@@ -438,15 +419,6 @@ export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterCha
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    filterRow: {
-        paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 8,
-    },
-    activeFilterLabel: {
-        fontSize: TextSizes.small,
-        fontFamily: 'Inter-Regular',
     },
     // ── Bottom sheet ────────────────────────────────────────────────
     modalOverlay: {
