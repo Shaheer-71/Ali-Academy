@@ -190,38 +190,18 @@ export const feeService = {
         months: string[]
     ) {
         try {
-            console.log("🚀 Starting markAsPaidWithNotification...");
-            console.log("📦 Input parameters:", {
-                studentId,
-                classId,
-                month,
-                year,
-                feeStructure,
-                studentName,
-                teacherId,
-            });
-
             const now = new Date();
 
-            // Check if payment record exists
-            console.log("🔍 Checking for existing payment record...");
             let payment = await this.getFeePaymentForMonth(studentId, classId, month, year);
-            console.log("🧾 Existing payment record:", payment);
-
             let paymentResult;
 
             if (payment) {
-                console.log("✏️ Updating existing fee payment record:", payment.id);
                 paymentResult = await this.updateFeePayment(payment.id, {
                     payment_status: "paid",
                     payment_date: now.toISOString(),
                     amount_paid: feeStructure?.amount || "0",
                 });
-                console.log("✅ Payment updated successfully:", paymentResult);
             } else {
-                console.log("🆕 Creating new fee payment record...");
-                console.log("🧩 Searching student_fee record for:", { studentId, classId });
-
                 const { data: studentFee, error: studentFeeError } = await supabase
                     .from("student_fees")
                     .select("id")
@@ -229,14 +209,11 @@ export const feeService = {
                     .eq("class_id", classId)
                     .single();
 
-                console.log("📄 Student fee query result:", { studentFee, studentFeeError });
-
                 if (studentFeeError) {
-                    console.warn("❌ Error fetching student_fee:", studentFeeError);
+                    console.warn("Error fetching student_fee:", studentFeeError);
                     throw studentFeeError;
                 }
 
-                console.log("📤 Creating fee_payment entry...");
                 paymentResult = await this.createFeePayment({
                     student_fee_id: studentFee?.id,
                     student_id: studentId,
@@ -249,20 +226,7 @@ export const feeService = {
                     payment_method: "manual",
                     notes: "Marked as paid by teacher",
                 });
-                console.log("✅ Fee payment created successfully:", paymentResult);
             }
-
-            console.log("🧠 Preparing to insert notification...");
-            console.log("📩 Notification variables:", {
-                type: "fee_paid",
-                title: `Fee Payment Confirmed`,
-                message: `Payment for ${months[month - 1]} ${year} has been marked as paid. Amount: Rs ${feeStructure?.amount || "0"}`,
-                entity_type: "fee_payment",
-                entity_id: paymentResult?.id,
-                created_by: teacherId,
-                target_type: "individual",
-                target_id: studentId,
-            });
 
             // Create notification
             const { data: notif, error: notifError } = await supabase
@@ -284,15 +248,11 @@ export const feeService = {
                 .single();
 
             if (notifError) {
-                console.warn("❌ Error creating payment notification:", notifError);
+                console.warn("Error creating payment notification:", notifError);
                 throw notifError;
             }
 
-            console.log("✅ Notification created successfully:", notif);
-
-            // Add recipient
             if (notif) {
-                console.log("📬 Adding notification recipient for:", { notification_id: notif.id, user_id: studentId });
                 const { error: recError } = await supabase.from("notification_recipients").insert([
                     {
                         notification_id: notif.id,
@@ -301,20 +261,12 @@ export const feeService = {
                         is_deleted: false,
                     },
                 ]);
-
-                if (recError) {
-                    console.warn("❌ Error adding notification recipient:", recError);
-                } else {
-                    console.log("✅ Notification recipient added successfully");
-                }
-            } else {
-                console.warn("⚠️ No notification returned from insert, skipping recipients.");
+                if (recError) console.warn("Error adding notification recipient:", recError);
             }
 
-            console.log("🎉 Finished markAsPaidWithNotification successfully");
             return paymentResult;
         } catch (error) {
-            console.warn("💥 Error in markAsPaidWithNotification:", error);
+            console.warn("Error in markAsPaidWithNotification:", error);
             throw error;
         }
     }

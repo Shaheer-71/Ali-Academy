@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { Settings, Moon, Sun, Bell, X, CheckCheck, Trash2, DollarSign } from 'lucide-react-native';
+import { Settings, Moon, Sun, Bell, X, CheckCheck, Trash2, DollarSign, SlidersHorizontal } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useNotifications } from '@/src/contexts/NotificationContext';
@@ -21,9 +21,11 @@ import { NotificationCard } from '@/src/components/common/NotificationCard';
 
 interface TopSectionProps {
     showNotifications?: boolean;
+    onFilterPress?: () => void;
+    isFiltered?: boolean;
 }
 
-export default function TopSection({ showNotifications = true }: TopSectionProps) {
+export default function TopSection({ showNotifications = true, onFilterPress, isFiltered = false }: TopSectionProps) {
     const route = useRoute();
     const router = useRouter();
     const { isDark, toggleTheme, colors } = useTheme();
@@ -90,12 +92,26 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                 </Text>
 
                 <View style={styles.rightSection}>
+                    {onFilterPress && (
+                        <TouchableOpacity
+                            style={[
+                                styles.iconButton,
+                                { backgroundColor: colors.cardBackground },
+                                isFiltered && { borderWidth: 1, borderColor: colors.primary },
+                            ]}
+                            onPress={onFilterPress}
+                        >
+                            <SlidersHorizontal color={isFiltered ? colors.primary : colors.primary} size={20} />
+                            {isFiltered && <View style={styles.filterDot} />}
+                        </TouchableOpacity>
+                    )}
+
                     {showNotifications && (
                         <TouchableOpacity
                             style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
                             onPress={() => setNotificationsVisible(true)}
                         >
-                            <Bell color={colors.primary} size={24} />
+                            <Bell color={colors.primary} size={20} />
                             {unreadCount > 0 && (
                                 <View style={styles.notificationBadge}>
                                     <Text allowFontScaling={false} style={styles.badgeText}>
@@ -106,13 +122,12 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                         </TouchableOpacity>
                     )}
 
-
                     {(profile?.role === 'teacher' && profile?.email === 'rafeh@aliacademy.edu') && !inFee && (
                         <TouchableOpacity
                             style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
                             onPress={() => router.push('/fee')}
                         >
-                            <DollarSign color={colors.primary} size={24} />
+                            <DollarSign color={colors.primary} size={20} />
                         </TouchableOpacity>
                     )}
 
@@ -122,9 +137,9 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                             onPress={toggleTheme}
                         >
                             {isDark ? (
-                                <Sun color={colors.primary} size={24} />
+                                <Sun color={colors.primary} size={20} />
                             ) : (
-                                <Moon color={colors.primary} size={24} />
+                                <Moon color={colors.primary} size={20} />
                             )}
                         </TouchableOpacity>
                     )}
@@ -134,10 +149,9 @@ export default function TopSection({ showNotifications = true }: TopSectionProps
                             style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
                             onPress={() => router.push('/settings')}
                         >
-                            <Settings color={colors.primary} size={24} />
+                            <Settings color={colors.primary} size={20} />
                         </TouchableOpacity>
                     )}
-
                 </View>
             </View>
 
@@ -306,6 +320,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
+    },
+    filterDot: {
+        position: 'absolute',
+        top: 7,
+        right: 7,
+        width: 7,
+        height: 7,
+        borderRadius: 4,
+        backgroundColor: '#EF4444',
+        borderWidth: 1,
+        borderColor: '#fff',
     },
     notificationBadge: {
         position: 'absolute',

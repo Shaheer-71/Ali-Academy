@@ -29,7 +29,7 @@ class LectureService {
                 throw new Error('User role is required');
             }
 
-            console.log(`🔍 Fetching lectures for ${role}:`, userId);
+            // console.log(`🔍 Fetching lectures for ${role}:`, userId);
 
             if (role === 'teacher') {
                 // ✅ For teachers, get from teacher_subject_enrollments
@@ -45,15 +45,11 @@ class LectureService {
                 }
 
                 if (!enrollments || enrollments.length === 0) {
-                    console.log('No enrollments found for teacher');
                     return [];
                 }
 
                 const classIds = [...new Set(enrollments.map(e => e.class_id))];
                 const subjectIds = [...new Set(enrollments.map(e => e.subject_id))];
-
-                console.log(`📚 Teacher class IDs:`, classIds);
-                console.log(`📚 Teacher subject IDs:`, subjectIds);
 
                 let query = supabase
                     .from('lectures')
@@ -77,8 +73,6 @@ class LectureService {
 
                 const { data, error } = await query;
                 if (error) throw error;
-
-                console.log(`✅ Fetched ${data?.length || 0} lectures`);
 
                 if (data && userId) {
                     return await this.enhanceLecturesWithViewStatus(data, userId);
@@ -99,15 +93,11 @@ class LectureService {
                 }
 
                 if (!enrollments || enrollments.length === 0) {
-                    console.log('No enrollments found for student');
                     return [];
                 }
 
                 const classIds = [...new Set(enrollments.map(e => e.class_id))];
                 const subjectIds = [...new Set(enrollments.map(e => e.subject_id))];
-
-                console.log(`📚 Student class IDs:`, classIds);
-                console.log(`📚 Student subject IDs:`, subjectIds);
 
                 let query = supabase
                     .from('lectures')
@@ -131,8 +121,6 @@ class LectureService {
 
                 const { data, error } = await query;
                 if (error) throw error;
-
-                console.log(`✅ Fetched ${data?.length || 0} lectures`);
 
                 if (data && userId) {
                     return await this.enhanceLecturesWithViewStatus(data, userId);
@@ -156,8 +144,6 @@ class LectureService {
             if (!userId || !role) {
                 throw new Error('User ID and role are required');
             }
-
-            console.log(`🔍 Fetching classes for ${role}:`, userId);
 
             if (role === 'teacher') {
                 const { data: enrollments, error: enrollmentError } = await supabase
@@ -223,7 +209,6 @@ class LectureService {
                 throw new Error('User ID and role are required');
             }
 
-            console.log(`🔍 Fetching subjects for ${role} in class:`, classId);
 
             if (role === 'teacher') {
                 const { data: enrollments, error: enrollmentError } = await supabase
@@ -287,7 +272,6 @@ class LectureService {
      */
     async fetchClassStudents(classId: string, subjectId: string) {
         try {
-            console.log('🔍 Fetching students for class + subject:', { classId, subjectId });
 
             const { data: enrollments, error: enrollmentError } = await supabase
                 .from('student_subject_enrollments')

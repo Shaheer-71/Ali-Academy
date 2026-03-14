@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/src/hooks/useFrameworkReady';
@@ -22,66 +22,54 @@ function RootLayoutNav() {
 
   // Setup notification handlers ONCE on mount
   useEffect(() => {
-    console.log('📱 Setting up notification handlers...');
     setupNotificationHandlers();
   }, []);
 
   // Register device when user is loaded
   useEffect(() => {
-    console.log('🔍 Checking user state:', { user: !!user, profile: !!profile, loading });
-
-    if (loading) {
-      console.log('⏳ Still loading, skipping device registration');
-      return;
-    }
-
-    if (!user) {
-      console.log('❌ No user found, skipping device registration');
-      return;
-    }
-
-    if (!user.id) {
-      console.log('❌ User ID is missing:', user);
-      return;
-    }
-
-    console.log('✅ Registering device for user:', user.id);
+    if (loading || !user?.id) return;
     registerDeviceForNotifications(user.id);
-  }, [user?.id, loading]); // Only depend on user.id and loading
+  }, [user?.id, loading]);
+
+  // Keep a ref to current segments so the routing effect can read it
+  // without re-running every time navigation changes
+  const segmentsRef = useRef(segments);
+  segmentsRef.current = segments;
 
   useEffect(() => {
     if (loading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
-    const inTeacherGroup = segments[0] === '(teacher)';
-    const inStudentGroup = segments[0] === '(student)';
-    const inSettings = segments[0] === 'settings';
-    const inFee = segments[0] === 'fee';
-    const inNotifications = segments[0] === 'notifications';
-    const inStudents = segments[0] === 'students';
+    const seg0 = segmentsRef.current[0];
+    const inAuthGroup = seg0 === '(auth)';
+    const inTeacherGroup = seg0 === '(teacher)';
+    const inStudentGroup = seg0 === '(student)';
+    const inSettings = seg0 === 'settings';
+    const inFee = seg0 === 'fee';
+    const inNotifications = seg0 === 'notifications';
+    const inStudents = seg0 === 'students';
 
+    console.log('[Route]', { seg0, role: profile?.role, user: !!user });
 
     if (!user || !profile) {
-      // Redirect to auth if not authenticated
       if (!inAuthGroup) {
+        console.log('[Route] No auth → sign-in');
         router.replace('/(auth)/sign-in');
       }
       return;
     }
 
-    // Allow access to settings/fee/notifications for authenticated users - STOP HERE
     if (inSettings || inFee || inNotifications || inStudents) {
-      console.log('User is in settings/fee/notifications/students, allowing access');
-      return; // This will stop the redirect
+      return;
     }
 
-    // Redirect based on user role after authentication
     if (inAuthGroup) {
       switch (profile.role) {
         case 'teacher':
+          console.log('[Route] teacher → /(teacher)');
           router.replace('/(teacher)');
           break;
         case 'student':
+          console.log('[Route] student → /(student)');
           router.replace('/(student)');
           break;
         default:
@@ -90,24 +78,22 @@ function RootLayoutNav() {
       return;
     }
 
-    // Only redirect to role groups if user is NOT in settings and NOT already in correct group
-    if (profile.role === 'teacher' && !inTeacherGroup && !inSettings && !inNotifications && !inStudents) {
-      // console.log('Redirecting teacher to teacher group');
+    if (profile.role === 'teacher' && !inTeacherGroup) {
       router.replace('/(teacher)');
-    } else if (profile.role === 'student' && !inStudentGroup && !inSettings) {
-      // console.log('Redirecting student to student group');
+    } else if (profile.role === 'student' && !inStudentGroup) {
       router.replace('/(student)');
     }
 
-  }, [user, profile, loading, segments]);
+  // Only re-run when auth state changes, not when navigation changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, profile?.role, loading]);
 
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" options={{ headerShown: false}} />
       <Stack.Screen name="(teacher)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="(student)" options={{ headerShown: false }} />
+<Stack.Screen name="(student)" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="fee" options={{ headerShown: false }} />
       <Stack.Screen name="notifications" options={{ headerShown: false }} />

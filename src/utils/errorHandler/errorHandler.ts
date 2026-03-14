@@ -8,6 +8,14 @@ export interface UserFriendlyError {
 export const handleAuthError = (error: any): UserFriendlyError => {
     const errorMessage = error?.message?.toLowerCase() || '';
 
+    // Disabled/deleted student account
+    if (error?.message === 'ACCOUNT_DISABLED' || errorMessage.includes('account_disabled')) {
+        return {
+            title: 'Account Disabled',
+            message: 'Your account has been deactivated. Please contact your teacher or academy administration for assistance.',
+        };
+    }
+
     // Network errors
     if (errorMessage.includes('network') || errorMessage.includes('fetch failed')) {
         return {

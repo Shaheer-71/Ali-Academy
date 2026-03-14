@@ -25,13 +25,13 @@ type SubjectQuizData = {
     };
 };
 
-export const useStudentAnalytics = (profileId: string | undefined) => {
+export const useStudentAnalytics = (email: string | undefined) => {
     const [analytics, setAnalytics] = useState<StudentAnalytics | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!profileId) {
+        if (!email) {
             setLoading(false);
             return;
         }
@@ -41,19 +41,7 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                 setLoading(true);
                 setError(null);
 
-                // Get the profile data
-                const { data: profileData, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('email, id')
-                    .eq('id', profileId)
-                    .single();
-
-                if (profileError) {
-                    console.warn('Profile error:', profileError);
-                    throw new Error('Unable to load your profile. Please try signing in again.');
-                }
-
-                // Find student record by email
+                // Find student record by email (consistent with the rest of the app)
                 const { data: studentData, error: studentError } = await supabase
                     .from('students')
                     .select(`
@@ -63,11 +51,9 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
                         email,
                         classes!inner(id, name)
                     `)
-                    .eq('id', profileData.id)
+                    .eq('email', email.toLowerCase().trim())
                     .eq('is_deleted', false)
                     .single();
-
-                console.log("HELLO : ", studentData)
 
 
                 if (studentError) {
@@ -292,7 +278,7 @@ export const useStudentAnalytics = (profileId: string | undefined) => {
         };
 
         fetchStudentAnalytics();
-    }, [profileId]);
+    }, [email]);
 
     return { analytics, loading, error };
 };

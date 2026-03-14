@@ -27,7 +27,7 @@ import { ErrorModal } from '@/src/components/common/ErrorModal';
 import { validateTimeRange } from '../utils/timetable';
 
 export const useTimetable = (): UseTimetableReturn => {
-    const { profile } = useAuth();
+    const { profile, student } = useAuth();
     const [timetable, setTimetable] = useState<TimetableEntryWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -51,14 +51,8 @@ export const useTimetable = (): UseTimetableReturn => {
             // Apply role-based filters
             if (profile.role === 'student') {
                 // Students see only their class schedule
-                const { data: studentData } = await supabase
-                    .from('students')
-                    .select('class_id')
-                    .eq('id', profile.id)
-                    .single();
-
-                if (studentData?.class_id) {
-                    query = query.eq('class_id', studentData.class_id);
+                if (student?.class_id) {
+                    query = query.eq('class_id', student.class_id);
                 } else {
                     setTimetable([]);
                     setLoading(false);

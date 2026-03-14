@@ -1,20 +1,36 @@
 // screens/AnalyticsScreen.tsx
-import React from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState } from 'react';
+import { View } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { useTheme } from '@/src/contexts/ThemeContext';
 import { StudentAnalyticsView } from '../analytics/StudentAnalyticsView';
 import { TeacherAnalyticsView } from '../analytics/TeacherAnalyticsView';
+import TopSections from '@/src/components/common/TopSections';
 
 export default function AnalyticsScreen() {
     const { profile } = useAuth();
+    const { colors } = useTheme();
+
+    const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin';
+
+    const [filterVisible, setFilterVisible] = useState(false);
+    const [isFiltered, setIsFiltered] = useState(false);
 
     return (
-        <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+            <TopSections
+                onFilterPress={isTeacher ? () => setFilterVisible(true) : undefined}
+                isFiltered={isTeacher ? isFiltered : false}
+            />
             {profile?.role === 'student' ? (
                 <StudentAnalyticsView />
             ) : (
-                <TeacherAnalyticsView />
+                <TeacherAnalyticsView
+                    filterVisible={filterVisible}
+                    onFilterClose={() => setFilterVisible(false)}
+                    onFilterChange={setIsFiltered}
+                />
             )}
-        </SafeAreaView>
+        </View>
     );
 }

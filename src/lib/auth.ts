@@ -169,8 +169,6 @@ export const completeStudentRegistration = async (email: string, password: strin
       throw new Error('This student has already completed registration. Please sign in instead.');
     }
 
-    console.log('Creating auth user for student:', email);
-
     // Create auth user - this will also trigger profile creation
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: email,
@@ -202,38 +200,41 @@ export const completeStudentRegistration = async (email: string, password: strin
     }
 
 
-    // Update student record to mark as registered and link to auth user
+    // Mark student as registered
     const { error: updateError } = await supabase
       .from('students')
       .update({
-        id: authData.user.id, // Update ID to match auth user
         has_registered: true,
         updated_by: authData.user.id
       })
-      .eq('email', email);
+      .eq('email', email.toLowerCase().trim());
 
     if (updateError) {
       console.warn('Error updating student record:', updateError);
-      // Don't throw - registration was successful
     }
 
-    // Wait for profile auto-creation
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Sync profiles.id and students.id to match auth.users.id.
+    // Requires RLS policies "claim_profile_by_email" and "claim_student_by_email"
+    // to be added in Supabase Dashboard → SQL Editor.
+    const normalizedEmail = email.toLowerCase().trim();
 
-    // Ensure profile has correct data
-    const { error: profileError } = await supabase
+    const { error: profileSyncError } = await supabase
       .from('profiles')
-      .upsert({
-        id: authData.user.id,
-        email: email,
-        full_name: student.full_name,
-        role: 'student',
-        contact_number: student.phone_number || null
-      });
+      .update({ id: authData.user.id })
+      .eq('email', normalizedEmail);
 
-    if (profileError) {
-      console.warn('Error updating profile:', profileError);
-      // Don't throw - registration was successful
+    if (profileSyncError) {
+      console.warn('Error syncing profile id:', profileSyncError.message);
+    }
+
+    const { error: studentSyncError } = await supabase
+      .from('students')
+      .update({ id: authData.user.id })
+      .eq('email', normalizedEmail)
+      .eq('is_deleted', false);
+
+    if (studentSyncError) {
+      console.warn('Error syncing student id:', studentSyncError.message);
     }
 
     return {

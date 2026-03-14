@@ -25,63 +25,34 @@ export const EASING = {
 };
 
 // ============================================
-// 1. SCREEN NAVIGATION ANIMATION (ENHANCED)
-// ============================================
-// ============================================
-// 1. SCREEN NAVIGATION ANIMATION (SUPER SMOOTH + SPICY)
+// 1. SCREEN NAVIGATION ANIMATION
 // ============================================
 export const createScreenAnimation = (animatedValue: Animated.Value) => {
     return {
         start: () => {
             animatedValue.setValue(0);
 
-            Animated.spring(animatedValue, {
+            Animated.timing(animatedValue, {
                 toValue: 1,
-                damping: 14,        // smoother spring
-                mass: 0.6,          // lighter feel
-                stiffness: 120,     // premium snappiness
-                velocity: 0.5,      // natural push
-                overshootClamping: false,
+                duration: ANIMATION_DURATION.NORMAL,
+                easing: EASING.SMOOTH,
                 useNativeDriver: true,
             }).start();
         },
 
         style: {
-            opacity: animatedValue.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 1], // clean fade
-            }),
-
+            opacity: animatedValue,
             transform: [
-                // LAYER 1: Smooth slide
-                {
-                    translateX: animatedValue.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [55, 0], // deeper slide = premium feel
-                    }),
-                },
-
-                // LAYER 2: Parallax depth (subtle vertical)
                 {
                     translateY: animatedValue.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [18, 0], // floating entry
+                        outputRange: [12, 0],
                     }),
                 },
-
-                // LAYER 3: Scale depth
                 {
                     scale: animatedValue.interpolate({
-                        inputRange: [0, 0.7, 1],
-                        outputRange: [0.93, 0.98, 1], // luxurious zoom-in
-                    }),
-                },
-
-                // LAYER 4: Tiny rotation for cinematic effect
-                {
-                    rotateZ: animatedValue.interpolate({
                         inputRange: [0, 1],
-                        outputRange: ['2deg', '0deg'], // subtle tilt
+                        outputRange: [0.97, 1],
                     }),
                 },
             ],
@@ -96,20 +67,20 @@ export const createScreenAnimation = (animatedValue: Animated.Value) => {
 export const createButtonAnimation = (animatedValue: Animated.Value) => {
     return {
         onPressIn: () => {
-            Animated.spring(animatedValue, {
-                toValue: 0.95,
+            Animated.timing(animatedValue, {
+                toValue: 0.96,
+                duration: 80,
+                easing: EASING.SMOOTH,
                 useNativeDriver: true,
-                speed: 50,
-                bounciness: 4,
             }).start();
         },
 
         onPressOut: () => {
-            Animated.spring(animatedValue, {
+            Animated.timing(animatedValue, {
                 toValue: 1,
+                duration: 120,
+                easing: EASING.SMOOTH,
                 useNativeDriver: true,
-                speed: 50,
-                bounciness: 4,
             }).start();
         },
 

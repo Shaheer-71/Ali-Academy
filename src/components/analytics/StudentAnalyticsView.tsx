@@ -6,11 +6,12 @@ import { useTheme } from '@/src/contexts/ThemeContext';
 import { useStudentAnalytics } from '@/src/hooks/useStudentAnalytics';
 import { User, Award, ClipboardCheck, BookOpen, TrendingUp, TrendingDown, Activity } from 'lucide-react-native';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { SkeletonBox } from '@/src/components/common/Skeleton';
 
 export const StudentAnalyticsView = () => {
     const { profile } = useAuth();
     const { colors } = useTheme();
-    const { analytics, loading, error } = useStudentAnalytics(profile?.id);
+    const { analytics, loading, error } = useStudentAnalytics(profile?.email);
     const [errorModal, setErrorModal] = useState({
         visible: false,
         title: '',
@@ -49,17 +50,26 @@ export const StudentAnalyticsView = () => {
         </View>
     );
 
-    if (error) {
-        showError('Unable to Load Performance', error);
-        // Return a minimal UI instead of full error screen
-    }
-
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>
-                    Loading your analytics...
-                </Text>
+            <View style={[styles.container, { backgroundColor: colors.background }]}>
+                <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+                    {/* Overview cards */}
+                    <View style={[styles.overviewCards, { marginBottom: 16 }]}>
+                        <SkeletonBox width="31%" height={90} borderRadius={12} />
+                        <SkeletonBox width="31%" height={90} borderRadius={12} />
+                        <SkeletonBox width="31%" height={90} borderRadius={12} />
+                    </View>
+
+                    {/* Trend card */}
+                    <SkeletonBox height={100} borderRadius={12} style={{ marginBottom: 16 }} />
+
+                    {/* Subject Performance */}
+                    <SkeletonBox width={160} height={18} borderRadius={6} style={{ marginBottom: 12 }} />
+                    <SkeletonBox height={70} borderRadius={12} style={{ marginBottom: 8 }} />
+                    <SkeletonBox height={70} borderRadius={12} style={{ marginBottom: 8 }} />
+                    <SkeletonBox height={70} borderRadius={12} />
+                </View>
             </View>
         );
     }
@@ -215,16 +225,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    loadingContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 16,
-    },
-    loadingText: {
-        fontSize: TextSizes.normal,
-        fontFamily: 'Inter-Regular',
-    },
     errorContainer: {
         flex: 1,
         alignItems: 'center',
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingTop: 12,
-        paddingBottom: 16,
+        paddingBottom: 12,
     },
     studentHeaderContent: {
         flexDirection: 'row',

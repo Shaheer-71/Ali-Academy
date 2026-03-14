@@ -93,8 +93,10 @@ export const useDiaryAssignments = (
                     return;
                 }
 
-                const classWideOrExpr = studentEnrollments
-                    .map(p => `and(class_id.eq.${p.class_id},subject_id.eq.${p.subject_id},student_id.is.null)`)
+                // Match class-wide entries: same class + (same subject OR no subject set) + not targeted at a specific student
+                const classIds = [...new Set(studentEnrollments.map(p => p.class_id))];
+                const classWideOrExpr = classIds
+                    .map(cid => `and(class_id.eq.${cid},student_id.is.null)`)
                     .join(',');
 
                 const { data: personalAssignments, error: personalErr } = await supabase

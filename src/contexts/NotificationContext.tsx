@@ -49,7 +49,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .order('created_at', { ascending: false })
         .limit(50);
 
-      console.debug('[NotificationContext] raw notification_recipients response:', { data, error });
 
       if (error) throw error;
 
@@ -81,7 +80,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       } else if (data && data.length > 0) {
         // Fallback: collect notification_ids and fetch full notifications
         const notifIds = data.map((r: any) => r.notification_id).filter(Boolean);
-        console.debug('[NotificationContext] fallback fetching notifications for ids:', notifIds);
 
         if (notifIds.length > 0) {
           const { data: notifsData, error: notifsError } = await supabase
@@ -119,7 +117,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       setNotifications(formattedNotifications);
     } catch (err) {
-      console.log('Failed to fetch notifications:', err);
+      console.warn('Failed to fetch notifications:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch notifications');
     } finally {
       setLoading(false);

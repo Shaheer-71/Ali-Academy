@@ -27,6 +27,7 @@ import {
   ChevronRight,
   Send,
   User,
+  UserCheck,
 } from 'lucide-react-native';
 import TopSections from '@/src/components/common/TopSections';
 import { useRouter } from 'expo-router';
@@ -155,6 +156,14 @@ export default function SettingsScreen() {
     confirmPassword: '',
   });
 
+  const handleNavigateToActivateUsers = () => {
+    try {
+      (router as any).push('/activate-users');
+    } catch (err) {
+      console.warn('Navigation to /activate-users failed:', err);
+    }
+  };
+
   const handlePasswordChange = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       Alert.alert('Error', 'New passwords do not match');
@@ -240,13 +249,19 @@ export default function SettingsScreen() {
           icon: Lock,
           onPress: () => setPasswordModalVisible(true),
         },
-        ...(profile?.role === 'teacher' && profile?.email === 'rafeh@aliacademy.edu'
+        ...(profile?.role === 'teacher' || profile?.role === 'admin'
           ? [
             {
               title: 'Manage Students',
-              subtitle: 'Manage your students here',
+              subtitle: 'Add and edit your students',
               icon: User,
               onPress: handleNavigateToStudents,
+            },
+            {
+              title: 'Activate Users',
+              subtitle: 'Reactivate deactivated student accounts',
+              icon: UserCheck,
+              onPress: handleNavigateToActivateUsers,
             },
             {
               title: 'Create Notification',

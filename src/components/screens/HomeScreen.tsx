@@ -1,5 +1,5 @@
 // screens/HomeScreen.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,8 +16,6 @@ import { useTheme } from '@/src/contexts/ThemeContext';
 import { supabase } from '@/src/lib/supabase';
 import { Users, ClipboardCheck, BookOpen, NotebookPen, ChartBar as BarChart3, Calendar, Bell, Sparkles, TrendingUp } from 'lucide-react-native';
 import TopSections from '@/src/components/common/TopSections';
-import AnalyticsScreen from './AnalyticsScreen';
-import { useFocusEffect } from '@react-navigation/native';
 import { Animated } from 'react-native';
 import { useScreenAnimation, useButtonAnimation, useCardAnimation } from '@/src/utils/animations';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
@@ -47,7 +45,7 @@ interface QuickAction {
 }
 
 export default function HomeScreen() {
-  const { profile } = useAuth();
+  const { profile, student } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
@@ -313,7 +311,7 @@ export default function HomeScreen() {
         );
       }
 
-      // Get student record
+      // Get student record — look up by profile email (stable, works even before student state loads)
       const { data: studentData, error: studentError } = await supabase
         .from('students')
         .select(`
@@ -321,7 +319,7 @@ export default function HomeScreen() {
           class_id,
           classes!inner(id, name)
         `)
-        .eq('id', profile.id)
+        .eq('email', profile!.email)
         .eq('is_deleted', false)
         .single();
 
@@ -486,15 +484,9 @@ export default function HomeScreen() {
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      onRefresh();
-    }, [profile])
-  );
-
   useEffect(() => {
-    fetchData();
-  }, [profile]);
+    if (profile) fetchData();
+  }, [profile?.id, profile?.role]);
 
   const getRoleBasedQuickActions = () => {
     if (profile?.role === 'teacher' || profile?.role === 'admin') {
@@ -661,11 +653,6 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-            </View>
-
-            {/* Analytics Section */}
-            <View>
-              <AnalyticsScreen />
             </View>
 
             {/* Dynamic Recent Activity */}

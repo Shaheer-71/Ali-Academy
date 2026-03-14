@@ -33,7 +33,7 @@ interface StudentsWithoutPasswords {
 export const createStudentSimple = async (studentData: StudentData, createdBy: string) => {
     try {
         // Generate email from roll number
-        const email = `${studentData.roll_number.toLowerCase()}@aliacademy.edu`;
+        const email = `${studentData.roll_number.toLowerCase()}@aliacademy.com`;
 
         // Validate required fields
         if (!studentData.full_name || !studentData.roll_number || !studentData.phone_number ||
@@ -86,26 +86,21 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
             throw new Error('Student with this email already exists');
         }
 
-        // ✅ Get teachers for the selected subjects
-        const { data: teacherEnrollments, error: teacherError } = await supabase
-            .from('teacher_subject_enrollments')
-            .select('subject_id, teacher_id')
+        // Verify selected subjects are valid for this class
+        const { data: classSubjects, error: csError } = await supabase
+            .from('classes_subjects')
+            .select('subject_id')
             .eq('class_id', studentData.class_id)
-            .in('subject_id', studentData.subject_ids)
-            .eq('is_active', true);
+            .eq('is_active', true)
+            .in('subject_id', studentData.subject_ids);
 
-        if (teacherError) {
-            console.warn('Error fetching teachers:', teacherError);
-            throw new Error('Failed to fetch teachers for selected subjects');
+        if (csError) {
+            console.warn('Error verifying subjects:', csError);
+            throw new Error('Failed to verify subjects for this class');
         }
 
-        // ✅ Verify all subjects have assigned teachers
-        const subjectsWithoutTeachers = studentData.subject_ids.filter(
-            subjectId => !teacherEnrollments?.some(te => te.subject_id === subjectId)
-        );
-
-        if (subjectsWithoutTeachers.length > 0) {
-            throw new Error(`No teachers assigned for some subjects in this class. Please assign teachers first.`);
+        if (!classSubjects || classSubjects.length !== studentData.subject_ids.length) {
+            throw new Error('One or more selected subjects are not available for this class');
         }
 
         // Create student record ONLY - no auth user
@@ -140,18 +135,14 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
             throw new Error(`Failed to create student record: ${error.message}`);
         }
 
-        // ✅ Create student_subject_enrollments for each subject
-        const enrollments = studentData.subject_ids.map(subjectId => {
-            const teacherEnrollment = teacherEnrollments?.find(te => te.subject_id === subjectId);
-            return {
-                student_id: data.id,
-                class_id: studentData.class_id,
-                subject_id: subjectId,
-                teacher_id : "334e767a-8b49-4e69-a3dc-63b4773618d1",
-                is_active: true,
-                created_by: createdBy,
-            };
-        });
+        // Create student_subject_enrollments for each subject
+        const enrollments = studentData.subject_ids.map(subjectId => ({
+            student_id: data.id,
+            class_id: studentData.class_id,
+            subject_id: subjectId,
+            is_active: true,
+            created_by: createdBy,
+        }));
 
         const { error: enrollmentError } = await supabase
             .from('student_subject_enrollments')
@@ -169,7 +160,25 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
             throw new Error(`Failed to enroll student in subjects: ${enrollmentError.message}`);
         }
 
-        console.log(`✅ Student created and enrolled in ${enrollments.length} subjects`);
+        // Also pre-create a profile so the student record is visible in profiles table
+        // When student signs up later, the auth trigger will update this profile's id
+        // to match the real auth UUID (via ON CONFLICT (email) DO UPDATE SET id = EXCLUDED.id)
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+                id: data.id,
+                email: email,
+                full_name: studentData.full_name,
+                role: 'student',
+                contact_number: studentData.phone_number || null,
+            });
+
+        if (profileError) {
+            console.warn('Profile pre-creation warning (non-fatal):', profileError.message);
+            // Not a fatal error — student & enrollments are created successfully
+        }
+
+        console.log(`✅ Student created, profile pre-created, enrolled in ${enrollments.length} subjects`);
 
         return {
             success: true,

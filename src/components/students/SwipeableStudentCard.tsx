@@ -1,7 +1,8 @@
 // components/students/SwipeableStudentCard.tsx
-import React, { useState, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Animated, PanResponder, TouchableOpacity, StyleSheet, Text } from 'react-native';
-import { Hash, BookOpen, Phone, Edit, Trash2, User, Mail } from 'lucide-react-native';
+import { Hash, BookOpen, Phone, Edit, UserX, Mail } from 'lucide-react-native';
+import { TextSizes } from '@/src/styles/TextSizes';
 
 interface Student {
     id: string;
@@ -10,141 +11,151 @@ interface Student {
     phone_number?: string;
     parent_contact: string;
     classes?: { name: string };
+    email?: string;
 }
 
-const SWIPE_THRESHOLD = -100;
-const ACTION_WIDTH = 150;
+const ACTION_WIDTH = 90;
+const SWIPE_THRESHOLD = -8; // minimum drag to trigger open
 
 interface SwipeableStudentCardProps {
     student: Student;
     colors: any;
     isTeacher: boolean;
+    isOpen: boolean;
+    onSwipeOpen: (id: string) => void;
+    onSwipeClose: () => void;
     onEdit: (student: Student) => void;
-    onDelete: (student: Student) => void;
+    onDeactivate: (student: Student) => void;
     onPress: (student: Student) => void;
+    onGestureStart: () => void;   // called when horizontal drag starts → parent disables scroll
+    onGestureEnd: () => void;     // called when drag ends → parent re-enables scroll
 }
 
 export const SwipeableStudentCard = ({
     student,
     colors,
     isTeacher,
+    isOpen,
+    onSwipeOpen,
+    onSwipeClose,
     onEdit,
-    onDelete,
+    onDeactivate,
     onPress,
+    onGestureStart,
+    onGestureEnd,
 }: SwipeableStudentCardProps) => {
     const translateX = useRef(new Animated.Value(0)).current;
-    const [isSwipeOpen, setIsSwipeOpen] = useState(false);
+    // Keep isOpen in a ref — panResponder is created once so props are stale inside it
+    const isOpenRef = useRef(isOpen);
+    isOpenRef.current = isOpen;
+
+    const snap = (toValue: number) => {
+        Animated.spring(translateX, {
+            toValue,
+            useNativeDriver: true,
+            bounciness: 0,
+            speed: 20,
+        }).start();
+    };
+
+    // Parent controls open/close state — react to isOpen changes
+    useEffect(() => {
+        snap(isOpen ? -ACTION_WIDTH : 0);
+    }, [isOpen]);
+
+    const onGestureStartRef = useRef(onGestureStart);
+    const onGestureEndRef   = useRef(onGestureEnd);
+    onGestureStartRef.current = onGestureStart;
+    onGestureEndRef.current   = onGestureEnd;
 
     const panResponder = useRef(
         PanResponder.create({
-            onMoveShouldSetPanResponder: (_, gesture) => {
-                return (
-                    isTeacher &&
-                    Math.abs(gesture.dx) > Math.abs(gesture.dy) &&
-                    Math.abs(gesture.dx) > 10
-                );
+            onStartShouldSetPanResponder: () => false,
+            // Claim any clearly horizontal gesture early, before ScrollView can take it
+            onMoveShouldSetPanResponder: (_, g) =>
+                isTeacher &&
+                Math.abs(g.dx) > Math.abs(g.dy) * 1.5 &&
+                Math.abs(g.dx) > 5,
+
+            onPanResponderGrant: () => {
+                translateX.stopAnimation();
+                onGestureStartRef.current();
             },
-            onPanResponderMove: (_, gesture) => {
-                if (gesture.dx < 0) {
-                    translateX.setValue(Math.max(gesture.dx, -ACTION_WIDTH));
-                } else if (isSwipeOpen) {
-                    translateX.setValue(Math.max(gesture.dx - ACTION_WIDTH, -ACTION_WIDTH));
-                }
+
+            onPanResponderMove: (_, g) => {
+                const base = isOpenRef.current ? -ACTION_WIDTH : 0;
+                const clamped = Math.min(0, Math.max(base + g.dx, -ACTION_WIDTH));
+                translateX.setValue(clamped);
             },
-            onPanResponderRelease: (_, gesture) => {
-                if (gesture.dx < SWIPE_THRESHOLD) {
-                    Animated.spring(translateX, {
-                        toValue: -ACTION_WIDTH,
-                        useNativeDriver: true,
-                        tension: 50,
-                        friction: 8,
-                    }).start();
-                    setIsSwipeOpen(true);
+
+            onPanResponderRelease: (_, g) => {
+                onGestureEndRef.current();
+                const currentlyOpen = isOpenRef.current;
+                const shouldOpen = currentlyOpen
+                    ? g.dx > -(ACTION_WIDTH / 2)
+                    : g.dx < SWIPE_THRESHOLD;
+
+                if (shouldOpen && !currentlyOpen) {
+                    onSwipeOpen(student.id);
+                } else if (!shouldOpen && currentlyOpen) {
+                    onSwipeClose();
                 } else {
-                    Animated.spring(translateX, {
-                        toValue: 0,
-                        useNativeDriver: true,
-                        tension: 50,
-                        friction: 8,
-                    }).start();
-                    setIsSwipeOpen(false);
+                    snap(currentlyOpen ? -ACTION_WIDTH : 0);
                 }
+            },
+
+            onPanResponderTerminate: () => {
+                onGestureEndRef.current();
+                snap(isOpenRef.current ? -ACTION_WIDTH : 0);
             },
         })
     ).current;
 
-    const closeSwipe = () => {
-        if (isSwipeOpen) {
-            Animated.spring(translateX, {
-                toValue: 0,
-                useNativeDriver: true,
-                tension: 50,
-                friction: 8,
-            }).start();
-            setIsSwipeOpen(false);
+    const handleCardPress = () => {
+        if (isOpen) {
+            onSwipeClose();
+        } else {
+            onPress(student);
         }
     };
 
     return (
         <View style={styles.container}>
-            {/* Action buttons (shown when swiped) */}
+            {/* Action buttons revealed behind the card */}
             {isTeacher && (
-                <View style={styles.actionsBackground}>
+                <View style={[styles.actionsBackground, { backgroundColor: colors.cardBackground }]}>
                     <TouchableOpacity
-                        style={[styles.actionBtn, { backgroundColor: colors.background }]}
-                        onPress={() => {
-                            closeSwipe();
-                            onEdit(student);
-                        }}
+                        style={[styles.actionBtn, { backgroundColor: colors.cardBackground }]}
+                        onPress={() => { onSwipeClose(); onEdit(student); }}
                     >
                         <Edit size={20} color={colors.primary} />
-                        <Text allowFontScaling={false} style={[styles.actionBtnText, { color: colors.primary }]}>
-                            Edit
-                        </Text>
+                        <Text allowFontScaling={false} style={[styles.actionBtnText, { color: colors.primary }]}>Edit</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.actionBtn, { backgroundColor: colors.background }]}
-                        onPress={() => {
-                            closeSwipe();
-                            onDelete(student);
-                        }}
+                        style={[styles.actionBtn, { backgroundColor: colors.cardBackground }]}
+                        onPress={() => { onSwipeClose(); onDeactivate(student); }}
                     >
-                        <Trash2 size={20} color="#EF4444" />
-                        <Text allowFontScaling={false} style={[styles.actionBtnText, { color: '#EF4444' }]}>
-                            Delete
-                        </Text>
+                        <UserX size={20} color="#EF4444" />
+                        <Text allowFontScaling={false} style={[styles.actionBtnText, { color: '#EF4444' }]}>Deactivate</Text>
                     </TouchableOpacity>
                 </View>
             )}
 
-            {/* Main card */}
+            {/* Sliding card */}
             <Animated.View
-                style={[
-                    styles.cardWrapper,
-                    {
-                        transform: [{ translateX }],
-                    },
-                ]}
+                style={[styles.cardWrapper, { transform: [{ translateX }] }]}
                 {...(isTeacher ? panResponder.panHandlers : {})}
             >
                 <TouchableOpacity
                     activeOpacity={1}
-                    onPress={() => {
-                        closeSwipe();
-                        onPress(student);
-                    }}
-                    style={[
-                        styles.card,
-                        { backgroundColor: colors.cardBackground, borderColor: colors.border }
-                    ]}
+                    onPress={handleCardPress}
+                    style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
                 >
-                    {/* Header */}
                     <View style={styles.header}>
-                        {/* <View style={[styles.iconContainer, { backgroundColor: colors.primary + '15' }]}>
-                            <User size={20} color={colors.primary} />
-                        </View> */}
                         <View style={[styles.studentAvatar, { backgroundColor: colors.primary }]}>
-                            <Text allowFontScaling={false} style={styles.studentInitial}>{student.full_name.charAt(0).toUpperCase()}</Text>
+                            <Text allowFontScaling={false} style={styles.studentInitial}>
+                                {student.full_name.charAt(0).toUpperCase()}
+                            </Text>
                         </View>
 
                         <View style={styles.info}>
@@ -152,7 +163,6 @@ export const SwipeableStudentCard = ({
                                 {student.full_name}
                             </Text>
 
-                            {/* Meta Info */}
                             <View style={styles.metaRow}>
                                 <View style={styles.metaItem}>
                                     <Hash size={12} color={colors.textSecondary} />
@@ -160,7 +170,6 @@ export const SwipeableStudentCard = ({
                                         {student.roll_number}
                                     </Text>
                                 </View>
-
                                 {student.classes?.name && (
                                     <View style={styles.metaItem}>
                                         <BookOpen size={12} color={colors.textSecondary} />
@@ -170,51 +179,32 @@ export const SwipeableStudentCard = ({
                                     </View>
                                 )}
                             </View>
-
-                            {/* Upload Info */}
-                            <View style={styles.uploadInfo}>
-                                <Text allowFontScaling={false} style={[styles.uploadedBy, { color: colors.textSecondary }]}>
-                                    Student ID: {student.roll_number}
-                                </Text>
-                            </View>
                         </View>
                     </View>
 
-                    {/* Actions - Contact Info */}
                     <View style={styles.actions}>
                         {student.phone_number && (
-                            <View
-                                style={[
-                                    styles.actionButton,
-                                    { backgroundColor: colors.primary + '10', borderColor: colors.border }
-                                ]}
-                            >
+                            <View style={[styles.actionButton, { backgroundColor: colors.primary + '10', borderColor: colors.border }]}>
                                 <Phone size={14} color={colors.primary} />
                                 <Text allowFontScaling={false} style={[styles.actionText, { color: colors.primary }]}>
                                     {student.phone_number}
                                 </Text>
                             </View>
                         )}
-
-                        <View
-                            style={[
-                                styles.actionButton,
-                                { backgroundColor: colors.primary + '10', borderColor: colors.border }
-                            ]}
-                        >
-                            <Mail size={14} color={colors.primary} />
-                            <Text allowFontScaling={false} style={[styles.actionText, { color: colors.primary }]}>
-                                {student?.email}
-                            </Text>
-                        </View>
+                        {student.email && (
+                            <View style={[styles.actionButton, { backgroundColor: colors.primary + '10', borderColor: colors.border }]}>
+                                <Mail size={14} color={colors.primary} />
+                                <Text allowFontScaling={false} style={[styles.actionText, { color: colors.primary }]}>
+                                    {student.email}
+                                </Text>
+                            </View>
+                        )}
                     </View>
                 </TouchableOpacity>
             </Animated.View>
         </View>
     );
 };
-
-import { TextSizes } from '@/src/styles/TextSizes';
 
 const styles = StyleSheet.create({
     container: {
@@ -226,21 +216,20 @@ const styles = StyleSheet.create({
         right: 0,
         top: 0,
         bottom: 0,
-        flexDirection: 'row',
+        width: ACTION_WIDTH,
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'flex-end',
-        backgroundColor: '#fff',
+        justifyContent: 'center',
     },
     actionBtn: {
-        width: 75,
-        height: '100%',
+        flex: 1,
+        width: '100%',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 4,
-        backgroundColor: '#fff',
     },
     actionBtnText: {
-        fontSize: 12,
+        fontSize: 11,
         fontFamily: 'Inter-SemiBold',
     },
     cardWrapper: {
@@ -255,13 +244,18 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         marginBottom: 12,
     },
-    iconContainer: {
+    studentAvatar: {
         width: 40,
         height: 40,
         borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 12,
+    },
+    studentInitial: {
+        fontSize: TextSizes.large,
+        fontFamily: 'Inter-SemiBold',
+        color: '#ffffff',
     },
     info: {
         flex: 1,
@@ -275,7 +269,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 12,
-        marginBottom: 4,
     },
     metaItem: {
         flexDirection: 'row',
@@ -286,20 +279,9 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontFamily: 'Inter-Regular',
     },
-    uploadInfo: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 4,
-    },
-    uploadedBy: {
-        fontSize: 11,
-        fontFamily: 'Inter-Italic',
-    },
     actions: {
         flexDirection: 'row',
         gap: 8,
-        marginTop: 0,
     },
     actionButton: {
         flex: 1,
@@ -314,18 +296,5 @@ const styles = StyleSheet.create({
     actionText: {
         fontSize: 11,
         fontFamily: 'Inter-SemiBold',
-    },
-    studentAvatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12,
-    },
-    studentInitial: {
-        fontSize: TextSizes.large,
-        fontFamily: 'Inter-SemiBold',
-        color: '#ffffff',
     },
 });

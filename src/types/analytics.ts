@@ -72,6 +72,7 @@ export interface StudentPerformance {
     assignments_completed: number;
     total_assignments: number;
     class_name: string;
+    subject_name?: string;
 }
 
 export interface ClassAnalytics {
@@ -111,6 +112,7 @@ export interface StudentPerformance {
     assignments_completed: number;
     total_assignments: number;
     class_name: string;
+    subject_name?: string;
 }
 
 export interface ClassAnalytics {

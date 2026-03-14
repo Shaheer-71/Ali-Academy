@@ -1,5 +1,5 @@
 // hooks/useTeacherAnalytics.ts - FIXED TYPE ISSUES
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { StudentPerformance, ClassAnalytics, Class } from '../types/analytics';
 
@@ -16,12 +16,18 @@ type StudentWithClass = {
 };
 
 
-export const useTeacherAnalytics = (profileId: string | undefined, selectedClass: string = 'all') => {
+export const useTeacherAnalytics = (profileId: string | undefined, selectedClass: string = 'all', selectedSubject: string = 'all') => {
     const [studentPerformances, setStudentPerformances] = useState<StudentPerformance[]>([]);
     const [classAnalytics, setClassAnalytics] = useState<ClassAnalytics[]>([]);
     const [classes, setClasses] = useState<Class[]>([]);
+    const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [refreshKey, setRefreshKey] = useState(0);
+
+    const refetch = useCallback(() => {
+        setRefreshKey(k => k + 1);
+    }, []);
 
     useEffect(() => {
         if (!profileId) {
@@ -36,7 +42,7 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
 
                 const { data: classesIDData, error: classesIDError } = await supabase
                     .from('teacher_subject_enrollments')
-                    .select('class_id , subject_id')
+                    .select('class_id, subject_id, subjects!inner(id, name)')
                     .eq('teacher_id', profileId)
 
                 if (classesIDError) {
@@ -44,19 +50,29 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     throw new Error('Unable to load your class assignments. Please check your internet connection and try again.');
                 }
 
-                let classIDs = classesIDData?.map(item => item.class_id) || [];
-                let subjectIDs = classesIDData?.map(item => item.subject_id) || [];
+                let classIDs = [...new Set(classesIDData?.map(item => item.class_id) || [])];
+                let subjectIDs = [...new Set(classesIDData?.map(item => item.subject_id) || [])];
+
+                // Build subjects list for the selected class (used by UI subject filter)
+                const relevantEnrollments = selectedClass === 'all'
+                    ? (classesIDData || [])
+                    : (classesIDData || []).filter((item: any) => item.class_id === selectedClass);
+                const subjectsMap = new Map<string, string>();
+                relevantEnrollments.forEach((item: any) => {
+                    subjectsMap.set(item.subject_id, (item.subjects as any)?.name || item.subject_id);
+                });
+                setSubjects(Array.from(subjectsMap.entries()).map(([id, name]) => ({ id, name })));
+
+                // Narrow to the selected subject when one is explicitly chosen
+                const effectiveSubjectIDs = selectedSubject !== 'all' ? [selectedSubject] : subjectIDs;
 
                 const { data: studentIDData, error: studentIDError } = await supabase
                     .from('student_subject_enrollments')
                     .select('student_id , class_id')
                     .in('class_id', classIDs)
-                    .in('subject_id', subjectIDs);
+                    .in('subject_id', effectiveSubjectIDs);
 
                 let studentsenrolledId = studentIDData?.map(item => item.student_id) || [];
-
-                console.log('Fetched class IDs from enrollments:', classIDs);
-                console.log('Fetched student IDs from enrollments:', studentsenrolledId);
 
                 const { data: classesData, error: classesError } = await supabase
                     .from('classes')
@@ -89,8 +105,7 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     if (selectedClassExists) {
                         classIds = [selectedClass];
                     } else {
-                        console.warn('Selected class not found or not assigned to teacher');
-                        classIds = teacherClasses.map(c => c.id);
+                            classIds = teacherClasses.map(c => c.id);
                     }
                 }
 
@@ -141,74 +156,72 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     return;
                 }
 
-                // Step 4: Fetch performance data for each student
-                const performanceData: StudentPerformance[] = [];
+                // Step 4: Batch-fetch all performance data (3 queries instead of 3N)
+                const allStudentIds = students.map(s => s.id);
 
-                for (const student of students) {
+                const [
+                    { data: allAttendanceData },
+                    { data: allQuizResultsData },
+                    { data: allQuizzesData },
+                ] = await Promise.all([
+                    supabase
+                        .from('attendance')
+                        .select('student_id, status')
+                        .in('student_id', allStudentIds),
+                    supabase
+                        .from('quiz_results')
+                        .select('student_id, percentage, quizzes!inner(class_id, subject_id)')
+                        .in('student_id', allStudentIds),
+                    supabase
+                        .from('quizzes')
+                        .select('id, class_id, subject_id')
+                        .in('class_id', classIds)
+                        .in('subject_id', effectiveSubjectIDs),
+                ]);
 
-                    try {
-                        // Get attendance for this student
-                        const { data: attendanceData } = await supabase
-                            .from('attendance')
-                            .select('status')
-                            .eq('student_id', student.id);
+                // Build lookup maps — filter by this teacher's classes AND effective subjects only
+                const classIdSet = new Set(classIds);
+                const subjectIdSet = new Set(effectiveSubjectIDs);
 
-                        const totalDays = attendanceData?.length || 0;
-                        const presentDays = attendanceData?.filter(r => r.status === 'present').length || 0;
-                        const attendance_rate = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
+                const attendanceMap: Record<string, { total: number; present: number }> = {};
+                (allAttendanceData || []).forEach((r: any) => {
+                    if (!attendanceMap[r.student_id]) attendanceMap[r.student_id] = { total: 0, present: 0 };
+                    attendanceMap[r.student_id].total++;
+                    if (r.status === 'present') attendanceMap[r.student_id].present++;
+                });
 
-                        // Get quiz results for this student in this class
-                        const { data: quizResultsData } = await supabase
-                            .from('quiz_results')
-                            .select(`
-                                percentage,
-                                quizzes!inner(class_id)
-                            `)
-                            .eq('student_id', student.id)
-                            .eq('quizzes.class_id', student.class_id);
+                const quizResultsMap: Record<string, number[]> = {};
+                (allQuizResultsData || []).forEach((r: any) => {
+                    // Only count results for quizzes in THIS teacher's classes AND subjects
+                    if (!classIdSet.has(r.quizzes?.class_id)) return;
+                    if (!subjectIdSet.has(r.quizzes?.subject_id)) return;
+                    if (!quizResultsMap[r.student_id]) quizResultsMap[r.student_id] = [];
+                    quizResultsMap[r.student_id].push(r.percentage || 0);
+                });
 
-                        const quizResults = quizResultsData || [];
-                        const percentages = quizResults.map((r: any) => r.percentage || 0);
-                        const average_grade = percentages.length > 0 ?
-                            Math.round(percentages.reduce((sum, p) => sum + p, 0) / percentages.length) : 0;
+                const quizCountByClass: Record<string, number> = {};
+                (allQuizzesData || []).forEach((q: any) => {
+                    quizCountByClass[q.class_id] = (quizCountByClass[q.class_id] || 0) + 1;
+                });
 
-                        // Get total quizzes for this class
-                        const { data: totalQuizzesData } = await supabase
-                            .from('quizzes')
-                            .select('id')
-                            .eq('class_id', student.class_id);
-
-                        const total_assignments = totalQuizzesData?.length || 0;
-                        const assignments_completed = quizResults.length;
-
-                        const studentPerformance: StudentPerformance = {
-                            id: student.id,
-                            full_name: student.full_name,
-                            roll_number: student.roll_number || 'N/A',
-                            attendance_rate,
-                            average_grade,
-                            assignments_completed,
-                            total_assignments,
-                            class_name: student.classes.name // NOW THIS WORKS
-                        };
-
-                        performanceData.push(studentPerformance);
-
-                    } catch (studentError) {
-                        console.warn(`Error fetching data for student ${student.full_name}:`, studentError);
-                        // Add default data for this student
-                        performanceData.push({
-                            id: student.id,
-                            full_name: student.full_name,
-                            roll_number: student.roll_number || 'N/A',
-                            attendance_rate: 0,
-                            average_grade: 0,
-                            assignments_completed: 0,
-                            total_assignments: 0,
-                            class_name: student.classes.name // This works now too
-                        });
-                    }
-                }
+                const performanceData: StudentPerformance[] = students.map(student => {
+                    const att = attendanceMap[student.id] || { total: 0, present: 0 };
+                    const attendance_rate = att.total > 0 ? Math.round((att.present / att.total) * 100) : 0;
+                    const percentages = quizResultsMap[student.id] || [];
+                    const average_grade = percentages.length > 0 ?
+                        Math.round(percentages.reduce((sum, p) => sum + p, 0) / percentages.length) : 0;
+                    return {
+                        id: student.id,
+                        full_name: student.full_name,
+                        roll_number: student.roll_number || 'N/A',
+                        attendance_rate,
+                        average_grade,
+                        assignments_completed: percentages.length,
+                        total_assignments: quizCountByClass[student.class_id] || 0,
+                        class_name: student.classes.name,
+                        subject_name: selectedSubject !== 'all' ? (subjectsMap.get(selectedSubject) || undefined) : undefined,
+                    };
+                });
 
                 setStudentPerformances(performanceData);
 
@@ -257,13 +270,15 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
         };
 
         fetchAllData();
-    }, [profileId, selectedClass]);
+    }, [profileId, selectedClass, selectedSubject, refreshKey]);
 
     return {
         studentPerformances,
         classAnalytics,
         classes,
+        subjects,
         loading,
-        error
+        error,
+        refetch
     };
 };

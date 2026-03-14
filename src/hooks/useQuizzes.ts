@@ -82,7 +82,7 @@ export const useQuizzes = () => {
     const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
     const [classesSubjects, setClassesSubjects] = useState<ClassSubject[]>([]);
     const [loading, setLoading] = useState(true);
-    const { profile } = useAuth();
+    const { profile, student } = useAuth();
 
     useEffect(() => {
         fetchSubjects();
@@ -202,7 +202,7 @@ export const useQuizzes = () => {
                 ({ data: enrollmentsData, error: enrollmentsError } = await supabase
                     .from('student_subject_enrollments')
                     .select('class_id, subject_id')
-                    .eq('student_id', profile.id)
+                    .eq('student_id', student?.id)
                     .eq('is_active', true));
             }
 
@@ -254,7 +254,7 @@ export const useQuizzes = () => {
             subjects (name)
           )
         `)
-                    .eq('student_id', profile?.id)
+                    .eq('student_id', student?.id)
                     .order('created_at', { ascending: false }));
             } else {
                 ({ data, error } = await supabase
@@ -287,26 +287,11 @@ export const useQuizzes = () => {
     const fetchStudentResults = async () => {
         try {
 
-            // First, get the student record ID from the students table
-            const { data: studentData, error: studentError } = await supabase
-                .from('students')
-                .select('id')
-                .eq('id', profile?.id)
-                .single();
-
-
-            if (studentError) {
-                console.warn('❌ Error fetching student record:', studentError);
-                throw studentError;
-            }
-
-            if (!studentData) {
-                console.warn('⚠️ No student record found for user:', profile?.id);
+            if (!student?.id) {
                 setQuizResults([]);
                 setLoading(false);
                 return;
             }
-
 
             const { data, error } = await supabase
                 .from('quiz_results')
@@ -321,7 +306,7 @@ export const useQuizzes = () => {
                         subjects (name)
                     )
                 `)
-                .eq('student_id', studentData.id)
+                .eq('student_id', student.id)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -546,8 +531,6 @@ export const useQuizzes = () => {
         instructions?: string;
     }) => {
         try {
-            console.log('🔍 Validating quiz creation:', quizData);
-
             // FIXED: Check teacher_subject_enrollments instead of classes_subjects
             const { data: enrollment, error: enrollmentError } = await supabase
                 .from('teacher_subject_enrollments')
@@ -558,11 +541,8 @@ export const useQuizzes = () => {
                 .single();
 
             if (enrollmentError || !enrollment) {
-                console.warn('❌ Validation failed:', enrollmentError);
                 throw new Error('You are not assigned to teach this subject in this class');
             }
-
-            console.log('✅ Validation passed, creating quiz');
 
             const { data, error } = await supabase
                 .from('quizzes')
@@ -584,8 +564,6 @@ export const useQuizzes = () => {
                 .single();
 
             if (error) throw error;
-
-            console.log('✅ Quiz created successfully:', data);
 
             // ✅ FIXED: Create quiz results only for students enrolled in this class + subject
             const { data: enrolledStudents, error: studentsError } = await supabase
@@ -662,7 +640,6 @@ export const useQuizzes = () => {
             if (result) {
                 const quiz = quizzes.find(q => q.id === result.quiz_id);
                 if (quiz && (quiz.status === 'scheduled' || quiz.status === 'active')) {
-                    console.log('🔄 Auto-completing quiz since teacher started marking:', quiz.title);
                     await supabase
                         .from('quizzes')
                         .update({ status: 'completed' })

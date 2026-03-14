@@ -96,7 +96,7 @@ export default function LecturesScreen() {
         const { data: studentData, error: studentError } = await supabase
           .from('students')
           .select('class_id')
-          .eq('id', profile.id)
+          .eq('id', student?.id)
           .single();
 
         if (studentError) {
@@ -115,7 +115,7 @@ export default function LecturesScreen() {
       const { data: enrollments, error: enrollmentError } = await supabase
         .from('student_subject_enrollments')
         .select('subject_id')
-        .eq(profile.role === 'teacher' ? 'teacher_id' : 'student_id', profile.id)
+        .eq(profile.role === 'teacher' ? 'teacher_id' : 'student_id', profile.role === 'student' ? student?.id : profile.id)
         .eq('is_active', true);
 
       if (enrollmentError) {
@@ -200,7 +200,7 @@ export default function LecturesScreen() {
 
 
       const data = await lectureService.fetchLectures({
-        userId: profile.id,
+        userId: profile.role === 'student' ? student?.id : profile.id,
         role: profile.role,
       });
 

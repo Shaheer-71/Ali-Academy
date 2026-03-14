@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -100,10 +101,24 @@ export default function DiaryScreen() {
   const {
     searchQuery,
     setSearchQuery,
+    selectedClass: filterClass,
+    setSelectedClass: setFilterClass,
     selectedSubject,
     setSelectedSubject,
     filteredAssignments,
   } = useDiaryFilters(assignments, profile);
+
+  // When teacher changes class filter, reload subjects for that class
+  useEffect(() => {
+    setSelectedSubject(null);
+    if (profile?.role === 'teacher') {
+      if (filterClass) {
+        fetchSubjectsForClass(filterClass);
+      } else {
+        fetchTeacherSubjects();
+      }
+    }
+  }, [filterClass]);
 
   const {
     uploading,
@@ -518,10 +533,58 @@ export default function DiaryScreen() {
           )}
         </View>
 
+        {/* Teacher: class + subject filter rows */}
+        {profile?.role === 'teacher' && classes.length > 0 && (
+          <View style={diaryFilterStyles.filterContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={diaryFilterStyles.filterButtons}>
+                <TouchableOpacity
+                  style={[diaryFilterStyles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }, filterClass === null && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                  onPress={() => setFilterClass(null)}
+                >
+                  <Text allowFontScaling={false} style={[diaryFilterStyles.filterText, { color: filterClass === null ? '#fff' : colors.text }]}>All Classes</Text>
+                </TouchableOpacity>
+                {classes.map(cls => (
+                  <TouchableOpacity
+                    key={cls.id}
+                    style={[diaryFilterStyles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }, filterClass === cls.id && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                    onPress={() => setFilterClass(cls.id)}
+                  >
+                    <Text allowFontScaling={false} style={[diaryFilterStyles.filterText, { color: filterClass === cls.id ? '#fff' : colors.text }]}>{cls.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+
+            {filterClass !== null && subjects.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
+                <View style={diaryFilterStyles.filterButtons}>
+                  <TouchableOpacity
+                    style={[diaryFilterStyles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }, selectedSubject === null && { backgroundColor: colors.secondary, borderColor: colors.secondary }]}
+                    onPress={() => setSelectedSubject(null)}
+                  >
+                    <Text allowFontScaling={false} style={[diaryFilterStyles.filterText, { color: selectedSubject === null ? '#fff' : colors.text }]}>All Subjects</Text>
+                  </TouchableOpacity>
+                  {subjects.map(sub => (
+                    <TouchableOpacity
+                      key={sub.id}
+                      style={[diaryFilterStyles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }, selectedSubject === sub.id && { backgroundColor: colors.secondary, borderColor: colors.secondary }]}
+                      onPress={() => setSelectedSubject(sub.id)}
+                    >
+                      <Text allowFontScaling={false} style={[diaryFilterStyles.filterText, { color: selectedSubject === sub.id ? '#fff' : colors.text }]}>{sub.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        )}
+
         {/* Assignments List */}
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -624,3 +687,26 @@ export default function DiaryScreen() {
     </Animated.View >
   );
 }
+
+import { TextSizes } from '@/src/styles/TextSizes';
+
+const diaryFilterStyles = StyleSheet.create({
+  filterContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  filterButtons: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  filterButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  filterText: {
+    fontSize: TextSizes.filterLabel,
+    fontFamily: 'Inter-Medium',
+  },
+});

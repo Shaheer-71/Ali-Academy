@@ -12,7 +12,6 @@ export const useNotificationHistory = (profile: any) => {
 
         try {
             setLoading(true);
-            console.log('📋 Fetching notifications for user:', profile.id);
 
             const { data, error } = await supabase
                 .from('notifications')
@@ -21,11 +20,9 @@ export const useNotificationHistory = (profile: any) => {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-
-            console.log(`✅ Fetched ${data?.length || 0} notifications`);
             setNotifications(data || []);
         } catch (error) {
-            console.warn('❌ Error fetching notifications:', error);
+            console.warn('Error fetching notifications:', error);
             setNotifications([]);
         } finally {
             setLoading(false);

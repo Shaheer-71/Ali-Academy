@@ -53,20 +53,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch user profile when user is set
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!user || profileFetched) return;
+      if (!user?.email || profileFetched) return;
 
       try {
         setLoading(true);
+        // Query by email because teacher-created profiles use a different UUID
+        // than the one Supabase assigns to the auth user at registration time.
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('email', user.email)
           .single();
 
         if (error) throw error;
         setProfile(data);
         setProfileFetched(true);
-      } catch (error) {
+      } catch (error: any) {
         console.warn('Error fetching profile:', error);
         setProfile(null);
       } finally {
@@ -75,90 +77,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     fetchProfile();
-  }, [user, profileFetched]);
+  }, [user?.id, profileFetched]);
 
   useEffect(() => {
     const fetchStudentInfo = async () => {
-
-      if (!profile) {
-        console.log('⏩ No profile found yet, skipping student fetch.');
-        return;
-      }
-
-      if (profile.role?.toLowerCase() !== 'student') {
-        console.log(`⏩ Role is not "student" (actual: ${profile.role}), skipping student fetch.`);
-        return;
-      }
-
-      if (profileStudentFetched) {
-        console.log('⏩ Student data already fetched once, skipping.');
-        return;
-      }
+      if (!profile?.email || profile.role?.toLowerCase() !== 'student' || profileStudentFetched) return;
 
       try {
-        setLoading(true);
-
         const { data, error } = await supabase
           .from('students')
           .select('*')
-          .eq('id', profile.id)
+          .eq('email', profile.email)
+          .eq('is_deleted', false)
           .single();
 
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
 
-        if (!data) {
-          console.warn('⚠️ No student record found for email:', profile.email);
-        } else {
-          console.log('✅ Student data fetched:', data);
-        }
-
-        setStudent(data);
+        setStudent(data ?? null);
         setProfileStudentFetched(true);
       } catch (error) {
-        console.warn('🔥 Error fetching student info:', error);
+        console.warn('Error fetching student info:', error);
         setStudent(null);
-      } finally {
-        setLoading(false);
+        setProfileStudentFetched(true);
       }
     };
 
     fetchStudentInfo();
-  }, [profile, profileStudentFetched]);
+  }, [profile?.email, profileStudentFetched]);
 
   const deleteDeviceToken = async (userId: string) => {
     try {
-      console.log('🗑️ [DEVICE] Deleting device token for user:', userId);
-
-      // Get current device's Expo push token
       const tokenData = await Notifications.getExpoPushTokenAsync();
       const currentToken = tokenData.data;
+      if (!currentToken) return;
 
-      if (!currentToken) {
-        console.log('⚠️ [DEVICE] No token found to delete');
-        return;
-      }
-
-      // Delete this specific device from database
       const { error } = await supabase
         .from('devices')
         .delete()
         .eq('user_id', userId)
         .eq('token', currentToken);
 
-      if (error) {
-        console.log('❌ [DEVICE] Error deleting token:', error.message);
-      } else {
-        console.log('✅ [DEVICE] Device token deleted successfully');
-      }
+      if (error) console.warn('Error deleting device token:', error.message);
     } catch (error) {
-      console.log('❌ [DEVICE] Error in deleteDeviceToken:', error);
+      console.warn('Error in deleteDeviceToken:', error);
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check disability BEFORE signing in — if signInWithPassword fires first,
+    // the auth state change navigates away before the error modal can show.
+    //
+    // We check students table (accessible via anon key) rather than profiles
+    // because profiles RLS may block reads before authentication.
+    const { data: studentCheck } = await supabase
+      .from('students')
+      .select('is_deleted, student_status')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
+
+    if (studentCheck && (studentCheck.is_deleted || studentCheck.student_status === 'inactive')) {
+      throw new Error('ACCOUNT_DISABLED');
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
     if (error) throw error;
   };
 
@@ -171,7 +154,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
     setUser(null);
     setProfile(null);
+    setStudent(null);
     setProfileFetched(false);
+    setProfileStudentFetched(false);
 
 
   };
