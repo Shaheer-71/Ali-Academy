@@ -30,7 +30,7 @@ interface ComprehensiveExamsFilterModalProps {
     onApplyFilters: (filters: ExamFilterData) => void;
     userRole: 'teacher' | 'student';
     activeTab: 'schedule' | 'results' | 'reports';
-    getSubjectsForClass: (classId: string) => Promise<Subject[]>;
+    getSubjectsForClass: (classId: string) => Subject[];
 }
 
 export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterModalProps> = ({
@@ -68,7 +68,7 @@ export const ComprehensiveExamsFilterModal: React.FC<ComprehensiveExamsFilterMod
             const classSubjects = await getSubjectsForClass(classId);
             setAvailableSubjects(classSubjects);
         } catch (error) {
-            console.error('Error loading subjects:', error);
+            console.warn('Error loading subjects:', error);
             setAvailableSubjects([]);
         } finally {
             setLoadingSubjects(false);

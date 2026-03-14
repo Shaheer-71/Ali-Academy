@@ -22,32 +22,37 @@ interface ThemeContextType {
 }
 
 const lightColors: ThemeColors = {
-    primary: '#274d71',
-    secondary: '#b6d509',
-    background: '#ffffff',
-    cardBackground: '#F9FAFB',
-    text: '#111827',
-    textSecondary: '#6B7280',
-    border: '#E5E7EB',
-    success: '#10B981',
-    warning: '#F59E0B',
-    error: '#EF4444',
-    info: '#3B82F6',
+    primary: '#1F3F4A',        // Logo dark teal
+    secondary: '#A4C400',      // Logo lime green
+    background: '#FFFFFF',
+    cardBackground: '#F4F7F8', // Light smooth teal-gray
+    text: '#1F3F4A',
+    textSecondary: '#5A7A80',  // Light teal-gray for clean UI
+    border: '#D5DFE1',
+    success: '#A4C400',
+    warning: '#A4C400',
+    error: '#1F3F4A',          // Stays consistent to your color identity
+    info: '#4E767F',           // Medium teal (professional & subtle)
 };
 
 const darkColors: ThemeColors = {
-    primary: '#4A90E2',
-    secondary: '#b6d509',
-    background: '#1F2937',
-    cardBackground: '#374151',
-    text: '#F9FAFB',
-    textSecondary: '#D1D5DB',
-    border: '#4B5563',
-    success: '#10B981',
-    warning: '#F59E0B',
-    error: '#EF4444',
-    info: '#3B82F6',
+    primary: '#3E6D73',        // Muted teal accent (professional + matches logo)
+    secondary: '#2A5055',      // Darker teal for depth
+
+    background: '#0D0D0F',     // Ultra-clean professional dark
+    cardBackground: '#161618', // Slightly raised card surface
+
+    text: '#E6E6E6',           // Soft white (not harsh)
+    textSecondary: '#9AA1A4',  // Elegant gray for secondary text
+
+    border: '#242628',         // Subtle, premium border
+
+    success: '#3E6D73',        // Keep teal tone for consistency
+    warning: '#3E6D73',
+    error: '#E6E6E6',
+    info: '#3E6D73',
 };
+
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
@@ -73,7 +78,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 setIsDark(savedTheme === 'dark');
             }
         } catch (error) {
-            console.error('Error loading theme:', error);
+            console.warn('Error loading theme:', error);
         }
     };
 
@@ -83,7 +88,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             setIsDark(newTheme);
             await AsyncStorage.setItem('theme', newTheme ? 'dark' : 'light');
         } catch (error) {
-            console.error('Error saving theme:', error);
+            console.warn('Error saving theme:', error);
         }
     };
 

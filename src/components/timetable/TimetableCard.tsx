@@ -37,13 +37,13 @@ export const TimetableCard: React.FC<TimetableCardProps> = ({
     >
       <View style={styles.header}>
         <View style={styles.timeContainer}>
-          <Clock size={14} color="#274d71" />
+          <Clock size={14} color="#204040" />
           <Text allowFontScaling={false} style={styles.timeText}>
             {entry.start_time} - {entry.end_time}
           </Text>
         </View>
         <View style={styles.roomBadge}>
-          <MapPin size={10} color="#274d71" />
+          <MapPin size={10} color="#204040" />
           <Text allowFontScaling={false} style={styles.roomText}>{entry.room_number}</Text>
         </View>
       </View>
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   },
   lastCard: {
     borderBottomWidth: 3,
-    borderBottomColor: '#274d71',
+    borderBottomColor: '#204040',
   },
   header: {
     flexDirection: 'row',
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: TextSizes.small,
     fontFamily: 'Inter-SemiBold',
-    color: '#274d71',
+    color: '#204040',
     marginLeft: 6,
   },
   roomBadge: {
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   roomText: {
     fontSize: TextSizes.extraSmall,
     fontFamily: 'Inter-SemiBold',
-    color: '#274d71',
+    color: '#204040',
   },
   subject: {
     fontSize: TextSizes.medium,

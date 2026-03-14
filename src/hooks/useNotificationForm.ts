@@ -43,9 +43,6 @@ export const useNotificationForm = (profile: any) => {
         setSending(true);
 
         try {
-            console.log('🟢 Starting notification creation...');
-
-            // Step 1: Create notification record
             const notificationData = {
                 title: formData.title,
                 message: formData.message,
@@ -58,8 +55,6 @@ export const useNotificationForm = (profile: any) => {
                 created_by: profile.id,
             };
 
-            console.log('📝 Creating notification:', notificationData);
-
             const { data: notification, error: notifError } = await supabase
                 .from('notifications')
                 .insert([notificationData])
@@ -68,43 +63,25 @@ export const useNotificationForm = (profile: any) => {
 
             if (notifError) throw notifError;
 
-            console.log('✅ Notification created:', notification.id);
-
-            // Step 2: Get recipients based on target_type
             let recipients: any[] = [];
 
             if (formData.target_type === 'all') {
-                console.log('👥 Fetching all users...');
-                const { data, error } = await supabase
-                    .from('profiles')
-                    .select('id');
-
+                const { data, error } = await supabase.from('profiles').select('id');
                 if (error) throw error;
                 recipients = data || [];
-                console.log(`✅ Found ${recipients.length} total users`);
             } else if (formData.target_type === 'students') {
-                console.log('👨‍🎓 Fetching all students...');
-                const { data, error } = await supabase
-                    .from('students')
-                    .select('id');
-
+                const { data, error } = await supabase.from('students').select('id');
                 if (error) throw error;
                 recipients = data || [];
-                console.log(`✅ Found ${recipients.length} students`);
             } else if (formData.target_type === 'individual') {
-                console.log('👤 Setting individual recipient:', formData.target_id);
                 recipients = [{ id: formData.target_id }];
             }
 
             if (recipients.length === 0) {
-                console.warn('⚠️ No recipients found');
                 Alert.alert('Warning', 'No recipients found for this notification');
                 setSending(false);
                 return true;
             }
-
-            // Step 3: Create notification_recipients records
-            console.log(`📧 Creating ${recipients.length} recipient records...`);
 
             const recipientRecords = recipients.map((recipient) => ({
                 notification_id: notification.id,
@@ -119,19 +96,11 @@ export const useNotificationForm = (profile: any) => {
 
             if (recipientError) throw recipientError;
 
-            console.log(`✅ Created ${recipients.length} notification recipient records`);
-
-            // Step 4: Send push notifications
-            console.log(`📱 Sending push notifications to ${recipients.length} recipients...`);
-
             let sentCount = 0;
             let failedCount = 0;
 
-            for (let i = 0; i < recipients.length; i++) {
-                const recipient = recipients[i];
+            for (const recipient of recipients) {
                 try {
-                    console.log(`📤 Sending push ${i + 1}/${recipients.length} to user ${recipient.id}`);
-
                     await sendPushNotification({
                         userId: recipient.id,
                         title: formData.title,
@@ -144,15 +113,12 @@ export const useNotificationForm = (profile: any) => {
                             timestamp: new Date().toISOString(),
                         },
                     });
-
                     sentCount++;
                 } catch (pushError) {
-                    console.error(`❌ Failed to send push to ${recipient.id}:`, pushError);
+                    console.warn(`Failed to send push to ${recipient.id}:`, pushError);
                     failedCount++;
                 }
             }
-
-            console.log(`📊 Push Summary: Sent ${sentCount}/${recipients.length}, Failed ${failedCount}`);
 
             Alert.alert(
                 'Success',
@@ -162,7 +128,7 @@ export const useNotificationForm = (profile: any) => {
             resetForm();
             return true;
         } catch (error: any) {
-            console.error('🔥 Error in sendNotification:', error);
+            console.warn('Error in sendNotification:', error);
             Alert.alert('Error', error.message || 'Failed to send notification');
             return false;
         } finally {

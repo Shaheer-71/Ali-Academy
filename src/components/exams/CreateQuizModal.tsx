@@ -15,6 +15,9 @@ import { X } from 'lucide-react-native';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { sendPushNotification } from '@/src/lib/notifications';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { handleQuizCreationError, handleSubjectFetchForClassError } from '@/src/utils/errorHandler/quizErrorHandler';
+
 
 interface Subject {
     id: string;
@@ -46,8 +49,8 @@ interface CreateQuizModalProps {
     subjects: Subject[];
     classes: Class[];
     selectedClass: string;
-    createQuiz: (quizData: QuizData) => Promise<{ success: boolean; error?: any; data?: any }>;
-    getSubjectsForClass: (classId: string) => Promise<Subject[]>;
+    createQuiz: (quizData: QuizData) => { success: boolean; error?: any; data?: any };
+    getSubjectsForClass: (classId: string) => Subject[];
 }
 
 const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
@@ -78,6 +81,25 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
     const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
     const [loadingSubjects, setLoadingSubjects] = useState<boolean>(false);
 
+    const [errorModal, setErrorModal] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showError = (error: any, handler?: (error: any) => any) => {
+        const errorInfo = handler ? handler(error) : handleError(error);
+        setErrorModal({
+            visible: true,
+            title: errorInfo.title,
+            message: errorInfo.message,
+        });
+    };
+
     // Reset form when modal is opened
     useEffect(() => {
         if (modalVisible) {
@@ -107,7 +129,8 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                     // Reset subject selection when class changes
                     setNewQuiz(prev => ({ ...prev, subject_id: '' }));
                 } catch (error) {
-                    console.error("❌ Error loading subjects:", error);
+                    console.warn("❌ Error loading subjects:", error);
+                    showError(error, handleSubjectFetchForClassError);
                     setAvailableSubjects([]);
                 } finally {
                     setLoadingSubjects(false);
@@ -121,7 +144,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
         loadSubjects();
     }, [newQuiz.class_id]);
 
-    const handleCreateQuiz = async (): Promise<void> => {
+    const handleCreateQuiz = async () => {
         // Validation
         const missingFields: string[] = [];
         if (!newQuiz.title.trim()) missingFields.push('Title');
@@ -180,7 +203,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                     .eq('class_id', newQuiz.class_id);
 
                 if (studentError) {
-                    console.error('Error fetching students:', studentError);
+                    console.warn('Error fetching students:', studentError);
                     return;
                 }
 
@@ -209,7 +232,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                     .single();
 
                 if (notifError) {
-                    console.error('Error creating notification:', notifError);
+                    console.warn('Error creating notification:', notifError);
                     return;
                 }
 
@@ -250,21 +273,21 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
 
                         sentCount++;
                     } catch (studentError) {
-                        console.error(`❌ [QUIZ] Failed to send notification to student ${i + 1}:`, studentError);
+                        console.warn(`❌ [QUIZ] Failed to send notification to student ${i + 1}:`, studentError);
                         failedCount++;
                         continue;
                     }
                 }
 
                 if (recipientError) {
-                    console.error('Error adding recipients:', recipientError);
+                    console.warn('Error adding recipients:', recipientError);
                 }
             } else {
-                Alert.alert('Error', result.error?.message || 'Failed to create quiz');
+                showError(result.error, handleQuizCreationError);
             }
 
         } catch (error: any) {
-            console.error('Error creating quiz:', error);
+            console.warn('Error creating quiz:', error);
             Alert.alert('Error', error.message);
         } finally {
             setCreating(false);
@@ -282,6 +305,15 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
         >
             <View style={styles.modalOverlay}>
                 <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+
+                    <ErrorModal
+                        visible={errorModal.visible}
+                        title={errorModal.title}
+                        message={errorModal.message}
+                        onClose={() => setErrorModal({ ...errorModal, visible: false })}
+                    />
+
+
                     <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
                         <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Schedule Quiz</Text>
                         <TouchableOpacity
@@ -493,6 +525,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
 
 
 import { TextSizes } from '@/src/styles/TextSizes';
+import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
 
 const styles = StyleSheet.create({
     modalOverlay: {

@@ -1,8 +1,8 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
-import { Redirect } from 'expo-router';
 import {
     House as Home,
     Users,
@@ -17,17 +17,17 @@ import {
 export default function TeacherLayout() {
     const { user, profile, loading } = useAuth();
     const { colors } = useTheme();
+    const router = useRouter();
 
-    if (loading) {
+    useEffect(() => {
+        if (loading) return;
+        if (!user || !profile || profile.role !== 'teacher') {
+            router.replace('/(auth)/sign-in');
+        }
+    }, [loading, user?.id, profile?.role]);
+
+    if (loading || !user || !profile || profile.role !== 'teacher') {
         return null;
-    }
-
-    if (!user || !profile) {
-        return <Redirect href="/(auth)/sign-in" />;
-    }
-
-    if (profile.role !== 'teacher') {
-        return <Redirect href="/(auth)/sign-in" />;
     }
 
     return (

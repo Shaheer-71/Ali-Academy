@@ -18,20 +18,20 @@ export default function TopSection() {
     return (
         <SafeAreaView style={{ backgroundColor: "#fff" }} edges={['top', 'left', 'right']}>
             <View style={{ paddingHorizontal: 12, marginHorizontal: 12, justifyContent: "space-between", flexDirection: "row", paddingVertical: 5, marginVertical: 5, marginRight: "5%" }}>
-                <Text allowFontScaling={false} style={{ fontWeight: "bold", color: "#274d71", fontSize: 28, fontFamily: 'Inter-SemiBold' }}>{screenName === "Index" ? "Home" : screenName || 'Untitled'}</Text>
+                <Text allowFontScaling={false} style={{ fontWeight: "bold", color: "#204040", fontSize: 28, fontFamily: 'Inter-SemiBold' }}>{screenName === "Index" ? "Home" : screenName || 'Untitled'}</Text>
                 {/* <TouchableOpacity>
-                    <CircleEllipsis color="#274d71" size={24} />
+                    <CircleEllipsis color="#204040" size={24} />
                 </TouchableOpacity> */}
 
                 <View style={{ flexDirection: "row", width: "23%", justifyContent: "space-between" }}>
                     <TouchableOpacity style={{ alignItems: "center" }}>
-                        <Moon color="#274d71" size={30} />
+                        <Moon color="#204040" size={30} />
                     </TouchableOpacity>
                     {/* 
                     {
                         screenName === "Settings" ? null : */}
                     <TouchableOpacity style={{ alignItems: "center" }}>
-                        <Settings color="#274d71" size={30} />
+                        <Settings color="#204040" size={30} />
                     </TouchableOpacity>
                     {/* } */}
 

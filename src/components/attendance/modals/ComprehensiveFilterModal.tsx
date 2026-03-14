@@ -90,7 +90,7 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                 .eq('class_id', classId);
 
             if (subjectIDError) {
-                console.error("❌ Error fetching subject enrollments:", subjectIDError);
+                console.warn("❌ Error fetching subject enrollments:", subjectIDError);
                 throw subjectIDError;
             }
 
@@ -110,7 +110,7 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                 .order('name');
 
             if (error) {
-                console.error("❌ Error fetching subjects details:", error);
+                console.warn("❌ Error fetching subjects details:", error);
                 throw error;
             }
 
@@ -127,7 +127,7 @@ export const ComprehensiveFilterModal: React.FC<ComprehensiveFilterModalProps> =
                 setFilters(prev => ({ ...prev, selectedSubject: '' }));
             }
         } catch (error) {
-            console.error('❌ Modal: Error fetching subjects:', error);
+            console.warn('❌ Modal: Error fetching subjects:', error);
             setLocalSubjects([]);
             setFilters(prev => ({ ...prev, selectedSubject: '' }));
         } finally {

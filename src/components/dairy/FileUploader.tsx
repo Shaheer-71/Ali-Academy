@@ -37,7 +37,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   const getFileIcon = () => {
-    if (!selectedFile) return <Upload size={20} color="#274d71" />;
+    if (!selectedFile) return <Upload size={20} color="#204040" />;
 
     if (selectedFile.mimeType?.includes('video')) {
       return <Video size={20} color="#8B5CF6" />;
@@ -45,7 +45,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     if (selectedFile.mimeType?.includes('image')) {
       return <Image size={20} color="#10B981" />;
     }
-    return <FileText size={20} color="#274d71" />;
+    return <FileText size={20} color="#204040" />;
   };
 
   const getFileSize = (size: number) => {
@@ -84,7 +84,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
           onPress={pickDocument}
           disabled={uploading}
         >
-          <Upload size={20} color="#274d71" />
+          <Upload size={20} color="#204040" />
           <Text allowFontScaling={false} style={styles.uploadText}>
             {uploading ? 'Selecting...' : 'Select File'}
           </Text>
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   uploadText: {
     fontSize: TextSizes.medium,
     fontFamily: 'Inter-Medium',
-    color: '#274d71',
+    color: '#204040',
   },
   selectedFileContainer: {
     flexDirection: 'row',
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
 //   uploadText: {
 //     fontSize: 14,
 //     fontFamily: 'Inter-Medium',
-//     color: '#274d71',
+//     color: '#204040',
 //   },
 //   selectedFileContainer: {
 //     flexDirection: 'row',

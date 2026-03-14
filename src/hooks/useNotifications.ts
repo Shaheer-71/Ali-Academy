@@ -61,7 +61,7 @@ export const useNotifications = () => {
       setNotifications(mockNotifications);
       setUnreadCount(mockNotifications.filter(n => !n.read).length);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.warn('Error fetching notifications:', error);
     } finally {
       setLoading(false);
     }
@@ -85,7 +85,7 @@ export const useNotifications = () => {
       
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.warn('Error marking notification as read:', error);
     }
   };
 
@@ -96,7 +96,7 @@ export const useNotifications = () => {
       );
       setUnreadCount(0);
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      console.warn('Error marking all notifications as read:', error);
     }
   };
 
@@ -111,7 +111,7 @@ export const useNotifications = () => {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (error) {
-      console.error('Error dismissing notification:', error);
+      console.warn('Error dismissing notification:', error);
     }
   };
 

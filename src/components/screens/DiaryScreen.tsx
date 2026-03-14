@@ -3,12 +3,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Modal,
   RefreshControl,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -34,6 +33,17 @@ import styles from '../dairy/styles';
 import { useFocusEffect } from '@react-navigation/native';
 import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
 import { Animated } from 'react-native';
+import {
+  handleClassFetchErrorForDiary,
+  handleSubjectFetchErrorForDiary,
+  handleStudentFetchErrorForDiary,
+  handleAssignmentCreateError,
+  handleAssignmentUpdateError,
+  handleFileDownloadErrorForDiary,
+} from '@/src/utils/errorHandler/diaryErrorHandler';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
+
 
 interface DiaryAssignment {
   id: string;
@@ -63,6 +73,21 @@ export default function DiaryScreen() {
   const screenStyle = useScreenAnimation();
   const addButtonAnimation = useButtonAnimation();
 
+  const [errorModal, setErrorModal] = useState({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showError = (error: any, handler?: (error: any) => any) => {
+    const errorInfo = handler ? handler(error) : handleError(error);
+    setErrorModal({
+      visible: true,
+      title: errorInfo.title,
+      message: errorInfo.message,
+    });
+  };
+
   // Custom Hooks
   const {
     assignments,
@@ -76,10 +101,24 @@ export default function DiaryScreen() {
   const {
     searchQuery,
     setSearchQuery,
+    selectedClass: filterClass,
+    setSelectedClass: setFilterClass,
     selectedSubject,
     setSelectedSubject,
     filteredAssignments,
   } = useDiaryFilters(assignments, profile);
+
+  // When teacher changes class filter, reload subjects for that class
+  useEffect(() => {
+    setSelectedSubject(null);
+    if (profile?.role === 'teacher') {
+      if (filterClass) {
+        fetchSubjectsForClass(filterClass);
+      } else {
+        fetchTeacherSubjects();
+      }
+    }
+  }, [filterClass]);
 
   const {
     uploading,
@@ -144,7 +183,8 @@ export default function DiaryScreen() {
 
       setSubjects(uniqueSubjects);
     } catch (error) {
-      console.error('❌ Error fetching teacher subjects:', error);
+      console.warn('❌ Error fetching teacher subjects:', error);
+      showError(error, handleSubjectFetchErrorForDiary);
       setSubjects([]);
     }
   };
@@ -185,6 +225,7 @@ export default function DiaryScreen() {
       setSubjects(uniqueSubjects);
     } catch (error) {
       console.log('❌ Error fetching subjects for class:', error);
+      showError(error, handleSubjectFetchErrorForDiary);
       setSubjects([]);
     }
   };
@@ -217,7 +258,8 @@ export default function DiaryScreen() {
 
       setSubjects(subjectsList);
     } catch (error) {
-      console.error('❌ Error fetching subjects:', error);
+      console.warn('❌ Error fetching subjects:', error);
+      showError(error, handleSubjectFetchErrorForDiary);
       setSubjects([]);
     }
   };
@@ -250,7 +292,8 @@ export default function DiaryScreen() {
 
       setClasses(uniqueClasses);
     } catch (error) {
-      console.error('❌ Error fetching classes:', error);
+      console.warn('❌ Error fetching classes:', error);
+      showError(error, handleClassFetchErrorForDiary);
       setClasses([]);
     }
   };
@@ -293,7 +336,8 @@ export default function DiaryScreen() {
 
       setStudents(data || []);
     } catch (error) {
-      console.error('❌ Error fetching students:', error);
+      console.warn('❌ Error fetching students:', error);
+      showError(error, handleStudentFetchErrorForDiary);
       setStudents([]);
     }
   };
@@ -312,7 +356,8 @@ export default function DiaryScreen() {
         }));
       }
     } catch (error) {
-      console.error('Error picking document:', error);
+      console.warn('Error picking document:', error);
+      showError(error, handleFileDownloadErrorForDiary);
     }
   };
 
@@ -370,7 +415,7 @@ export default function DiaryScreen() {
       resetForm();
       fetchAssignments();
     } catch (error: any) {
-      alert(error.message);
+      showError(error, handleAssignmentUpdateError);
     }
   };
 
@@ -438,7 +483,7 @@ export default function DiaryScreen() {
       resetForm();
       fetchAssignments();
     } catch (error: any) {
-      alert(error.message);
+      showError(error, handleAssignmentCreateError);
     }
   };
 
@@ -460,6 +505,14 @@ export default function DiaryScreen() {
             />
           </View>
 
+          <ErrorModal
+            visible={errorModal.visible}
+            title={errorModal.title}
+            message={errorModal.message}
+            onClose={() => setErrorModal({ ...errorModal, visible: false })}
+          />
+
+
           {profile?.role === 'student' && (
             <SubjectFilter
               subjects={subjects}
@@ -480,10 +533,58 @@ export default function DiaryScreen() {
           )}
         </View>
 
+        {/* Teacher: class + subject filter rows */}
+        {profile?.role === 'teacher' && classes.length > 0 && (
+          <View style={diaryFilterStyles.filterContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={diaryFilterStyles.filterButtons}>
+                <TouchableOpacity
+                  style={[diaryFilterStyles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }, filterClass === null && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                  onPress={() => setFilterClass(null)}
+                >
+                  <Text allowFontScaling={false} style={[diaryFilterStyles.filterText, { color: filterClass === null ? '#fff' : colors.text }]}>All Classes</Text>
+                </TouchableOpacity>
+                {classes.map(cls => (
+                  <TouchableOpacity
+                    key={cls.id}
+                    style={[diaryFilterStyles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }, filterClass === cls.id && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                    onPress={() => setFilterClass(cls.id)}
+                  >
+                    <Text allowFontScaling={false} style={[diaryFilterStyles.filterText, { color: filterClass === cls.id ? '#fff' : colors.text }]}>{cls.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+
+            {filterClass !== null && subjects.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
+                <View style={diaryFilterStyles.filterButtons}>
+                  <TouchableOpacity
+                    style={[diaryFilterStyles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }, selectedSubject === null && { backgroundColor: colors.secondary, borderColor: colors.secondary }]}
+                    onPress={() => setSelectedSubject(null)}
+                  >
+                    <Text allowFontScaling={false} style={[diaryFilterStyles.filterText, { color: selectedSubject === null ? '#fff' : colors.text }]}>All Subjects</Text>
+                  </TouchableOpacity>
+                  {subjects.map(sub => (
+                    <TouchableOpacity
+                      key={sub.id}
+                      style={[diaryFilterStyles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }, selectedSubject === sub.id && { backgroundColor: colors.secondary, borderColor: colors.secondary }]}
+                      onPress={() => setSelectedSubject(sub.id)}
+                    >
+                      <Text allowFontScaling={false} style={[diaryFilterStyles.filterText, { color: selectedSubject === sub.id ? '#fff' : colors.text }]}>{sub.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        )}
+
         {/* Assignments List */}
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -547,6 +648,7 @@ export default function DiaryScreen() {
             pickDocument={pickDocument}
             fetchStudents={fetchStudents}
             fetchSubjectsForClass={fetchSubjectsForClass}
+            showError={showError}
           />
         )}
 
@@ -585,3 +687,26 @@ export default function DiaryScreen() {
     </Animated.View >
   );
 }
+
+import { TextSizes } from '@/src/styles/TextSizes';
+
+const diaryFilterStyles = StyleSheet.create({
+  filterContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  filterButtons: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  filterButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  filterText: {
+    fontSize: TextSizes.filterLabel,
+    fontFamily: 'Inter-Medium',
+  },
+});

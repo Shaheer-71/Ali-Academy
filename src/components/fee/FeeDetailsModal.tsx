@@ -87,7 +87,7 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
             );
             onRefresh();
         } catch (error: any) {
-            console.error('Error marking fee as paid:', error);
+            console.warn('Error marking fee as paid:', error);
             Alert.alert('Error', error.message || 'Failed to mark fee as paid');
         } finally {
             setCreatingPayment(false);

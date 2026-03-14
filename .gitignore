@@ -37,3 +37,13 @@ yarn-error.*
 # Firebase config files
 google-services.json
 GoogleService-Info.plist
+
+# Supabase sensitive files
+supabase/.temp/
+supabase/backup/
+
+# Database scripts
+scripts/
+
+# Claude Code local settings (may contain credentials)
+.claude/

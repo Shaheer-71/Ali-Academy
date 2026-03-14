@@ -8,6 +8,7 @@ import {
     DaySchedule,
     WeekSchedule
 } from '@/src/types/timetable';
+import { handleValidationError, ErrorResponse } from './errorHandler/timetableErrorHandler';
 
 /**
  * Convert time string to minutes since midnight
@@ -31,6 +32,33 @@ export const minutesToTime = (minutes: number): string => {
  */
 export const calculateDuration = (startTime: string, endTime: string): number => {
     return timeToMinutes(endTime) - timeToMinutes(startTime);
+};
+
+
+/**
+ * Validate time range (end time after start time)
+ */
+export const validateTimeRange = (startTime: string, endTime: string): { valid: boolean; error?: ErrorResponse } => {
+    // First validate format
+    const startValidation = isValidTimeFormat(startTime);
+    if (!startValidation.valid) {
+        return startValidation;
+    }
+
+    const endValidation = isValidTimeFormat(endTime);
+    if (!endValidation.valid) {
+        return endValidation;
+    }
+
+    // Then validate range
+    if (timeToMinutes(startTime) >= timeToMinutes(endTime)) {
+        return {
+            valid: false,
+            error: handleValidationError(new Error('end time must be after start time'))
+        };
+    }
+
+    return { valid: true };
 };
 
 /**
@@ -147,12 +175,19 @@ export const generateWeekSchedule = (
 /**
  * Check for scheduling conflicts
  */
+/**
+ * Check for scheduling conflicts with error details
+ */
 export const findConflicts = (
     newEntry: { day: DayOfWeek; start_time: string; end_time: string; class_id: string },
     existingEntries: TimetableEntryWithDetails[],
     excludeId?: string
-): TimetableEntryWithDetails[] => {
-    return existingEntries.filter(entry => {
+): {
+    conflicts: TimetableEntryWithDetails[];
+    hasConflict: boolean;
+    error?: ErrorResponse
+} => {
+    const conflicts = existingEntries.filter(entry => {
         if (excludeId && entry.id === excludeId) return false;
         if (entry.day !== newEntry.day) return false;
         if (entry.class_id !== newEntry.class_id) return false;
@@ -164,6 +199,16 @@ export const findConflicts = (
             entry.end_time
         );
     });
+
+    return {
+        conflicts,
+        hasConflict: conflicts.length > 0,
+        error: conflicts.length > 0 ? {
+            title: 'Time Conflict',
+            message: `This time slot conflicts with ${conflicts[0].subject_name} at ${conflicts[0].start_time}. Please choose a different time.`,
+            type: 'warning'
+        } : undefined
+    };
 };
 
 /**
@@ -313,9 +358,18 @@ export const calculateTeacherWorkload = (
 /**
  * Validate time format (HH:MM)
  */
-export const isValidTimeFormat = (time: string): boolean => {
+export const isValidTimeFormat = (time: string): { valid: boolean; error?: ErrorResponse } => {
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    return timeRegex.test(time);
+    const isValid = timeRegex.test(time);
+
+    if (!isValid) {
+        return {
+            valid: false,
+            error: handleValidationError(new Error('invalid time format'))
+        };
+    }
+
+    return { valid: true };
 };
 
 /**

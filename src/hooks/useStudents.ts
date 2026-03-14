@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { handleStudentFetchError } from '@/src/utils/errorHandler/studentErrorHandling';
+
 
 interface Student {
   id: string;
@@ -25,10 +27,11 @@ interface Student {
   };
 }
 
-export const useStudents = (classId?: string) => {
+export const useStudents = (classId?: string, includeInactive = false) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const { profile } = useAuth();
+  const [error, setError] = useState<any>(null);
 
   useEffect(() => {
     fetchStudents();
@@ -36,6 +39,7 @@ export const useStudents = (classId?: string) => {
 
   const fetchStudents = async () => {
     try {
+      setError(null);
       let query = supabase
         .from('students')
         .select(`
@@ -45,14 +49,16 @@ export const useStudents = (classId?: string) => {
             name
           )
         `)
-        .eq('is_deleted', false) // Only get non-deleted students
         .order('roll_number');
+
+      if (!includeInactive) {
+        query = query.eq('is_deleted', false);
+      }
 
       if (classId) {
         query = query.eq('class_id', classId);
       }
 
-      // Filter based on user role
       if (profile?.role === 'parent') {
         query = query.eq('parent_id', profile.id);
       }
@@ -62,7 +68,9 @@ export const useStudents = (classId?: string) => {
       if (error) throw error;
       setStudents(data || []);
     } catch (error) {
-      console.error('Error fetching students:', error);
+      console.warn('Error fetching students:', error);
+      setError(error);
+      setStudents([]);
     } finally {
       setLoading(false);
     }
@@ -76,18 +84,12 @@ export const useStudents = (classId?: string) => {
     parent_id?: string;
   }) => {
     try {
-      const { data, error } = await supabase
-        // .from('students')
-        // .insert([studentData])
-        // .select()
-        // .single();
-
-      if (error) throw error;
-
+      // Note: Actual insertion happens in createStudentSimple
+      // This just triggers refetch
       await fetchStudents();
-      return { success: true, data };
+      return { success: true };
     } catch (error) {
-      console.error('Error adding student:', error);
+      console.warn('Error adding student:', error);
       return { success: false, error };
     }
   };
@@ -98,10 +100,10 @@ export const useStudents = (classId?: string) => {
         .from('students')
         .update({
           ...updates,
-          updated_by: profile?.id // Add audit trail
+          updated_by: profile?.id
         })
         .eq('id', studentId)
-        .eq('is_deleted', false) // Only update non-deleted students
+        .eq('is_deleted', false)
         .select()
         .single();
 
@@ -110,14 +112,14 @@ export const useStudents = (classId?: string) => {
       await fetchStudents();
       return { success: true, data };
     } catch (error) {
-      console.error('Error updating student:', error);
+      console.warn('Error updating student:', error);
       return { success: false, error };
     }
   };
 
   const deleteStudent = async (studentId: string) => {
     try {
-      // Soft delete instead of hard delete
+      // Soft delete
       const { error } = await supabase
         .from('students')
         .update({
@@ -132,7 +134,7 @@ export const useStudents = (classId?: string) => {
       await fetchStudents();
       return { success: true };
     } catch (error) {
-      console.error('Error deleting student:', error);
+      console.warn('Error deleting student:', error);
       return { success: false, error };
     }
   };
@@ -152,6 +154,7 @@ export const useStudents = (classId?: string) => {
   return {
     students,
     loading,
+    error,
     addStudent,
     updateStudent,
     deleteStudent,

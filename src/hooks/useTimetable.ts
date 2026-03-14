@@ -15,9 +15,19 @@ import {
     DAYS_ORDER
 } from '@/src/types/timetable';
 import { Alert } from 'react-native';
+import {
+    handleTimetableFetchError,
+    handleTimetableCreateError,
+    handleTimetableUpdateError,
+    handleTimetableDeleteError,
+    handleValidationError,
+    handleConflictError
+} from '@/src/utils/errorHandler/timetableErrorHandler';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { validateTimeRange } from '../utils/timetable';
 
 export const useTimetable = (): UseTimetableReturn => {
-    const { profile } = useAuth();
+    const { profile, student } = useAuth();
     const [timetable, setTimetable] = useState<TimetableEntryWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -41,14 +51,8 @@ export const useTimetable = (): UseTimetableReturn => {
             // Apply role-based filters
             if (profile.role === 'student') {
                 // Students see only their class schedule
-                const { data: studentData } = await supabase
-                    .from('students')
-                    .select('class_id')
-                    .eq('id', profile.id)
-                    .single();
-
-                if (studentData?.class_id) {
-                    query = query.eq('class_id', studentData.class_id);
+                if (student?.class_id) {
+                    query = query.eq('class_id', student.class_id);
                 } else {
                     setTimetable([]);
                     setLoading(false);
@@ -57,7 +61,7 @@ export const useTimetable = (): UseTimetableReturn => {
             } else if (profile.role === 'teacher') {
                 // Teachers see only THEIR OWN lectures (where they are the teacher)
                 query = query.eq('teacher_id', profile.id);
-                
+
                 // If specific class is selected, also filter by that class
                 if (filters.class_id) {
                     query = query.eq('class_id', filters.class_id);
@@ -99,8 +103,9 @@ export const useTimetable = (): UseTimetableReturn => {
 
             setTimetable(data || []);
         } catch (err: any) {
-            console.error('Error fetching timetable:', err);
-            setError(err.message || 'Failed to fetch timetable');
+            console.warn('Error fetching timetable:', err);
+            const errorResponse = handleTimetableFetchError(err);
+            setError(errorResponse.message);
         } finally {
             setLoading(false);
         }
@@ -163,14 +168,16 @@ export const useTimetable = (): UseTimetableReturn => {
                 const errorMsg = validation.conflicts.length > 0
                     ? `Time conflict with ${validation.conflicts[0].existing_entry.subject_name}`
                     : validation.errors[0];
-                Alert.alert('Validation Error', errorMsg);
+                const errorResponse = handleValidationError(new Error(errorMsg));
+                Alert.alert(errorResponse.title, errorResponse.message);
                 return null;
             }
 
             // Get subject ID
             const subjectId = await getSubjectId(entry.subject);
             if (!subjectId) {
-                Alert.alert('Error', 'Subject not found');
+                const errorResponse = handleTimetableCreateError(new Error('subject not found'));
+                Alert.alert(errorResponse.title, errorResponse.message);
                 return null;
             }
 
@@ -182,7 +189,8 @@ export const useTimetable = (): UseTimetableReturn => {
             );
 
             if (!isAssigned) {
-                Alert.alert('Error', 'You are not assigned to teach this subject in this class');
+                const errorResponse = handleTimetableCreateError(new Error('not assigned to teach'));
+                Alert.alert(errorResponse.title, errorResponse.message);
                 return null;
             }
 
@@ -216,8 +224,9 @@ export const useTimetable = (): UseTimetableReturn => {
             }
             return null;
         } catch (err: any) {
-            console.error('Error creating entry:', err);
-            Alert.alert('Error', err.message || 'Failed to create entry');
+            console.warn('Error creating entry:', err);
+            const errorResponse = handleTimetableCreateError(err);
+            Alert.alert(errorResponse.title, errorResponse.message);
             return null;
         }
     }, [profile?.id]);
@@ -246,7 +255,8 @@ export const useTimetable = (): UseTimetableReturn => {
                         const errorMsg = validation.conflicts.length > 0
                             ? `Time conflict with ${validation.conflicts[0].existing_entry.subject_name}`
                             : validation.errors[0];
-                        Alert.alert('Validation Error', errorMsg);
+                        const errorResponse = handleValidationError(new Error(errorMsg));
+                        Alert.alert(errorResponse.title, errorResponse.message);
                         return null;
                     }
                 }
@@ -291,8 +301,9 @@ export const useTimetable = (): UseTimetableReturn => {
             }
             return null;
         } catch (err: any) {
-            console.error('Error updating entry:', err);
-            Alert.alert('Error', err.message || 'Failed to update entry');
+            console.warn('Error updating entry:', err);
+            const errorResponse = handleTimetableUpdateError(err);
+            Alert.alert(errorResponse.title, errorResponse.message);
             return null;
         }
     }, [profile?.id, timetable]);
@@ -315,8 +326,9 @@ export const useTimetable = (): UseTimetableReturn => {
             Alert.alert('Success', 'Entry deleted');
             return true;
         } catch (err: any) {
-            console.error('Error deleting entry:', err);
-            Alert.alert('Error', err.message || 'Failed to delete entry');
+            console.warn('Error deleting entry:', err);
+            const errorResponse = handleTimetableDeleteError(err);
+            Alert.alert(errorResponse.title, errorResponse.message);
             return false;
         }
     }, [profile?.id]);
@@ -334,8 +346,11 @@ export const useTimetable = (): UseTimetableReturn => {
             errors.push('All fields are required');
         }
 
-        if (entry.start_time && entry.end_time && entry.start_time >= entry.end_time) {
-            errors.push('End time must be after start time');
+        if (entry.start_time && entry.end_time) {
+            const timeValidation = validateTimeRange(entry.start_time, entry.end_time);
+            if (!timeValidation.valid && timeValidation.error) {
+                errors.push(timeValidation.error.message);
+            }
         }
 
         // Check conflicts within same class
@@ -370,8 +385,9 @@ export const useTimetable = (): UseTimetableReturn => {
                     });
                 }
             } catch (err) {
-                console.error('Error checking conflicts:', err);
-                errors.push('Unable to validate time conflicts');
+                console.warn('Error checking conflicts:', err);
+                const errorResponse = handleValidationError(err);
+                errors.push(errorResponse.message);
             }
         }
 

@@ -81,7 +81,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                 style={styles.addClassButton}
                                                 onPress={() => onAddEntry(day)}
                                             >
-                                                <Plus size={12} color="#274d71" />
+                                                <Plus size={12} color="#204040" />
                                                 <Text allowFontScaling={false} style={styles.addClassText}>Add</Text>
                                             </TouchableOpacity>
                                         )}
@@ -108,7 +108,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                 style={styles.addSlotButton}
                                                 onPress={() => onAddEntry(day)}
                                             >
-                                                <Plus size={20} color="#274d71" />
+                                                <Plus size={20} color="#204040" />
                                                 <Text allowFontScaling={false} style={styles.addSlotText}>Add Class</Text>
                                             </TouchableOpacity>
                                         )}
@@ -147,8 +147,8 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start',
     },
     todayHeader: {
-        backgroundColor: '#274d71',
-        borderColor: '#274d71',
+        backgroundColor: '#204040',
+        borderColor: '#204040',
     },
     dayName: {
         fontSize: 12,
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     dayDate: {
         fontSize: 18,
         fontFamily: 'Inter-SemiBold',
-        color: '#274d71',
+        color: '#204040',
     },
     todayDateText: {
         color: '#b6d509',
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     addClassText: {
         fontSize: 10,
         fontFamily: 'Inter-Medium',
-        color: '#274d71',
+        color: '#204040',
     },
     addSlotButton: {
         width: 120,
@@ -228,6 +228,6 @@ const styles = StyleSheet.create({
     addSlotText: {
         fontSize: 12,
         fontFamily: 'Inter-Medium',
-        color: '#274d71',
+        color: '#204040',
     },
 });

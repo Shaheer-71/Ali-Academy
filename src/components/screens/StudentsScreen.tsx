@@ -1,5 +1,5 @@
 // Updated StudentsScreen component
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     View,
     Text,
@@ -10,6 +10,7 @@ import {
     Modal,
     Alert,
     ActivityIndicator,
+    Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -18,18 +19,34 @@ import { useStudents } from '@/src/hooks/useStudents';
 import { createStudentSimple, getStudentsWithoutPasswords } from '@/src/lib/api/simple-student-creation';
 import {
     Plus,
-    Search,
     Users,
     Phone,
     Hash,
     BookOpen,
     X,
     AlertCircle,
+    ChevronRight,
+    Check,
 } from 'lucide-react-native';
+import { Dimensions, TouchableWithoutFeedback } from 'react-native';
 import { supabase } from '@/src/lib/supabase';
 import TopSection from '../common/TopSections';
-import { Animated } from 'react-native';
-import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+import { useScreenAnimation } from '@/src/utils/animations';
+import { SwipeableStudentCard } from '@/src/components/students/SwipeableStudentCard';
+import StudentDetailModal from '../students/StudentDetailModal';
+import {
+    handleStudentFetchError,
+    handleStudentCreateError,
+    handleStudentDeleteError,
+    handleClassFetchErrorForStudents,
+    handleSubjectFetchErrorForStudents,
+    handlePasswordStatusFetchError,
+    handleValidationError,
+} from '@/src/utils/errorHandler/studentErrorHandling';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { RefreshControl } from 'react-native';
+import { SkeletonBox } from '@/src/components/common/Skeleton';
+
 
 
 interface Class {
@@ -66,7 +83,23 @@ export default function StudentsScreen() {
     const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
     const [loadingSubjects, setLoadingSubjects] = useState(false);
     const screenStyle = useScreenAnimation();
-    const ButtonAnimation = useButtonAnimation()
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [showStudentModal, setShowStudentModal] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const [editingStudent, setEditingStudent] = useState<any>(null);
+    const [openCardId, setOpenCardId] = useState<string | null>(null);
+    const [scrollEnabled, setScrollEnabled] = useState(true);
+
+    // Filter state
+    const [filterVisible, setFilterVisible] = useState(false);
+    const [filterStep, setFilterStep] = useState<'class' | 'subject'>('class');
+    const [pendingFilterClass, setPendingFilterClass] = useState('all');
+    const [pendingFilterSubject, setPendingFilterSubject] = useState('all');
+    const [selectedFilterClass, setSelectedFilterClass] = useState('all');
+    const [selectedFilterSubject, setSelectedFilterSubject] = useState('all');
+    const [filterSubjects, setFilterSubjects] = useState<Subject[]>([]);
+    const [enrolledStudentIds, setEnrolledStudentIds] = useState<Set<string> | null>(null);
+
 
     const [newStudent, setNewStudent] = useState({
         full_name: '',
@@ -85,6 +118,44 @@ export default function StudentsScreen() {
         notes: '',
     });
 
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await Promise.all([
+            refetch(),                    // reload students
+            fetchClasses(),               // reload classes
+            fetchStudentsPasswordStatus() // reload pending students
+        ]);
+        setRefreshing(false);
+    };
+
+    const [errorModal, setErrorModal] = useState({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showError = (error: any, handler?: (error: any) => any) => {
+        const errorInfo = handler ? handler(error) : {
+            title: 'Error',
+            message: error?.message || 'An unexpected error occurred'
+        };
+        setErrorModal({
+            visible: true,
+            title: errorInfo.title,
+            message: errorInfo.message,
+        });
+    };
+
+    // Use Alert.alert when a Modal is already open — ErrorModal renders behind it
+    const showModalError = (error: any, handler?: (error: any) => any) => {
+        const errorInfo = handler ? handler(error) : {
+            title: 'Error',
+            message: error?.message || 'An unexpected error occurred'
+        };
+        Alert.alert(errorInfo.title, errorInfo.message);
+    };
+
+
     useEffect(() => {
         if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
             fetchClasses();
@@ -100,12 +171,10 @@ export default function StudentsScreen() {
                 .order('name');
             if (error) throw error;
             setClasses(data || []);
-            if (data && data.length > 0) {
-                setNewStudent((prev) => ({ ...prev, class_id: data[0].id }));
-            }
+            // No default class selection — user must pick a class first
         } catch (error) {
-            console.error('Error fetching classes:', error);
-            Alert.alert('Error', 'Failed to load classes');
+            console.warn('Error fetching classes:', error);
+            showError(error, handleClassFetchErrorForStudents);
         }
     };
 
@@ -118,45 +187,34 @@ export default function StudentsScreen() {
 
         setLoadingSubjects(true);
         try {
-
-            // Get subjects from teacher_subject_enrollments (subjects that have teachers assigned)
-            const { data: teacherEnrollments, error: enrollmentError } = await supabase
-                .from('teacher_subject_enrollments')
-                .select('subject_id')
+            const { data, error } = await supabase
+                .from('classes_subjects')
+                .select('subject_id, subjects(id, name)')
                 .eq('class_id', classId)
                 .eq('is_active', true);
 
-            if (enrollmentError) throw enrollmentError;
+            if (error) throw error;
 
-            if (!teacherEnrollments || teacherEnrollments.length === 0) {
+            if (!data || data.length === 0) {
                 setSubjects([]);
                 setSelectedSubjects([]);
-                Alert.alert(
-                    'No Subjects Available',
-                    'No teachers are assigned to subjects in this class. Please assign teachers first.'
+                showError(
+                    { message: 'No subjects assigned to this class yet' },
+                    handleSubjectFetchErrorForStudents
                 );
                 return;
             }
 
-            // Get unique subject IDs
-            const subjectIds = [...new Set(teacherEnrollments.map(e => e.subject_id))];
+            const subjectsData = data
+                .map((row: any) => row.subjects)
+                .filter(Boolean)
+                .sort((a: any, b: any) => a.name.localeCompare(b.name));
 
-
-            // Fetch subject details
-            const { data: subjectsData, error: subjectsError } = await supabase
-                .from('subjects')
-                .select('id, name')
-                .in('id', subjectIds)
-                .eq('is_active', true)
-                .order('name');
-
-            if (subjectsError) throw subjectsError;
-
-            setSubjects(subjectsData || []);
-            setSelectedSubjects([]); // Reset selection when class changes
+            setSubjects(subjectsData);
+            setSelectedSubjects([]);
         } catch (error) {
-            console.error('Error fetching subjects:', error);
-            Alert.alert('Error', 'Failed to load subjects for selected class');
+            console.warn('Error fetching subjects:', error);
+            showError(error, handleSubjectFetchErrorForStudents);
             setSubjects([]);
         } finally {
             setLoadingSubjects(false);
@@ -168,18 +226,20 @@ export default function StudentsScreen() {
             const studentsWithoutPass = await getStudentsWithoutPasswords();
             setStudentsWithoutPasswords(studentsWithoutPass);
         } catch (error) {
-            console.error('Error fetching students without passwords:', error);
+            console.warn('Error fetching students without passwords:', error);
+            showError(error, handlePasswordStatusFetchError);
         }
     };
 
     const resetForm = () => {
+        setEditingStudent(null);
         setNewStudent({
             full_name: '',
             roll_number: '',
             phone_number: '',
             parent_contact: '',
-            class_id: classes.length > 0 ? classes[0].id : '',
-            subject_ids: [], // ✅ Reset subjects
+            class_id: '',
+            subject_ids: [],
             gender: '' as 'male' | 'female' | 'other' | '',
             address: '',
             admission_date: new Date().toISOString().split('T')[0],
@@ -189,46 +249,45 @@ export default function StudentsScreen() {
             medical_conditions: '',
             notes: '',
         });
-        setSelectedSubjects([]); // ✅ Reset selected subjects
-        setSubjects([]); // ✅ Clear subjects
+        setSelectedSubjects([]);
+        setSubjects([]);
     };
 
     const handleAddStudent = async () => {
-        // Validation
         if (!newStudent.full_name.trim()) {
-            Alert.alert('Error', 'Student name is required');
+            showModalError({ field: 'full_name' }, () => handleValidationError('full_name'));
             return;
         }
         if (!newStudent.roll_number.trim()) {
-            Alert.alert('Error', 'Roll number is required');
+            showModalError({ field: 'roll_number' }, () => handleValidationError('roll_number'));
             return;
         }
         if (!newStudent.phone_number.trim()) {
-            Alert.alert('Error', 'Student phone number is required');
+            showModalError({ field: 'phone_number' }, () => handleValidationError('phone_number'));
             return;
         }
         if (!newStudent.class_id) {
-            Alert.alert('Error', 'Please select a class');
+            showModalError({ field: 'class_id' }, () => handleValidationError('class_id'));
             return;
         }
         if (!newStudent.parent_contact.trim()) {
-            Alert.alert('Error', 'Parent contact is required');
+            showModalError({ field: 'parent_contact' }, () => handleValidationError('parent_contact'));
             return;
         }
         if (!newStudent.gender) {
-            Alert.alert('Error', 'Please select gender');
+            showModalError({ field: 'gender' }, () => handleValidationError('gender'));
             return;
         }
         if (!newStudent.address.trim()) {
-            Alert.alert('Error', 'Address is required');
+            showModalError({ field: 'address' }, () => handleValidationError('address'));
             return;
         }
         if (!newStudent.admission_date) {
-            Alert.alert('Error', 'Admission date is required');
+            showModalError({ field: 'admission_date' }, () => handleValidationError('admission_date'));
             return;
         }
         if (!newStudent.subject_ids || newStudent.subject_ids.length === 0) {
-            Alert.alert('Error', 'Please select at least one subject');
+            showModalError({ field: 'subject_ids' }, () => handleValidationError('subject_ids'));
             return;
         }
 
@@ -237,7 +296,6 @@ export default function StudentsScreen() {
             const result = await createStudentSimple(newStudent, profile!.id);
 
             if (result.success) {
-                // Add to local students list
                 await addStudent({
                     full_name: newStudent.full_name,
                     roll_number: newStudent.roll_number,
@@ -246,7 +304,6 @@ export default function StudentsScreen() {
                 });
 
                 const studentEmail = result.data?.email;
-                const enrolledCount = result.data?.enrolledSubjects || 0;
 
                 Alert.alert(
                     'Success',
@@ -264,38 +321,301 @@ export default function StudentsScreen() {
                     ]
                 );
             } else {
-                Alert.alert('Error', result.error || 'Failed to create student');
+                showModalError({ message: result.error }, handleStudentCreateError);
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to create student');
+            showModalError(error, handleStudentCreateError);
         } finally {
             setCreating(false);
         }
     };
 
-    const filteredStudents = students.filter(
-        (student) =>
-            student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            student.roll_number.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    const toggleSubject = (subjectId: string) => {
-        setSelectedSubjects(prev => {
-            const newSelection = prev.includes(subjectId)
-                ? prev.filter(id => id !== subjectId)
-                : [...prev, subjectId];
-
-            // Update newStudent state
-            setNewStudent(prevStudent => ({
-                ...prevStudent,
-                subject_ids: newSelection
-            }));
-
-            return newSelection;
+    const handleEditStudent = async (student: any) => {
+        setEditingStudent(student);
+        setNewStudent({
+            full_name: student.full_name || '',
+            roll_number: student.roll_number || '',
+            phone_number: student.phone_number || '',
+            parent_contact: student.parent_contact || '',
+            class_id: student.class_id || '',
+            subject_ids: [],
+            gender: student.gender || '',
+            address: student.address || '',
+            admission_date: student.admission_date || '',
+            date_of_birth: student.date_of_birth || '',
+            emergency_contact: student.emergency_contact || '',
+            parent_name: student.parent_name || '',
+            medical_conditions: student.medical_conditions || '',
+            notes: student.notes || '',
         });
+
+        // Load subjects for the student's class then pre-select enrolled ones
+        if (student.class_id) {
+            setLoadingSubjects(true);
+            try {
+                const [classSubjectsRes, enrolledRes] = await Promise.all([
+                    supabase
+                        .from('classes_subjects')
+                        .select('subject_id, subjects(id, name)')
+                        .eq('class_id', student.class_id)
+                        .eq('is_active', true),
+                    supabase
+                        .from('student_subject_enrollments')
+                        .select('subject_id')
+                        .eq('student_id', student.id)
+                        .eq('is_active', true),
+                ]);
+
+                const subjectsData = (classSubjectsRes.data || [])
+                    .map((row: any) => row.subjects)
+                    .filter(Boolean);
+                setSubjects(subjectsData);
+
+                const enrolledIds = (enrolledRes.data || []).map((r: any) => r.subject_id);
+                setSelectedSubjects(enrolledIds);
+                setNewStudent(prev => ({ ...prev, subject_ids: enrolledIds }));
+            } catch (e) {
+                console.warn('Error loading subjects for edit:', e);
+            } finally {
+                setLoadingSubjects(false);
+            }
+        }
+
+        setModalVisible(true);
     };
 
-    if (profile?.role !== 'teacher') {
+    const handleUpdateStudent = async () => {
+        if (!editingStudent) return;
+        if (!newStudent.full_name.trim()) {
+            showModalError({ field: 'full_name' }, () => handleValidationError('full_name'));
+            return;
+        }
+        if (selectedSubjects.length === 0) {
+            showModalError({ field: 'subject_ids' }, () => handleValidationError('subject_ids'));
+            return;
+        }
+
+        setCreating(true);
+        try {
+            const classChanged = newStudent.class_id !== editingStudent.class_id;
+
+            // 1. Update students table
+            const { error: studentErr } = await supabase
+                .from('students')
+                .update({
+                    full_name: newStudent.full_name.trim(),
+                    class_id: newStudent.class_id || null,
+                    phone_number: newStudent.phone_number.trim() || null,
+                    parent_contact: newStudent.parent_contact.trim() || null,
+                    gender: newStudent.gender || null,
+                    address: newStudent.address.trim() || null,
+                    admission_date: newStudent.admission_date || null,
+                    date_of_birth: newStudent.date_of_birth || null,
+                    emergency_contact: newStudent.emergency_contact.trim() || null,
+                    parent_name: newStudent.parent_name.trim() || null,
+                    medical_conditions: newStudent.medical_conditions.trim() || null,
+                    notes: newStudent.notes.trim() || null,
+                })
+                .eq('id', editingStudent.id);
+            if (studentErr) throw studentErr;
+
+            // 2. Update profiles table (full_name + contact_number)
+            await supabase
+                .from('profiles')
+                .update({
+                    full_name: newStudent.full_name.trim(),
+                    contact_number: newStudent.phone_number.trim() || null,
+                })
+                .eq('email', `${editingStudent.roll_number.toLowerCase()}@aliacademy.com`);
+
+            // 3. Smart subject enrollment update — no hard deletes
+            const { data: existingEnrollments } = await supabase
+                .from('student_subject_enrollments')
+                .select('id, subject_id, is_active')
+                .eq('student_id', editingStudent.id);
+
+            const existingMap = new Map(
+                (existingEnrollments || []).map((e: any) => [e.subject_id, e])
+            );
+
+            const toEnable: string[]  = [];  // exists but inactive → re-enable
+            const toInsert: string[]  = [];  // doesn't exist → insert fresh
+            const toDisable: string[] = [];  // active but not in new selection → disable
+
+            for (const subject_id of selectedSubjects) {
+                const row = existingMap.get(subject_id);
+                if (row) {
+                    if (!row.is_active) toEnable.push(subject_id);
+                    // already active → nothing to do
+                } else {
+                    toInsert.push(subject_id);
+                }
+            }
+
+            for (const [subject_id, row] of existingMap as Map<string, any>) {
+                if (!selectedSubjects.includes(subject_id) && row.is_active) {
+                    toDisable.push(subject_id);
+                }
+            }
+
+            if (toEnable.length > 0) {
+                await supabase
+                    .from('student_subject_enrollments')
+                    .update({ is_active: true })
+                    .eq('student_id', editingStudent.id)
+                    .in('subject_id', toEnable);
+            }
+
+            if (toInsert.length > 0) {
+                const { error: insertErr } = await supabase
+                    .from('student_subject_enrollments')
+                    .insert(toInsert.map(subject_id => ({
+                        student_id: editingStudent.id,
+                        class_id: newStudent.class_id,
+                        subject_id,
+                        is_active: true,
+                    })));
+                if (insertErr) throw insertErr;
+            }
+
+            if (toDisable.length > 0) {
+                await supabase
+                    .from('student_subject_enrollments')
+                    .update({ is_active: false })
+                    .eq('student_id', editingStudent.id)
+                    .in('subject_id', toDisable);
+            }
+
+            Alert.alert('Success', 'Student updated successfully', [{
+                text: 'OK', onPress: () => {
+                    setModalVisible(false);
+                    resetForm();
+                    refetch();
+                }
+            }]);
+        } catch (error: any) {
+            showModalError(error, handleStudentCreateError);
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    const handleDeactivateStudent = (student: any) => {
+        Alert.alert(
+            'Deactivate Student',
+            `Are you sure you want to deactivate ${student.full_name}?\n\nThis will:\n• Disable the student account\n• Remove all subject enrollments\n• Revoke login access`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Deactivate',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            // 1. Soft-disable student — trigger syncs profiles.is_active
+                            //    and student_subject_enrollments.is_active automatically
+                            const { error: studentErr } = await supabase
+                                .from('students')
+                                .update({ is_deleted: true, student_status: 'inactive' })
+                                .eq('id', student.id);
+                            if (studentErr) throw studentErr;
+
+                            // profiles.is_active is synced automatically by DB trigger
+
+                            Alert.alert('Success', 'Student has been deactivated successfully.');
+                            refetch();
+                        } catch (error) {
+                            showError(error, handleStudentDeleteError);
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const handleStudentPress = (student) => {
+        setSelectedStudent(student);
+        setShowStudentModal(true);
+    };
+
+
+    const isFiltered = selectedFilterClass !== 'all' || selectedFilterSubject !== 'all';
+
+    const fetchFilterSubjects = async (classId: string) => {
+        if (classId === 'all') { setFilterSubjects([]); return; }
+        try {
+            const { data } = await supabase
+                .from('classes_subjects')
+                .select('subject_id, subjects(id, name)')
+                .eq('class_id', classId)
+                .eq('is_active', true);
+            setFilterSubjects(
+                (data || []).map((r: any) => r.subjects).filter(Boolean)
+                    .sort((a: any, b: any) => a.name.localeCompare(b.name))
+            );
+        } catch {
+            setFilterSubjects([]);
+        }
+    };
+
+    const openFilter = () => {
+        setPendingFilterClass(selectedFilterClass);
+        setPendingFilterSubject(selectedFilterSubject);
+        setFilterStep('class');
+        if (selectedFilterClass !== 'all') fetchFilterSubjects(selectedFilterClass);
+        setFilterVisible(true);
+    };
+
+    const handlePendingFilterClassSelect = (id: string) => {
+        setPendingFilterClass(id);
+        setPendingFilterSubject('all');
+        fetchFilterSubjects(id);
+        setFilterStep('subject');
+    };
+
+    const applyStudentFilter = async () => {
+        setSelectedFilterClass(pendingFilterClass);
+        setSelectedFilterSubject(pendingFilterSubject);
+        if (pendingFilterSubject !== 'all') {
+            const { data } = await supabase
+                .from('student_subject_enrollments')
+                .select('student_id')
+                .eq('subject_id', pendingFilterSubject)
+                .eq('is_active', true);
+            setEnrolledStudentIds(new Set((data || []).map((r: any) => r.student_id)));
+        } else {
+            setEnrolledStudentIds(null);
+        }
+        setFilterVisible(false);
+    };
+
+    const resetStudentFilter = () => {
+        setPendingFilterClass('all');
+        setPendingFilterSubject('all');
+        setSelectedFilterClass('all');
+        setSelectedFilterSubject('all');
+        setEnrolledStudentIds(null);
+        setFilterVisible(false);
+    };
+
+    const filteredStudents = students.filter((student) => {
+        const matchesSearch =
+            student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            student.roll_number.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesClass = selectedFilterClass === 'all' || student.class_id === selectedFilterClass;
+        const matchesSubject = !enrolledStudentIds || enrolledStudentIds.has(student.id);
+        return matchesSearch && matchesClass && matchesSubject;
+    });
+
+    const toggleSubject = (subjectId: string) => {
+        const newSelection = selectedSubjects.includes(subjectId)
+            ? selectedSubjects.filter(id => id !== subjectId)
+            : [...selectedSubjects, subjectId];
+
+        setSelectedSubjects(newSelection);
+        setNewStudent(prev => ({ ...prev, subject_ids: newSelection }));
+    };
+
+    if (profile?.role !== 'teacher' && profile?.role !== 'admin') {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -310,61 +630,181 @@ export default function StudentsScreen() {
         );
     }
 
+    const { height } = Dimensions.get('window');
+
     return (
         <>
-            <TopSection />
+            <TopSection onFilterPress={openFilter} isFiltered={isFiltered} />
+
+            {/* Filter Bottom Sheet */}
+            <Modal
+                visible={filterVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setFilterVisible(false)}
+            >
+                <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
+                    <View style={styles.filterOverlay} />
+                </TouchableWithoutFeedback>
+                <View style={[styles.filterSheet, { backgroundColor: colors.cardBackground }]}>
+                    <View style={[styles.filterHandle, { backgroundColor: colors.border }]} />
+
+                    {/* Add Student — always at top */}
+                    <TouchableOpacity
+                        style={[styles.addStudentRow, { borderBottomColor: colors.border }]}
+                        onPress={() => {
+                            setFilterVisible(false);
+                            resetForm();
+                            setModalVisible(true);
+                        }}
+                    >
+                        <View style={[styles.addStudentIcon, { backgroundColor: colors.primary + '15' }]}>
+                            <Plus size={18} color={colors.primary} />
+                        </View>
+                        <Text allowFontScaling={false} style={[styles.addStudentText, { color: colors.primary }]}>
+                            Add New Student
+                        </Text>
+                    </TouchableOpacity>
+
+                    <View style={styles.filterSheetHeader}>
+                        {filterStep === 'subject' && (
+                            <TouchableOpacity onPress={() => setFilterStep('class')} style={styles.filterBackBtn}>
+                                <ChevronRight size={20} color={colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
+                            </TouchableOpacity>
+                        )}
+                        <Text allowFontScaling={false} style={[styles.filterSheetTitle, { color: colors.text }]}>
+                            {filterStep === 'class' ? 'Filter by Class' : 'Filter by Subject'}
+                        </Text>
+                        {isFiltered && (
+                            <TouchableOpacity onPress={resetStudentFilter}>
+                                <Text allowFontScaling={false} style={styles.filterResetText}>Reset</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    <ScrollView style={{ maxHeight: height * 0.35 }} showsVerticalScrollIndicator={false}>
+                        {filterStep === 'class' ? (
+                            <>
+                                <TouchableOpacity
+                                    style={[styles.filterOption, { borderBottomColor: colors.border }]}
+                                    onPress={() => handlePendingFilterClassSelect('all')}
+                                >
+                                    <Text allowFontScaling={false} style={[styles.filterOptionText, { color: colors.text }]}>All Classes</Text>
+                                    <View style={styles.filterOptionRight}>
+                                        {pendingFilterClass === 'all' && <Check size={16} color={colors.primary} />}
+                                        <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} />
+                                    </View>
+                                </TouchableOpacity>
+                                {classes.map((c) => (
+                                    <TouchableOpacity
+                                        key={c.id}
+                                        style={[styles.filterOption, { borderBottomColor: colors.border }]}
+                                        onPress={() => handlePendingFilterClassSelect(c.id)}
+                                    >
+                                        <Text allowFontScaling={false} style={[styles.filterOptionText, { color: colors.text }]}>{c.name}</Text>
+                                        <View style={styles.filterOptionRight}>
+                                            {pendingFilterClass === c.id && <Check size={16} color={colors.primary} />}
+                                            <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} />
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </>
+                        ) : (
+                            <>
+                                <TouchableOpacity
+                                    style={[styles.filterOption, { borderBottomColor: colors.border }]}
+                                    onPress={() => setPendingFilterSubject('all')}
+                                >
+                                    <Text allowFontScaling={false} style={[styles.filterOptionText, { color: colors.text }]}>All Subjects</Text>
+                                    {pendingFilterSubject === 'all' && <Check size={16} color={colors.primary} />}
+                                </TouchableOpacity>
+                                {filterSubjects.map((s) => (
+                                    <TouchableOpacity
+                                        key={s.id}
+                                        style={[styles.filterOption, { borderBottomColor: colors.border }]}
+                                        onPress={() => setPendingFilterSubject(s.id)}
+                                    >
+                                        <Text allowFontScaling={false} style={[styles.filterOptionText, { color: colors.text }]}>{s.name}</Text>
+                                        {pendingFilterSubject === s.id && <Check size={16} color={colors.primary} />}
+                                    </TouchableOpacity>
+                                ))}
+                            </>
+                        )}
+                    </ScrollView>
+
+                    <TouchableOpacity
+                        style={[styles.filterApplyBtn, { backgroundColor: colors.primary }]}
+                        onPress={applyStudentFilter}
+                    >
+                        <Text allowFontScaling={false} style={styles.filterApplyBtnText}>Apply Filter</Text>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
+
             <Animated.View style={[{ flex: 1 }, screenStyle]}>
                 <View style={[styles.container, { backgroundColor: colors.background }]}>
                     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
-                        <View style={styles.headerContainer}>
-                            <View style={styles.searchContainer}>
-                                <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                                    <Search size={20} color={colors.textSecondary} />
-                                    <TextInput
-                                        style={[styles.searchInput, { color: colors.text }]}
-                                        placeholder="Search students..."
-                                        value={searchQuery}
-                                        onChangeText={setSearchQuery}
-                                        placeholderTextColor={colors.textSecondary}
-                                    />
-                                </View>
-                                <TouchableOpacity
-                                    style={[styles.addButton, { backgroundColor: colors.primary }]}
-                                    onPress={() => {
-                                        resetForm();
-                                        setModalVisible(true);
-                                    }}
-                                >
-                                    <Plus size={20} color="#ffffff" />
-                                </TouchableOpacity>
-                            </View>
 
-                            {/* Pending Registration Banner */}
-                            {studentsWithoutPasswords.length > 0 && (
-                                <TouchableOpacity
-                                    style={[styles.alertBanner, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}
-                                    onPress={() => setPasswordStatusModalVisible(true)}
-                                >
-                                    <AlertCircle size={20} color="#F59E0B" />
-                                    <Text allowFontScaling={false} style={[styles.alertText, { color: '#92400E' }]}>
-                                        {studentsWithoutPasswords.length} student(s) pending registration
-                                    </Text>
-                                    <Text allowFontScaling={false} style={[styles.alertAction, { color: '#F59E0B' }]}>View Details</Text>
-                                </TouchableOpacity>
-                            )}
-                        </View>
 
-                        {/* Student List */}
+                        <ErrorModal
+                            visible={errorModal.visible}
+                            title={errorModal.title}
+                            message={errorModal.message}
+                            onClose={() => setErrorModal({ ...errorModal, visible: false })}
+                        />
+
+
+                        {studentsWithoutPasswords.length > 0 && (
+                            <TouchableOpacity
+                                style={[styles.alertBanner, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}
+                                onPress={() => setPasswordStatusModalVisible(true)}
+                            >
+                                <AlertCircle size={20} color="#F59E0B" />
+                                <Text allowFontScaling={false} style={[styles.alertText, { color: '#92400E' }]}>
+                                    {studentsWithoutPasswords.length} student(s) pending registration
+                                </Text>
+                                <Text allowFontScaling={false} style={[styles.alertAction, { color: '#F59E0B' }]}>View Details</Text>
+                            </TouchableOpacity>
+                        )}
+
                         <ScrollView
                             style={styles.scrollView}
-                            contentContainerStyle={{ paddingBottom: 50 }}
+                            contentContainerStyle={{ paddingBottom: 100 }}
                             keyboardShouldPersistTaps="handled"
                             showsVerticalScrollIndicator={false}
+                            scrollEnabled={scrollEnabled}
+                            refreshControl={
+                                <RefreshControl
+                                    refreshing={refreshing}
+                                    onRefresh={onRefresh}
+                                    colors={[colors.primary]}                   // Android indicator color
+                                    tintColor={colors.primary}                  // iOS indicator color
+                                    progressBackgroundColor={colors.cardBackground}
+                                />
+                            }
                         >
                             {loading ? (
-                                <View style={styles.loadingContainer}>
-                                    <ActivityIndicator size="large" color={colors.primary} />
-                                    <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>Loading students...</Text>
+                                <View style={styles.skeletonContainer}>
+                                    {[...Array(6)].map((_, i) => (
+                                        <View key={i} style={styles.skeletonCard}>
+                                            {/* Avatar + name row */}
+                                            <View style={styles.skeletonHeader}>
+                                                <SkeletonBox width={40} height={40} borderRadius={8} />
+                                                <View style={{ flex: 1, gap: 8 }}>
+                                                    <SkeletonBox width="60%" height={14} borderRadius={6} />
+                                                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                                                        <SkeletonBox width={70} height={12} borderRadius={4} />
+                                                        <SkeletonBox width={80} height={12} borderRadius={4} />
+                                                    </View>
+                                                </View>
+                                            </View>
+                                            {/* Contact row */}
+                                            <View style={{ flexDirection: 'row', gap: 8 }}>
+                                                <SkeletonBox width="45%" height={32} borderRadius={6} />
+                                                <SkeletonBox width="45%" height={32} borderRadius={6} />
+                                            </View>
+                                        </View>
+                                    ))}
                                 </View>
                             ) : filteredStudents.length === 0 ? (
                                 <View style={styles.emptyContainer}>
@@ -376,42 +816,29 @@ export default function StudentsScreen() {
                                 </View>
                             ) : (
                                 filteredStudents.map((student) => (
-                                    <TouchableOpacity
+                                    <SwipeableStudentCard
                                         key={student.id}
-                                        style={[styles.studentCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-                                        onPress={() => console.log('Student details not implemented yet')}
-                                    >
-                                        <View style={styles.studentHeader}>
-                                            <View style={[styles.studentAvatar, { backgroundColor: colors.primary }]}>
-                                                <Text allowFontScaling={false} style={styles.studentInitial}>{student.full_name.charAt(0).toUpperCase()}</Text>
-                                            </View>
-                                            <View style={styles.studentInfo}>
-                                                <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]}>{student.full_name}</Text>
-                                                <View style={styles.studentDetails}>
-                                                    <View style={styles.detailItem}>
-                                                        <Hash size={14} color={colors.textSecondary} />
-                                                        <Text allowFontScaling={false} style={[styles.detailText, { color: colors.textSecondary }]}>{student.roll_number}</Text>
-                                                    </View>
-                                                    <View style={styles.detailItem}>
-                                                        <BookOpen size={14} color={colors.textSecondary} />
-                                                        <Text allowFontScaling={false} style={[styles.detailText, { color: colors.textSecondary }]}>{student.classes?.name}</Text>
-                                                    </View>
-                                                </View>
-                                            </View>
-                                        </View>
-                                        <View style={[styles.contactInfo, { borderTopColor: colors.border }]}>
-                                            <View style={styles.contactRow}>
-                                                <Phone size={16} color={colors.textSecondary} />
-                                                <Text allowFontScaling={false} style={[styles.contactText, { color: colors.text }]}>{student.phone_number || 'N/A'}</Text>
-                                            </View>
-                                            <View style={styles.contactRow}>
-                                                <Phone size={16} color={colors.textSecondary} />
-                                                <Text allowFontScaling={false} style={[styles.contactText, { color: colors.text }]}>Parent: {student.parent_contact}</Text>
-                                            </View>
-                                        </View>
-                                    </TouchableOpacity>
+                                        student={student}
+                                        colors={colors}
+                                        isTeacher={profile?.role === 'teacher' || profile?.role === 'admin'}
+                                        isOpen={openCardId === student.id}
+                                        onSwipeOpen={(id) => setOpenCardId(id)}
+                                        onSwipeClose={() => setOpenCardId(null)}
+                                        onGestureStart={() => setScrollEnabled(false)}
+                                        onGestureEnd={() => setScrollEnabled(true)}
+                                        onEdit={handleEditStudent}
+                                        onDeactivate={handleDeactivateStudent}
+                                        onPress={handleStudentPress}
+                                    />
                                 ))
                             )}
+
+                            <StudentDetailModal
+                                visible={showStudentModal}
+                                onClose={() => setShowStudentModal(false)}
+                                student={selectedStudent}
+                            />
+
                         </ScrollView>
 
                         {/* Add Student Modal */}
@@ -419,24 +846,24 @@ export default function StudentsScreen() {
                             animationType="fade"
                             transparent={true}
                             visible={modalVisible}
-                            onRequestClose={() => setModalVisible(false)}
+                            onRequestClose={() => { setModalVisible(false); resetForm(); }}
                             statusBarTranslucent={true}  // ← ADD THIS
                             presentationStyle="overFullScreen"
                         >
                             <View style={styles.modalOverlay}>
                                 <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                                     <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Add New Student</Text>
+                                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>{editingStudent ? 'Edit Student' : 'Add New Student'}</Text>
                                         <TouchableOpacity
                                             style={styles.closeButton}
-                                            onPress={() => setModalVisible(false)}
+                                            onPress={() => { setModalVisible(false); resetForm(); }}
                                         >
                                             <X size={24} color={colors.textSecondary} />
                                         </TouchableOpacity>
                                     </View>
 
                                     <ScrollView style={styles.modalScrollView}>
-                                        <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Student Information</Text>
+                                        {/* <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Student Information</Text> */}
 
                                         <View style={styles.inputGroup}>
                                             <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Full Name *</Text>
@@ -450,16 +877,17 @@ export default function StudentsScreen() {
                                         </View>
 
                                         <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Roll Number *</Text>
+                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Roll Number {editingStudent ? '' : '*'}</Text>
                                             <TextInput
-                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: editingStudent ? colors.textSecondary : colors.text }]}
                                                 value={newStudent.roll_number}
-                                                onChangeText={(text) => setNewStudent({ ...newStudent, roll_number: text })}
+                                                onChangeText={(text) => !editingStudent && setNewStudent({ ...newStudent, roll_number: text })}
                                                 placeholder="Enter roll number"
                                                 placeholderTextColor={colors.textSecondary}
+                                                editable={!editingStudent}
                                             />
                                             <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary }]}>
-                                                Email will be: {newStudent.roll_number.toLowerCase()}@aliacademy.edu
+                                                {editingStudent ? 'Roll number cannot be changed (tied to login email)' : `Email will be: ${newStudent.roll_number.toLowerCase()}@aliacademy.com`}
                                             </Text>
                                         </View>
 
@@ -703,26 +1131,28 @@ export default function StudentsScreen() {
                                             />
                                         </View>
 
-                                        {/* Info box about workflow */}
-                                        <View style={[styles.infoBox, { backgroundColor: '#EBF8FF', borderColor: '#3182CE' }]}>
+                                        {/* Info box about workflow — only shown when adding */}
+                                        {!editingStudent && <View style={[styles.infoBox, { backgroundColor: '#EBF8FF', borderColor: '#3182CE' }]}>
                                             <Text allowFontScaling={false} style={[styles.infoTitle, { color: '#2C5282' }]}>How it works:</Text>
                                             <Text allowFontScaling={false} style={[styles.infoText, { color: '#2A4A6B' }]}>
-                                                1. Student record is created with email: {newStudent.roll_number.toLowerCase()}@aliacademy.edu{'\n'}
+                                                1. Student record is created with email: {newStudent.roll_number.toLowerCase()}@aliacademy.com{'\n'}
                                                 2. Student uses this email in the registration screen{'\n'}
                                                 3. Student sets their own password{'\n'}
                                                 4. Auth account is created automatically
                                             </Text>
-                                        </View>
+                                        </View>}
 
                                         <TouchableOpacity
                                             style={[styles.submitButton, { backgroundColor: colors.primary }]}
-                                            onPress={handleAddStudent}
+                                            onPress={editingStudent ? handleUpdateStudent : handleAddStudent}
                                             disabled={creating}
                                         >
                                             {creating ? (
                                                 <ActivityIndicator color="#ffffff" />
                                             ) : (
-                                                <Text allowFontScaling={false} style={styles.submitButtonText}>Create Student (No Password)</Text>
+                                                <Text allowFontScaling={false} style={styles.submitButtonText}>
+                                                    {editingStudent ? 'Save Changes' : 'Create Student (No Password)'}
+                                                </Text>
                                             )}
                                         </TouchableOpacity>
                                     </ScrollView>
@@ -788,6 +1218,7 @@ export default function StudentsScreen() {
 
 import { TextSizes } from '@/src/styles/TextSizes';
 
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -812,45 +1243,15 @@ const styles = StyleSheet.create({
     },
 
     // Header & Search
-    headerContainer: {
-        paddingHorizontal: 24,
-        paddingTop: 5,
-    },
-    searchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    searchInputContainer: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        borderWidth: 1,
-        marginRight: 12,
-        height: 48,
-    },
-    searchInput: {
-        flex: 1,
-        fontSize: TextSizes.normal + 4,
-        fontFamily: 'Inter-Regular',
-        marginLeft: 12,
-    },
-    addButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
     alertBanner: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 12,
         borderRadius: 8,
         borderWidth: 1,
-        marginBottom: 16,
+        marginHorizontal: 16,
+        marginTop: 12,
+        marginBottom: 4,
     },
     alertText: {
         flex: 1,
@@ -866,17 +1267,23 @@ const styles = StyleSheet.create({
     // Scroll / loading / empty
     scrollView: {
         flex: 1,
-        paddingHorizontal: 24,
+        paddingHorizontal: 16,
+        paddingTop: 12,
     },
-    loadingContainer: {
+    skeletonContainer: {
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        gap: 12,
+    },
+    skeletonCard: {
+        borderRadius: 12,
+        padding: 16,
+        gap: 12,
+    },
+    skeletonHeader: {
+        flexDirection: 'row',
+        gap: 12,
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 60,
-    },
-    loadingText: {
-        fontSize: TextSizes.modalText,
-        fontFamily: 'Inter-Regular',
-        marginTop: 12,
     },
     emptyContainer: {
         alignItems: 'center',
@@ -971,6 +1378,7 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         maxHeight: '65%',
+
     },
     modalHeader: {
         flexDirection: 'row',
@@ -993,7 +1401,8 @@ const styles = StyleSheet.create({
     },
     modalScrollView: {
         paddingHorizontal: 24,
-        paddingVertical: 24,
+        // paddingTop: 24,
+
     },
 
     // Form inputs
@@ -1128,15 +1537,98 @@ const styles = StyleSheet.create({
         fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
     },
+    // ── Filter bottom sheet ─────────────────────────────────────────
+    filterOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    filterSheet: {
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingTop: 12,
+        paddingBottom: 32,
+    },
+    filterHandle: {
+        width: 40,
+        height: 4,
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginBottom: 12,
+    },
+    filterSheetHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        marginBottom: 8,
+    },
+    filterBackBtn: {
+        marginRight: 8,
+        padding: 2,
+    },
+    filterSheetTitle: {
+        flex: 1,
+        fontSize: TextSizes.sectionTitle,
+        fontFamily: 'Inter-SemiBold',
+    },
+    filterResetText: {
+        fontSize: TextSizes.filterLabel,
+        fontFamily: 'Inter-Medium',
+        color: '#EF4444',
+    },
+    addStudentRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        gap: 12,
+    },
+    addStudentIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    addStudentText: {
+        fontSize: TextSizes.medium,
+        fontFamily: 'Inter-SemiBold',
+    },
+    filterOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    filterOptionText: {
+        fontSize: TextSizes.medium,
+        fontFamily: 'Inter-Regular',
+        flex: 1,
+    },
+    filterOptionRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    filterApplyBtn: {
+        marginHorizontal: 16,
+        marginTop: 12,
+        borderRadius: 10,
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    filterApplyBtnText: {
+        fontSize: TextSizes.medium,
+        fontFamily: 'Inter-SemiBold',
+        color: '#ffffff',
+    },
 });
 
-
-
-
-// Updated styles
 // const styles = StyleSheet.create({
 //     container: {
 //         flex: 1,
+//         marginBottom: 10
 //     },
 //     errorContainer: {
 //         flex: 1,
@@ -1145,18 +1637,18 @@ const styles = StyleSheet.create({
 //         paddingHorizontal: 24,
 //     },
 //     errorText: {
-//         fontSize: 24,
+//         fontSize: TextSizes.header,
 //         fontFamily: 'Inter-SemiBold',
 //         marginBottom: 8,
 //     },
 //     errorSubtext: {
-//         fontSize: 16,
+//         fontSize: TextSizes.normal,
 //         fontFamily: 'Inter-Regular',
 //         textAlign: 'center',
 //     },
 //     headerContainer: {
 //         paddingHorizontal: 24,
-//         paddingTop: 16,
+//         paddingTop: 5,
 //     },
 //     searchContainer: {
 //         flexDirection: 'row',
@@ -1168,14 +1660,14 @@ const styles = StyleSheet.create({
 //         flexDirection: 'row',
 //         alignItems: 'center',
 //         borderRadius: 12,
-//         paddingHorizontal: 16,
+//         paddingHorizontal: 12,
 //         borderWidth: 1,
 //         marginRight: 12,
+//         height: 48,
 //     },
 //     searchInput: {
 //         flex: 1,
-//         height: 48,
-//         fontSize: 16,
+//         fontSize: TextSizes.normal + 4,
 //         fontFamily: 'Inter-Regular',
 //         marginLeft: 12,
 //     },
@@ -1196,12 +1688,12 @@ const styles = StyleSheet.create({
 //     },
 //     alertText: {
 //         flex: 1,
-//         fontSize: 14,
+//         fontSize: TextSizes.bannerSubtitle,
 //         fontFamily: 'Inter-Medium',
 //         marginLeft: 8,
 //     },
 //     alertAction: {
-//         fontSize: 14,
+//         fontSize: TextSizes.bannerTitle,
 //         fontFamily: 'Inter-SemiBold',
 //     },
 //     scrollView: {
@@ -1214,7 +1706,7 @@ const styles = StyleSheet.create({
 //         paddingVertical: 60,
 //     },
 //     loadingText: {
-//         fontSize: 16,
+//         fontSize: TextSizes.modalText,
 //         fontFamily: 'Inter-Regular',
 //         marginTop: 12,
 //     },
@@ -1224,79 +1716,15 @@ const styles = StyleSheet.create({
 //         paddingVertical: 60,
 //     },
 //     emptyText: {
-//         fontSize: 18,
+//         fontSize: TextSizes.large,
 //         fontFamily: 'Inter-SemiBold',
 //         marginTop: 16,
 //         marginBottom: 8,
 //     },
 //     emptySubtext: {
-//         fontSize: 14,
+//         fontSize: TextSizes.normal,
 //         fontFamily: 'Inter-Regular',
 //         textAlign: 'center',
-//     },
-//     studentCard: {
-//         borderRadius: 16,
-//         padding: 20,
-//         marginBottom: 12,
-//         borderWidth: 1,
-//         shadowColor: '#000',
-//         shadowOffset: { width: 0, height: 2 },
-//         shadowOpacity: 0.05,
-//         shadowRadius: 4,
-//         elevation: 2,
-//     },
-//     studentHeader: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         marginBottom: 12,
-//     },
-//     studentAvatar: {
-//         width: 48,
-//         height: 48,
-//         borderRadius: 12,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         marginRight: 16,
-//     },
-//     studentInitial: {
-//         fontSize: 20,
-//         fontFamily: 'Inter-SemiBold',
-//         color: '#ffffff',
-//     },
-//     studentInfo: {
-//         flex: 1,
-//     },
-//     studentName: {
-//         fontSize: 18,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     studentDetails: {
-//         flexDirection: 'row',
-//         gap: 16,
-//         flexWrap: 'wrap',
-//     },
-//     detailItem: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//     },
-//     detailText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         marginLeft: 4,
-//     },
-//     contactInfo: {
-//         paddingTop: 12,
-//         borderTopWidth: 1,
-//         gap: 8,
-//     },
-//     contactRow: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//     },
-//     contactText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//         marginLeft: 8,
 //     },
 //     modalOverlay: {
 //         flex: 1,
@@ -1306,7 +1734,7 @@ const styles = StyleSheet.create({
 //     modalContent: {
 //         borderTopLeftRadius: 24,
 //         borderTopRightRadius: 24,
-//         maxHeight: '90%',
+//         maxHeight: '65%',
 //     },
 //     modalHeader: {
 //         flexDirection: 'row',
@@ -1318,7 +1746,7 @@ const styles = StyleSheet.create({
 //         borderBottomWidth: 1,
 //     },
 //     modalTitle: {
-//         fontSize: 20,
+//         fontSize: TextSizes.modalTitle,
 //         fontFamily: 'Inter-SemiBold',
 //     },
 //     closeButton: {
@@ -1331,133 +1759,4 @@ const styles = StyleSheet.create({
 //         paddingHorizontal: 24,
 //         paddingVertical: 24,
 //     },
-//     sectionTitle: {
-//         fontSize: 16,
-//         fontFamily: 'Inter-SemiBold',
-//         marginBottom: 16,
-//     },
-//     inputGroup: {
-//         marginBottom: 20,
-//     },
-//     label: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//         marginBottom: 8,
-//     },
-//     input: {
-//         height: 50,
-//         borderWidth: 1,
-//         borderRadius: 12,
-//         paddingHorizontal: 16,
-//         fontSize: 16,
-//         fontFamily: 'Inter-Regular',
-//     },
-//     textArea: {
-//         borderWidth: 1,
-//         borderRadius: 12,
-//         paddingHorizontal: 16,
-//         paddingVertical: 12,
-//         fontSize: 16,
-//         fontFamily: 'Inter-Regular',
-//         textAlignVertical: 'top',
-//     },
-//     classOptions: {
-//         flexDirection: 'row',
-//         gap: 8,
-//     },
-//     classOption: {
-//         paddingHorizontal: 16,
-//         paddingVertical: 12,
-//         borderWidth: 1,
-//         borderRadius: 8,
-//     },
-//     classOptionText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//     },
-//     genderOptions: {
-//         flexDirection: 'row',
-//         gap: 8,
-//     },
-//     genderOption: {
-//         flex: 1,
-//         paddingHorizontal: 16,
-//         paddingVertical: 12,
-//         borderWidth: 1,
-//         borderRadius: 8,
-//         alignItems: 'center',
-//     },
-//     genderOptionText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//     },
-//     submitButton: {
-//         height: 50,
-//         borderRadius: 12,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         marginTop: 12,
-//         marginBottom: 16,
-//     },
-//     submitButtonText: {
-//         color: '#ffffff',
-//         fontSize: 16,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     infoText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         textAlign: 'center',
-//     },
-//     pendingStudentCard: {
-//         padding: 16,
-//         borderRadius: 12,
-//         borderWidth: 1,
-//         marginBottom: 12,
-//     },
-//     pendingStudentInfo: {
-//         flex: 1,
-//     },
-//     pendingStudentName: {
-//         fontSize: 16,
-//         fontFamily: 'Inter-SemiBold',
-//         marginBottom: 4,
-//     },
-//     pendingStudentDetails: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         marginBottom: 4,
-//     },
-//     pendingStudentEmail: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//         marginBottom: 4,
-//     },
-//     pendingStudentStatus: {
-//         fontSize: 12,
-//         fontFamily: 'Inter-Medium',
-//     },
-//     helpText: {
-//         fontSize: 12,
-//         fontFamily: 'Inter-Regular',
-//         marginTop: 4,
-//         fontStyle: 'italic',
-//     },
-//     infoBox: {
-//         padding: 16,
-//         borderRadius: 8,
-//         borderWidth: 1,
-//         marginBottom: 20,
-//     },
-//     infoTitle: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-SemiBold',
-//         marginBottom: 8,
-//     },
-//     infoText: {
-//         fontSize: 12,
-//         fontFamily: 'Inter-Regular',
-//         lineHeight: 18,
-//     },
-
 // });

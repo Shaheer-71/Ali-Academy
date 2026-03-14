@@ -66,13 +66,13 @@ export const DayScheduleCard: React.FC<DayScheduleCardProps> = ({
               ]}>
                 <View style={styles.entryHeader}>
                   <View style={styles.timeContainer}>
-                    <Clock size={12} color="#274d71" />
+                    <Clock size={12} color="#204040" />
                     <Text allowFontScaling={false} style={styles.timeText}>
                       {entry.start_time} - {entry.end_time}
                     </Text>
                   </View>
                   <View style={styles.roomBadge}>
-                    <MapPin size={8} color="#274d71" />
+                    <MapPin size={8} color="#204040" />
                     <Text allowFontScaling={false} style={styles.roomText}>{entry.room_number}</Text>
                   </View>
                 </View>
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   todayHeader: {
-    backgroundColor: '#274d71',
+    backgroundColor: '#204040',
   },
   dayName: {
     fontSize: 16,
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   dayDate: {
     fontSize: 24,
     fontFamily: 'Inter-SemiBold',
-    color: '#274d71',
+    color: '#204040',
     marginBottom: 2,
   },
   todayDateText: {
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   addButton: {
-    backgroundColor: '#274d71',
+    backgroundColor: '#204040',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   },
   lastEntry: {
     borderRightWidth: 4,
-    borderRightColor: '#274d71',
+    borderRightColor: '#204040',
   },
   entryHeader: {
     flexDirection: 'row',
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 12,
     fontFamily: 'Inter-SemiBold',
-    color: '#274d71',
+    color: '#204040',
     marginLeft: 6,
   },
   roomBadge: {
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   roomText: {
     fontSize: 10,
     fontFamily: 'Inter-SemiBold',
-    color: '#274d71',
+    color: '#204040',
   },
   subjectText: {
     fontSize: 16,

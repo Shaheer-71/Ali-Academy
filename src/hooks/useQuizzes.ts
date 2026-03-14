@@ -2,6 +2,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/contexts/AuthContext';
+import {
+    handleFilterApplicationError,
+    handleQuizFetchError,
+    handleQuizResultFetchError,
+    handleQuizStatsError,
+    handleSubjectFetchForClassError
+} from '@/src/utils/errorHandler/quizErrorHandler';
+import { handleError, handleSubjectFetchError } from '../utils/errorHandler/attendanceErrorHandler';
 
 export interface Subject {
     id: string;
@@ -74,7 +82,7 @@ export const useQuizzes = () => {
     const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
     const [classesSubjects, setClassesSubjects] = useState<ClassSubject[]>([]);
     const [loading, setLoading] = useState(true);
-    const { profile } = useAuth();
+    const { profile, student } = useAuth();
 
     useEffect(() => {
         fetchSubjects();
@@ -144,7 +152,8 @@ export const useQuizzes = () => {
             if (error) throw error;
             setClassesSubjects(data || []);
         } catch (error) {
-            console.error('❌ Error fetching class-subject relationships:', error);
+            console.warn('❌ Error fetching class-subject relationships:', error);
+            throw handleSubjectFetchError(error);
         }
     };
 
@@ -156,7 +165,7 @@ export const useQuizzes = () => {
                 .eq('teacher_id', profile?.id);
 
             if (classesIDError) {
-                console.error('Enrollments fetch error:', classesIDError);
+                console.warn('Enrollments fetch error:', classesIDError);
                 throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
             }
 
@@ -172,7 +181,8 @@ export const useQuizzes = () => {
             if (error) throw error;
             setSubjects(data || []);
         } catch (error) {
-            console.error('❌ Error fetching subjects:', error);
+            console.warn('❌ Error fetching subjects:', error);
+            throw handleSubjectFetchError(error);
         }
     };
 
@@ -192,7 +202,7 @@ export const useQuizzes = () => {
                 ({ data: enrollmentsData, error: enrollmentsError } = await supabase
                     .from('student_subject_enrollments')
                     .select('class_id, subject_id')
-                    .eq('student_id', profile.id)
+                    .eq('student_id', student?.id)
                     .eq('is_active', true));
             }
 
@@ -220,7 +230,8 @@ export const useQuizzes = () => {
             if (error) throw error;
             setQuizzes(data || []);
         } catch (err) {
-            console.error('❌ Error fetching quizzes:', err);
+            console.warn('❌ Error fetching quizzes:', err);
+            throw handleQuizFetchError(err);
             setQuizzes([]);
         }
     };
@@ -243,7 +254,7 @@ export const useQuizzes = () => {
             subjects (name)
           )
         `)
-                    .eq('student_id', profile?.id)
+                    .eq('student_id', student?.id)
                     .order('created_at', { ascending: false }));
             } else {
                 ({ data, error } = await supabase
@@ -266,7 +277,8 @@ export const useQuizzes = () => {
 
             setQuizResults(data || []);
         } catch (error) {
-            console.error('❌ Error fetching quiz results:', error);
+            console.warn('❌ Error fetching quiz results:', error);
+            throw handleQuizResultFetchError(error);
         } finally {
             setLoading(false);
         }
@@ -275,26 +287,11 @@ export const useQuizzes = () => {
     const fetchStudentResults = async () => {
         try {
 
-            // First, get the student record ID from the students table
-            const { data: studentData, error: studentError } = await supabase
-                .from('students')
-                .select('id')
-                .eq('id', profile?.id)
-                .single();
-
-
-            if (studentError) {
-                console.error('❌ Error fetching student record:', studentError);
-                throw studentError;
-            }
-
-            if (!studentData) {
-                console.warn('⚠️ No student record found for user:', profile?.id);
+            if (!student?.id) {
                 setQuizResults([]);
                 setLoading(false);
                 return;
             }
-
 
             const { data, error } = await supabase
                 .from('quiz_results')
@@ -309,36 +306,42 @@ export const useQuizzes = () => {
                         subjects (name)
                     )
                 `)
-                .eq('student_id', studentData.id)
+                .eq('student_id', student.id)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
             setQuizResults(data || []);
         } catch (error) {
-            console.error('❌ Error fetching student results:', error);
+            console.warn('❌ Error fetching student results:', error);
+            throw handleQuizResultFetchError(error);
         } finally {
             setLoading(false);
         }
     };
 
-    const getSubjectsForClass = (selectedClass: string) => {
-        if (!selectedClass || selectedClass === 'all') {
-            const subjectsWithQuizzes = subjects.filter(subject =>
-                quizzes.some(quiz => quiz.subject_id === subject.id)
-            );
-            return subjectsWithQuizzes;
-        } else {
-            const classSubjectRelations = classesSubjects.filter(cs =>
-                String(cs.class_id) === String(selectedClass) && cs.is_active
-            );
+    const getSubjectsForClass = async (selectedClass: string) => {
+        try {
+            if (!selectedClass || selectedClass === 'all') {
+                const subjectsWithQuizzes = subjects.filter(subject =>
+                    quizzes.some(quiz => quiz.subject_id === subject.id)
+                );
+                return subjectsWithQuizzes;
+            } else {
+                const classSubjectRelations = classesSubjects.filter(cs =>
+                    String(cs.class_id) === String(selectedClass) && cs.is_active
+                );
 
-            const subjectIdsInClass = classSubjectRelations.map(cs => cs.subject_id);
+                const subjectIdsInClass = classSubjectRelations.map(cs => cs.subject_id);
 
-            const subjectsInClass = subjects.filter(subject =>
-                subjectIdsInClass.includes(subject.id)
-            );
+                const subjectsInClass = subjects.filter(subject =>
+                    subjectIdsInClass.includes(subject.id)
+                );
 
-            return subjectsInClass;
+                return subjectsInClass;
+            }
+        } catch (error) {
+            console.warn('❌ Error getting subjects for class:', error);
+            throw handleSubjectFetchForClassError(error);
         }
     };
 
@@ -367,46 +370,51 @@ export const useQuizzes = () => {
     };
 
     const getFilteredResults = (selectedClass: string, selectedSubject: string, checkedFilter: 'all' | 'checked' | 'unchecked') => {
-        let filteredResults = [...quizResults];
+        try {
+            let filteredResults = [...quizResults];
 
-        if (selectedClass !== 'all') {
-            const classQuizIds = quizzes
-                .filter(quiz => String(quiz.class_id) === String(selectedClass))
-                .map(quiz => quiz.id);
-
-            filteredResults = filteredResults.filter(result =>
-                classQuizIds.includes(result.quiz_id)
-            );
-        }
-
-        if (selectedSubject !== 'all') {
-            let subjectQuizIds: string[];
-
-            if (selectedClass === 'all') {
-                subjectQuizIds = quizzes
-                    .filter(quiz => String(quiz.subject_id) === String(selectedSubject))
+            if (selectedClass !== 'all') {
+                const classQuizIds = quizzes
+                    .filter(quiz => String(quiz.class_id) === String(selectedClass))
                     .map(quiz => quiz.id);
-            } else {
-                subjectQuizIds = quizzes
-                    .filter(quiz =>
-                        String(quiz.subject_id) === String(selectedSubject) &&
-                        String(quiz.class_id) === String(selectedClass)
-                    )
-                    .map(quiz => quiz.id);
+
+                filteredResults = filteredResults.filter(result =>
+                    classQuizIds.includes(result.quiz_id)
+                );
             }
 
-            filteredResults = filteredResults.filter(result =>
-                subjectQuizIds.includes(result.quiz_id)
-            );
-        }
+            if (selectedSubject !== 'all') {
+                let subjectQuizIds: string[];
 
-        if (checkedFilter === 'checked') {
-            filteredResults = filteredResults.filter(result => result.is_checked);
-        } else if (checkedFilter === 'unchecked') {
-            filteredResults = filteredResults.filter(result => !result.is_checked);
-        }
+                if (selectedClass === 'all') {
+                    subjectQuizIds = quizzes
+                        .filter(quiz => String(quiz.subject_id) === String(selectedSubject))
+                        .map(quiz => quiz.id);
+                } else {
+                    subjectQuizIds = quizzes
+                        .filter(quiz =>
+                            String(quiz.subject_id) === String(selectedSubject) &&
+                            String(quiz.class_id) === String(selectedClass)
+                        )
+                        .map(quiz => quiz.id);
+                }
 
-        return filteredResults;
+                filteredResults = filteredResults.filter(result =>
+                    subjectQuizIds.includes(result.quiz_id)
+                );
+            }
+
+            if (checkedFilter === 'checked') {
+                filteredResults = filteredResults.filter(result => result.is_checked);
+            } else if (checkedFilter === 'unchecked') {
+                filteredResults = filteredResults.filter(result => !result.is_checked);
+            }
+
+            return filteredResults;
+        } catch (error) {
+            console.warn('❌ Error filtering results:', error);
+            throw handleFilterApplicationError(error);
+        }
     };
 
     const areAllResultsMarked = (quizId: string) => {
@@ -446,7 +454,7 @@ export const useQuizzes = () => {
     //             .single();
 
     //         if (enrollmentError || !enrollment) {
-    //             console.error('❌ Validation failed:', enrollmentError);
+    //             console.warn('❌ Validation failed:', enrollmentError);
     //             throw new Error('You are not assigned to teach this subject in this class');
     //         }
 
@@ -505,7 +513,7 @@ export const useQuizzes = () => {
 
     //         return { success: true, data };
     //     } catch (error) {
-    //         console.error('❌ Error creating quiz:', error);
+    //         console.warn('❌ Error creating quiz:', error);
     //         return { success: false, error };
     //     }
     // };
@@ -523,8 +531,6 @@ export const useQuizzes = () => {
         instructions?: string;
     }) => {
         try {
-            console.log('🔍 Validating quiz creation:', quizData);
-
             // FIXED: Check teacher_subject_enrollments instead of classes_subjects
             const { data: enrollment, error: enrollmentError } = await supabase
                 .from('teacher_subject_enrollments')
@@ -535,11 +541,8 @@ export const useQuizzes = () => {
                 .single();
 
             if (enrollmentError || !enrollment) {
-                console.error('❌ Validation failed:', enrollmentError);
                 throw new Error('You are not assigned to teach this subject in this class');
             }
-
-            console.log('✅ Validation passed, creating quiz');
 
             const { data, error } = await supabase
                 .from('quizzes')
@@ -562,8 +565,6 @@ export const useQuizzes = () => {
 
             if (error) throw error;
 
-            console.log('✅ Quiz created successfully:', data);
-
             // ✅ FIXED: Create quiz results only for students enrolled in this class + subject
             const { data: enrolledStudents, error: studentsError } = await supabase
                 .from('student_subject_enrollments')
@@ -573,7 +574,7 @@ export const useQuizzes = () => {
                 .eq('is_active', true);
 
             if (studentsError) {
-                console.error('❌ Error fetching enrolled students:', studentsError);
+                console.warn('❌ Error fetching enrolled students:', studentsError);
             } else if (enrolledStudents && enrolledStudents.length > 0) {
                 const resultEntries = enrolledStudents.map(student => ({
                     quiz_id: data.id,
@@ -598,7 +599,7 @@ export const useQuizzes = () => {
 
             return { success: true, data };
         } catch (error) {
-            console.error('❌ Error creating quiz:', error);
+            console.warn('❌ Error creating quiz:', error);
             return { success: false, error };
         }
     };
@@ -639,7 +640,6 @@ export const useQuizzes = () => {
             if (result) {
                 const quiz = quizzes.find(q => q.id === result.quiz_id);
                 if (quiz && (quiz.status === 'scheduled' || quiz.status === 'active')) {
-                    console.log('🔄 Auto-completing quiz since teacher started marking:', quiz.title);
                     await supabase
                         .from('quizzes')
                         .update({ status: 'completed' })
@@ -656,7 +656,7 @@ export const useQuizzes = () => {
 
             return { success: true, data };
         } catch (error) {
-            console.error('❌ Error marking quiz result:', error);
+            console.warn('❌ Error marking quiz result:', error);
             return { success: false, error };
         }
     };
@@ -677,10 +677,11 @@ export const useQuizzes = () => {
 
             return { success: true };
         } catch (error) {
-            console.error('❌ Error updating quiz status:', error);
+            console.warn('❌ Error updating quiz status:', error);
             return { success: false, error };
         }
     };
+
 
     const getQuizResultsBySubject = (subjectId: string, checkedFilter?: 'all' | 'checked' | 'unchecked') => {
         let filtered = quizResults.filter(result =>
@@ -697,23 +698,28 @@ export const useQuizzes = () => {
     };
 
     const getStudentQuizStats = (studentId?: string) => {
-        const studentResults = studentId
-            ? quizResults.filter(r => r.student_id === studentId)
-            : quizResults.filter(r => r.student_id === profile?.id);
+        try {
+            const studentResults = studentId
+                ? quizResults.filter(r => r.student_id === studentId)
+                : quizResults.filter(r => r.student_id === profile?.id);
 
-        const checkedResults = studentResults.filter(r => r.is_checked && r.marks_obtained !== null);
-        const totalMarks = checkedResults.reduce((sum, r) => sum + (r.marks_obtained || 0), 0);
-        const totalPossible = checkedResults.reduce((sum, r) => sum + r.total_marks, 0);
-        const averagePercentage = totalPossible > 0 ? (totalMarks / totalPossible) * 100 : 0;
+            const checkedResults = studentResults.filter(r => r.is_checked && r.marks_obtained !== null);
+            const totalMarks = checkedResults.reduce((sum, r) => sum + (r.marks_obtained || 0), 0);
+            const totalPossible = checkedResults.reduce((sum, r) => sum + r.total_marks, 0);
+            const averagePercentage = totalPossible > 0 ? (totalMarks / totalPossible) * 100 : 0;
 
-        return {
-            totalQuizzes: studentResults.length,
-            checkedQuizzes: checkedResults.length,
-            uncheckedQuizzes: studentResults.length - checkedResults.length,
-            averagePercentage: Math.round(averagePercentage),
-            totalMarks,
-            totalPossible,
-        };
+            return {
+                totalQuizzes: studentResults.length,
+                checkedQuizzes: checkedResults.length,
+                uncheckedQuizzes: studentResults.length - checkedResults.length,
+                averagePercentage: Math.round(averagePercentage),
+                totalMarks,
+                totalPossible,
+            };
+        } catch (error) {
+            console.warn('❌ Error calculating quiz stats:', error);
+            throw handleQuizStatsError(error);
+        }
     };
 
     const fetchStudentClassId = async (studentId?: string) => {
@@ -726,13 +732,14 @@ export const useQuizzes = () => {
                 .single();
 
             if (error) {
-                console.error('Error fetching class ID:', error);
+                console.warn('Error fetching class ID:', error);
                 return null;
             }
 
             return data?.class_id || null;
         } catch (err) {
-            console.error('Unexpected error fetching class ID:', err);
+            console.warn('Unexpected error fetching class ID:', err);
+            throw handleError(err);
             return null;
         }
     };

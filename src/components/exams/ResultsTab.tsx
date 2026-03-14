@@ -2,6 +2,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, ScrollView, TouchableOpacity, Text, StyleSheet, RefreshControl } from 'react-native';
 import { BookOpen, CircleCheck as CheckCircle, Circle, UserX } from 'lucide-react-native';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
+import { handleFilterApplicationError } from '@/src/utils/errorHandler/quizErrorHandler';
 
 interface ResultsTabProps {
     colors: any;
@@ -19,7 +22,7 @@ interface ResultsTabProps {
     quizResults: any[];
     subjects: any[];
     classes?: any[];
-    onRefresh?: () => Promise<void>;
+    onRefresh?: () => void;
 }
 
 const ResultsTab: React.FC<ResultsTabProps> = ({
@@ -43,6 +46,20 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     const [refreshKey, setRefreshKey] = useState(0);
     const [refreshing, setRefreshing] = useState(false);
     const previousClassRef = useRef<string>();
+    const [errorModal, setErrorModal] = useState({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showError = (error: any, handler?: (error: any) => any) => {
+        const errorInfo = handler ? handler(error) : handleError(error);
+        setErrorModal({
+            visible: true,
+            title: errorInfo.title,
+            message: errorInfo.message,
+        });
+    };
 
     // Handle pull-to-refresh
     const handleRefresh = async () => {
@@ -52,7 +69,8 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                 await onRefresh();
                 // console.log('✅ Results tab refreshed successfully');
             } catch (error) {
-                console.error('❌ Error refreshing results:', error);
+                console.warn('❌ Error refreshing results:', error);
+                showError(error);
             } finally {
                 setRefreshing(false);
             }
@@ -115,7 +133,13 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     };
 
     // Use the centralized filtering function
-    const filteredResults = getFilteredResults();
+    let filteredResults: any[] = [];
+    try {
+        filteredResults = getFilteredResults();
+    } catch (error) {
+        console.warn('❌ Error filtering results:', error);
+        showError(error, handleFilterApplicationError);
+    }
 
     const renderResultCard = (result: any) => {
         const fullQuiz = quizzes.find(quiz => quiz.id === result.quiz_id);
@@ -196,9 +220,11 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                         </View>
                         <View style={styles.resultDetail}>
                             <Text allowFontScaling={false} style={[styles.resultLabel, { color: colors.textSecondary }]}>Grade</Text>
-                            <View style={[styles.gradeContainer, { backgroundColor: getGradeColor(
-                                result.grade || calculateGrade(result.percentage || ((result.marks_obtained / result.total_marks) * 100))
-                            ) }]}>
+                            <View style={[styles.gradeContainer, {
+                                backgroundColor: getGradeColor(
+                                    result.grade || calculateGrade(result.percentage || ((result.marks_obtained / result.total_marks) * 100))
+                                )
+                            }]}>
                                 <Text allowFontScaling={false} style={styles.gradeText}>
                                     {result.grade || calculateGrade(result.percentage || ((result.marks_obtained / result.total_marks) * 100))}
                                 </Text>
@@ -235,20 +261,20 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     // Get current filter summary for display
     const getFilterSummary = () => {
         const items = [];
-        
+
         if (selectedClass !== 'all') {
             items.push(`Class: ${classes.find(c => c.id === selectedClass)?.name || 'Unknown'}`);
         }
-        
+
         if (selectedSubject !== 'all') {
             const availableSubjects = getSubjectsWithAll(selectedClass);
             items.push(`Subject: ${availableSubjects.find(s => s.id === selectedSubject)?.name || 'Unknown'}`);
         }
-        
+
         if (checkedFilter !== 'all') {
             items.push(`Status: ${checkedFilter.charAt(0).toUpperCase() + checkedFilter.slice(1)}`);
         }
-        
+
         return items.join(' • ') || 'Showing all quiz results';
     };
 
@@ -265,9 +291,9 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
             </View>
 
             {/* Results List */}
-            <ScrollView 
-                style={styles.resultsList} 
-                showsVerticalScrollIndicator={false} 
+            <ScrollView
+                style={styles.resultsList}
+                showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 50 }}
                 refreshControl={
                     <RefreshControl
@@ -280,6 +306,14 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                     />
                 }
             >
+
+                <ErrorModal
+                    visible={errorModal.visible}
+                    title={errorModal.title}
+                    message={errorModal.message}
+                    onClose={() => setErrorModal({ ...errorModal, visible: false })}
+                />
+
                 {filteredResults.length === 0 ? (
                     <View style={styles.emptyResults}>
                         <BookOpen size={48} color={colors.textSecondary} />
@@ -287,7 +321,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                         <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>
                             No results match your current filters. Use the Filter button to adjust your search criteria.
                         </Text>
-                        
+
                         {/* Helpful suggestions */}
                         <View style={[styles.suggestionsContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                             <Text allowFontScaling={false} style={[styles.suggestionsTitle, { color: colors.text }]}>Try:</Text>
@@ -313,33 +347,9 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
 import { TextSizes } from '@/src/styles/TextSizes'; // <--- import TextSizes
 
 const styles = StyleSheet.create({
-    resultsContainer: {
-        flex: 1,
-    },
-    filterSummary: {
+    resultCard: {
         borderRadius: 12,
         padding: 16,
-        marginBottom: 16,
-        borderWidth: 1,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    filterSummaryText: {
-        fontSize: TextSizes.medium,
-        fontFamily: 'Inter-Regular',
-        flex: 1,
-    },
-    resultCount: {
-        fontSize: TextSizes.medium,
-        fontFamily: 'Inter-SemiBold',
-    },
-    resultsList: {
-        flex: 1,
-    },
-    resultCard: {
-        borderRadius: 16,
-        padding: 20,
         marginBottom: 12,
         borderWidth: 1,
         shadowColor: '#000',
@@ -363,11 +373,6 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     resultSubject: {
-        fontSize: TextSizes.small,
-        fontFamily: 'Inter-Regular',
-        marginBottom: 2,
-    },
-    resultClass: {
         fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         marginBottom: 2,
@@ -407,6 +412,100 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-SemiBold',
         color: '#ffffff',
     },
+    resultsContainer: {
+        flex: 1,
+    },
+    filterSummary: {
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    filterSummaryText: {
+        fontSize: TextSizes.medium,
+        fontFamily: 'Inter-Regular',
+        flex: 1,
+    },
+    resultCount: {
+        fontSize: TextSizes.medium,
+        fontFamily: 'Inter-SemiBold',
+    },
+    resultsList: {
+        flex: 1,
+    },
+    // resultCard: {
+    //     borderRadius: 16,
+    //     padding: 20,
+    //     marginBottom: 12,
+    //     borderWidth: 1,
+    //     shadowColor: '#000',
+    //     shadowOffset: { width: 0, height: 2 },
+    //     shadowOpacity: 0.05,
+    //     shadowRadius: 4,
+    //     elevation: 2,
+    // },
+    // resultHeader: {
+    //     flexDirection: 'row',
+    //     justifyContent: 'space-between',
+    //     alignItems: 'center',
+    //     marginBottom: 12,
+    // },
+    // resultInfo: {
+    //     flex: 1,
+    // },
+    // resultTitle: {
+    //     fontSize: TextSizes.large,
+    //     fontFamily: 'Inter-SemiBold',
+    //     marginBottom: 4,
+    // },
+    // resultSubject: {
+    //     fontSize: TextSizes.small,
+    //     fontFamily: 'Inter-Regular',
+    //     marginBottom: 2,
+    // },
+    // resultClass: {
+    //     fontSize: TextSizes.small,
+    //     fontFamily: 'Inter-Regular',
+    //     marginBottom: 2,
+    // },
+    // studentName: {
+    //     fontSize: TextSizes.medium,
+    //     fontFamily: 'Inter-Regular',
+    // },
+    // resultStatus: {
+    //     marginLeft: 12,
+    // },
+    // resultDetails: {
+    //     flexDirection: 'row',
+    //     justifyContent: 'space-between',
+    //     marginBottom: 12,
+    // },
+    // resultDetail: {
+    //     alignItems: 'center',
+    // },
+    // resultLabel: {
+    //     fontSize: TextSizes.small,
+    //     fontFamily: 'Inter-Regular',
+    //     marginBottom: 4,
+    // },
+    // resultValue: {
+    //     fontSize: TextSizes.medium,
+    //     fontFamily: 'Inter-SemiBold',
+    // },
+    // gradeContainer: {
+    //     paddingHorizontal: 12,
+    //     paddingVertical: 6,
+    //     borderRadius: 8,
+    //     alignItems: 'center',
+    // },
+    // gradeText: {
+    //     fontSize: TextSizes.medium,
+    //     fontFamily: 'Inter-SemiBold',
+    //     color: '#ffffff',
+    // },
     pendingResult: {
         alignItems: 'center',
         paddingVertical: 12,

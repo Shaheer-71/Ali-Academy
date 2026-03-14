@@ -17,6 +17,7 @@ interface DiaryAssignment {
 
 export const useDiaryFilters = (assignments: DiaryAssignment[], profile: any) => {
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedClass, setSelectedClass] = useState<string | null>(null);
     const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
     const filteredAssignments = useMemo(() => {
@@ -27,17 +28,25 @@ export const useDiaryFilters = (assignments: DiaryAssignment[], profile: any) =>
 
             if (!matchesSearch) return false;
 
+            if (profile?.role === 'teacher') {
+                if (selectedClass && assignment.class_id !== selectedClass) return false;
+                if (selectedSubject && assignment.subject_id !== selectedSubject) return false;
+                return true;
+            }
+
             if (profile?.role === 'student' && selectedSubject) {
                 return assignment.subject_id === selectedSubject;
             }
 
             return true;
         });
-    }, [assignments, searchQuery, selectedSubject, profile]);
+    }, [assignments, searchQuery, selectedClass, selectedSubject, profile]);
 
     return {
         searchQuery,
         setSearchQuery,
+        selectedClass,
+        setSelectedClass,
         selectedSubject,
         setSelectedSubject,
         filteredAssignments,

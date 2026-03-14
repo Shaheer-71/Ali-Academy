@@ -1,7 +1,9 @@
 // components/ScheduleTab.tsx - Updated without filter UI (filters now centralized)
-import React from 'react';
+import React, { useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Text, StyleSheet, Alert, RefreshControl } from 'react-native';
 import { Calendar, Clock, Target, GraduationCap, Edit3, Users, Play, Square } from 'lucide-react-native';
+import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
 
 interface ScheduleTabProps {
     colors: any;
@@ -14,7 +16,7 @@ interface ScheduleTabProps {
     selectedClass: string;
     quizResults: any[];
     areAllResultsMarked: (quizId: string) => boolean;
-    onRefresh?: () => Promise<void>;
+    onRefresh?: () => void
 }
 
 const ScheduleTab: React.FC<ScheduleTabProps> = ({
@@ -31,6 +33,20 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
     onRefresh,
 }) => {
     const [refreshing, setRefreshing] = React.useState(false);
+    const [errorModal, setErrorModal] = useState({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showError = (error: any) => {
+        const errorInfo = handleError(error);
+        setErrorModal({
+            visible: true,
+            title: errorInfo.title,
+            message: errorInfo.message,
+        });
+    };
 
     const filteredQuizzes = getFilteredQuizzes();
 
@@ -119,7 +135,8 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
             try {
                 await onRefresh();
             } catch (error) {
-                console.error('Error refreshing data:', error);
+                console.warn('Error refreshing data:', error);
+                showError(error);
             } finally {
                 setRefreshing(false);
             }
@@ -167,6 +184,14 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                     />
                 }
             >
+
+                <ErrorModal
+                    visible={errorModal.visible}
+                    title={errorModal.title}
+                    message={errorModal.message}
+                    onClose={() => setErrorModal({ ...errorModal, visible: false })}
+                />
+
                 {filteredQuizzes.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <Calendar size={48} color={colors.textSecondary} />
@@ -332,40 +357,9 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
 import { TextSizes } from '@/src/styles/TextSizes'; // <--- import TextSizes
 
 const styles = StyleSheet.create({
-    scheduleContainer: {
-        flex: 1,
-    },
-    filterBanner: {
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 16,
-        borderWidth: 1,
-        alignItems: 'center',
-    },
-    filterText: {
-        fontSize: TextSizes.medium,
-        fontFamily: 'Inter-Medium',
-    },
-    emptyContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 60,
-    },
-    emptyText: {
-        fontSize: TextSizes.large,
-        fontFamily: 'Inter-SemiBold',
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    emptySubtext: {
-        fontSize: TextSizes.medium,
-        fontFamily: 'Inter-Regular',
-        textAlign: 'center',
-        paddingHorizontal: 20,
-    },
     quizCard: {
-        borderRadius: 16,
-        padding: 20,
+        borderRadius: 12,
+        padding: 16,
         marginBottom: 12,
         borderWidth: 1,
         shadowColor: '#000',
@@ -380,12 +374,12 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     quizIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
+        width: 40,
+        height: 40,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 16,
+        marginRight: 12,
     },
     quizInfo: {
         flex: 1,
@@ -394,7 +388,6 @@ const styles = StyleSheet.create({
         fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
         marginBottom: 4,
-        paddingHorizontal: 2
     },
     quizSubject: {
         fontSize: TextSizes.medium,
@@ -430,6 +423,117 @@ const styles = StyleSheet.create({
         fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
     },
+    actionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        gap: 6,
+    },
+    actionButtonText: {
+        fontSize: TextSizes.medium,
+        fontFamily: 'Inter-SemiBold',
+    },
+    scheduleContainer: {
+        flex: 1,
+    },
+    filterBanner: {
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 16,
+        borderWidth: 1,
+        alignItems: 'center',
+    },
+    filterText: {
+        fontSize: TextSizes.medium,
+        fontFamily: 'Inter-Medium',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 60,
+    },
+    emptyText: {
+        fontSize: TextSizes.large,
+        fontFamily: 'Inter-SemiBold',
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    emptySubtext: {
+        fontSize: TextSizes.medium,
+        fontFamily: 'Inter-Regular',
+        textAlign: 'center',
+        paddingHorizontal: 20,
+    },
+    // quizCard: {
+    //     borderRadius: 16,
+    //     padding: 20,
+    //     marginBottom: 12,
+    //     borderWidth: 1,
+    //     shadowColor: '#000',
+    //     shadowOffset: { width: 0, height: 2 },
+    //     shadowOpacity: 0.05,
+    //     shadowRadius: 4,
+    //     elevation: 2,
+    // },
+    // quizHeader: {
+    //     flexDirection: 'row',
+    //     alignItems: 'center',
+    //     marginBottom: 12,
+    // },
+    // quizIcon: {
+    //     width: 48,
+    //     height: 48,
+    //     borderRadius: 12,
+    //     alignItems: 'center',
+    //     justifyContent: 'center',
+    //     marginRight: 16,
+    // },
+    // quizInfo: {
+    //     flex: 1,
+    // },
+    // quizTitle: {
+    //     fontSize: TextSizes.large,
+    //     fontFamily: 'Inter-SemiBold',
+    //     marginBottom: 4,
+    //     paddingHorizontal: 2
+    // },
+    // quizSubject: {
+    //     fontSize: TextSizes.medium,
+    //     fontFamily: 'Inter-Regular',
+    // },
+    // statusBadge: {
+    //     paddingHorizontal: 12,
+    //     paddingVertical: 6,
+    //     borderRadius: 8,
+    // },
+    // statusText: {
+    //     fontSize: TextSizes.small,
+    //     fontFamily: 'Inter-SemiBold',
+    //     color: '#ffffff',
+    // },
+    // quizDescription: {
+    //     fontSize: TextSizes.medium,
+    //     fontFamily: 'Inter-Regular',
+    //     lineHeight: TextSizes.medium + 6,
+    //     marginBottom: 12,
+    // },
+    // quizDetails: {
+    //     flexDirection: 'row',
+    //     justifyContent: 'space-between',
+    //     marginBottom: 12,
+    // },
+    // quizDetail: {
+    //     flexDirection: 'row',
+    //     alignItems: 'center',
+    //     gap: 6,
+    // },
+    // quizDetailText: {
+    //     fontSize: TextSizes.small,
+    //     fontFamily: 'Inter-Regular',
+    // },
     instructionsContainer: {
         borderRadius: 8,
         padding: 12,

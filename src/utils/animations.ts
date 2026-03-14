@@ -25,36 +25,34 @@ export const EASING = {
 };
 
 // ============================================
-// 1. SCREEN NAVIGATION ANIMATION (ENHANCED)
+// 1. SCREEN NAVIGATION ANIMATION
 // ============================================
 export const createScreenAnimation = (animatedValue: Animated.Value) => {
     return {
         start: () => {
             animatedValue.setValue(0);
-            Animated.spring(animatedValue, {
+
+            Animated.timing(animatedValue, {
                 toValue: 1,
-                friction: 8,
-                tension: 40,
+                duration: ANIMATION_DURATION.NORMAL,
+                easing: EASING.SMOOTH,
                 useNativeDriver: true,
             }).start();
         },
 
         style: {
-            opacity: animatedValue.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0, 0.3, 1],
-            }),
+            opacity: animatedValue,
             transform: [
                 {
-                    translateX: animatedValue.interpolate({
+                    translateY: animatedValue.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [50, 0], // Slide from right
+                        outputRange: [12, 0],
                     }),
                 },
                 {
                     scale: animatedValue.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [0.95, 1], // Slight zoom in
+                        outputRange: [0.97, 1],
                     }),
                 },
             ],
@@ -62,26 +60,27 @@ export const createScreenAnimation = (animatedValue: Animated.Value) => {
     };
 };
 
+
 // ============================================
 // 2. BUTTON PRESS ANIMATION
 // ============================================
 export const createButtonAnimation = (animatedValue: Animated.Value) => {
     return {
         onPressIn: () => {
-            Animated.spring(animatedValue, {
-                toValue: 0.95,
+            Animated.timing(animatedValue, {
+                toValue: 0.96,
+                duration: 80,
+                easing: EASING.SMOOTH,
                 useNativeDriver: true,
-                speed: 50,
-                bounciness: 4,
             }).start();
         },
 
         onPressOut: () => {
-            Animated.spring(animatedValue, {
+            Animated.timing(animatedValue, {
                 toValue: 1,
+                duration: 120,
+                easing: EASING.SMOOTH,
                 useNativeDriver: true,
-                speed: 50,
-                bounciness: 4,
             }).start();
         },
 
