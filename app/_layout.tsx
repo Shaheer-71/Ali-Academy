@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { LogBox } from 'react-native';
+import { useEffect, useRef, useState } from 'react'; // useState kept for splashVisible
+import { LogBox, AppState } from 'react-native';
 
 LogBox.ignoreLogs([
   'expo-notifications: Android Push notifications',
@@ -16,6 +16,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import '@/src/constants/TextScaling';
 import { registerDeviceForNotifications, setupNotificationHandlers, pendingNavigation } from '@/src/lib/notifications';
 import * as Notifications from 'expo-notifications';
+import { useLastNotificationResponse } from 'expo-notifications';
 import { AppSplashScreen } from '@/src/components/common/AppSplashScreen';
 
 
@@ -26,76 +27,99 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
 
+  // useLastNotificationResponse — fires when user taps a notification while app is in foreground
+  const lastNotificationResponse = useLastNotificationResponse();
 
-  // Setup notification handlers ONCE on mount
   useEffect(() => {
     setupNotificationHandlers();
+  }, []);
 
-    // Cold-start: app was killed and opened by tapping a notification
-    console.log('[DEEPLINK] Checking cold-start notification...');
-    Notifications.getLastNotificationResponseAsync().then(response => {
+  // Track which notification id we've already handled to prevent double-navigation
+  const handledNotificationId = useRef<string | null>(null);
+
+  // Refs so navigation callbacks always have the latest auth state
+  const loadingRef = useRef(loading);
+  const userRef = useRef(user);
+  const profileRef = useRef(profile);
+  loadingRef.current = loading;
+  userRef.current = user;
+  profileRef.current = profile;
+
+  // Core handler — called from both the hook and the AppState fallback
+  const handleNotifData = useRef((notifId: string, data: Record<string, any>, source: string) => {
+    console.log(`[DEEPLINK][${source}] handleNotifData called`);
+    console.log(`[DEEPLINK][${source}]   notifId =`, notifId);
+    console.log(`[DEEPLINK][${source}]   data =`, JSON.stringify(data));
+    console.log(`[DEEPLINK][${source}]   already handled =`, handledNotificationId.current === notifId);
+    console.log(`[DEEPLINK][${source}]   loading =`, loadingRef.current, '| user =', !!userRef.current, '| role =', profileRef.current?.role);
+
+    if (handledNotificationId.current === notifId) return;
+    if (loadingRef.current) {
+      console.log(`[DEEPLINK][${source}] Auth still loading — skipping (AppState will retry)`);
+      return;
+    }
+    if (!userRef.current || !profileRef.current) {
+      console.log(`[DEEPLINK][${source}] No auth — skipping`);
+      return;
+    }
+    if (!data?.type) {
+      handledNotificationId.current = notifId;
+      return;
+    }
+
+    handledNotificationId.current = notifId;
+    const { type, assignmentId } = data;
+    console.log(`[DEEPLINK][${source}] Processing type =`, type, '| assignmentId =', assignmentId);
+
+    const FEE_TYPES = ['fee_reminder', 'fee_paid', 'fee'];
+    if (FEE_TYPES.includes(type)) {
+      console.log(`[DEEPLINK][${source}] → /fee-status`);
+      router.push('/fee-status' as any);
+      return;
+    }
+
+    if (type === 'assignment_added' && assignmentId) {
+      if (profileRef.current.role === 'student') {
+        console.log(`[DEEPLINK][${source}] → dairy, assignmentId =`, assignmentId);
+        pendingNavigation.diaryAssignmentId = assignmentId;
+        // Small delay to let the navigation stack settle on Android
+        setTimeout(() => {
+          console.log(`[DEEPLINK][${source}] Calling router.navigate to dairy`);
+          router.navigate('/(student)/dairy' as any);
+        }, 300);
+      } else {
+        console.log(`[DEEPLINK][${source}] Not a student — skipping`);
+      }
+    }
+  });
+
+  // Path 1: foreground tap — useLastNotificationResponse
+  useEffect(() => {
+    if (!lastNotificationResponse) return;
+    const notifId = lastNotificationResponse.notification.request.identifier;
+    const data = lastNotificationResponse.notification.request.content.data as Record<string, any>;
+    console.log('[DEEPLINK][hook] lastNotificationResponse fired, id =', notifId);
+    handleNotifData.current(notifId, data, 'hook');
+  }, [lastNotificationResponse, loading, user?.id, profile?.role]);
+
+  // Path 2: background→foreground — AppState + getLastNotificationResponseAsync
+  // On Android Expo Go, useLastNotificationResponse may not fire for this case.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      console.log('[DEEPLINK][appstate] AppState →', nextState);
+      if (nextState !== 'active') return;
+
+      const response = await Notifications.getLastNotificationResponseAsync();
       if (!response) {
-        console.log('[DEEPLINK] Cold-start: no pending notification response');
+        console.log('[DEEPLINK][appstate] No last notification response');
         return;
       }
+      const notifId = response.notification.request.identifier;
       const data = response.notification.request.content.data as Record<string, any>;
-      console.log('[DEEPLINK] Cold-start: notification data =', JSON.stringify(data));
-
-      if (!data?.type) {
-        console.log('[DEEPLINK] Cold-start: no type in data, skipping');
-        return;
-      }
-
-      const FEE_TYPES = ['fee_reminder', 'fee_paid', 'fee'];
-      if (FEE_TYPES.includes(data.type)) {
-        console.log('[DEEPLINK] Cold-start: fee notification → pushing /fee-status');
-        router.push('/fee-status' as any);
-        return;
-      }
-
-      if (data.type === 'assignment_added' && data.assignmentId) {
-        console.log('[DEEPLINK] Cold-start: diary notification → storing pendingNavigation, assignmentId =', data.assignmentId);
-        // Cold start: store intent only — auth routing hasn't finished yet.
-        // The segments effect below will navigate to dairy once auth completes.
-        pendingNavigation.diaryAssignmentId = data.assignmentId;
-        pendingNavigation.coldStartDiary = true;
-      } else {
-        console.log('[DEEPLINK] Cold-start: unhandled type =', data.type);
-      }
+      console.log('[DEEPLINK][appstate] Got last notification, id =', notifId, '| data =', JSON.stringify(data));
+      handleNotifData.current(notifId, data, 'appstate');
     });
-
-    // Warm-start: app is open (foreground or background) and user taps a notification.
-    // Using useRouter() here keeps navigation inside the React tree — reliable on Android.
-    console.log('[DEEPLINK] Registering warm-start tap listener...');
-    const tapSub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as Record<string, any>;
-      console.log('[DEEPLINK] Warm-start: notification tapped, data =', JSON.stringify(data));
-
-      if (!data?.type) {
-        console.log('[DEEPLINK] Warm-start: no type in data, skipping');
-        return;
-      }
-
-      const FEE_TYPES = ['fee_reminder', 'fee_paid', 'fee'];
-      if (FEE_TYPES.includes(data.type)) {
-        console.log('[DEEPLINK] Warm-start: fee notification → pushing /fee-status');
-        router.push('/fee-status' as any);
-        return;
-      }
-
-      if (data.type === 'assignment_added' && data.assignmentId) {
-        console.log('[DEEPLINK] Warm-start: diary notification → navigating to dairy, assignmentId =', data.assignmentId);
-        pendingNavigation.diaryAssignmentId = data.assignmentId;
-        router.navigate('/(student)/dairy' as any);
-      } else {
-        console.log('[DEEPLINK] Warm-start: unhandled type =', data.type);
-      }
-    });
-
-    return () => {
-      console.log('[DEEPLINK] Cleaning up tap listener');
-      tapSub.remove();
-    };
+    return () => sub.remove();
   }, []);
 
   // Register device when user is loaded
@@ -162,29 +186,6 @@ function RootLayoutNav() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, profile?.role, loading]);
 
-  // Cold-start deep link: once auth routing lands the student in (student) group,
-  // navigate to the dairy tab so the diary screen can open the pending assignment.
-  useEffect(() => {
-    console.log('[DEEPLINK] Cold-start segments effect fired:', {
-      loading,
-      hasUser: !!user,
-      hasProfile: !!profile,
-      role: profile?.role,
-      seg0: segments[0],
-      coldStartDiary: pendingNavigation.coldStartDiary,
-      diaryAssignmentId: pendingNavigation.diaryAssignmentId,
-    });
-
-    if (loading || !user || !profile) return;
-    if (profile.role !== 'student') return;
-    if (segments[0] !== '(student)') return;
-    if (!pendingNavigation.coldStartDiary) return;
-
-    console.log('[DEEPLINK] Cold-start: navigating to dairy tab');
-    pendingNavigation.coldStartDiary = false; // consume so it doesn't re-fire
-    router.navigate('/(student)/dairy' as any);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [segments, loading, user?.id, profile?.role]);
 
 
   return (

@@ -10,6 +10,7 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Dimensions,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -155,6 +156,21 @@ export default function DiaryScreen() {
     console.log('[DIARY FOCUS] Calling handleRefresh...');
     handleRefresh();
   }, [profile]));
+
+  // AppState listener: handles the case where app comes from background while dairy
+  // is already the active tab — useFocusEffect won't fire, but this will.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      console.log('[DIARY APPSTATE] AppState changed to:', nextState, '| pendingNavigation.diaryAssignmentId =', pendingNavigation.diaryAssignmentId);
+      if (nextState === 'active' && pendingNavigation.diaryAssignmentId) {
+        console.log('[DIARY APPSTATE] App came to foreground with pending assignment — consuming and refreshing');
+        pendingAssignmentId.current = pendingNavigation.diaryAssignmentId;
+        pendingNavigation.diaryAssignmentId = null;
+        handleRefresh();
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // After every assignments update, open the pending diary if we have one
   useEffect(() => {

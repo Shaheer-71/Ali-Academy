@@ -2,7 +2,6 @@
 // hooks/useDiaryForm.ts
 // ===================================
 import { uploadToCloudinary } from '@/src/lib/cloudinary';
-import { sendPushNotification } from '@/src/lib/notifications';
 import {
     handleAssignmentCreateError,
     handleCloudinaryUploadErrorForDiary,
@@ -10,6 +9,7 @@ import {
 } from '@/src/utils/errorHandler/diaryErrorHandler';
 import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
+import { supabase } from '@/src/lib/supabase';
 
 interface FormState {
     title: string;
@@ -142,122 +142,153 @@ export const useDiaryForm = (
 
             if (error) throw error;
 
-            // Handle notifications (non-blocking)
+            // ─── NOTIFICATIONS (non-blocking) ───────────────────────────
             try {
+                let recipientIds: string[] = [];
+                let targetType: string;
+                let targetId: string | null = null;
+                let pushTitle: string;
+                let pushBody: string;
+
+                // ── CASE 1: Whole class ──────────────────────────────────
                 if (newAssignment.assignTo === 'class' && newAssignment.class_id) {
-                    const { data: students, error: studentError } = await supabase
-                        .from('students')
-                        .select('id, full_name')
-                        .eq('class_id', newAssignment.class_id);
+                    console.log('[DIARY NOTIF] Case 1 — whole class');
+                    console.log('[DIARY NOTIF] class_id:', newAssignment.class_id, '| subject_id:', newAssignment.subject_id);
 
-                    if (studentError) {
-                        console.warn('❌ Error fetching class students:', studentError);
-                    } else if (students && students.length > 0) {
-                        const { data: notif, error: notifError } = await supabase
-                            .from('notifications')
-                            .insert([
-                                {
-                                    type: 'assignment_added',
-                                    title: `New Assignment: ${newAssignment.title}`,
-                                    message: `A new assignment has been added for your class. Due date: ${newAssignment.due_date}.`,
-                                    entity_type: 'assignment',
-                                    entity_id: assignment.id,
-                                    created_by: profile!.id,
-                                    target_type: 'students',
-                                    target_id: newAssignment.class_id,
-                                    priority: 'medium',
+                    // Get only students taking THIS subject in THIS class
+                    const query = supabase
+                        .from('student_subject_enrollments')
+                        .select('student_id')
+                        .eq('class_id', newAssignment.class_id)
+                        .eq('is_active', true);
+
+                    // Filter by subject if one was selected
+                    if (newAssignment.subject_id) {
+                        query.eq('subject_id', newAssignment.subject_id);
+                    }
+
+                    const { data: enrollments, error: enrollErr } = await query;
+
+                    if (enrollErr) {
+                        console.warn('[DIARY NOTIF] Failed to fetch enrollments:', enrollErr.message);
+                    } else {
+                        recipientIds = [...new Set((enrollments ?? []).map((e) => e.student_id))];
+                        console.log('[DIARY NOTIF] Students to notify:', recipientIds.length, recipientIds);
+                    }
+
+                    targetType = 'class';
+                    targetId = newAssignment.class_id;
+                    pushTitle = `📝 New Diary: ${newAssignment.title}`;
+                    pushBody = `New diary assignment for your class. Due: ${newAssignment.due_date}.`;
+
+                // ── CASE 2: Individual student(s) ────────────────────────
+                } else {
+                    console.log('[DIARY NOTIF] Case 2 — individual students');
+                    console.log('[DIARY NOTIF] student_ids:', newAssignment.student_ids);
+
+                    recipientIds = newAssignment.student_ids;
+                    targetType = 'individual';
+                    targetId = newAssignment.student_ids[0] ?? null;
+                    pushTitle = `📝 New Diary: ${newAssignment.title}`;
+                    pushBody = `You have a new diary assignment due on ${newAssignment.due_date}.`;
+                }
+
+                if (recipientIds.length === 0) {
+                    console.log('[DIARY NOTIF] No recipients found — skipping notifications');
+                } else {
+                    // STEP 1: Insert notification record
+                    console.log('[DIARY NOTIF] Step 1 — inserting notification record...');
+                    const { data: notif, error: notifError } = await supabase
+                        .from('notifications')
+                        .insert([{
+                            type: 'assignment_added',
+                            title: `New Diary: ${newAssignment.title}`,
+                            message: pushBody,
+                            entity_type: 'diary_assignment',
+                            entity_id: assignment.id,
+                            created_by: profile!.id,
+                            target_type: targetType,
+                            target_id: targetId,
+                            priority: 'medium',
+                        }])
+                        .select('id')
+                        .single();
+
+                    if (notifError) {
+                        console.warn('[DIARY NOTIF] Step 1 failed:', notifError.message);
+                    } else {
+                        console.log('[DIARY NOTIF] Step 1 done — notification id:', notif.id);
+
+                        // STEP 2: Bulk insert notification_recipients
+                        console.log('[DIARY NOTIF] Step 2 — inserting', recipientIds.length, 'recipient(s)...');
+                        const { error: recipientError } = await supabase
+                            .from('notification_recipients')
+                            .insert(
+                                recipientIds.map((uid) => ({
+                                    notification_id: notif.id,
+                                    user_id: uid,
+                                    is_read: false,
+                                    is_deleted: false,
+                                }))
+                            );
+
+                        if (recipientError) {
+                            console.warn('[DIARY NOTIF] Step 2 failed:', recipientError.message);
+                        } else {
+                            console.log('[DIARY NOTIF] Step 2 done — recipients saved');
+                        }
+
+                        // STEP 3: Fetch device tokens for all recipients
+                        console.log('[DIARY NOTIF] Step 3 — fetching device tokens...');
+                        const { data: devices, error: deviceError } = await supabase
+                            .from('devices')
+                            .select('token')
+                            .in('user_id', recipientIds);
+
+                        if (deviceError) {
+                            console.warn('[DIARY NOTIF] Step 3 failed:', deviceError.message);
+                        } else {
+                            console.log('[DIARY NOTIF] Step 3 done — devices found:', devices?.length ?? 0);
+                        }
+
+                        if (devices && devices.length > 0) {
+                            // STEP 4: Send batch push to Expo
+                            console.log('[DIARY NOTIF] Step 4 — sending batch push to', devices.length, 'device(s)...');
+                            const expoResponse = await fetch('https://exp.host/--/api/v2/push/send', {
+                                method: 'POST',
+                                headers: {
+                                    Accept: 'application/json',
+                                    'Content-Type': 'application/json',
                                 },
-                            ])
-                            .select('id')
-                            .single();
-
-                        if (!notifError && notif) {
-                            const recipientRows = students.map((s) => ({
-                                notification_id: notif.id,
-                                user_id: s.id,
-                                is_read: false,
-                                is_deleted: false,
-                            }));
-
-                            await supabase.from('notification_recipients').insert(recipientRows);
-
-                            // Send push notifications
-                            for (const student of students) {
-                                try {
-                                    await sendPushNotification({
-                                        userId: student.id,
-                                        title: `📝 New Assignment: ${newAssignment.title}`,
-                                        body: `A new assignment has been added. Due date: ${newAssignment.due_date}.`,
+                                body: JSON.stringify(
+                                    devices.map((d) => ({
+                                        to: d.token,
+                                        title: pushTitle,
+                                        body: pushBody,
                                         data: {
                                             type: 'assignment_added',
                                             notificationId: notif.id,
                                             assignmentId: assignment.id,
-                                            classId: newAssignment.class_id,
-                                            studentId: student.id,
-                                            studentName: student.full_name,
-                                            dueDate: newAssignment.due_date,
-                                            timestamp: new Date().toISOString(),
                                         },
-                                    });
-                                } catch (pushError) {
-                                    console.warn(`❌ Failed to send push to ${student.full_name}:`, pushError);
-                                }
-                            }
-                        }
-                    }
-                } else if (newAssignment.assignTo === 'students' && newAssignment.student_ids.length > 0) {
-                    for (const studentId of newAssignment.student_ids) {
-                        const { data: notif, error: notifError } = await supabase
-                            .from('notifications')
-                            .insert([{
-                                type: 'assignment_added',
-                                title: `Assignment: ${newAssignment.title}`,
-                                message: `You have received a new assignment. Due date: ${newAssignment.due_date}.`,
-                                entity_type: 'assignment',
-                                entity_id: assignment.id,
-                                created_by: profile!.id,
-                                target_type: 'individual',
-                                target_id: studentId,
-                                priority: 'medium',
-                            }])
-                            .select('id')
-                            .single();
-
-                        if (!notifError && notif) {
-                            await supabase.from('notification_recipients').insert([{
-                                notification_id: notif.id,
-                                user_id: studentId,
-                                is_read: false,
-                                is_deleted: false,
-                            }]);
-                            try {
-                                await sendPushNotification({
-                                    userId: studentId,
-                                    title: `📝 New Assignment: ${newAssignment.title}`,
-                                    body: `You have a new assignment due on ${newAssignment.due_date}.`,
-                                    data: {
-                                        type: 'assignment_added',
-                                        notificationId: notif.id,
-                                        assignmentId: assignment.id,
-                                        studentId,
-                                        dueDate: newAssignment.due_date,
-                                        timestamp: new Date().toISOString(),
-                                    },
-                                });
-                            } catch (pushError) {
-                                console.warn('❌ Failed to send push notification:', pushError);
-                            }
+                                        sound: 'default',
+                                        channelId: 'default',
+                                    }))
+                                ),
+                            });
+                            const expoResult = await expoResponse.json();
+                            console.log('[DIARY NOTIF] Step 4 done — Expo response:', JSON.stringify(expoResult));
+                        } else {
+                            console.log('[DIARY NOTIF] Step 4 skipped — no registered devices');
                         }
                     }
                 }
             } catch (notificationError: any) {
-                // Non-blocking: just log and show warning if handler exists
-                console.warn('⚠️ Notification error (non-blocking):', notificationError);
-
+                console.warn('[DIARY NOTIF] Unexpected error (non-blocking):', notificationError);
                 if (showError) {
                     showError(notificationError, handleNotificationErrorForDiary);
                 }
             }
+            // ────────────────────────────────────────────────────────────
 
             resetForm();
             onSuccess();

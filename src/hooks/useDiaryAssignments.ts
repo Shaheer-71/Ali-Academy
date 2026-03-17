@@ -162,13 +162,20 @@ export const useDiaryAssignments = (
             `)
                         .or(classWideOrExpr)
                         .eq("is_deleted", false)
+                        .filter('student_ids', 'eq', '{}')
                         .order("created_at", { ascending: false });
 
                     if (classErr) throw classErr;
                     classAssignments = data || [];
                 }
 
+                const seen = new Set<string>();
                 const combined = [...(personalAssignments || []), ...classAssignments]
+                    .filter(a => {
+                        if (seen.has(a.id)) return false;
+                        seen.add(a.id);
+                        return true;
+                    })
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
                 setAssignments(combined);

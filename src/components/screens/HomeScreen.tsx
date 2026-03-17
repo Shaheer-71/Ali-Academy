@@ -144,9 +144,6 @@ export default function HomeScreen() {
         );
       }
 
-      console.log("✅ Unique Class IDs:", teacherClassIds);
-      console.log("✅ Unique Class & Subject pairs:", uniqueClassSubjectPairs);
-
       // ========== 3️⃣ Get Students from These Classes ==========
       let uniqueStudentIds: string[] = [];
 
@@ -164,7 +161,6 @@ export default function HomeScreen() {
         }
 
         uniqueStudentIds = [...new Set(students?.map(s => s.student_id) || [])];
-        console.log("✅ Unique Student IDs:", uniqueStudentIds);
       }
 
       // ========== 4️⃣ Get Total Lectures Uploaded ==========

@@ -6,16 +6,13 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { supabase } from './supabase';
 import { Platform } from 'react-native';
-import { router } from 'expo-router';
 
-const FEE_TYPES = ['fee_reminder', 'fee_paid', 'fee'];
-
-function handleNotificationTap(data: Record<string, any> | undefined) {
-    if (!data) return;
-    if (FEE_TYPES.includes(data.type)) {
-        router.push('/fee-status' as any);
-    }
-}
+// Module-level store for pending deep-link targets.
+// Navigation is handled inside RootLayoutNav (_layout.tsx) using useRouter()
+// so it always runs inside the React/Expo Router tree — reliable on Android.
+export const pendingNavigation = {
+    diaryAssignmentId: null as string | null,
+};
 
 // ============================================
 // HELPER: GET DEVICE IP ADDRESS
@@ -76,20 +73,10 @@ export function setupNotificationHandlers() {
         }
     );
 
-    // Handle when user taps notification (foreground + background)
-    const tapListener = Notifications.addNotificationResponseReceivedListener(
-        (response) => {
-            const data = response.notification.request.content.data;
-            handleNotificationTap(data as Record<string, any>);
-        }
-    );
-
     console.log('✅ [SETUP] Notification handlers registered');
 
-    // Return cleanup function if needed
     return () => {
         foregroundListener.remove();
-        tapListener.remove();
     };
 }
 
