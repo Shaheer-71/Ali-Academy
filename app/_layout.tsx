@@ -1,4 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { LogBox } from 'react-native';
+
+LogBox.ignoreLogs([
+  'expo-notifications: Android Push notifications',
+]);
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/src/hooks/useFrameworkReady';
@@ -9,7 +14,7 @@ import { NotificationProvider } from '@/src/contexts/NotificationContext';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import '@/src/constants/TextScaling';
-import { registerDeviceForNotifications, setupNotificationHandlers } from '@/src/lib/notifications';
+import { registerDeviceForNotifications, setupNotificationHandlers, pendingNavigation } from '@/src/lib/notifications';
 import * as Notifications from 'expo-notifications';
 import { AppSplashScreen } from '@/src/components/common/AppSplashScreen';
 
@@ -30,11 +35,41 @@ function RootLayoutNav() {
     Notifications.getLastNotificationResponseAsync().then(response => {
       if (!response) return;
       const data = response.notification.request.content.data as Record<string, any>;
+      if (!data?.type) return;
+
       const FEE_TYPES = ['fee_reminder', 'fee_paid', 'fee'];
-      if (data?.type && FEE_TYPES.includes(data.type)) {
+      if (FEE_TYPES.includes(data.type)) {
         router.push('/fee-status' as any);
+        return;
+      }
+
+      if (data.type === 'assignment_added' && data.assignmentId) {
+        // Cold start: store intent only — auth routing hasn't finished yet.
+        // The segments effect below will navigate to dairy once auth completes.
+        pendingNavigation.diaryAssignmentId = data.assignmentId;
+        pendingNavigation.coldStartDiary = true;
       }
     });
+
+    // Warm-start: app is open (foreground or background) and user taps a notification.
+    // Using useRouter() here keeps navigation inside the React tree — reliable on Android.
+    const tapSub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as Record<string, any>;
+      if (!data?.type) return;
+
+      const FEE_TYPES = ['fee_reminder', 'fee_paid', 'fee'];
+      if (FEE_TYPES.includes(data.type)) {
+        router.push('/fee-status' as any);
+        return;
+      }
+
+      if (data.type === 'assignment_added' && data.assignmentId) {
+        pendingNavigation.diaryAssignmentId = data.assignmentId;
+        router.navigate('/(student)/dairy' as any);
+      }
+    });
+
+    return () => tapSub.remove();
   }, []);
 
   // Register device when user is loaded
@@ -100,6 +135,19 @@ function RootLayoutNav() {
   // Only re-run when auth state changes, not when navigation changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, profile?.role, loading]);
+
+  // Cold-start deep link: once auth routing lands the student in (student) group,
+  // navigate to the dairy tab so the diary screen can open the pending assignment.
+  useEffect(() => {
+    if (loading || !user || !profile) return;
+    if (profile.role !== 'student') return;
+    if (segments[0] !== '(student)') return;
+    if (!pendingNavigation.coldStartDiary) return;
+
+    pendingNavigation.coldStartDiary = false; // consume so it doesn't re-fire
+    router.navigate('/(student)/dairy' as any);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [segments, loading, user?.id, profile?.role]);
 
 
   return (
