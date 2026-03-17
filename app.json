@@ -26,7 +26,7 @@
     },
     "android": {
       "package": "com.kodex.aliacademy",
-      "googleServicesFile": "./google-services.json",
+      "googleServicesFile": "$GOOGLE_SERVICES_JSON"
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/icons/logo.png",
         "backgroundColor": "#ffffff"
