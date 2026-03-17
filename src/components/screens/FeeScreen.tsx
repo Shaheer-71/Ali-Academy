@@ -9,7 +9,6 @@ import {
     Alert,
     RefreshControl,
     Modal,
-    ActivityIndicator,
 } from 'react-native';
 import {
     Clock,
@@ -33,6 +32,7 @@ import { sendPushNotification } from '@/src/lib/notifications';
 import { Animated } from 'react-native';
 import { useScreenAnimation } from '@/src/utils/animations';
 import { TextSizes } from '@/src/styles/TextSizes';
+import { SkeletonBox } from '@/src/components/common/Skeleton';
 
 const MONTHS = [
     'January', 'February', 'March', 'April',
@@ -51,7 +51,7 @@ export default function FeeScreen() {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
     const [selectedClass, setSelectedClass] = useState<string>('');
-    const [showUnpaidOnly, setShowUnpaidOnly] = useState(true);
+    const [showUnpaidOnly, setShowUnpaidOnly] = useState(false);
     const [filterVisible, setFilterVisible] = useState(false);
 
     // Dropdown state inside modal
@@ -72,9 +72,6 @@ export default function FeeScreen() {
     const [feeRecords, setFeeRecords] = useState<FeePayment[]>([]);
     const [feeStructure, setFeeStructure] = useState<any>(null);
 
-    const isFiltered = showUnpaidOnly ||
-        selectedMonth !== new Date().getMonth() + 1 ||
-        selectedYear !== CURRENT_YEAR;
 
     useEffect(() => {
         if (profile?.role === 'teacher' || profile?.role === 'superadmin') {
@@ -92,7 +89,10 @@ export default function FeeScreen() {
         try {
             const classesData = await classService.getTeacherClasses() as any[];
             setClasses(classesData);
-            if (classesData.length > 0) setSelectedClass(classesData[0].id);
+            if (classesData.length > 0) {
+                const class10 = classesData.find((c: any) => c.name?.includes('10'));
+                setSelectedClass((class10 ?? classesData[0]).id);
+            }
         } catch {
             Alert.alert('Error', 'Failed to load classes');
         } finally {
@@ -209,40 +209,13 @@ export default function FeeScreen() {
         paid: students.filter(s => s.current_month_payment_status === 'paid').length,
     };
 
-    const selectedClassName = classes.find(c => c.id === selectedClass)?.name || '';
 
     return (
         <Animated.View style={[{ flex: 1, backgroundColor: colors.background }, screenStyle]}>
             <TopSections
                 onFilterPress={() => setFilterVisible(true)}
-                isFiltered={isFiltered}
             />
             <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'bottom']}>
-
-                {/* Active Filter Summary */}
-                <View style={[styles.filterSummary, { borderBottomColor: colors.border }]}>
-                    <View style={styles.filterChips}>
-                        <View style={[styles.chip, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                            <Text allowFontScaling={false} style={[styles.chipText, { color: colors.text }]}>
-                                {MONTHS[selectedMonth - 1]} {selectedYear}
-                            </Text>
-                        </View>
-                        {selectedClassName ? (
-                            <View style={[styles.chip, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                                <Text allowFontScaling={false} style={[styles.chipText, { color: colors.text }]}>{selectedClassName}</Text>
-                            </View>
-                        ) : null}
-                        {showUnpaidOnly && (
-                            <View style={[styles.chip, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                                <Text allowFontScaling={false} style={[styles.chipText, { color: colors.primary }]}>Unpaid Only</Text>
-                            </View>
-                        )}
-                    </View>
-                    {/* <TouchableOpacity onPress={() => setFilterVisible(true)} style={styles.editFilterBtn}>
-                        <SlidersHorizontal size={14} color={colors.primary} />
-                        <Text allowFontScaling={false} style={[styles.editFilterText, { color: colors.primary }]}>Edit</Text>
-                    </TouchableOpacity> */}
-                </View>
 
                 {/* Stats Row */}
                 <View style={[styles.statsRow, { paddingHorizontal: 24 }]}>
@@ -258,9 +231,22 @@ export default function FeeScreen() {
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[colors.primary]} tintColor={colors.primary} />}
                 >
                     {loading ? (
-                        <View style={styles.centered}>
-                            <ActivityIndicator size="large" color={colors.primary} />
-                        </View>
+                        <>
+                            {[...Array(6)].map((_, i) => (
+                                <View key={i} style={[styles.skeletonCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                                    <View style={[styles.skeletonAccent, { backgroundColor: colors.border }]} />
+                                    <View style={styles.skeletonBody}>
+                                        <SkeletonBox width="55%" height={14} borderRadius={6} />
+                                        <SkeletonBox width="35%" height={11} borderRadius={4} />
+                                    </View>
+                                    <SkeletonBox width={52} height={24} borderRadius={6} style={{ marginRight: 8 }} />
+                                    <View style={styles.skeletonRight}>
+                                        <SkeletonBox width={16} height={16} borderRadius={8} />
+                                        <SkeletonBox width={34} height={34} borderRadius={8} />
+                                    </View>
+                                </View>
+                            ))}
+                        </>
                     ) : displayedStudents.length === 0 ? (
                         <View style={styles.centered}>
                             <DollarSign size={48} color={colors.textSecondary} />
@@ -500,28 +486,12 @@ const StudentFeeCard: React.FC<StudentFeeCardProps> = ({ student, colors, onPres
             activeOpacity={0.7}
         >
             {/* Left accent */}
-            <View style={[styles.cardAccent, { backgroundColor: isPaid ? colors.secondary : colors.border }]} />
+            <View style={[styles.cardAccent, { backgroundColor: isPaid ? colors.primary : colors.border }]} />
 
             <View style={styles.cardBody}>
-                <View style={styles.cardTop}>
-                    <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]} numberOfLines={1}>
-                        {student.full_name}
-                    </Text>
-                    <View style={[
-                        styles.statusBadge,
-                        isPaid
-                            ? { backgroundColor: colors.secondary + '20', borderColor: colors.secondary }
-                            : { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                    ]}>
-                        <Text allowFontScaling={false} style={[
-                            styles.statusText,
-                            { color: isPaid ? colors.secondary : colors.textSecondary },
-                        ]}>
-                            {isPaid ? 'Paid' : 'Unpaid'}
-                        </Text>
-                    </View>
-                </View>
-
+                <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]} numberOfLines={1}>
+                    {student.full_name}
+                </Text>
                 {isPaid && student.current_month_amount ? (
                     <Text allowFontScaling={false} style={[styles.amountText, { color: colors.textSecondary }]}>
                         Rs. {student.current_month_amount}
@@ -531,6 +501,20 @@ const StudentFeeCard: React.FC<StudentFeeCardProps> = ({ student, colors, onPres
                         Due: Rs. {student.amount_due ?? student.current_month_amount}
                     </Text>
                 ) : null}
+            </View>
+
+            <View style={[
+                styles.statusBadge,
+                isPaid
+                    ? { backgroundColor: colors.secondary + '20', borderColor: colors.secondary }
+                    : { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}>
+                <Text allowFontScaling={false} style={[
+                    styles.statusText,
+                    { color: isPaid ? colors.secondary : colors.textSecondary },
+                ]}>
+                    {isPaid ? 'Paid' : 'Unpaid'}
+                </Text>
             </View>
 
             <View style={styles.cardRight}>
@@ -672,6 +656,33 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         gap: 8,
     },
+    cardBadgeRow: {
+        alignItems: 'center',
+    },
+    skeletonCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 12,
+        borderWidth: 1,
+        marginBottom: 10,
+        overflow: 'hidden',
+        height: 64,
+    },
+    skeletonAccent: {
+        width: 4,
+        alignSelf: 'stretch',
+    },
+    skeletonBody: {
+        flex: 1,
+        padding: 14,
+        gap: 6,
+    },
+    skeletonRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginRight: 12,
+    },
     studentName: {
         fontSize: TextSizes.header,
         fontFamily: 'Inter-SemiBold',
@@ -682,6 +693,7 @@ const styles = StyleSheet.create({
         paddingVertical: 3,
         borderRadius: 6,
         borderWidth: 1,
+        marginRight: 8,
     },
     statusText: {
         fontSize: TextSizes.small,

@@ -161,9 +161,7 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
             throw new Error(`Failed to enroll student in subjects: ${enrollmentError.message}`);
         }
 
-        // Also pre-create a profile so the student record is visible in profiles table
-        // When student signs up later, the auth trigger will update this profile's id
-        // to match the real auth UUID (via ON CONFLICT (email) DO UPDATE SET id = EXCLUDED.id)
+        // Pre-create profile with same id as students.id so all three stay in sync
         const { error: profileError } = await supabase
             .from('profiles')
             .insert({
@@ -176,7 +174,6 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
 
         if (profileError) {
             console.warn('Profile pre-creation warning (non-fatal):', profileError.message);
-            // Not a fatal error — student & enrollments are created successfully
         }
 
         // Save fee into fee_structures (class-level) and student_fees (per-student link)

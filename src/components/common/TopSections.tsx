@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { Settings, Moon, Sun, Bell, X, CheckCheck, Trash2, DollarSign, SlidersHorizontal } from 'lucide-react-native';
+import { Settings, Moon, Sun, Bell, X, CheckCheck, Trash2, SlidersHorizontal } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useNotifications } from '@/src/contexts/NotificationContext';
@@ -111,14 +111,6 @@ export default function TopSection({ showNotifications = true, onFilterPress, is
                         </TouchableOpacity>
                     )}
 
-                    {profile?.role === 'superadmin' && !inFee && (
-                        <TouchableOpacity
-                            style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
-                            onPress={() => router.push('/fee')}
-                        >
-                            <DollarSign color={colors.primary} size={20} />
-                        </TouchableOpacity>
-                    )}
 
                     {inSettings && (
                         <TouchableOpacity

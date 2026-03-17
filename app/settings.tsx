@@ -267,6 +267,12 @@ export default function SettingsScreen() {
         ...(isSuperAdmin
           ? [
             {
+              title: 'Manage Fee',
+              subtitle: 'Manage student fee payments',
+              icon: DollarSign,
+              onPress: () => (router as any).push('/fee'),
+            },
+            {
               title: 'Manage Students',
               subtitle: 'Add and edit your students',
               icon: User,
@@ -286,12 +292,16 @@ export default function SettingsScreen() {
             },
           ]
           : []),
-        {
-          title: 'Help Center',
-          subtitle: 'Get help and find answers',
-          icon: HelpCircle,
-          onPress: handleSupport,
-        },
+        ...(!isSuperAdmin
+          ? [
+            {
+              title: 'Help Center',
+              subtitle: 'Get help and find answers',
+              icon: HelpCircle,
+              onPress: handleSupport,
+            },
+          ]
+          : []),
       ],
     },
     // {

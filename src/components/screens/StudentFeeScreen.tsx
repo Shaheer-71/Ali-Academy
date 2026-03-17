@@ -148,7 +148,9 @@ export default function StudentFeeScreen() {
             <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'bottom']}>
                 {/* Summary Card */}
                 {studentFeeInfo.amount_due != null && (
-                    <View style={[styles.summaryCard, { backgroundColor: colors.secondary + '20', borderColor: colors.secondary }]}>
+                    <View 
+                    style={[styles.summaryCard, { backgroundColor: colors.secondary + '20', borderColor: colors.secondary }]}
+                    >
                         <DollarSign size={18} color={colors.secondary} />
                         <View style={{ flex: 1 }}>
                             <Text allowFontScaling={false} style={[styles.summaryLabel, { color: colors.secondary }]}>
@@ -451,7 +453,8 @@ const FeeRecordCard: React.FC<FeeRecordCardProps> = ({ record, colors, amountDue
             onPress={onPress}
             activeOpacity={0.7}
         >
-            <View style={[styles.cardAccent, { backgroundColor: isPaid ? colors.secondary : colors.border }]} />
+            <View 
+            style={[styles.cardAccent, { backgroundColor: isPaid ? colors.primary : colors.border }]} />
             <View style={styles.cardBody}>
                 <View style={styles.cardRow}>
                     <Text allowFontScaling={false} style={[styles.cardMonth, { color: colors.text }]}>

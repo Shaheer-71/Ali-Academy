@@ -169,78 +169,35 @@ export const completeStudentRegistration = async (email: string, password: strin
       throw new Error('This student has already completed registration. Please sign in instead.');
     }
 
-    // Create auth user - this will also trigger profile creation
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: email,
-      password: password,
-      options: {
-        data: {
-          full_name: student.full_name,
-          role: 'student',
-          student_id: student.id,
-          roll_number: student.roll_number,
-          registration_completed: true
-        }
-      }
+    // Call Edge Function which uses Admin API to create auth user with
+    // the exact same UUID already set in students.id and profiles.id.
+    const fnUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/complete-student-registration`;
+    const fnResponse = await fetch(fnUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ email: email.toLowerCase().trim(), password }),
     });
 
-    if (authError) {
-      console.warn('Auth signup error:', authError);
-      
-      // Check if user already exists (shouldn't happen in this workflow but just in case)
-      if (authError.message.includes('already registered') || authError.message.includes('already been registered')) {
+    console.log('[REG] Edge Function HTTP status:', fnResponse.status);
+    const fnData = await fnResponse.json().catch(() => ({}));
+    console.log('[REG] Edge Function response:', JSON.stringify(fnData));
+
+    const fnError = !fnResponse.ok;
+    if (fnError || !fnData?.success) {
+      const msg = fnData?.error || `HTTP ${fnResponse.status}`;
+      if (msg.includes('already registered') || msg.includes('already been registered')) {
         throw new Error('An account with this email already exists. Please contact your teacher.');
       }
-      
-      throw new Error('Registration failed: ' + authError.message);
-    }
-
-    if (!authData.user) {
-      throw new Error('Failed to create user account');
-    }
-
-
-    // Mark student as registered
-    const { error: updateError } = await supabase
-      .from('students')
-      .update({
-        has_registered: true,
-        updated_by: authData.user.id
-      })
-      .eq('email', email.toLowerCase().trim());
-
-    if (updateError) {
-      console.warn('Error updating student record:', updateError);
-    }
-
-    // Sync profiles.id and students.id to match auth.users.id.
-    // Requires RLS policies "claim_profile_by_email" and "claim_student_by_email"
-    // to be added in Supabase Dashboard → SQL Editor.
-    const normalizedEmail = email.toLowerCase().trim();
-
-    const { error: profileSyncError } = await supabase
-      .from('profiles')
-      .update({ id: authData.user.id })
-      .eq('email', normalizedEmail);
-
-    if (profileSyncError) {
-      console.warn('Error syncing profile id:', profileSyncError.message);
-    }
-
-    const { error: studentSyncError } = await supabase
-      .from('students')
-      .update({ id: authData.user.id })
-      .eq('email', normalizedEmail)
-      .eq('is_deleted', false);
-
-    if (studentSyncError) {
-      console.warn('Error syncing student id:', studentSyncError.message);
+      throw new Error(msg);
     }
 
     return {
       success: true,
       message: 'Registration completed successfully! You can now sign in.',
-      user: authData.user
+      user: { id: fnData.userId }
     };
 
   } catch (error: any) {
