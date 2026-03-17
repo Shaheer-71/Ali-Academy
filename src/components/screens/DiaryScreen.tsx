@@ -1,5 +1,5 @@
 // screens/DiaryScreen.tsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,7 @@ import styles from '../dairy/styles';
 import { useFocusEffect } from '@react-navigation/native';
 import { useScreenAnimation } from '@/src/utils/animations';
 import { Animated } from 'react-native';
+import { pendingNavigation } from '@/src/lib/notifications';
 import {
   handleClassFetchErrorForDiary,
   handleSubjectFetchErrorForDiary,
@@ -73,6 +74,8 @@ export default function DiaryScreen() {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<DiaryAssignment | null>(null);
   const screenStyle = useScreenAnimation();
+  // Holds the target assignment id to open after the next fetch
+  const pendingAssignmentId = useRef<string | null>(null);
 
   // Filter bottom sheet state
   const [openCardId, setOpenCardId] = useState<string | null>(null);
@@ -137,12 +140,45 @@ export default function DiaryScreen() {
     else if (profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') fetchTeacherSubjects();
   }, [profile, student?.class_id]);
 
-  // Auto refresh on focus
-  useFocusEffect(useCallback(() => { handleRefresh(); }, [profile]));
+  // Refresh every time the screen is focused; also handle deep-link target
+  useFocusEffect(useCallback(() => {
+    console.log('[DIARY FOCUS] Screen focused');
+    console.log('[DIARY FOCUS] pendingNavigation.diaryAssignmentId =', pendingNavigation.diaryAssignmentId);
+    console.log('[DIARY FOCUS] pendingAssignmentId.current (before) =', pendingAssignmentId.current);
 
-  // Apply date filter on top of class/subject filtered assignments
+    if (pendingNavigation.diaryAssignmentId) {
+      pendingAssignmentId.current = pendingNavigation.diaryAssignmentId;
+      pendingNavigation.diaryAssignmentId = null;
+      console.log('[DIARY FOCUS] Consumed pendingNavigation → pendingAssignmentId.current =', pendingAssignmentId.current);
+    }
+
+    console.log('[DIARY FOCUS] Calling handleRefresh...');
+    handleRefresh();
+  }, [profile]));
+
+  // After every assignments update, open the pending diary if we have one
+  useEffect(() => {
+    console.log('[DIARY ASSIGNMENTS] assignments updated, count =', assignments.length, '| pendingAssignmentId =', pendingAssignmentId.current);
+
+    if (!pendingAssignmentId.current || assignments.length === 0) return;
+
+    const found = assignments.find(a => a.id === pendingAssignmentId.current);
+    console.log('[DIARY ASSIGNMENTS] Looking for assignment id =', pendingAssignmentId.current, '| found =', !!found);
+
+    if (found) {
+      pendingAssignmentId.current = null;
+      console.log('[DIARY ASSIGNMENTS] Opening detail modal for assignment:', found.title);
+      setSelectedAssignment(found);
+      setDetailModalVisible(true);
+    }
+  }, [assignments]);
+
+  // Apply date filter + deduplicate to guarantee unique keys
   const displayAssignments = useMemo(() => {
+    const seen = new Set<string>();
     return filteredAssignments.filter(a => {
+      if (seen.has(a.id)) return false;
+      seen.add(a.id);
       if (selectedDate === 'all') return true;
       const due = new Date(a.due_date);
       const now = new Date();
@@ -373,36 +409,9 @@ export default function DiaryScreen() {
   const isOverdue = (dueDate: string) => new Date(dueDate) < new Date();
 
   const handleCreateAssignment = async () => {
-    if (!newAssignment.title || !newAssignment.description || !newAssignment.due_date) {
-      alert('Please fill in all required fields');
-      return;
-    }
-    if (!newAssignment.class_id) { alert('Please select a class'); return; }
-    if (newAssignment.assignTo === 'students' && newAssignment.student_ids.length === 0) { alert('Please select at least one student'); return; }
-    try {
-      let fileUrl: string | undefined;
-      if (newAssignment.file) {
-        const uploadResult = await uploadToCloudinary(newAssignment.file, 'raw');
-        fileUrl = uploadResult.secure_url;
-      }
-      const assignmentData: any = {
-        title: newAssignment.title,
-        description: newAssignment.description,
-        due_date: newAssignment.due_date,
-        file_url: fileUrl,
-        class_id: newAssignment.class_id || null,
-        student_ids: newAssignment.assignTo === 'students' ? newAssignment.student_ids : [],
-        subject_id: newAssignment.subject_id || null,
-        assigned_by: profile?.id,
-      };
-      const { error } = await (supabase.from('diary_assignments') as any).insert([assignmentData]);
-      if (error) throw error;
-      alert('Assignment created successfully');
+    const success = await createAssignment(classes, subjects);
+    if (success) {
       setModalVisible(false);
-      resetForm();
-      fetchAssignments();
-    } catch (error: any) {
-      showError(error, handleAssignmentCreateError);
     }
   };
 

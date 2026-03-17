@@ -32,44 +32,70 @@ function RootLayoutNav() {
     setupNotificationHandlers();
 
     // Cold-start: app was killed and opened by tapping a notification
+    console.log('[DEEPLINK] Checking cold-start notification...');
     Notifications.getLastNotificationResponseAsync().then(response => {
-      if (!response) return;
+      if (!response) {
+        console.log('[DEEPLINK] Cold-start: no pending notification response');
+        return;
+      }
       const data = response.notification.request.content.data as Record<string, any>;
-      if (!data?.type) return;
+      console.log('[DEEPLINK] Cold-start: notification data =', JSON.stringify(data));
+
+      if (!data?.type) {
+        console.log('[DEEPLINK] Cold-start: no type in data, skipping');
+        return;
+      }
 
       const FEE_TYPES = ['fee_reminder', 'fee_paid', 'fee'];
       if (FEE_TYPES.includes(data.type)) {
+        console.log('[DEEPLINK] Cold-start: fee notification → pushing /fee-status');
         router.push('/fee-status' as any);
         return;
       }
 
       if (data.type === 'assignment_added' && data.assignmentId) {
+        console.log('[DEEPLINK] Cold-start: diary notification → storing pendingNavigation, assignmentId =', data.assignmentId);
         // Cold start: store intent only — auth routing hasn't finished yet.
         // The segments effect below will navigate to dairy once auth completes.
         pendingNavigation.diaryAssignmentId = data.assignmentId;
         pendingNavigation.coldStartDiary = true;
+      } else {
+        console.log('[DEEPLINK] Cold-start: unhandled type =', data.type);
       }
     });
 
     // Warm-start: app is open (foreground or background) and user taps a notification.
     // Using useRouter() here keeps navigation inside the React tree — reliable on Android.
+    console.log('[DEEPLINK] Registering warm-start tap listener...');
     const tapSub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as Record<string, any>;
-      if (!data?.type) return;
+      console.log('[DEEPLINK] Warm-start: notification tapped, data =', JSON.stringify(data));
+
+      if (!data?.type) {
+        console.log('[DEEPLINK] Warm-start: no type in data, skipping');
+        return;
+      }
 
       const FEE_TYPES = ['fee_reminder', 'fee_paid', 'fee'];
       if (FEE_TYPES.includes(data.type)) {
+        console.log('[DEEPLINK] Warm-start: fee notification → pushing /fee-status');
         router.push('/fee-status' as any);
         return;
       }
 
       if (data.type === 'assignment_added' && data.assignmentId) {
+        console.log('[DEEPLINK] Warm-start: diary notification → navigating to dairy, assignmentId =', data.assignmentId);
         pendingNavigation.diaryAssignmentId = data.assignmentId;
         router.navigate('/(student)/dairy' as any);
+      } else {
+        console.log('[DEEPLINK] Warm-start: unhandled type =', data.type);
       }
     });
 
-    return () => tapSub.remove();
+    return () => {
+      console.log('[DEEPLINK] Cleaning up tap listener');
+      tapSub.remove();
+    };
   }, []);
 
   // Register device when user is loaded
@@ -139,11 +165,22 @@ function RootLayoutNav() {
   // Cold-start deep link: once auth routing lands the student in (student) group,
   // navigate to the dairy tab so the diary screen can open the pending assignment.
   useEffect(() => {
+    console.log('[DEEPLINK] Cold-start segments effect fired:', {
+      loading,
+      hasUser: !!user,
+      hasProfile: !!profile,
+      role: profile?.role,
+      seg0: segments[0],
+      coldStartDiary: pendingNavigation.coldStartDiary,
+      diaryAssignmentId: pendingNavigation.diaryAssignmentId,
+    });
+
     if (loading || !user || !profile) return;
     if (profile.role !== 'student') return;
     if (segments[0] !== '(student)') return;
     if (!pendingNavigation.coldStartDiary) return;
 
+    console.log('[DEEPLINK] Cold-start: navigating to dairy tab');
     pendingNavigation.coldStartDiary = false; // consume so it doesn't re-fire
     router.navigate('/(student)/dairy' as any);
   // eslint-disable-next-line react-hooks/exhaustive-deps
