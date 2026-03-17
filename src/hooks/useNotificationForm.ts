@@ -1,7 +1,6 @@
 // hooks/useNotificationForm.ts
 import { useState, useCallback } from 'react';
 import { supabase } from '@/src/lib/supabase';
-import { sendPushNotification } from '@/src/lib/notifications';
 import { Alert } from 'react-native';
 
 interface NotificationFormData {
@@ -99,25 +98,53 @@ export const useNotificationForm = (profile: any) => {
             let sentCount = 0;
             let failedCount = 0;
 
-            for (const recipient of recipients) {
+            // Batch: fetch ALL device tokens for ALL recipients in ONE query
+            const recipientIds = recipients.map((r) => r.id);
+            const { data: devices } = await supabase
+                .from('devices')
+                .select('token')
+                .in('user_id', recipientIds);
+
+            if (devices && devices.length > 0) {
+                const notifData = {
+                    type: formData.type,
+                    notificationId: notification.id,
+                    priority: formData.priority,
+                    target_type: formData.target_type,
+                    timestamp: new Date().toISOString(),
+                };
+
+                const messages = devices.map((device) => ({
+                    to: device.token,
+                    title: formData.title,
+                    body: formData.message,
+                    data: notifData,
+                    sound: 'default',
+                    badge: 1,
+                    channelId: 'default',
+                }));
+
                 try {
-                    await sendPushNotification({
-                        userId: recipient.id,
-                        title: formData.title,
-                        body: formData.message,
-                        data: {
-                            type: formData.type,
-                            notificationId: notification.id,
-                            priority: formData.priority,
-                            target_type: formData.target_type,
-                            timestamp: new Date().toISOString(),
+                    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+                        method: 'POST',
+                        headers: {
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
                         },
+                        body: JSON.stringify(messages),
                     });
-                    sentCount++;
+                    const result = await response.json();
+                    const statuses = Array.isArray(result?.data) ? result.data : [result?.data];
+                    statuses.forEach((s: any) => {
+                        if (s?.status === 'error') failedCount++;
+                        else sentCount++;
+                    });
                 } catch (pushError) {
-                    console.warn(`Failed to send push to ${recipient.id}:`, pushError);
-                    failedCount++;
+                    console.warn('Batch push send failed:', pushError);
+                    failedCount = devices.length;
                 }
+            } else {
+                sentCount = recipients.length;
             }
 
             Alert.alert(
