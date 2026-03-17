@@ -61,11 +61,6 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
             return;
         }
 
-        if (!feeStructure) {
-            Alert.alert('Error', 'Fee structure not found');
-            return;
-        }
-
         setCreatingPayment(true);
         try {
             // Need to get these from the parent component props
@@ -206,7 +201,7 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
                                 )}
 
                                 {/* Show Pending message if no record yet */}
-                                {!currentMonthPayment && (
+                                {/* {!currentMonthPayment && (
                                     <View
                                         style={[
                                             styles.pendingMessage,
@@ -222,7 +217,7 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
                                             Fee payment pending
                                         </Text>
                                     </View>
-                                )}
+                                )} */}
                             </View>
                         )}
 
@@ -267,10 +262,8 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
                                                     {
                                                         backgroundColor:
                                                             record.payment_status === 'paid'
-                                                                ? '#D1FAE5'
-                                                                : record.payment_status === 'overdue'
-                                                                    ? '#FEE2E2'
-                                                                    : '#FEF3C7',
+                                                                ? colors.primary + '20'
+                                                                : colors.cardBackground,
                                                     },
                                                 ]}
                                             >
@@ -280,14 +273,12 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
                                                         {
                                                             color:
                                                                 record.payment_status === 'paid'
-                                                                    ? '#10B981'
-                                                                    : record.payment_status === 'overdue'
-                                                                        ? '#EF4444'
-                                                                        : '#D97706',
+                                                                    ? colors.primary
+                                                                    : colors.textSecondary,
                                                         },
                                                     ]}
                                                 >
-                                                    {record.payment_status.toUpperCase()}
+                                                    {record.payment_status === 'paid' ? 'Paid' : 'Unpaid'}
                                                 </Text>
                                             </View>
                                         </View>

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Clock, MapPin, User, BookOpen } from 'lucide-react-native';
 import { TimetableEntryWithDetails, UserProfile, ThemeColors } from '@/src/types/timetable';
+import { formatTimeForDisplay } from '@/src/utils/timetable';
 
 interface TimeSlotProps {
     entry: TimetableEntryWithDetails;
@@ -22,8 +23,8 @@ export default function TimeSlot({
     isFirst,
     isLast
 }: TimeSlotProps) {
-    const canPress = (profile?.role === 'teacher') && entry.teacher_id === profile.id;
-    const formatTime = (time: string) => time.substring(0, 5);
+    const canPress = profile?.role === 'superadmin';
+    const formatTime = (time: string) => formatTimeForDisplay(time.substring(0, 5), true);
 
     return (
         <TouchableOpacity

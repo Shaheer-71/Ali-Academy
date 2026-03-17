@@ -8,97 +8,92 @@ import {
     TouchableOpacity,
     Alert,
     RefreshControl,
+    Modal,
+    ActivityIndicator,
 } from 'react-native';
 import {
     Clock,
     Check,
-    AlertCircle,
     DollarSign,
     Bell,
+    ChevronDown,
+    X,
+    Users,
 } from 'lucide-react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import TopSections from '@/src/components/common/TopSections';
-import { SwipeableFeeCard } from '../fee/SwipeableFeeCard';
 import { FeeDetailsModal } from '../fee/FeeDetailsModal';
-
-import {
-    feeService,
-    StudentWithFeeStatus,
-    FeePayment,
-} from '@/src/services/feeService';
+import { feeService, StudentWithFeeStatus, FeePayment } from '@/src/services/feeService';
 import { classService } from '@/src/services/feeService';
 import { notificationService } from '@/src/services/feeService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/src/lib/supabase';
 import { sendPushNotification } from '@/src/lib/notifications';
 import { Animated } from 'react-native';
-import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
-
-
-
+import { useScreenAnimation } from '@/src/utils/animations';
+import { TextSizes } from '@/src/styles/TextSizes';
 
 const MONTHS = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
+    'January', 'February', 'March', 'April',
+    'May', 'June', 'July', 'August',
+    'September', 'October', 'November', 'December',
 ];
-
 const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
 
 export default function FeeScreen() {
     const { profile } = useAuth();
     const { colors } = useTheme();
+    const screenStyle = useScreenAnimation();
 
-    // State Management
+    // Filters
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
-    const [classes, setClasses] = useState<any[]>([]);
     const [selectedClass, setSelectedClass] = useState<string>('');
+    const [showUnpaidOnly, setShowUnpaidOnly] = useState(true);
+    const [filterVisible, setFilterVisible] = useState(false);
+
+    // Dropdown state inside modal
+    const [monthOpen, setMonthOpen] = useState(false);
+    const [yearOpen, setYearOpen] = useState(false);
+    const [classOpen, setClassOpen] = useState(false);
+
+    // Data
+    const [classes, setClasses] = useState<any[]>([]);
     const [students, setStudents] = useState<StudentWithFeeStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+
+    // Detail modal
     const [modalVisible, setModalVisible] = useState(false);
-    const [selectedStudentId, setSelectedStudentId] = useState<string>('');
-    const [selectedStudentName, setSelectedStudentName] = useState<string>('');
+    const [selectedStudentId, setSelectedStudentId] = useState('');
+    const [selectedStudentName, setSelectedStudentName] = useState('');
     const [feeRecords, setFeeRecords] = useState<FeePayment[]>([]);
     const [feeStructure, setFeeStructure] = useState<any>(null);
-    const screenStyle = useScreenAnimation();
-    const ButtonAnimation = useButtonAnimation();
 
-    // Load classes on component mount
+    const isFiltered = showUnpaidOnly ||
+        selectedMonth !== new Date().getMonth() + 1 ||
+        selectedYear !== CURRENT_YEAR;
+
     useEffect(() => {
-        if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+        if (profile?.role === 'teacher' || profile?.role === 'superadmin') {
             initializeClasses();
         }
     }, [profile]);
 
-    // Load students and fees when class, month, or year changes
     useEffect(() => {
         if (selectedClass) {
             loadStudentsAndFees();
-            loadFeeStructure();
         }
     }, [selectedMonth, selectedYear, selectedClass]);
 
     const initializeClasses = async () => {
         try {
-            const classesData = await classService.getTeacherClasses();
+            const classesData = await classService.getTeacherClasses() as any[];
             setClasses(classesData);
-            if (classesData.length > 0) {
-                setSelectedClass(classesData[0].id);
-            }
-        } catch (error) {
-            console.warn('Error loading classes:', error);
+            if (classesData.length > 0) setSelectedClass(classesData[0].id);
+        } catch {
             Alert.alert('Error', 'Failed to load classes');
         } finally {
             setLoading(false);
@@ -108,167 +103,91 @@ export default function FeeScreen() {
     const loadStudentsAndFees = async () => {
         try {
             setLoading(true);
-            const studentsData = await feeService.getStudentsWithFeeStatus(
-                selectedClass,
-                selectedMonth,
-                selectedYear
-            );
-            setStudents(studentsData);
-        } catch (error) {
-            console.warn('Error loading students and fees:', error);
+            const data = await feeService.getStudentsWithFeeStatus(selectedClass, selectedMonth, selectedYear);
+            setStudents(data);
+        } catch {
             Alert.alert('Error', 'Failed to load fee data');
         } finally {
             setLoading(false);
         }
     };
 
-    const loadFeeStructure = async () => {
-        try {
-            const structure = await feeService.getFeeStructure(selectedClass);
-            setFeeStructure(structure);
-        } catch (error) {
-            console.warn('Error loading fee structure:', error);
-        }
-    };
-
     const handleSelectStudent = async (student: StudentWithFeeStatus) => {
         try {
-            const payments = await feeService.getStudentFeePayments(student.id);
+            const [payments, studentFs] = await Promise.all([
+                feeService.getStudentFeePayments(student.id),
+                feeService.getFeeStructureForStudent(student.id, student.class_id),
+            ]);
             setSelectedStudentId(student.id);
             setSelectedStudentName(student.full_name);
             setFeeRecords(payments);
+            setFeeStructure(studentFs);
             setModalVisible(true);
-        } catch (error) {
-            console.warn('Error fetching student fee records:', error);
+        } catch {
             Alert.alert('Error', 'Failed to fetch fee records');
         }
     };
 
     const handleRefreshModal = async () => {
-        try {
-            // Refresh fee records
-            const payments = await feeService.getStudentFeePayments(selectedStudentId);
-            setFeeRecords(payments);
-
-            // Refresh students list
-            await loadStudentsAndFees();
-        } catch (error) {
-            console.warn('Error refreshing data:', error);
-        }
+        const payments = await feeService.getStudentFeePayments(selectedStudentId);
+        setFeeRecords(payments);
+        await loadStudentsAndFees();
     };
 
     const handleSendNotification = (studentId: string) => {
-        Alert.alert(
-            'Send Notification',
-            `Notify this student about the fee payment?`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Send',
-                    onPress: () => sendFeeNotification([studentId], 'single'),
-                },
-            ]
-        );
+        Alert.alert('Send Notification', 'Notify this student about their fee?', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Send', onPress: () => sendFeeNotification([studentId], 'single') },
+        ]);
     };
 
-    const sendFeeNotification = async (
-        studentIds: string[],
-        type: 'single' | 'all'
-    ) => {
+    const sendFeeNotification = async (studentIds: string[], type: 'single' | 'all') => {
         try {
             let recipientList: any[] = [];
-
             if (type === 'single') {
                 recipientList = students.filter(s => studentIds.includes(s.id));
             } else {
-                // get all students in the class
                 const { data: allStudents } = await supabase
-                    .from('students')
-                    .select('id, full_name, parent_contact')
-                    .eq('class_id', selectedClass);
-
-                // get paid students for month/year
+                    .from('students').select('id, full_name').eq('class_id', selectedClass);
                 const { data: paidStudents } = await supabase
-                    .from('fee_payments')
-                    .select('student_id')
-                    .eq('class_id', selectedClass)
-                    .eq('month', selectedMonth)
-                    .eq('year', selectedYear)
-                    .eq('payment_status', 'paid');
-
-                const paidIds = new Set(paidStudents?.map(p => p.student_id) || []);
-                recipientList = allStudents.filter(s => !paidIds.has(s.id));
+                    .from('fee_payments').select('student_id')
+                    .eq('class_id', selectedClass).eq('month', selectedMonth)
+                    .eq('year', selectedYear).eq('payment_status', 'paid');
+                const paidIds = new Set((paidStudents as any[] || []).map((p: any) => p.student_id));
+                recipientList = (allStudents as any[] || []).filter((s: any) => !paidIds.has(s.id));
             }
+            if (!recipientList.length) { Alert.alert('Info', 'No students to notify'); return; }
 
-            if (!recipientList.length) {
-                Alert.alert('Info', 'No students to notify');
-                return;
-            }
-
-            // ✅ target_type fixed
-            const notif = await notificationService.createNotification({
+            const notif: any = await notificationService.createNotification({
                 type: 'fee_reminder',
-                title: `Fee Reminder for ${MONTHS[selectedMonth - 1]}`,
-                message: `Please pay the fee for ${MONTHS[selectedMonth - 1]} ${selectedYear}.`,
+                title: `Fee Reminder — ${MONTHS[selectedMonth - 1]} ${selectedYear}`,
+                message: `Please submit your fee for ${MONTHS[selectedMonth - 1]} ${selectedYear}.`,
                 entity_type: 'fee_payment',
                 created_by: profile!.id,
-                target_type: type === 'single' ? 'individual' : 'students',
+                target_type: type === 'single' ? 'individual' : 'all',
                 target_id: type === 'single' ? studentIds[0] : selectedClass,
-                priority: 'medium',
+                priority: 'high',
             });
 
+            await notificationService.addNotificationRecipients(
+                recipientList.map((s: any) => ({ notification_id: notif.id, user_id: s.id, is_read: false, is_deleted: false }))
+            );
 
-
-            const recipients = recipientList.map(s => ({
-                notification_id: notif.id,
-                user_id: s.id,
-                is_read: false,
-                is_deleted: false,
-            }));
-
-            await notificationService.addNotificationRecipients(recipients);
-
-            // 📱 SEND PUSH NOTIFICATIONS TO ALL STUDENTS
-            // console.log(`📱 [FEE_REMINDER] Sending push notifications to ${recipientList.length} students...`);
-            let sentCount = 0;
-            let failedCount = 0;
-
-            for (let i = 0; i < recipientList.length; i++) {
-                const student = recipientList[i];
+            for (const s of recipientList as any[]) {
                 try {
-                    // console.log(`📤 [FEE_REMINDER] Sending to student ${i + 1}/${recipientList.length}: ${student.full_name}`);
-
                     await sendPushNotification({
-                        userId: student.id,
-                        title: `💰 Fee Reminder - ${MONTHS[selectedMonth - 1]}`,
-                        body: `Please pay the fee for ${MONTHS[selectedMonth - 1]} ${selectedYear} to avoid any penalties.`,
-                        data: {
-                            type: 'fee_reminder',
-                            notificationId: notif.id,
-                            month: selectedMonth,
-                            year: selectedYear,
-                            monthName: MONTHS[selectedMonth - 1],
-                            studentId: student.id,
-                            studentName: student.full_name,
-                            timestamp: new Date().toISOString(),
-                        },
+                        userId: s.id,
+                        title: `Fee Reminder — ${MONTHS[selectedMonth - 1]}`,
+                        body: `Please pay your fee for ${MONTHS[selectedMonth - 1]} ${selectedYear}.`,
+                        data: { type: 'fee_reminder', notificationId: notif.id },
                     });
-
-                    // console.log(`✅ [FEE_REMINDER] Push sent to student ${i + 1}: ${student.full_name}`);
-                    sentCount++;
-                } catch (pushError) {
-                    console.warn(`❌ [FEE_REMINDER] Failed to send push to student ${i + 1} (${student.full_name}):`, pushError);
-                    failedCount++;
-                    // Continue with next student instead of stopping
-                    continue;
-                }
+                } catch {}
             }
 
-            Alert.alert('Success', `Fee reminder sent to ${recipientList.length} student(s)`);
+            Alert.alert('Sent', `Fee reminder sent to ${recipientList.length} student(s)`);
             await loadStudentsAndFees();
-        } catch (error: any) {
-            console.warn('Error sending notifications:', error);
-            Alert.alert('Error', error.message || 'Failed to send notifications');
+        } catch (e: any) {
+            Alert.alert('Error', e.message || 'Failed to send notifications');
         }
     };
 
@@ -278,251 +197,267 @@ export default function FeeScreen() {
         setRefreshing(false);
     };
 
-    const getPaymentStats = () => {
-        const stats = {
-            pending: students.filter(
-                s => s.current_month_payment_status === 'pending'
-            ).length,
-            paid: students.filter(s => s.current_month_payment_status === 'paid')
-                .length,
-            partial: students.filter(
-                s => s.current_month_payment_status === 'partial'
-            ).length,
-            overdue: students.filter(
-                s => s.current_month_payment_status === 'overdue'
-            ).length,
-        };
-        return stats;
+    const applyFilters = () => setFilterVisible(false);
+
+    // Derive displayed list
+    const displayedStudents = showUnpaidOnly
+        ? students.filter(s => s.current_month_payment_status !== 'paid')
+        : students;
+
+    const stats = {
+        unpaid: students.filter(s => s.current_month_payment_status !== 'paid').length,
+        paid: students.filter(s => s.current_month_payment_status === 'paid').length,
     };
 
-    const stats = getPaymentStats();
+    const selectedClassName = classes.find(c => c.id === selectedClass)?.name || '';
 
     return (
-        <Animated.View style={[styles.container, { backgroundColor: colors.background } , screenStyle]}>
-            <TopSections />
-            <SafeAreaView
-                style={[styles.container, { backgroundColor: colors.background }]}
-                edges={['left', 'right', 'bottom']}
-            >
-                {/* Filter Section */}
-                <View style={styles.filterSection}>
-                    {/* Month Selection */}
-                    <View style={styles.filterGroup}>
-                        <Text allowFontScaling={false} style={[styles.filterLabel, { color: colors.textSecondary }]}>
-                            Month
-                        </Text>
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            style={styles.monthSelector}
-                        >
-                            {MONTHS.map((month, index) => (
-                                <TouchableOpacity
-                                    key={index}
-                                    style={[
-                                        styles.monthButton,
-                                        {
-                                            backgroundColor:
-                                                selectedMonth === index + 1
-                                                    ? colors.primary
-                                                    : colors.cardBackground,
-                                            borderColor: colors.border,
-                                        },
-                                    ]}
-                                    onPress={() => setSelectedMonth(index + 1)}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.monthButtonText,
-                                            {
-                                                color:
-                                                    selectedMonth === index + 1
-                                                        ? '#ffffff'
-                                                        : colors.text,
-                                            },
-                                        ]}
-                                    >
-                                        {month.slice(0, 3)}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
+        <Animated.View style={[{ flex: 1, backgroundColor: colors.background }, screenStyle]}>
+            <TopSections
+                onFilterPress={() => setFilterVisible(true)}
+                isFiltered={isFiltered}
+            />
+            <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'bottom']}>
 
-                    {/* Year Selection */}
-                    <View style={styles.filterGroup}>
-                        <Text allowFontScaling={false} style={[styles.filterLabel, { color: colors.textSecondary }]}>
-                            Year
-                        </Text>
-                        <View style={styles.yearSelector}>
-                            {[CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1].map(year => (
-                                <TouchableOpacity
-                                    key={year}
-                                    style={[
-                                        styles.yearButton,
-                                        {
-                                            backgroundColor:
-                                                selectedYear === year
-                                                    ? colors.primary
-                                                    : colors.cardBackground,
-                                            borderColor: colors.border,
-                                        },
-                                    ]}
-                                    onPress={() => setSelectedYear(year)}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.yearButtonText,
-                                            {
-                                                color: selectedYear === year ? '#ffffff' : colors.text,
-                                            },
-                                        ]}
-                                    >
-                                        {year}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </View>
-
-                    {/* Class Selection */}
-                    {(profile?.role === 'teacher' || profile?.role === 'admin') && classes.length > 0 && (
-                        <View style={styles.filterGroup}>
-                            <Text
-                                style={[
-                                    styles.filterLabel,
-                                    { color: colors.textSecondary },
-                                ]}
-                            >
-                                Select Class
+                {/* Active Filter Summary */}
+                <View style={[styles.filterSummary, { borderBottomColor: colors.border }]}>
+                    <View style={styles.filterChips}>
+                        <View style={[styles.chip, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                            <Text allowFontScaling={false} style={[styles.chipText, { color: colors.text }]}>
+                                {MONTHS[selectedMonth - 1]} {selectedYear}
                             </Text>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={styles.classSelector}
-                            >
-                                {classes.map(cls => (
-                                    <TouchableOpacity
-                                        key={cls.id}
-                                        style={[
-                                            styles.classButton,
-                                            {
-                                                backgroundColor:
-                                                    selectedClass === cls.id
-                                                        ? colors.primary
-                                                        : colors.cardBackground,
-                                                borderColor: colors.border,
-                                            },
-                                        ]}
-                                        onPress={() => setSelectedClass(cls.id)}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.classButtonText,
-                                                {
-                                                    color:
-                                                        selectedClass === cls.id
-                                                            ? '#ffffff'
-                                                            : colors.text,
-                                                },
-                                            ]}
-                                        >
-                                            {cls.name}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
                         </View>
-                    )}
+                        {selectedClassName ? (
+                            <View style={[styles.chip, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                                <Text allowFontScaling={false} style={[styles.chipText, { color: colors.text }]}>{selectedClassName}</Text>
+                            </View>
+                        ) : null}
+                        {showUnpaidOnly && (
+                            <View style={[styles.chip, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
+                                <Text allowFontScaling={false} style={[styles.chipText, { color: colors.primary }]}>Unpaid Only</Text>
+                            </View>
+                        )}
+                    </View>
+                    {/* <TouchableOpacity onPress={() => setFilterVisible(true)} style={styles.editFilterBtn}>
+                        <SlidersHorizontal size={14} color={colors.primary} />
+                        <Text allowFontScaling={false} style={[styles.editFilterText, { color: colors.primary }]}>Edit</Text>
+                    </TouchableOpacity> */}
                 </View>
 
-                {/* Statistics */}
-                <View style={styles.statsContainer}>
-                    <StatCard
-                        icon={<Clock size={20} color="#6B7280" />}
-                        label="Pending"
-                        value={stats.pending}
-                        colors={colors}
-                    />
-                    <StatCard
-                        icon={<Check size={20} color="#10B981" />}
-                        label="Paid"
-                        value={stats.paid}
-                        colors={colors}
-                    />
-                    <StatCard
-                        icon={<AlertCircle size={20} color="#EF4444" />}
-                        label="Overdue"
-                        value={stats.overdue}
-                        colors={colors}
-                    />
+                {/* Stats Row */}
+                <View style={[styles.statsRow, { paddingHorizontal: 24 }]}>
+                    <StatPillThemed icon="clock" label="Unpaid" value={stats.unpaid} colors={colors} />
+                    <StatPillThemed icon="check" label="Paid" value={stats.paid} colors={colors} isPrimary />
                 </View>
 
-                {/* Students List */}
+                {/* Student List */}
                 <ScrollView
-                    style={styles.scrollView}
+                    style={styles.list}
+                    contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
                     showsVerticalScrollIndicator={false}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={handleRefresh}
-                            colors={[colors.primary]}
-                        />
-                    }
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[colors.primary]} tintColor={colors.primary} />}
                 >
                     {loading ? (
-                        <View style={styles.loadingContainer}>
-                            <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>
-                                Loading fee records...
-                            </Text>
+                        <View style={styles.centered}>
+                            <ActivityIndicator size="large" color={colors.primary} />
                         </View>
-                    ) : students.length === 0 ? (
-                        <View style={styles.emptyContainer}>
+                    ) : displayedStudents.length === 0 ? (
+                        <View style={styles.centered}>
                             <DollarSign size={48} color={colors.textSecondary} />
-                            <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>
-                                No students found
+                            <Text allowFontScaling={false} style={[styles.emptyTitle, { color: colors.text }]}>
+                                {showUnpaidOnly ? 'All fees paid!' : 'No students found'}
                             </Text>
-                            <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                                Select a class to view fee records
+                            <Text allowFontScaling={false} style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                                {showUnpaidOnly
+                                    ? `Every student has paid for ${MONTHS[selectedMonth - 1]}`
+                                    : 'Select a class to view fee records'}
                             </Text>
                         </View>
                     ) : (
-                        students.map(student => (
-                            <SwipeableFeeCard
+                        displayedStudents.map(student => (
+                            <StudentFeeCard
                                 key={student.id}
                                 student={student}
                                 colors={colors}
-                                isTeacher={(profile?.role === 'teacher' || profile?.role === 'admin')}
-                                onSelect={handleSelectStudent}
+                                onPress={() => handleSelectStudent(student)}
+                                onNotify={() => handleSendNotification(student.id)}
                             />
                         ))
                     )}
                 </ScrollView>
 
-                {/* Notify All Button */}
-                {(profile?.role === 'teacher' || profile?.role === 'admin') && students.length > 0 && (
-                    <View style={styles.bottomButtonContainer}>
+                {/* Notify All FAB */}
+                {displayedStudents.length > 0 && (
+                    <View style={styles.fabContainer}>
                         <TouchableOpacity
-                            style={[styles.notifyAllButton, { backgroundColor: colors.primary }]}
-                            onPress={() => {
-                                Alert.alert(
-                                    'Notify All',
-                                    `Send fee reminders for ${MONTHS[selectedMonth - 1]} to unpaid students?`,
-                                    [
-                                        { text: 'Cancel', style: 'cancel' },
-                                        {
-                                            text: 'Send',
-                                            onPress: () => sendFeeNotification([], 'all'),
-                                        },
-                                    ]
-                                );
-                            }}
+                            style={[styles.fab, { backgroundColor: colors.primary }]}
+                            onPress={() => Alert.alert(
+                                'Notify All Unpaid',
+                                `Send fee reminders for ${MONTHS[selectedMonth - 1]} to all unpaid students?`,
+                                [
+                                    { text: 'Cancel', style: 'cancel' },
+                                    { text: 'Send', onPress: () => sendFeeNotification([], 'all') },
+                                ]
+                            )}
                         >
-                            <Bell size={20} color="#ffffff" />
-                            <Text allowFontScaling={false} style={styles.notifyAllButtonText}>Notify Unpaid Students</Text>
+                            <Bell size={18} color="#fff" />
+                            <Text allowFontScaling={false} style={styles.fabText}>Notify Unpaid</Text>
                         </TouchableOpacity>
                     </View>
                 )}
+
+                {/* Filter Modal */}
+                <Modal
+                    visible={filterVisible}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setFilterVisible(false)}
+                    statusBarTranslucent
+                >
+                    <TouchableOpacity
+                        style={styles.overlay}
+                        activeOpacity={1}
+                        onPress={() => setFilterVisible(false)}
+                    >
+                        <TouchableOpacity
+                            activeOpacity={1}
+                            style={[styles.filterSheet, { backgroundColor: colors.background }]}
+                            onPress={e => e.stopPropagation()}
+                        >
+                            {/* Sheet Header */}
+                            <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
+                                <Text allowFontScaling={false} style={[styles.sheetTitle, { color: colors.text }]}>Filters</Text>
+                                <TouchableOpacity onPress={() => setFilterVisible(false)}>
+                                    <X size={22} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <ScrollView showsVerticalScrollIndicator={false} style={{ padding: 24 }}>
+
+                                {/* Month Dropdown */}
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.textSecondary }]}>Month</Text>
+                                <TouchableOpacity
+                                    style={[styles.dropdown, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                                    onPress={() => { setMonthOpen(p => !p); setYearOpen(false); setClassOpen(false); }}
+                                >
+                                    <Text allowFontScaling={false} style={[styles.dropdownText, { color: colors.text }]}>
+                                        {MONTHS[selectedMonth - 1]}
+                                    </Text>
+                                    <ChevronDown size={16} color={colors.textSecondary} style={{ transform: [{ rotate: monthOpen ? '180deg' : '0deg' }] }} />
+                                </TouchableOpacity>
+                                {monthOpen && (
+                                    <ScrollView
+                                        style={[styles.dropdownList, { backgroundColor: colors.cardBackground, borderColor: colors.border, maxHeight: 132 }]}
+                                        nestedScrollEnabled
+                                        showsVerticalScrollIndicator={false}
+                                    >
+                                        {MONTHS.map((m, i) => (
+                                            <TouchableOpacity
+                                                key={m}
+                                                style={[styles.dropdownItem, i + 1 === selectedMonth && { backgroundColor: colors.primary + '20' }]}
+                                                onPress={() => { setSelectedMonth(i + 1); setMonthOpen(false); }}
+                                            >
+                                                <Text allowFontScaling={false} style={[styles.dropdownItemText, { color: i + 1 === selectedMonth ? colors.primary : colors.text }]}>
+                                                    {m}
+                                                </Text>
+                                                {i + 1 === selectedMonth && <Check size={14} color={colors.primary} />}
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                )}
+
+                                {/* Year Dropdown */}
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.textSecondary, marginTop: 16 }]}>Year</Text>
+                                <TouchableOpacity
+                                    style={[styles.dropdown, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                                    onPress={() => { setYearOpen(p => !p); setMonthOpen(false); setClassOpen(false); }}
+                                >
+                                    <Text allowFontScaling={false} style={[styles.dropdownText, { color: colors.text }]}>{selectedYear}</Text>
+                                    <ChevronDown size={16} color={colors.textSecondary} style={{ transform: [{ rotate: yearOpen ? '180deg' : '0deg' }] }} />
+                                </TouchableOpacity>
+                                {yearOpen && (
+                                    <View style={[styles.dropdownList, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                                        {YEARS.map(y => (
+                                            <TouchableOpacity
+                                                key={y}
+                                                style={[styles.dropdownItem, y === selectedYear && { backgroundColor: colors.primary + '20' }]}
+                                                onPress={() => { setSelectedYear(y); setYearOpen(false); }}
+                                            >
+                                                <Text allowFontScaling={false} style={[styles.dropdownItemText, { color: y === selectedYear ? colors.primary : colors.text }]}>
+                                                    {y}
+                                                </Text>
+                                                {y === selectedYear && <Check size={14} color={colors.primary} />}
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                )}
+
+                                {/* Class Dropdown */}
+                                {classes.length > 0 && (
+                                    <>
+                                        <Text allowFontScaling={false} style={[styles.label, { color: colors.textSecondary, marginTop: 16 }]}>Class</Text>
+                                        <TouchableOpacity
+                                            style={[styles.dropdown, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                                            onPress={() => { setClassOpen(p => !p); setMonthOpen(false); setYearOpen(false); }}
+                                        >
+                                            <Text allowFontScaling={false} style={[styles.dropdownText, { color: colors.text }]}>
+                                                {classes.find(c => c.id === selectedClass)?.name || 'Select Class'}
+                                            </Text>
+                                            <ChevronDown size={16} color={colors.textSecondary} style={{ transform: [{ rotate: classOpen ? '180deg' : '0deg' }] }} />
+                                        </TouchableOpacity>
+                                        {classOpen && (
+                                            <ScrollView
+                                                style={[styles.dropdownList, { backgroundColor: colors.cardBackground, borderColor: colors.border, maxHeight: 132 }]}
+                                                nestedScrollEnabled
+                                                showsVerticalScrollIndicator={false}
+                                            >
+                                                {classes.map(cls => (
+                                                    <TouchableOpacity
+                                                        key={cls.id}
+                                                        style={[styles.dropdownItem, cls.id === selectedClass && { backgroundColor: colors.primary + '20' }]}
+                                                        onPress={() => { setSelectedClass(cls.id); setClassOpen(false); }}
+                                                    >
+                                                        <Text allowFontScaling={false} style={[styles.dropdownItemText, { color: cls.id === selectedClass ? colors.primary : colors.text }]}>
+                                                            {cls.name}
+                                                        </Text>
+                                                        {cls.id === selectedClass && <Check size={14} color={colors.primary} />}
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </ScrollView>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* Show Unpaid Only Toggle */}
+                                <Text allowFontScaling={false} style={[styles.label, { color: colors.textSecondary, marginTop: 16 }]}>Show</Text>
+                                <View style={styles.toggleRow}>
+                                    <TouchableOpacity
+                                        style={[styles.toggleOption, { backgroundColor: showUnpaidOnly ? colors.primary : colors.cardBackground, borderColor: showUnpaidOnly ? colors.primary : colors.border }]}
+                                        onPress={() => setShowUnpaidOnly(true)}
+                                    >
+                                        <Clock size={14} color={showUnpaidOnly ? '#fff' : colors.textSecondary} />
+                                        <Text allowFontScaling={false} style={[styles.toggleText, { color: showUnpaidOnly ? '#fff' : colors.text }]}>Unpaid Only</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.toggleOption, { backgroundColor: !showUnpaidOnly ? colors.primary : colors.cardBackground, borderColor: !showUnpaidOnly ? colors.primary : colors.border }]}
+                                        onPress={() => setShowUnpaidOnly(false)}
+                                    >
+                                        <Users size={14} color={!showUnpaidOnly ? '#fff' : colors.textSecondary} />
+                                        <Text allowFontScaling={false} style={[styles.toggleText, { color: !showUnpaidOnly ? '#fff' : colors.text }]}>All Students</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                {/* Apply Button */}
+                                <TouchableOpacity
+                                    style={[styles.applyBtn, { backgroundColor: colors.primary }]}
+                                    onPress={applyFilters}
+                                >
+                                    <Text allowFontScaling={false} style={styles.applyBtnText}>Apply Filters</Text>
+                                </TouchableOpacity>
+                            </ScrollView>
+                        </TouchableOpacity>
+                    </TouchableOpacity>
+                </Modal>
 
                 {/* Fee Details Modal */}
                 <FeeDetailsModal
@@ -532,18 +467,13 @@ export default function FeeScreen() {
                     feeRecords={feeRecords}
                     classId={selectedClass}
                     colors={colors}
-                    isTeacher={(profile?.role === 'teacher' || profile?.role === 'admin')}
+                    isTeacher={profile?.role === 'teacher' || profile?.role === 'superadmin'}
                     months={MONTHS}
                     currentMonth={selectedMonth}
                     currentYear={selectedYear}
                     feeStructure={feeStructure}
                     teacherId={profile?.id}
-                    onClose={() => {
-                        setModalVisible(false);
-                        setSelectedStudentId('');
-                        setSelectedStudentName('');
-                        setFeeRecords([]);
-                    }}
+                    onClose={() => { setModalVisible(false); setSelectedStudentId(''); setSelectedStudentName(''); setFeeRecords([]); }}
                     onRefresh={handleRefreshModal}
                     onSendNotification={handleSendNotification}
                 />
@@ -552,167 +482,347 @@ export default function FeeScreen() {
     );
 }
 
-// StatCard Component
-interface StatCardProps {
-    icon: React.ReactNode;
-    label: string;
-    value: number;
+// ── Student Fee Card ────────────────────────────────────────────────────────
+interface StudentFeeCardProps {
+    student: StudentWithFeeStatus;
     colors: any;
+    onPress: () => void;
+    onNotify: () => void;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ icon, label, value, colors }) => (
-    <View
-        style={[
-            styles.statCard,
-            { backgroundColor: colors.cardBackground, borderColor: colors.border },
-        ]}
-    >
-        <View style={styles.statContent}>
-            {icon}
-            <Text allowFontScaling={false} style={[styles.statLabel, { color: colors.textSecondary }]}>
-                {label}
-            </Text>
-        </View>
-        <Text allowFontScaling={false} style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+const StudentFeeCard: React.FC<StudentFeeCardProps> = ({ student, colors, onPress, onNotify }) => {
+    const isPaid = student.current_month_payment_status === 'paid';
+
+    return (
+        <TouchableOpacity
+            style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+            onPress={onPress}
+            activeOpacity={0.7}
+        >
+            {/* Left accent */}
+            <View style={[styles.cardAccent, { backgroundColor: isPaid ? colors.secondary : colors.border }]} />
+
+            <View style={styles.cardBody}>
+                <View style={styles.cardTop}>
+                    <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]} numberOfLines={1}>
+                        {student.full_name}
+                    </Text>
+                    <View style={[
+                        styles.statusBadge,
+                        isPaid
+                            ? { backgroundColor: colors.secondary + '20', borderColor: colors.secondary }
+                            : { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                    ]}>
+                        <Text allowFontScaling={false} style={[
+                            styles.statusText,
+                            { color: isPaid ? colors.secondary : colors.textSecondary },
+                        ]}>
+                            {isPaid ? 'Paid' : 'Unpaid'}
+                        </Text>
+                    </View>
+                </View>
+
+                {isPaid && student.current_month_amount ? (
+                    <Text allowFontScaling={false} style={[styles.amountText, { color: colors.textSecondary }]}>
+                        Rs. {student.current_month_amount}
+                    </Text>
+                ) : !isPaid && (student.amount_due ?? student.current_month_amount) ? (
+                    <Text allowFontScaling={false} style={[styles.amountText, { color: colors.textSecondary }]}>
+                        Due: Rs. {student.amount_due ?? student.current_month_amount}
+                    </Text>
+                ) : null}
+            </View>
+
+            <View style={styles.cardRight}>
+                {isPaid
+                    ? <Check size={16} color={colors.secondary} />
+                    : <Clock size={16} color={colors.border} />
+                }
+                <TouchableOpacity
+                    style={[styles.notifyBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
+                    onPress={e => { e.stopPropagation(); onNotify(); }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                    <Bell size={14} color={colors.primary} />
+                </TouchableOpacity>
+            </View>
+        </TouchableOpacity>
+    );
+};
+
+// ── Stat Pill ───────────────────────────────────────────────────────────────
+const StatPillThemed = ({ icon, label, value, colors, isPrimary }: any) => (
+    <View style={[
+        styles.statPill,
+        {
+            backgroundColor: isPrimary ? colors.secondary + '20' : colors.cardBackground,
+            borderWidth: 1,
+            borderColor: isPrimary ? colors.secondary : colors.border,
+        },
+    ]}>
+        {icon === 'check'
+            ? <Check size={14} color={isPrimary ? colors.secondary : colors.textSecondary} />
+            : <Clock size={14} color={isPrimary ? colors.secondary : colors.textSecondary} />
+        }
+        <Text allowFontScaling={false} style={[styles.statPillValue, { color: isPrimary ? colors.secondary : colors.text }]}>{value}</Text>
+        <Text allowFontScaling={false} style={[styles.statPillLabel, { color: isPrimary ? colors.secondary : colors.textSecondary }]}>{label}</Text>
     </View>
 );
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    filterSection: {
-        paddingHorizontal: 24,
-        marginBottom: 20,
-        gap: 16,
-    },
-    filterGroup: {
-        gap: 8,
-    },
-    filterLabel: {
-        fontSize: 12,
-        fontFamily: 'Inter-Medium',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    monthSelector: {
-        marginHorizontal: -24,
-        paddingHorizontal: 24,
-    },
-    monthButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        borderWidth: 1,
-        marginRight: 8,
-    },
-    monthButtonText: {
-        fontSize: 12,
-        fontFamily: 'Inter-SemiBold',
-    },
-    yearSelector: {
+    filterSummary: {
         flexDirection: 'row',
-        gap: 8,
-    },
-    yearButton: {
-        flex: 1,
-        paddingVertical: 10,
-        borderRadius: 8,
-        borderWidth: 1,
         alignItems: 'center',
-    },
-    yearButtonText: {
-        fontSize: 14,
-        fontFamily: 'Inter-Medium',
-    },
-    classSelector: {
-        marginHorizontal: -24,
+        justifyContent: 'space-between',
         paddingHorizontal: 24,
-    },
-    classButton: {
-        paddingHorizontal: 16,
         paddingVertical: 10,
-        borderRadius: 8,
-        borderWidth: 1,
-        marginRight: 8,
+        borderBottomWidth: 1,
     },
-    classButtonText: {
-        fontSize: 14,
+    filterChips: {
+        flexDirection: 'row',
+        gap: 6,
+        flexWrap: 'wrap',
+        flex: 1,
+    },
+    chip: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 20,
+        borderWidth: 1,
+    },
+    chipText: {
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Medium',
     },
-    statsContainer: {
-        paddingHorizontal: 24,
-        marginBottom: 20,
+    editFilterBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingLeft: 12,
+    },
+    editFilterText: {
+        fontSize: TextSizes.small,
+        fontFamily: 'Inter-Medium',
+    },
+    statsRow: {
         flexDirection: 'row',
         gap: 10,
+        paddingVertical: 14,
     },
-    statCard: {
+    statPill: {
         flex: 1,
-        borderRadius: 12,
-        borderWidth: 1,
-        padding: 12,
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        gap: 5,
+        paddingVertical: 8,
+        borderRadius: 10,
     },
-    statContent: {
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    statLabel: {
-        fontSize: 11,
-        fontFamily: 'Inter-Medium',
-        marginTop: 4,
-    },
-    statValue: {
-        fontSize: 20,
+    statPillValue: {
+        fontSize: TextSizes.header,
         fontFamily: 'Inter-SemiBold',
     },
-    scrollView: {
-        flex: 1,
-        paddingHorizontal: 24,
-        marginBottom: 10,
-    },
-    loadingContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 40,
-    },
-    loadingText: {
-        fontSize: 16,
+    statPillLabel: {
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
     },
-    emptyContainer: {
+    list: {
+        flex: 1,
+    },
+    centered: {
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 60,
+        gap: 12,
     },
-    emptyText: {
-        fontSize: 18,
+    emptyTitle: {
+        fontSize: TextSizes.sectionTitle,
         fontFamily: 'Inter-SemiBold',
-        marginTop: 16,
-        marginBottom: 8,
     },
-    emptySubtext: {
-        fontSize: 14,
+    emptySubtitle: {
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Regular',
         textAlign: 'center',
     },
-    bottomButtonContainer: {
-        paddingHorizontal: 24,
-        paddingBottom: 20,
-        paddingTop: 10,
+    card: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 12,
+        borderWidth: 1,
+        marginBottom: 10,
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
     },
-    notifyAllButton: {
+    cardAccent: {
+        width: 4,
+        alignSelf: 'stretch',
+    },
+    cardBody: {
+        flex: 1,
+        padding: 14,
+        gap: 4,
+    },
+    cardTop: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+    },
+    studentName: {
+        fontSize: TextSizes.header,
+        fontFamily: 'Inter-SemiBold',
+        flex: 1,
+    },
+    statusBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+        borderWidth: 1,
+    },
+    statusText: {
+        fontSize: TextSizes.small,
+        fontFamily: 'Inter-SemiBold',
+    },
+    amountText: {
+        fontSize: TextSizes.small,
+        fontFamily: 'Inter-Regular',
+    },
+    cardRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginRight: 12,
+    },
+    notifyBtn: {
+        width: 34,
+        height: 34,
+        borderRadius: 8,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    fabContainer: {
+        position: 'absolute',
+        bottom: 24,
+        left: 24,
+        right: 24,
+    },
+    fab: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 14,
-        borderRadius: 12,
+        borderRadius: 14,
         gap: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    notifyAllButtonText: {
-        color: '#ffffff',
-        fontSize: 16,
+    fabText: {
+        color: '#fff',
+        fontSize: TextSizes.buttonText,
+        fontFamily: 'Inter-SemiBold',
+    },
+    // Filter Sheet
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    filterSheet: {
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        maxHeight: '80%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    sheetHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 24,
+        paddingTop: 24,
+        paddingBottom: 16,
+        borderBottomWidth: 1,
+    },
+    sheetTitle: {
+        fontSize: TextSizes.sectionTitle,
+        fontFamily: 'Inter-SemiBold',
+    },
+    label: {
+        fontSize: TextSizes.small,
+        fontFamily: 'Inter-Medium',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 8,
+    },
+    dropdown: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+    },
+    dropdownText: {
+        fontSize: TextSizes.normal,
+        fontFamily: 'Inter-Medium',
+    },
+    dropdownList: {
+        borderWidth: 1,
+        borderRadius: 10,
+        marginTop: 4,
+        overflow: 'hidden',
+    },
+    dropdownItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 14,
+        paddingVertical: 11,
+    },
+    dropdownItemText: {
+        fontSize: TextSizes.normal,
+        fontFamily: 'Inter-Regular',
+    },
+    toggleRow: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    toggleOption: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+    },
+    toggleText: {
+        fontSize: TextSizes.normal,
+        fontFamily: 'Inter-Medium',
+    },
+    applyBtn: {
+        marginTop: 24,
+        marginBottom: 32,
+        paddingVertical: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    applyBtnText: {
+        color: '#fff',
+        fontSize: TextSizes.buttonText,
         fontFamily: 'Inter-SemiBold',
     },
 });

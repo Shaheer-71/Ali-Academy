@@ -28,7 +28,7 @@ export const useDiaryFilters = (assignments: DiaryAssignment[], profile: any) =>
 
             if (!matchesSearch) return false;
 
-            if (profile?.role === 'teacher') {
+            if (profile?.role === 'teacher' || profile?.role === 'superadmin') {
                 if (selectedClass && assignment.class_id !== selectedClass) return false;
                 if (selectedSubject && assignment.subject_id !== selectedSubject) return false;
                 return true;

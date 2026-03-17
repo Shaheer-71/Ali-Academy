@@ -58,7 +58,7 @@ export default function DayRow({
                         <Text allowFontScaling={false} style={[styles.emptyDayText, { color: colors.textSecondary }]}>No classes scheduled</Text>
                     </View>
                 ) : (
-                    dayEntries.slice(0, 3).map((entry, index) => (
+                    dayEntries.map((entry, index) => (
                         <TimeSlot
                             key={entry.id}
                             entry={entry}
@@ -69,6 +69,7 @@ export default function DayRow({
                             handleDeleteEntry={handleDeleteEntry}
                             isFirst={index === 0}
                             isLast={index === dayEntries.length - 1}
+
                         />
                     ))
                 )}

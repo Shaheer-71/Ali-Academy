@@ -1,5 +1,5 @@
 // src/components/lectures/UploadLectureModal.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -10,7 +10,7 @@ import {
     Alert,
     StyleSheet,
     ActivityIndicator,
-    KeyboardAvoidingView,
+    Keyboard,
     Platform,
 } from 'react-native';
 import { X, Upload, Youtube } from 'lucide-react-native';
@@ -30,6 +30,7 @@ import {
 } from '@/src/utils/errorHandler/lectureErrorHandler';
 import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
 import { TextSizes } from '@/src/styles/TextSizes';
+import { modalShell, modalForm } from '@/src/styles/creationModalStyles';
 
 interface UploadLectureModalProps {
     visible: boolean;
@@ -64,8 +65,22 @@ export default function UploadLectureModal({
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const submittingRef = useRef(false);
 
     const [errorModal, setErrorModal] = useState({ visible: false, title: '', message: '' });
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+    useEffect(() => {
+        const show = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            e => setKeyboardHeight(e.endCoordinates.height)
+        );
+        const hide = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            () => setKeyboardHeight(0)
+        );
+        return () => { show.remove(); hide.remove(); };
+    }, []);
 
     const showError = (error: any, handler?: (error: any) => any) => {
         const info = handler ? handler(error) : handleError(error);
@@ -116,47 +131,44 @@ export default function UploadLectureModal({
 
     /* ── Submit ───────────────────────────────────────────────────────────── */
     const handleSubmit = async () => {
+        // Guard against double-tap before React re-renders
+        if (submittingRef.current) return;
+
+        // Validate before locking the button
         if (!formData.title.trim()) { Alert.alert('Error', 'Please enter a title'); return; }
         if (formData.youtube_link && !validateYouTubeLink(formData.youtube_link)) {
             Alert.alert('Error', 'Please enter a valid YouTube link'); return;
         }
-
-        if (isEditMode) {
-            // ── Edit mode ──────────────────────────────────────────────────
-            setIsSubmitting(true);
-            try {
-                await lectureService.updateLecture(editLecture!.id, {
-                    title: formData.title.trim(),
-                    description: formData.description.trim(),
-                    youtube_link: formData.youtube_link.trim(),
-                });
-                Alert.alert('Success', 'Lecture updated successfully', [
-                    { text: 'OK', onPress: () => { onSuccess(); onClose(); } },
-                ]);
-            } catch (error) {
-                showError(error, handleLectureUpdateError);
-            } finally {
-                setIsSubmitting(false);
-            }
-        } else {
-            // ── Create mode ────────────────────────────────────────────────
+        if (!isEditMode) {
             if (!formData.class_id) { Alert.alert('Error', 'Please select a class'); return; }
             if (!formData.subject_id) { Alert.alert('Error', 'Please select a subject'); return; }
             if (!formData.file) { Alert.alert('Error', 'Please select a file'); return; }
             if (formData.access_type === 'individual' && formData.selected_students.length === 0) {
                 Alert.alert('Error', 'Please select at least one student'); return;
             }
-            setIsSubmitting(true);
-            try {
+        }
+
+        submittingRef.current = true;
+        setIsSubmitting(true);
+
+        try {
+            if (isEditMode) {
+                await lectureService.updateLecture(editLecture!.id, {
+                    title: formData.title.trim(),
+                    description: formData.description.trim(),
+                    youtube_link: formData.youtube_link.trim(),
+                });
+            } else {
                 await lectureService.uploadLecture(formData, profile!.id);
-                Alert.alert('Success', 'Lecture uploaded successfully', [
-                    { text: 'OK', onPress: () => { onSuccess(); onClose(); } },
-                ]);
-            } catch (error) {
-                showError(error, handleLectureUploadError);
-            } finally {
-                setIsSubmitting(false);
             }
+            // Close and refresh immediately — no OK-press required
+            onSuccess();
+            onClose();
+        } catch (error) {
+            showError(error, isEditMode ? handleLectureUpdateError : handleLectureUploadError);
+        } finally {
+            submittingRef.current = false;
+            setIsSubmitting(false);
         }
     };
 
@@ -253,24 +265,22 @@ export default function UploadLectureModal({
             statusBarTranslucent
             presentationStyle="overFullScreen"
         >
-            <KeyboardAvoidingView
-                style={styles.keyboardView}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            >
-                <View style={styles.backdrop} />
-                <View style={[styles.modal, { backgroundColor: colors.background }]}>
+            <View style={modalShell.overlay}>
+                <View style={s.backdrop} />
+                <View style={[modalShell.sheet, { backgroundColor: colors.background }]}>
 
                     {/* Header */}
-                    <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                        <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>
+                    <View style={[modalShell.header, { borderBottomColor: colors.border }]}>
+                        <Text allowFontScaling={false} style={[modalShell.title, { color: colors.text }]}>
                             {isEditMode ? 'Edit Lecture' : 'Upload Lecture'}
                         </Text>
-                        <TouchableOpacity onPress={onClose} disabled={isSubmitting}>
+                        <TouchableOpacity style={modalShell.closeBtn} onPress={onClose} disabled={isSubmitting}>
                             <X size={24} color={colors.text} />
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                    <ScrollView style={modalShell.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+                        contentContainerStyle={[modalShell.scrollContent, { paddingBottom: keyboardHeight + 24 }]}>
                         <ErrorModal
                             visible={errorModal.visible}
                             title={errorModal.title}
@@ -279,10 +289,10 @@ export default function UploadLectureModal({
                         />
 
                         {/* Title */}
-                        <View style={styles.field}>
-                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Title *</Text>
+                        <View style={modalForm.group}>
+                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Title *</Text>
                             <TextInput
-                                style={[styles.input, { backgroundColor: colors.cardBackground, color: colors.text }]}
+                                style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                 placeholder="Enter lecture title"
                                 value={formData.title}
                                 onChangeText={text => setFormData(prev => ({ ...prev, title: text }))}
@@ -291,10 +301,10 @@ export default function UploadLectureModal({
                         </View>
 
                         {/* Description */}
-                        <View style={styles.field}>
-                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Description</Text>
+                        <View style={modalForm.group}>
+                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Description</Text>
                             <TextInput
-                                style={[styles.input, styles.textArea, { backgroundColor: colors.cardBackground, color: colors.text }]}
+                                style={[modalForm.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                 placeholder="Enter description (optional)"
                                 value={formData.description}
                                 onChangeText={text => setFormData(prev => ({ ...prev, description: text }))}
@@ -305,12 +315,12 @@ export default function UploadLectureModal({
                         </View>
 
                         {/* YouTube Link */}
-                        <View style={styles.field}>
-                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
-                                <Youtube size={16} color={colors.text} /> YouTube Link (Optional)
+                        <View style={modalForm.group}>
+                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>
+                                YouTube Link (Optional)
                             </Text>
                             <TextInput
-                                style={[styles.input, { backgroundColor: colors.cardBackground, color: colors.text }]}
+                                style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                 placeholder="https://youtube.com/watch?v=..."
                                 value={formData.youtube_link}
                                 onChangeText={text => setFormData(prev => ({ ...prev, youtube_link: text }))}
@@ -319,16 +329,16 @@ export default function UploadLectureModal({
                         </View>
 
                         {/* Class Selection */}
-                        <View style={styles.field}>
-                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
+                        <View style={modalForm.group}>
+                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>
                                 {isEditMode ? 'Class' : 'Select Class *'}
                             </Text>
-                            <View style={styles.options}>
+                            <View style={modalForm.chipRow}>
                                 {classes.map(cls => (
                                     <TouchableOpacity
                                         key={cls.id}
                                         style={[
-                                            styles.option,
+                                            modalForm.chip,
                                             { backgroundColor: colors.cardBackground, borderColor: colors.border },
                                             formData.class_id === cls.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                                         ]}
@@ -337,10 +347,7 @@ export default function UploadLectureModal({
                                         }}
                                         disabled={isEditMode}
                                     >
-                                        <Text allowFontScaling={false} style={[
-                                            styles.optionText,
-                                            { color: formData.class_id === cls.id ? '#fff' : colors.text },
-                                        ]}>
+                                        <Text allowFontScaling={false} style={[modalForm.chipText, { color: formData.class_id === cls.id ? '#fff' : colors.text }]}>
                                             {cls.name}
                                         </Text>
                                     </TouchableOpacity>
@@ -350,16 +357,16 @@ export default function UploadLectureModal({
 
                         {/* Subject Selection */}
                         {subjects.length > 0 && (
-                            <View style={styles.field}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
+                            <View style={modalForm.group}>
+                                <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>
                                     {isEditMode ? 'Subject' : 'Select Subject *'}
                                 </Text>
-                                <View style={styles.options}>
+                                <View style={modalForm.chipRow}>
                                     {subjects.map(subject => (
                                         <TouchableOpacity
                                             key={subject.id}
                                             style={[
-                                                styles.option,
+                                                modalForm.chip,
                                                 { backgroundColor: colors.cardBackground, borderColor: colors.border },
                                                 formData.subject_id === subject.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                                             ]}
@@ -368,10 +375,7 @@ export default function UploadLectureModal({
                                             }}
                                             disabled={isEditMode}
                                         >
-                                            <Text allowFontScaling={false} style={[
-                                                styles.optionText,
-                                                { color: formData.subject_id === subject.id ? '#fff' : colors.text },
-                                            ]}>
+                                            <Text allowFontScaling={false} style={[modalForm.chipText, { color: formData.subject_id === subject.id ? '#fff' : colors.text }]}>
                                                 {subject.name}
                                             </Text>
                                         </TouchableOpacity>
@@ -382,25 +386,21 @@ export default function UploadLectureModal({
 
                         {/* Students (create mode only) */}
                         {!isEditMode && formData.access_type === 'individual' && students.length > 0 && (
-                            <View style={styles.field}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
+                            <View style={modalForm.group}>
+                                <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>
                                     Select Students ({formData.selected_students.length}/{students.length})
                                 </Text>
-                                <ScrollView style={styles.studentList} nestedScrollEnabled>
+                                <ScrollView style={s.studentList} nestedScrollEnabled>
                                     {students.map(student => (
                                         <TouchableOpacity
                                             key={student.id}
                                             style={[
-                                                styles.student,
-                                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                                formData.selected_students.includes(student.user_id) && {
-                                                    backgroundColor: colors.primary + '20',
-                                                    borderColor: colors.primary,
-                                                },
+                                                modalForm.dropdownOption,
+                                                { borderBottomColor: colors.border, backgroundColor: formData.selected_students.includes(student.user_id) ? colors.primary + '18' : 'transparent' },
                                             ]}
                                             onPress={() => toggleStudent(student.user_id)}
                                         >
-                                            <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]}>
+                                            <Text allowFontScaling={false} style={[modalForm.dropdownOptionText, { color: colors.text }]}>
                                                 {student.profiles?.full_name || `Roll: ${student.roll_number}`}
                                             </Text>
                                         </TouchableOpacity>
@@ -411,19 +411,19 @@ export default function UploadLectureModal({
 
                         {/* File Picker — create mode only */}
                         {!isEditMode && (
-                            <View style={styles.field}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Select File *</Text>
+                            <View style={modalForm.group}>
+                                <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Select File *</Text>
                                 <TouchableOpacity
-                                    style={[styles.filePicker, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                                    style={[modalForm.filePicker, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
                                     onPress={pickFile}
                                 >
                                     <Upload size={20} color={colors.primary} />
-                                    <Text allowFontScaling={false} style={[styles.fileText, { color: formData.file ? colors.text : colors.textSecondary }]}>
+                                    <Text allowFontScaling={false} style={[modalForm.filePickerText, { color: formData.file ? colors.text : colors.textSecondary }]}>
                                         {formData.file ? formData.file.name : 'Tap to select file (PDF, Image, Video)'}
                                     </Text>
                                 </TouchableOpacity>
                                 {formData.file && (
-                                    <Text allowFontScaling={false} style={[styles.fileSize, { color: colors.textSecondary }]}>
+                                    <Text allowFontScaling={false} style={[modalForm.fileSize, { color: colors.textSecondary }]}>
                                         Size: {((formData.file.size || 0) / (1024 * 1024)).toFixed(1)} MB
                                     </Text>
                                 )}
@@ -432,8 +432,8 @@ export default function UploadLectureModal({
 
                         {/* Edit mode note */}
                         {isEditMode && (
-                            <View style={[styles.infoBox, { backgroundColor: colors.cardBackground }]}>
-                                <Text allowFontScaling={false} style={[styles.infoText, { color: colors.textSecondary }]}>
+                            <View style={[modalForm.infoBox, { backgroundColor: colors.cardBackground }]}>
+                                <Text allowFontScaling={false} style={[modalForm.infoText, { color: colors.textSecondary }]}>
                                     Class, subject, and file cannot be changed after uploading.
                                 </Text>
                             </View>
@@ -441,7 +441,7 @@ export default function UploadLectureModal({
 
                         {/* Submit Button */}
                         <TouchableOpacity
-                            style={[styles.submitButton, { backgroundColor: isSubmitting ? colors.textSecondary : colors.primary }]}
+                            style={[modalForm.submitBtn, { backgroundColor: isSubmitting ? colors.textSecondary : colors.primary, flexDirection: 'row', gap: 6 }]}
                             onPress={handleSubmit}
                             disabled={isSubmitting}
                         >
@@ -450,7 +450,7 @@ export default function UploadLectureModal({
                             ) : (
                                 <>
                                     <Upload size={20} color="white" />
-                                    <Text allowFontScaling={false} style={styles.submitButtonText}>
+                                    <Text allowFontScaling={false} style={modalForm.submitText}>
                                         {isEditMode ? 'Update Lecture' : 'Upload Lecture'}
                                     </Text>
                                 </>
@@ -458,126 +458,17 @@ export default function UploadLectureModal({
                         </TouchableOpacity>
                     </ScrollView>
                 </View>
-            </KeyboardAvoidingView>
+            </View>
         </Modal>
     );
 }
 
-const styles = StyleSheet.create({
-    keyboardView: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end',
-    },
-    backdrop: {
-        flex: 1,
-    },
-    modal: {
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        maxHeight: '75%',
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 20,
-        borderBottomWidth: 1,
-    },
-    title: {
-        fontSize: TextSizes.modalTitle,
-        fontFamily: 'Inter-SemiBold',
-    },
-    content: {
-        padding: 20,
-    },
-    field: {
-        marginBottom: 16,
-    },
-    label: {
-        fontSize: TextSizes.modalText,
-        fontFamily: 'Inter-SemiBold',
-        marginBottom: 6,
-    },
-    input: {
-        borderRadius: 8,
-        padding: 12,
-        fontSize: TextSizes.medium,
-        fontFamily: 'Inter-Regular',
-    },
-    textArea: {
-        minHeight: 70,
-        textAlignVertical: 'top',
-    },
-    options: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    option: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 6,
-        borderWidth: 1,
-    },
-    optionText: {
-        fontSize: TextSizes.normal,
-        fontFamily: 'Inter-SemiBold',
-    },
+const s = StyleSheet.create({
+    backdrop: { flex: 1 },
     studentList: {
-        maxHeight: 150,
-    },
-    student: {
-        padding: 8,
-        marginBottom: 4,
-        borderRadius: 6,
+        maxHeight: 200,
         borderWidth: 1,
-    },
-    studentName: {
-        fontSize: TextSizes.normal,
-        fontFamily: 'Inter-Regular',
-    },
-    filePicker: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 12,
-        borderRadius: 8,
-        borderWidth: 1,
-        gap: 8,
-    },
-    fileText: {
-        flex: 1,
-        fontSize: TextSizes.normal,
-        fontFamily: 'Inter-Regular',
-    },
-    fileSize: {
-        fontSize: TextSizes.small,
-        fontFamily: 'Inter-Regular',
-        marginTop: 4,
-    },
-    infoBox: {
-        padding: 12,
-        borderRadius: 8,
-        marginBottom: 16,
-    },
-    infoText: {
-        fontSize: TextSizes.small,
-        fontFamily: 'Inter-Regular',
-        lineHeight: 18,
-    },
-    submitButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 12,
-        borderRadius: 8,
-        gap: 6,
-        marginTop: 6,
-        marginBottom: 24,
-    },
-    submitButtonText: {
-        color: 'white',
-        fontSize: TextSizes.buttonText,
-        fontFamily: 'Inter-SemiBold',
+        borderRadius: 12,
+        overflow: 'hidden',
     },
 });

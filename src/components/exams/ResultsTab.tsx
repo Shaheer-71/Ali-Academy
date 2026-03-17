@@ -15,7 +15,7 @@ interface ResultsTabProps {
     checkedFilter: 'all' | 'checked' | 'unchecked';
     setCheckedFilter: (filter: 'all' | 'checked' | 'unchecked') => void;
     getSubjectsWithAll: (selectedClass?: string) => any[];
-    getFilteredResults: () => any[]; // Updated to use function that returns filtered results
+    getFilteredResults: () => any[];
     setSelectedResult: (result: any) => void;
     setMarkingModalVisible: (visible: boolean) => void;
     quizzes: any[];
@@ -23,6 +23,9 @@ interface ResultsTabProps {
     subjects: any[];
     classes?: any[];
     onRefresh?: () => void;
+    readOnly?: boolean;
+    emptyMessage?: string;
+    emptySubMessage?: string;
 }
 
 const ResultsTab: React.FC<ResultsTabProps> = ({
@@ -42,6 +45,9 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     subjects,
     classes = [],
     onRefresh,
+    readOnly = false,
+    emptyMessage = 'No quiz results found',
+    emptySubMessage = 'No results match your current filters.',
 }) => {
     const [refreshKey, setRefreshKey] = useState(0);
     const [refreshing, setRefreshing] = useState(false);
@@ -116,17 +122,13 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     };
 
     const handleResultPress = (result: any) => {
-        if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+        if (readOnly) return;
+        if ((profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')) {
             const fullQuiz = quizzes.find(quiz => quiz.id === result.quiz_id);
-
             const enrichedResult = {
                 ...result,
-                quizzes: {
-                    ...result.quizzes,
-                    ...fullQuiz
-                }
+                quizzes: { ...result.quizzes, ...fullQuiz }
             };
-
             setSelectedResult(enrichedResult);
             setMarkingModalVisible(true);
         }
@@ -156,10 +158,10 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                     { backgroundColor: colors.cardBackground, borderColor: colors.border },
                     !isChecked && !isAbsent && { borderColor: '#F59E0B', backgroundColor: '#FEF3C7' },
                     isAbsent && { borderColor: '#EF4444', backgroundColor: '#FEE2E2' },
-                    (profile?.role === 'teacher' || profile?.role === 'admin') && { opacity: 1 },
+                    (profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') && { opacity: 1 },
                 ]}
                 onPress={() => handleResultPress(result)}
-                disabled={profile?.role !== 'teacher'}
+                disabled={readOnly || profile?.role !== 'teacher'}
             >
                 <View style={styles.resultHeader}>
                     <View style={styles.resultInfo}>
@@ -176,7 +178,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                                 {classes.find(c => c.id === fullQuiz?.class_id)?.name || 'Unknown Class'}
                             </Text>
                         )}
-                        {(profile?.role === 'teacher' || profile?.role === 'admin') && (
+                        {(profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') && (
                             <Text allowFontScaling={false} style={[styles.studentName, { color: colors.textSecondary }]}>
                                 {result.students?.full_name} ({result.students?.roll_number})
                             </Text>
@@ -234,13 +236,13 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                 ) : (
                     <View style={styles.pendingResult}>
                         <Text allowFontScaling={false} style={[styles.pendingText, { color: '#F59E0B' }]}>
-                            {(profile?.role === 'teacher' || profile?.role === 'admin') ? 'Tap to mark this quiz' : 'Pending evaluation'}
+                            {!readOnly && (profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') ? 'Tap to mark this quiz' : 'Pending evaluation'}
                         </Text>
                     </View>
                 )}
 
                 {/* Teacher edit hint for checked results */}
-                {(profile?.role === 'teacher' || profile?.role === 'admin') && isChecked && !isAbsent && (
+                {(profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') && isChecked && !isAbsent && (
                     <View style={[styles.editHintContainer, { backgroundColor: colors.background }]}>
                         <Text allowFontScaling={false} style={[styles.editHintText, { color: colors.textSecondary }]}>
                             💡 Tap to edit marks
@@ -317,24 +319,8 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                 {filteredResults.length === 0 ? (
                     <View style={styles.emptyResults}>
                         <BookOpen size={48} color={colors.textSecondary} />
-                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>No quiz results found</Text>
-                        <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                            No results match your current filters. Use the Filter button to adjust your search criteria.
-                        </Text>
-
-                        {/* Helpful suggestions */}
-                        <View style={[styles.suggestionsContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                            <Text allowFontScaling={false} style={[styles.suggestionsTitle, { color: colors.text }]}>Try:</Text>
-                            <Text allowFontScaling={false} style={[styles.suggestionText, { color: colors.textSecondary }]}>
-                                • Using the Filter button to adjust class/subject selection
-                            </Text>
-                            <Text allowFontScaling={false} style={[styles.suggestionText, { color: colors.textSecondary }]}>
-                                • Selecting "All Classes" or "All Subjects"
-                            </Text>
-                            <Text allowFontScaling={false} style={[styles.suggestionText, { color: colors.textSecondary }]}>
-                                • Changing the evaluation status filter
-                            </Text>
-                        </View>
+                        <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>{emptyMessage}</Text>
+                        <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>{emptySubMessage}</Text>
                     </View>
                 ) : (
                     filteredResults.map(renderResultCard)
@@ -373,6 +359,11 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     resultSubject: {
+        fontSize: TextSizes.small,
+        fontFamily: 'Inter-Regular',
+        marginBottom: 2,
+    },
+    resultClass: {
         fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
         marginBottom: 2,

@@ -7,7 +7,7 @@ import { Lecture, Class, Subject, ClassSubject } from '@/src/types/lectures';
 
 // Main hook for lectures
 export function useLectures(selectedClassId?: string) {
-    const { profile } = useAuth();
+    const { profile, student } = useAuth();
     const [lectures, setLectures] = useState<Lecture[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -40,7 +40,7 @@ export function useLectures(selectedClassId?: string) {
                     .from('lecture_views')
                     .select('lecture_id, view_type')
                     .in('lecture_id', lectureIds)
-                    .eq('user_id', profile.id);
+                    .eq('user_id', profile?.role === 'student' ? (student?.id ?? '') : profile.id);
 
                 const viewMap = new Map();
                 const downloadMap = new Map();
@@ -97,10 +97,11 @@ export function useClasses() {
             try {
                 let query = supabase.from('classes').select('*').order('name');
 
-                // If teacher, get only their classes
-                if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+                // Superadmin: all classes. Regular teacher: only their assigned classes
+                if (profile?.role === 'teacher' || profile?.role === 'admin') {
                     query = query.eq('teacher_id', profile.id);
                 }
+                // superadmin: no filter — gets all classes
 
                 const { data, error } = await query;
                 if (error) throw error;

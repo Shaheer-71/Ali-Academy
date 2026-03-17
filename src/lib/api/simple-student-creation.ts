@@ -7,7 +7,7 @@ interface StudentData {
     phone_number: string;
     parent_contact: string;
     class_id: string;
-    subject_ids: string[]; // ✅ NEW: Array of subject IDs
+    subject_ids: string[];
     gender: 'male' | 'female' | 'other';
     address: string;
     admission_date: string;
@@ -16,6 +16,7 @@ interface StudentData {
     parent_name?: string;
     medical_conditions?: string;
     notes?: string;
+    monthly_fee?: number;
 }
 
 interface StudentsWithoutPasswords {
@@ -176,6 +177,39 @@ export const createStudentSimple = async (studentData: StudentData, createdBy: s
         if (profileError) {
             console.warn('Profile pre-creation warning (non-fatal):', profileError.message);
             // Not a fatal error — student & enrollments are created successfully
+        }
+
+        // Save fee into fee_structures (class-level) and student_fees (per-student link)
+        if (studentData.monthly_fee != null && studentData.monthly_fee >= 0) {
+            const currentYear = new Date().getFullYear();
+
+            // 1. Upsert into fee_structures with student_id (per-student fee)
+            const { error: fsError } = await supabase
+                .from('fee_structures')
+                .upsert({
+                    student_id: data.id,
+                    class_id: studentData.class_id,
+                    amount: studentData.monthly_fee,
+                    academic_year: currentYear,
+                }, { onConflict: 'student_id,class_id,academic_year' });
+
+            if (fsError) {
+                console.warn('fee_structures upsert warning (non-fatal):', fsError.message);
+            }
+
+            // 2. Upsert into student_fees for the FK link used by fee_payments
+            const { error: sfError } = await supabase
+                .from('student_fees')
+                .upsert({
+                    student_id: data.id,
+                    class_id: studentData.class_id,
+                    amount_due: studentData.monthly_fee,
+                    academic_year: currentYear,
+                }, { onConflict: 'student_id,class_id,academic_year' });
+
+            if (sfError) {
+                console.warn('student_fees upsert warning (non-fatal):', sfError.message);
+            }
         }
 
         console.log(`✅ Student created, profile pre-created, enrolled in ${enrollments.length} subjects`);

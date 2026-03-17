@@ -1,78 +1,76 @@
 // supabase/functions/send-notification/index.ts
-// Send notifications via Expo Push Notification Service
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 serve(async (req) => {
-    console.log("🔔 [EDGE] Notification request received");
-    console.log("🔔 [EDGE] Method:", req.method);
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
 
-    if (req.method !== "POST") {
-        console.log("❌ [EDGE] Invalid method:", req.method);
-        return new Response("Method not allowed", { status: 405 });
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+  }
+
+  try {
+    const { token, title, body, data } = await req.json();
+
+    if (!token || !title || !body) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: token, title, body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    try {
-        const requestBody = await req.json();
-        console.log("📨 [EDGE] Request body:", requestBody);
+    console.log("[EDGE] Sending to token:", token.substring(0, 40));
 
-        const { token, title, body, data } = requestBody;
+    const payload = {
+      to: token,
+      title,
+      body,
+      data: data || {},
+      sound: "default",
+      badge: 1,
+      channelId: "default",
+    };
 
-        // Validate required fields
-        if (!token || !title || !body) {
-            console.log("❌ [EDGE] Missing required fields");
-            console.log("❌ [EDGE] Received:", { token: !!token, title: !!title, body: !!body });
-            return new Response(
-                JSON.stringify({ error: "Missing required fields: token, title, body" }),
-                { status: 400 }
-            );
-        }
+    const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-        console.log("📤 [EDGE] Sending to Expo Push Service...");
-        console.log("📤 [EDGE] Token:", token.substring(0, 50) + "...");
-        console.log("📤 [EDGE] Title:", title);
-        console.log("📤 [EDGE] Body:", body);
+    const expoResult = await expoResponse.json();
+    console.log("[EDGE] Expo HTTP status:", expoResponse.status);
+    console.log("[EDGE] Expo response:", JSON.stringify(expoResult));
 
-        // Send to Expo Push Notification Service
-        const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
-            method: "POST",
-            headers: {
-                "Accept": "application/json",
-                "Accept-Encoding": "gzip, deflate",
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                to: token,
-                title: title,
-                body: body,
-                data: data || {},
-                sound: "default",
-                badge: 1,
-            }),
-        });
-
-        const expoResult = await expoResponse.json();
-        console.log("✅ [EDGE] Expo Response:", expoResult);
-
-        if (expoResponse.ok) {
-            console.log("✅ [EDGE] Notification sent successfully");
-            return new Response(
-                JSON.stringify({ success: true, result: expoResult }),
-                { status: 200 }
-            );
-        } else {
-            console.log("❌ [EDGE] Expo Error:", expoResult);
-            return new Response(
-                JSON.stringify({ error: "Expo send failed", details: expoResult }),
-                { status: expoResponse.status }
-            );
-        }
-    } catch (error) {
-        console.log("❌ [EDGE] CATCH Error:", error);
-        console.log("❌ [EDGE] Error message:", error.message);
-        return new Response(
-            JSON.stringify({ error: error.message }),
-            { status: 500 }
-        );
+    // Expo always returns 200 — check inner status
+    const inner = expoResult?.data;
+    if (inner?.status === "error") {
+      console.log("[EDGE] Expo inner error:", inner.message, inner.details);
+      // Still return 200 so the client doesn't treat it as a hard failure
+      return new Response(
+        JSON.stringify({ success: false, expoError: inner }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    return new Response(
+      JSON.stringify({ success: true, result: expoResult }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.log("[EDGE] Error:", error.message);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 });

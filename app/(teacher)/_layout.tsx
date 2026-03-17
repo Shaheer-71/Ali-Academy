@@ -5,7 +5,6 @@ import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import {
     House as Home,
-    Users,
     ClipboardCheck,
     BookOpen,
     BarChart3,
@@ -19,14 +18,16 @@ export default function TeacherLayout() {
     const { colors } = useTheme();
     const router = useRouter();
 
+    const isAllowed = profile?.role === 'teacher' || profile?.role === 'superadmin';
+
     useEffect(() => {
         if (loading) return;
-        if (!user || !profile || profile.role !== 'teacher') {
+        if (!user || !profile || !isAllowed) {
             router.replace('/(auth)/sign-in');
         }
     }, [loading, user?.id, profile?.role]);
 
-    if (loading || !user || !profile || profile.role !== 'teacher') {
+    if (loading || !user || !profile || !isAllowed) {
         return null;
     }
 
@@ -132,13 +133,7 @@ export default function TeacherLayout() {
 
                 <Tabs.Screen
                     name="students"
-                    options={{
-                        title: 'Students',
-                        // tabBarShowLabel: false,
-                        tabBarIcon: ({ size, color }) => (
-                            <Users size={size} color={color} />
-                        ),
-                    }}
+                    options={{ href: null }}
                 />
             </Tabs>
         </>

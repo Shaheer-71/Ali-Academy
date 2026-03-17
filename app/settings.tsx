@@ -28,6 +28,7 @@ import {
   Send,
   User,
   UserCheck,
+  DollarSign,
 } from 'lucide-react-native';
 import TopSections from '@/src/components/common/TopSections';
 import { useRouter } from 'expo-router';
@@ -239,6 +240,10 @@ export default function SettingsScreen() {
     );
   };
 
+  const isSuperAdmin = profile?.role === 'superadmin';
+
+  const isStudent = profile?.role === 'student';
+
   const settingsOptions = [
     {
       title: 'Account',
@@ -249,7 +254,17 @@ export default function SettingsScreen() {
           icon: Lock,
           onPress: () => setPasswordModalVisible(true),
         },
-        ...(profile?.role === 'teacher' || profile?.role === 'admin'
+        ...(isStudent
+          ? [
+            {
+              title: 'Fee Status',
+              subtitle: 'View your fee payment history',
+              icon: DollarSign,
+              onPress: () => (router as any).push('/fee-status'),
+            },
+          ]
+          : []),
+        ...(isSuperAdmin
           ? [
             {
               title: 'Manage Students',
@@ -269,14 +284,14 @@ export default function SettingsScreen() {
               icon: Send,
               onPress: handleNavigateToNotifications,
             },
-            {
-              title: 'Help Center',
-              subtitle: 'Get help and find answers',
-              icon: HelpCircle,
-              onPress: handleSupport,
-            },
           ]
           : []),
+        {
+          title: 'Help Center',
+          subtitle: 'Get help and find answers',
+          icon: HelpCircle,
+          onPress: handleSupport,
+        },
       ],
     },
     // {

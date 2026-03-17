@@ -88,7 +88,7 @@ export const useQuizzes = () => {
         fetchSubjects();
         fetchClassesSubjects();
         fetchQuizzes();
-        if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+        if ((profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')) {
             fetchQuizResults();
         } else if (profile?.role === 'student') {
             fetchStudentResults();
@@ -127,7 +127,7 @@ export const useQuizzes = () => {
                     table: 'quiz_results'
                 },
                 (payload) => {
-                    if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+                    if ((profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')) {
                         fetchQuizResults();
                     } else if (profile?.role === 'student') {
                         fetchStudentResults();
@@ -159,23 +159,36 @@ export const useQuizzes = () => {
 
     const fetchSubjects = async () => {
         try {
-            const { data: classesIDData, error: classesIDError } = await supabase
-                .from('student_subject_enrollments')
-                .select('subject_id, class_id')
-                .eq('teacher_id', profile?.id);
-
-            if (classesIDError) {
-                console.warn('Enrollments fetch error:', classesIDError);
-                throw new Error('Failed to fetch enrollments: ' + classesIDError.message);
+            if (profile?.role === 'superadmin') {
+                const { data, error } = await supabase
+                    .from('subjects').select('*').eq('is_active', true).order('name');
+                if (error) throw error;
+                setSubjects(data || []);
+                return;
             }
 
-            let subject_id = classesIDData?.map(item => item.subject_id) || [];
+            const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin';
+            const table = isTeacher ? 'teacher_subject_enrollments' : 'student_subject_enrollments';
+            const filterCol = isTeacher ? 'teacher_id' : 'student_id';
+            const filterVal = isTeacher ? profile?.id : student?.id;
+
+            if (!filterVal) { setSubjects([]); return; }
+
+            const { data: enrollments, error: enrollmentError } = await supabase
+                .from(table)
+                .select('subject_id')
+                .eq(filterCol, filterVal);
+
+            if (enrollmentError) throw enrollmentError;
+
+            const subject_ids = [...new Set(enrollments?.map(i => i.subject_id) || [])];
+            if (subject_ids.length === 0) { setSubjects([]); return; }
 
             const { data, error } = await supabase
                 .from('subjects')
                 .select('*')
                 .eq('is_active', true)
-                .in('id', subject_id)
+                .in('id', subject_ids)
                 .order('name');
 
             if (error) throw error;
@@ -190,9 +203,20 @@ export const useQuizzes = () => {
         try {
             if (!profile?.id) return setQuizzes([]);
 
+            // Superadmin: fetch all quizzes without enrollment filter
+            if (profile.role === 'superadmin') {
+                const { data, error } = await supabase
+                    .from('quizzes')
+                    .select('*, subjects(id, name), classes(name)')
+                    .order('scheduled_date', { ascending: false });
+                if (error) throw error;
+                setQuizzes(data || []);
+                return;
+            }
+
             let enrollmentsData, enrollmentsError;
 
-            if (profile.role === "teacher") {
+            if (profile.role === "teacher" || profile.role === "admin") {
                 ({ data: enrollmentsData, error: enrollmentsError } = await supabase
                     .from('teacher_subject_enrollments')
                     .select('class_id, subject_id')
@@ -505,7 +529,7 @@ export const useQuizzes = () => {
 
     //         // FORCE IMMEDIATE REFRESH
     //         await fetchQuizzes();
-    //         if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+    //         if ((profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')) {
     //             await fetchQuizResults();
     //         } else if (profile?.role === 'student') {
     //             await fetchStudentResults();
@@ -531,17 +555,19 @@ export const useQuizzes = () => {
         instructions?: string;
     }) => {
         try {
-            // FIXED: Check teacher_subject_enrollments instead of classes_subjects
-            const { data: enrollment, error: enrollmentError } = await supabase
-                .from('teacher_subject_enrollments')
-                .select('*')
-                .eq('teacher_id', profile?.id)
-                .eq('class_id', quizData.class_id)
-                .eq('subject_id', quizData.subject_id)
-                .single();
+            // Regular teachers: verify they're assigned to this class+subject
+            if (profile?.role !== 'superadmin') {
+                const { data: enrollment, error: enrollmentError } = await supabase
+                    .from('teacher_subject_enrollments')
+                    .select('*')
+                    .eq('teacher_id', profile?.id)
+                    .eq('class_id', quizData.class_id)
+                    .eq('subject_id', quizData.subject_id)
+                    .single();
 
-            if (enrollmentError || !enrollment) {
-                throw new Error('You are not assigned to teach this subject in this class');
+                if (enrollmentError || !enrollment) {
+                    throw new Error('You are not assigned to teach this subject in this class');
+                }
             }
 
             const { data, error } = await supabase
@@ -565,33 +591,33 @@ export const useQuizzes = () => {
 
             if (error) throw error;
 
-            // ✅ FIXED: Create quiz results only for students enrolled in this class + subject
+            // Create quiz results for ALL students in the class (not filtered by subject)
             const { data: enrolledStudents, error: studentsError } = await supabase
-                .from('student_subject_enrollments')
-                .select('student_id')
+                .from('students')
+                .select('id')
                 .eq('class_id', quizData.class_id)
-                .eq('subject_id', quizData.subject_id)
-                .eq('is_active', true);
+                .eq('is_deleted', false);
 
             if (studentsError) {
                 console.warn('❌ Error fetching enrolled students:', studentsError);
             } else if (enrolledStudents && enrolledStudents.length > 0) {
                 const resultEntries = enrolledStudents.map(student => ({
                     quiz_id: data.id,
-                    student_id: student.student_id,
+                    student_id: student.id,
                     total_marks: quizData.total_marks,
                     is_checked: false,
                     submission_status: 'submitted'
                 }));
 
-                await supabase
+                const { error: insertError } = await supabase
                     .from('quiz_results')
                     .insert(resultEntries);
+                if (insertError) console.warn('❌ Error inserting quiz results:', insertError);
             }
 
             // FORCE IMMEDIATE REFRESH
             await fetchQuizzes();
-            if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+            if ((profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')) {
                 await fetchQuizResults();
             } else if (profile?.role === 'student') {
                 await fetchStudentResults();
@@ -647,7 +673,7 @@ export const useQuizzes = () => {
                 }
             }
 
-            if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+            if ((profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')) {
                 await fetchQuizResults();
                 await fetchQuizzes();
             } else if (profile?.role === 'student') {
@@ -657,6 +683,36 @@ export const useQuizzes = () => {
             return { success: true, data };
         } catch (error) {
             console.warn('❌ Error marking quiz result:', error);
+            return { success: false, error };
+        }
+    };
+
+    const updateQuiz = async (quizId: string, quizData: Partial<Quiz>) => {
+        try {
+            const { error } = await supabase
+                .from('quizzes')
+                .update(quizData)
+                .eq('id', quizId);
+            if (error) throw error;
+            await fetchQuizzes();
+            return { success: true };
+        } catch (error) {
+            console.warn('❌ Error updating quiz:', error);
+            return { success: false, error };
+        }
+    };
+
+    const deleteQuiz = async (quizId: string) => {
+        try {
+            // Delete results first (FK), then the quiz
+            await supabase.from('quiz_results').delete().eq('quiz_id', quizId);
+            const { error } = await supabase.from('quizzes').delete().eq('id', quizId);
+            if (error) throw error;
+            await fetchQuizzes();
+            await fetchQuizResults();
+            return { success: true };
+        } catch (error) {
+            console.warn('❌ Error deleting quiz:', error);
             return { success: false, error };
         }
     };
@@ -701,7 +757,7 @@ export const useQuizzes = () => {
         try {
             const studentResults = studentId
                 ? quizResults.filter(r => r.student_id === studentId)
-                : quizResults.filter(r => r.student_id === profile?.id);
+                : quizResults.filter(r => r.student_id === student?.id);
 
             const checkedResults = studentResults.filter(r => r.is_checked && r.marks_obtained !== null);
             const totalMarks = checkedResults.reduce((sum, r) => sum + (r.marks_obtained || 0), 0);
@@ -751,6 +807,8 @@ export const useQuizzes = () => {
         classesSubjects,
         loading,
         createQuiz,
+        updateQuiz,
+        deleteQuiz,
         markQuizResult,
         updateQuizStatus,
         getQuizResultsBySubject,

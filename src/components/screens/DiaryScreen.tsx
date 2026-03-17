@@ -78,7 +78,7 @@ export default function DiaryScreen() {
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [filterVisible, setFilterVisible] = useState(false);
-  const [filterStep, setFilterStep] = useState<'class' | 'subject'>('class');
+  const [expandedSection, setExpandedSection] = useState<'class' | 'subject' | 'date' | null>(null);
   const [pendingClass, setPendingClass] = useState<string | null>(null);
   const [pendingSubject, setPendingSubject] = useState<string | null>(null);
   const [pendingDate, setPendingDate] = useState<DateFilter>('all');
@@ -112,14 +112,14 @@ export default function DiaryScreen() {
       setPendingClass(filterClass);
       setPendingSubject(selectedSubject);
       setPendingDate(selectedDate);
-      setFilterStep('class');
+      setExpandedSection(null);
     }
   }, [filterVisible]);
 
   // When teacher changes class filter, reload subjects for that class
   useEffect(() => {
     setSelectedSubject(null);
-    if (profile?.role === 'teacher') {
+    if (profile?.role === 'teacher' || profile?.role === 'superadmin') {
       if (filterClass) fetchSubjectsForClass(filterClass);
       else fetchTeacherSubjects();
     }
@@ -128,13 +128,13 @@ export default function DiaryScreen() {
   // Fetch initial data
   useEffect(() => {
     fetchAssignments();
-    if (profile?.role === 'teacher' || profile?.role === 'admin') fetchClasses();
+    if (profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') fetchClasses();
   }, [profile]);
 
   // Fetch subjects
   useEffect(() => {
     if (profile?.role === 'student' && student?.class_id) fetchSubjects();
-    else if (profile?.role === 'teacher' || profile?.role === 'admin') fetchTeacherSubjects();
+    else if (profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') fetchTeacherSubjects();
   }, [profile, student?.class_id]);
 
   // Auto refresh on focus
@@ -184,13 +184,23 @@ export default function DiaryScreen() {
   const handleModalClassSelect = (classId: string | null) => {
     setPendingClass(classId);
     setPendingSubject(null);
-    setFilterStep('subject');
+    setExpandedSection(null);
     if (classId) fetchSubjectsForClass(classId);
     else fetchTeacherSubjects();
   };
 
+  const toggleSection = (section: 'class' | 'subject' | 'date') => {
+    setExpandedSection(prev => prev === section ? null : section);
+  };
+
   const fetchTeacherSubjects = async () => {
     try {
+      if (profile?.role === 'superadmin') {
+        const { data, error } = await supabase.from('subjects').select('id, name').eq('is_active', true).order('name');
+        if (error) throw error;
+        setSubjects(data || []);
+        return;
+      }
       const { data, error } = await supabase
         .from('teacher_subject_enrollments')
         .select('subject_id, subjects (id, name)')
@@ -245,15 +255,22 @@ export default function DiaryScreen() {
 
   const fetchClasses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('teacher_subject_enrollments')
-        .select('classes (id, name)')
-        .eq('teacher_id', profile?.id)
-        .eq('is_active', true);
-      if (error) throw error;
-      const uniqueClasses = Array.from(
-        new Map(data?.map((item: any) => item.classes).filter(Boolean).map((c: any) => [c.id, c])).values()
-      );
+      let uniqueClasses: any[] = [];
+      if (profile?.role === 'superadmin') {
+        const { data, error } = await supabase.from('classes').select('id, name').order('name');
+        if (error) throw error;
+        uniqueClasses = data || [];
+      } else {
+        const { data, error } = await supabase
+          .from('teacher_subject_enrollments')
+          .select('classes (id, name)')
+          .eq('teacher_id', profile!.id)
+          .eq('is_active', true);
+        if (error) throw error;
+        uniqueClasses = Array.from(
+          new Map(data?.map((item: any) => item.classes).filter(Boolean).map((c: any) => [c.id, c])).values()
+        );
+      }
       setClasses(uniqueClasses);
     } catch (error) {
       showError(error, handleClassFetchErrorForDiary);
@@ -389,166 +406,119 @@ export default function DiaryScreen() {
     }
   };
 
-  const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin';
+  const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin';
 
-  const renderFilterModal = () => (
-    <Modal
-      visible={filterVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setFilterVisible(false)}
-    >
-      <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
-        <View style={localStyles.modalOverlay} />
-      </TouchableWithoutFeedback>
+  const renderFilterModal = () => {
+    const selectedClassName = pendingClass ? classes.find(c => c.id === pendingClass)?.name : 'All Classes';
+    const selectedSubjectName = pendingSubject ? subjects.find(s => s.id === pendingSubject)?.name : 'All Subjects';
+    const dateLabels: Record<DateFilter, string> = { all: 'All', today: 'Today', week: 'This Week', overdue: 'Overdue' };
 
-      <View style={[localStyles.bottomSheet, { backgroundColor: colors.cardBackground }]}>
-        {/* Handle */}
-        <View style={[localStyles.sheetHandle, { backgroundColor: colors.border }]} />
+    return (
+      <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={() => setFilterVisible(false)}>
+        <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
+          <View style={localStyles.modalOverlay} />
+        </TouchableWithoutFeedback>
 
-        {/* Add Assignment (teacher only) */}
-        {isTeacher && (
-          <TouchableOpacity
-            style={[localStyles.addAssignmentBtn, { borderColor: colors.primary }]}
-            onPress={() => { setFilterVisible(false); resetForm(); setModalVisible(true); }}
-          >
-            <Plus size={18} color={colors.primary} />
-            <Text allowFontScaling={false} style={[localStyles.addAssignmentText, { color: colors.primary }]}>
-              Add New Assignment
-            </Text>
-          </TouchableOpacity>
-        )}
+        <View style={[localStyles.bottomSheet, { backgroundColor: colors.cardBackground }]}>
+          <View style={[localStyles.sheetHandle, { backgroundColor: colors.border }]} />
 
-        {/* Sheet header */}
-        <View style={localStyles.sheetHeader}>
-          {isTeacher && filterStep === 'subject' && (
-            <TouchableOpacity onPress={() => setFilterStep('class')} style={localStyles.backBtn}>
-              <ChevronRight size={20} color={colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
+          {isTeacher && (
+            <TouchableOpacity
+              style={[localStyles.addAssignmentBtn, { borderColor: colors.primary }]}
+              onPress={() => { setFilterVisible(false); resetForm(); setModalVisible(true); }}
+            >
+              <Plus size={18} color={colors.primary} />
+              <Text allowFontScaling={false} style={[localStyles.addAssignmentText, { color: colors.primary }]}>Add New Assignment</Text>
             </TouchableOpacity>
           )}
-          <Text allowFontScaling={false} style={[localStyles.sheetTitle, { color: colors.text }]}>
-            {isTeacher
-              ? filterStep === 'class' ? 'Select Class' : 'Select Subject'
-              : 'Filter Assignments'}
-          </Text>
-          {(pendingClass !== null || pendingSubject !== null || pendingDate !== 'all') && (
-            <TouchableOpacity onPress={resetDiaryFilter}>
-              <Text allowFontScaling={false} style={[localStyles.resetText, { color: '#EF4444' }]}>Reset</Text>
-            </TouchableOpacity>
-          )}
-        </View>
 
-        <ScrollView style={localStyles.sheetScroll} showsVerticalScrollIndicator={false}>
-          {/* Class / Subject list */}
-          {isTeacher ? (
-            filterStep === 'class' ? (
+          <View style={localStyles.sheetHeader}>
+            <Text allowFontScaling={false} style={[localStyles.sheetTitle, { color: colors.text }]}>Filter Assignments</Text>
+            {(pendingClass !== null || pendingSubject !== null || pendingDate !== 'all') && (
+              <TouchableOpacity onPress={resetDiaryFilter}>
+                <Text allowFontScaling={false} style={[localStyles.resetText, { color: '#EF4444' }]}>Reset</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <ScrollView style={localStyles.sheetScroll} showsVerticalScrollIndicator={false}>
+            {/* Class accordion — teacher only */}
+            {isTeacher && (
               <>
-                <TouchableOpacity
-                  style={[localStyles.sheetOption, { borderBottomColor: colors.border }]}
-                  onPress={() => handleModalClassSelect(null)}
-                >
-                  <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>All Classes</Text>
-                  <View style={localStyles.sheetOptionRight}>
-                    {pendingClass === null && <Check size={16} color={colors.primary} />}
-                    <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} />
+                <TouchableOpacity style={[localStyles.accordionHeader, { borderColor: colors.border }]} onPress={() => toggleSection('class')}>
+                  <Text allowFontScaling={false} style={[localStyles.accordionLabel, { color: colors.textSecondary }]}>Class</Text>
+                  <View style={localStyles.accordionRight}>
+                    <Text allowFontScaling={false} style={[localStyles.accordionValue, { color: colors.text }]}>{selectedClassName}</Text>
+                    <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6, transform: [{ rotate: expandedSection === 'class' ? '270deg' : '90deg' }] }} />
                   </View>
                 </TouchableOpacity>
-                {classes.map(c => (
-                  <TouchableOpacity
-                    key={c.id}
-                    style={[localStyles.sheetOption, { borderBottomColor: colors.border }]}
-                    onPress={() => handleModalClassSelect(c.id)}
-                  >
-                    <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>{c.name}</Text>
-                    <View style={localStyles.sheetOptionRight}>
-                      {pendingClass === c.id && <Check size={16} color={colors.primary} />}
-                      <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} />
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                {expandedSection === 'class' && (
+                  <View style={[localStyles.accordionBody, { borderColor: colors.border }]}>
+                    <TouchableOpacity style={[localStyles.sheetOption, { borderBottomColor: colors.border }]} onPress={() => handleModalClassSelect(null)}>
+                      <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>All Classes</Text>
+                      {pendingClass === null && <Check size={16} color={colors.primary} />}
+                    </TouchableOpacity>
+                    {classes.map(c => (
+                      <TouchableOpacity key={c.id} style={[localStyles.sheetOption, { borderBottomColor: colors.border }]} onPress={() => handleModalClassSelect(c.id)}>
+                        <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>{c.name}</Text>
+                        {pendingClass === c.id && <Check size={16} color={colors.primary} />}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={[localStyles.sheetOption, { borderBottomColor: colors.border }]}
-                  onPress={() => setPendingSubject(null)}
-                >
+            )}
+
+            {/* Subject accordion */}
+            <TouchableOpacity style={[localStyles.accordionHeader, { borderColor: colors.border }]} onPress={() => toggleSection('subject')}>
+              <Text allowFontScaling={false} style={[localStyles.accordionLabel, { color: colors.textSecondary }]}>Subject</Text>
+              <View style={localStyles.accordionRight}>
+                <Text allowFontScaling={false} style={[localStyles.accordionValue, { color: colors.text }]}>{selectedSubjectName}</Text>
+                <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6, transform: [{ rotate: expandedSection === 'subject' ? '270deg' : '90deg' }] }} />
+              </View>
+            </TouchableOpacity>
+            {expandedSection === 'subject' && (
+              <View style={[localStyles.accordionBody, { borderColor: colors.border }]}>
+                <TouchableOpacity style={[localStyles.sheetOption, { borderBottomColor: colors.border }]} onPress={() => { setPendingSubject(null); setExpandedSection(null); }}>
                   <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>All Subjects</Text>
                   {pendingSubject === null && <Check size={16} color={colors.primary} />}
                 </TouchableOpacity>
                 {subjects.map(s => (
-                  <TouchableOpacity
-                    key={s.id}
-                    style={[localStyles.sheetOption, { borderBottomColor: colors.border }]}
-                    onPress={() => setPendingSubject(s.id)}
-                  >
+                  <TouchableOpacity key={s.id} style={[localStyles.sheetOption, { borderBottomColor: colors.border }]} onPress={() => { setPendingSubject(s.id); setExpandedSection(null); }}>
                     <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>{s.name}</Text>
                     {pendingSubject === s.id && <Check size={16} color={colors.primary} />}
                   </TouchableOpacity>
                 ))}
-              </>
-            )
-          ) : (
-            // Student: subject filter
-            <>
-              <TouchableOpacity
-                style={[localStyles.sheetOption, { borderBottomColor: colors.border }]}
-                onPress={() => setPendingSubject(null)}
-              >
-                <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>All Subjects</Text>
-                {pendingSubject === null && <Check size={16} color={colors.primary} />}
-              </TouchableOpacity>
-              {subjects.map(s => (
-                <TouchableOpacity
-                  key={s.id}
-                  style={[localStyles.sheetOption, { borderBottomColor: colors.border }]}
-                  onPress={() => setPendingSubject(s.id)}
-                >
-                  <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>{s.name}</Text>
-                  {pendingSubject === s.id && <Check size={16} color={colors.primary} />}
-                </TouchableOpacity>
-              ))}
-            </>
-          )}
+              </View>
+            )}
 
-          {/* Date filter — always visible */}
-          <View style={[localStyles.dateSectionHeader, { borderTopColor: colors.border }]}>
-            <Text allowFontScaling={false} style={[localStyles.dateSectionTitle, { color: colors.textSecondary }]}>
-              Filter by Date
-            </Text>
-          </View>
-          <View style={localStyles.dateChips}>
-            {(['all', 'today', 'week', 'overdue'] as DateFilter[]).map(opt => (
-              <TouchableOpacity
-                key={opt}
-                style={[
-                  localStyles.dateChip,
-                  { borderColor: colors.border, backgroundColor: colors.cardBackground },
-                  pendingDate === opt && { backgroundColor: colors.primary, borderColor: colors.primary },
-                ]}
-                onPress={() => setPendingDate(opt)}
-              >
-                <Text
-                  allowFontScaling={false}
-                  style={[localStyles.dateChipText, { color: pendingDate === opt ? '#fff' : colors.text }]}
-                >
-                  {opt === 'all' ? 'All' : opt === 'today' ? 'Today' : opt === 'week' ? 'This Week' : 'Overdue'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+            {/* Date accordion */}
+            <TouchableOpacity style={[localStyles.accordionHeader, { borderColor: colors.border }]} onPress={() => toggleSection('date')}>
+              <Text allowFontScaling={false} style={[localStyles.accordionLabel, { color: colors.textSecondary }]}>Date</Text>
+              <View style={localStyles.accordionRight}>
+                <Text allowFontScaling={false} style={[localStyles.accordionValue, { color: colors.text }]}>{dateLabels[pendingDate]}</Text>
+                <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6, transform: [{ rotate: expandedSection === 'date' ? '270deg' : '90deg' }] }} />
+              </View>
+            </TouchableOpacity>
+            {expandedSection === 'date' && (
+              <View style={[localStyles.accordionBody, { borderColor: colors.border }]}>
+                {(['all', 'today', 'week', 'overdue'] as DateFilter[]).map(opt => (
+                  <TouchableOpacity key={opt} style={[localStyles.sheetOption, { borderBottomColor: colors.border }]} onPress={() => { setPendingDate(opt); setExpandedSection(null); }}>
+                    <Text allowFontScaling={false} style={[localStyles.sheetOptionText, { color: colors.text }]}>{dateLabels[opt]}</Text>
+                    {pendingDate === opt && <Check size={16} color={colors.primary} />}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </ScrollView>
 
-        {/* Apply button */}
-        <TouchableOpacity
-          style={[localStyles.applyBtn, { backgroundColor: colors.primary }]}
-          onPress={applyDiaryFilter}
-        >
-          <Text allowFontScaling={false} style={localStyles.applyBtnText}>Apply Filter</Text>
-        </TouchableOpacity>
-      </View>
-    </Modal>
-  );
+          <TouchableOpacity style={[localStyles.applyBtn, { backgroundColor: colors.primary }]} onPress={applyDiaryFilter}>
+            <Text allowFontScaling={false} style={localStyles.applyBtnText}>Apply Filter</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    );
+  };
 
   return (
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -737,10 +707,6 @@ const localStyles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 8,
   },
-  backBtn: {
-    marginRight: 8,
-    padding: 2,
-  },
   sheetTitle: {
     flex: 1,
     fontSize: TextSizes.sectionTitle,
@@ -751,55 +717,26 @@ const localStyles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
   },
   sheetScroll: {
-    maxHeight: height * 0.38,
+    flexGrow: 0,
+  },
+  accordionHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginHorizontal: 16, marginBottom: 8,
+    paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 10, borderWidth: 1,
+  },
+  accordionLabel: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium', flex: 1 },
+  accordionValue: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-SemiBold' },
+  accordionRight: { flexDirection: 'row', alignItems: 'center' },
+  accordionBody: {
+    marginHorizontal: 16, marginBottom: 8,
+    borderRadius: 10, borderWidth: 1, overflow: 'hidden',
   },
   sheetOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  sheetOptionText: {
-    fontSize: TextSizes.medium,
-    fontFamily: 'Inter-Regular',
-    flex: 1,
-  },
-  sheetOptionRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dateSectionHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: 4,
-  },
-  dateSectionTitle: {
-    fontSize: TextSizes.filterLabel,
-    fontFamily: 'Inter-Medium',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  dateChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    gap: 8,
-    paddingBottom: 8,
-  },
-  dateChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  dateChipText: {
-    fontSize: TextSizes.filterLabel,
-    fontFamily: 'Inter-Medium',
-  },
+  sheetOptionText: { fontSize: TextSizes.medium, fontFamily: 'Inter-Regular', flex: 1 },
   applyBtn: {
     marginHorizontal: 16,
     marginTop: 12,

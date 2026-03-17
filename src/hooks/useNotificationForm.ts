@@ -70,7 +70,7 @@ export const useNotificationForm = (profile: any) => {
                 if (error) throw error;
                 recipients = data || [];
             } else if (formData.target_type === 'students') {
-                const { data, error } = await supabase.from('students').select('id');
+                const { data, error } = await supabase.from('profiles').select('id').eq('role', 'student');
                 if (error) throw error;
                 recipients = data || [];
             } else if (formData.target_type === 'individual') {

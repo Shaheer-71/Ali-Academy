@@ -128,7 +128,7 @@ export default function NotificationScreen() {
         return targetType;
     };
 
-    if (profile?.role !== 'teacher' && profile?.role !== 'admin') {
+    if (profile?.role !== 'teacher' && profile?.role !== 'admin' && profile?.role !== 'superadmin') {
         return (
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
                 <TopSections />

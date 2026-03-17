@@ -74,11 +74,10 @@ export const AttendanceRecordCard: React.FC<AttendanceRecordCardProps> = ({
                 )}
             </View>
 
-            {/* Subject Info - Always show for students to know which class it was */}
             <View style={styles.subjectInfo}>
                 <BookOpen size={14} color={colors.textSecondary} />
                 <Text allowFontScaling={false} style={[styles.subjectText, { color: colors.textSecondary }]}>
-                    {subjectName} • {className}
+                    {className}
                 </Text>
             </View>
 

@@ -31,7 +31,6 @@ interface StudentCardProps {
     isMarkedInDatabase?: boolean; // Student has attendance record in database for this date
     selectedDate: string;
     onMarkAttendance: (studentId: string, status: 'present' | 'late' | 'absent', arrivalTime?: string) => void;
-    onCustomTime: (studentId: string) => void;
     onEdit?: (record: AttendanceRecord) => void;
 }
 
@@ -43,7 +42,6 @@ export const StudentCard: React.FC<StudentCardProps> = ({
     isMarkedInDatabase = false,
     selectedDate,
     onMarkAttendance,
-    onCustomTime,
     onEdit,
 }) => {
     const { colors } = useTheme();
@@ -166,26 +164,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
                     </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={[
-                        styles.actionButton,
-                        styles.customTimeButton,
-                        buttonsDisabled && styles.disabledButton
-                    ]}
-                    onPress={() => !buttonsDisabled && onCustomTime(student.id)}
-                    disabled={buttonsDisabled}
-                    activeOpacity={buttonsDisabled ? 1 : 0.7}
-                >
-                    <Clock size={16} color={buttonsDisabled ? "#999999" : "#ffffff"} />
-                    <Text allowFontScaling={false} style={[
-                        styles.actionButtonText,
-                        buttonsDisabled && styles.disabledButtonText
-                    ]}>
-                        Custom
-                    </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
+<TouchableOpacity
                     style={[
                         styles.actionButton,
                         styles.absentButton,
@@ -346,10 +325,7 @@ const styles = StyleSheet.create({
     presentButton: {
         backgroundColor: '#10B981',
     },
-    customTimeButton: {
-        backgroundColor: '#204040',
-    },
-    absentButton: {
+absentButton: {
         backgroundColor: '#EF4444',
     },
     disabledButton: {

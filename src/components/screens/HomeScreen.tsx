@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useNotifications } from '@/src/contexts/NotificationContext';
 import { supabase } from '@/src/lib/supabase';
 import { Users, ClipboardCheck, BookOpen, NotebookPen, ChartBar as BarChart3, Calendar, Bell, Sparkles, TrendingUp } from 'lucide-react-native';
 import TopSections from '@/src/components/common/TopSections';
@@ -48,6 +49,7 @@ export default function HomeScreen() {
   const { profile, student } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
+  const { fetchNotifications } = useNotifications();
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<HomeStats>({
     students: 0,
@@ -95,44 +97,54 @@ export default function HomeScreen() {
         );
       }
 
-      // ========== 1️⃣ Get Teacher's Unique Class IDs ==========
-      const { data: classes, error: classesError } = await supabase
-        .from('teacher_subject_enrollments')
-        .select('class_id')
-        .eq('teacher_id', profile.id);
+      const isSuperAdmin = profile.role === 'superadmin';
 
-      if (classesError) {
-        console.warn('Classes error:', classesError);
-        throw new Error(
-          'We couldn\'t fetch your class information. Please check your internet connection and try again.',
+      // ========== 1️⃣ Get Class IDs ==========
+      let teacherClassIds: string[] = [];
+      let uniqueClassSubjectPairs: { class_id: string; subject_id: string }[] = [];
+
+      if (isSuperAdmin) {
+        // Superadmin: all classes + all class-subject pairs
+        const [{ data: allClasses }, { data: allCS }] = await Promise.all([
+          supabase.from('classes').select('id'),
+          supabase.from('classes_subjects').select('class_id, subject_id').eq('is_active', true),
+        ]);
+        teacherClassIds = (allClasses || []).map((c: any) => c.id);
+        uniqueClassSubjectPairs = allCS || [];
+      } else {
+        const { data: classes, error: classesError } = await supabase
+          .from('teacher_subject_enrollments')
+          .select('class_id')
+          .eq('teacher_id', profile.id);
+
+        if (classesError) {
+          console.warn('Classes error:', classesError);
+          throw new Error('We couldn\'t fetch your class information. Please check your internet connection and try again.');
+        }
+
+        teacherClassIds = [...new Set(classes?.map(c => c.class_id) || [])];
+
+        const { data: teacherClassesSubjects, error: teacherClassesSubjectsError } = await supabase
+          .from('teacher_subject_enrollments')
+          .select('class_id, subject_id')
+          .eq('teacher_id', profile.id);
+
+        if (teacherClassesSubjectsError) {
+          console.warn('Subject error:', teacherClassesSubjectsError);
+          throw new Error('There was a problem loading your subject assignments. Please try refreshing.');
+        }
+
+        uniqueClassSubjectPairs = Array.from(
+          new Map(
+            (teacherClassesSubjects || []).map(item => [
+              `${item.class_id}-${item.subject_id}`,
+              { class_id: item.class_id, subject_id: item.subject_id }
+            ])
+          ).values()
         );
       }
 
-      const teacherClassIds = [...new Set(classes?.map(c => c.class_id) || [])];
       console.log("✅ Unique Class IDs:", teacherClassIds);
-
-      // ========== 2️⃣ Get Teacher's Class–Subject Pairs ==========
-      const { data: teacherClassesSubjects, error: teacherClassesSubjectsError } = await supabase
-        .from('teacher_subject_enrollments')
-        .select('class_id, subject_id')
-        .eq('teacher_id', profile.id);
-
-      if (teacherClassesSubjectsError) {
-        console.warn('Subject error:', teacherClassesSubjectsError);
-        throw new Error(
-          'There was a problem loading your subject assignments. Please try refreshing.',
-        );
-      }
-
-      const uniqueClassSubjectPairs = Array.from(
-        new Map(
-          (teacherClassesSubjects || []).map(item => [
-            `${item.class_id}-${item.subject_id}`,
-            { class_id: item.class_id, subject_id: item.subject_id }
-          ])
-        ).values()
-      );
-
       console.log("✅ Unique Class & Subject pairs:", uniqueClassSubjectPairs);
 
       // ========== 3️⃣ Get Students from These Classes ==========
@@ -455,7 +467,7 @@ export default function HomeScreen() {
         );
       }
 
-      if (profile.role === 'teacher' || profile.role === 'admin') {
+      if (profile.role === 'teacher' || profile.role === 'admin' || profile.role === 'superadmin') {
         await fetchTeacherStats();
       } else if (profile.role === 'student') {
         await fetchStudentStats();
@@ -474,7 +486,7 @@ export default function HomeScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetchData();
+      await Promise.all([fetchData(), fetchNotifications()]);
     } catch (error: any) {
       console.warn('Refresh error:', error);
       const errorResponse = handleError(error);
@@ -489,7 +501,7 @@ export default function HomeScreen() {
   }, [profile?.id, profile?.role]);
 
   const getRoleBasedQuickActions = () => {
-    if (profile?.role === 'teacher' || profile?.role === 'admin') {
+    if (profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') {
       return [
         {
           title: 'Mark Attendance',
@@ -547,7 +559,7 @@ export default function HomeScreen() {
   };
 
   const getStatsLabels = () => {
-    if (profile?.role === 'teacher' || profile?.role === 'admin') {
+    if (profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') {
       return ['Students', 'Classes', 'Lectures'];
     } else {
       return ['Attendance', 'Dairy', 'Lectures'];
@@ -555,7 +567,7 @@ export default function HomeScreen() {
   };
 
   const getStatsValues = () => {
-    if (profile?.role === 'teacher' || profile?.role === 'admin') {
+    if (profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') {
       return [stats.students, stats.classes, stats.lectures];
     } else {
       return [
@@ -591,6 +603,7 @@ export default function HomeScreen() {
           <ScrollView
             contentContainerStyle={{
               paddingBottom: 50,
+              gap: 24,
             }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"

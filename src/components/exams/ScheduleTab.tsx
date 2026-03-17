@@ -109,7 +109,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
     };
 
     const handleMarkQuizzes = (quiz: any) => {
-        if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+        if ((profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')) {
             Alert.alert(
                 'Mark Quiz Results',
                 `Go to Results tab to mark individual student results for "${quiz.title}"`,
@@ -197,7 +197,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                         <Calendar size={48} color={colors.textSecondary} />
                         <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.text }]}>No quizzes found</Text>
                         <Text allowFontScaling={false} style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                            {(profile?.role === 'teacher' || profile?.role === 'admin') ? 'Schedule your first quiz or adjust filters using the Filter button' : 'Check back later for quiz schedules or adjust filters'}
+                            {(profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') ? 'Schedule your first quiz or adjust filters using the Filter button' : 'Check back later for quiz schedules or adjust filters'}
                         </Text>
                     </View>
                 ) : (
@@ -289,7 +289,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({
                                 )} */}
 
                                 {/* Teacher Actions - ENHANCED LOGIC WITH AUTO-COMPLETE */}
-                                {(profile?.role === 'teacher' || profile?.role === 'admin') && (
+                                {(profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') && (
                                     <View style={styles.teacherActions}>
                                         {/* Show Start Quiz button for scheduled quizzes (only if no marks entered) */}
                                         {quiz.status === 'scheduled' && resultCounts.marked === 0 && (

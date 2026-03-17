@@ -58,14 +58,13 @@ export const useTimetable = (): UseTimetableReturn => {
                     setLoading(false);
                     return;
                 }
+            } else if (profile.role === 'superadmin') {
+                // Superadmin sees everything; optionally filtered by class
+                if (filters.class_id) query = query.eq('class_id', filters.class_id);
             } else if (profile.role === 'teacher') {
-                // Teachers see only THEIR OWN lectures (where they are the teacher)
+                // Teachers see only their own entries; optionally filtered by class
                 query = query.eq('teacher_id', profile.id);
-
-                // If specific class is selected, also filter by that class
-                if (filters.class_id) {
-                    query = query.eq('class_id', filters.class_id);
-                }
+                if (filters.class_id) query = query.eq('class_id', filters.class_id);
             } else if (profile.role === 'parent') {
                 const { data: studentData } = await supabase
                     .from('students')
@@ -219,7 +218,6 @@ export const useTimetable = (): UseTimetableReturn => {
                 .single();
 
             if (completeEntry) {
-                Alert.alert('Success', 'Timetable entry created');
                 return completeEntry;
             }
             return null;
@@ -323,7 +321,6 @@ export const useTimetable = (): UseTimetableReturn => {
 
             if (error) throw error;
 
-            Alert.alert('Success', 'Entry deleted');
             return true;
         } catch (err: any) {
             console.warn('Error deleting entry:', err);

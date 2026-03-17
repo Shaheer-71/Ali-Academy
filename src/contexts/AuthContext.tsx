@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { UserProfile, StudentProfile } from '@/src/lib/auth';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 
 interface AuthContextType {
   user: any;
@@ -107,7 +108,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteDeviceToken = async (userId: string) => {
     try {
-      const tokenData = await Notifications.getExpoPushTokenAsync();
+      const tokenData = await Notifications.getExpoPushTokenAsync({
+        projectId: Constants.expoConfig?.extra?.eas?.projectId,
+      });
       const currentToken = tokenData.data;
       if (!currentToken) return;
 

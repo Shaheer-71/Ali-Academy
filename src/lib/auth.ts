@@ -5,7 +5,7 @@ export interface UserProfile {
   id: string;
   email: string;
   full_name: string;
-  role: 'teacher' | 'student' | 'admin';
+  role: 'teacher' | 'student' | 'admin' | 'superadmin';
   contact_number?: string;
 }
 

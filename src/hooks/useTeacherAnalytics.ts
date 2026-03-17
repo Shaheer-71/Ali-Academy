@@ -16,7 +16,7 @@ type StudentWithClass = {
 };
 
 
-export const useTeacherAnalytics = (profileId: string | undefined, selectedClass: string = 'all', selectedSubject: string = 'all') => {
+export const useTeacherAnalytics = (profileId: string | undefined, selectedClass: string = 'all', selectedSubject: string = 'all', isSuperAdmin: boolean = false) => {
     const [studentPerformances, setStudentPerformances] = useState<StudentPerformance[]>([]);
     const [classAnalytics, setClassAnalytics] = useState<ClassAnalytics[]>([]);
     const [classes, setClasses] = useState<Class[]>([]);
@@ -40,39 +40,62 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                 setLoading(true);
                 setError(null);
 
-                const { data: classesIDData, error: classesIDError } = await supabase
-                    .from('teacher_subject_enrollments')
-                    .select('class_id, subject_id, subjects!inner(id, name)')
-                    .eq('teacher_id', profileId)
-
-                if (classesIDError) {
-                    console.warn('Enrollments fetch error:', classesIDError);
-                    throw new Error('Unable to load your class assignments. Please check your internet connection and try again.');
-                }
-
-                let classIDs = [...new Set(classesIDData?.map(item => item.class_id) || [])];
-                let subjectIDs = [...new Set(classesIDData?.map(item => item.subject_id) || [])];
-
-                // Build subjects list for the selected class (used by UI subject filter)
-                const relevantEnrollments = selectedClass === 'all'
-                    ? (classesIDData || [])
-                    : (classesIDData || []).filter((item: any) => item.class_id === selectedClass);
+                let classIDs: string[] = [];
+                let subjectIDs: string[] = [];
                 const subjectsMap = new Map<string, string>();
-                relevantEnrollments.forEach((item: any) => {
-                    subjectsMap.set(item.subject_id, (item.subjects as any)?.name || item.subject_id);
-                });
-                setSubjects(Array.from(subjectsMap.entries()).map(([id, name]) => ({ id, name })));
+
+                if (isSuperAdmin) {
+                    // Superadmin: pull all classes and all subjects directly
+                    const [{ data: allClasses, error: allClassesErr }, { data: allSubjects, error: allSubjectsErr }] = await Promise.all([
+                        supabase.from('classes').select('id, name').order('name'),
+                        supabase.from('subjects').select('id, name').order('name'),
+                    ]);
+                    if (allClassesErr) throw allClassesErr;
+                    if (allSubjectsErr) throw allSubjectsErr;
+                    classIDs = (allClasses || []).map((c: any) => c.id);
+                    subjectIDs = (allSubjects || []).map((s: any) => s.id);
+                    // Build subjects list for filter
+                    const relevantSubjects = selectedClass === 'all'
+                        ? (allSubjects || [])
+                        : (allSubjects || []); // show all subjects regardless for superadmin
+                    relevantSubjects.forEach((s: any) => subjectsMap.set(s.id, s.name));
+                    setSubjects(relevantSubjects.map((s: any) => ({ id: s.id, name: s.name })));
+                } else {
+                    const { data: classesIDData, error: classesIDError } = await supabase
+                        .from('teacher_subject_enrollments')
+                        .select('class_id, subject_id, subjects!inner(id, name)')
+                        .eq('teacher_id', profileId);
+
+                    if (classesIDError) {
+                        console.warn('Enrollments fetch error:', classesIDError);
+                        throw new Error('Unable to load your class assignments. Please check your internet connection and try again.');
+                    }
+
+                    classIDs = [...new Set(classesIDData?.map(item => item.class_id) || [])];
+                    subjectIDs = [...new Set(classesIDData?.map(item => item.subject_id) || [])];
+
+                    const relevantEnrollments = selectedClass === 'all'
+                        ? (classesIDData || [])
+                        : (classesIDData || []).filter((item: any) => item.class_id === selectedClass);
+                    relevantEnrollments.forEach((item: any) => {
+                        subjectsMap.set(item.subject_id, (item.subjects as any)?.name || item.subject_id);
+                    });
+                    setSubjects(Array.from(subjectsMap.entries()).map(([id, name]) => ({ id, name })));
+                }
 
                 // Narrow to the selected subject when one is explicitly chosen
                 const effectiveSubjectIDs = selectedSubject !== 'all' ? [selectedSubject] : subjectIDs;
 
-                const { data: studentIDData, error: studentIDError } = await supabase
-                    .from('student_subject_enrollments')
-                    .select('student_id , class_id')
-                    .in('class_id', classIDs)
-                    .in('subject_id', effectiveSubjectIDs);
-
-                let studentsenrolledId = studentIDData?.map(item => item.student_id) || [];
+                // For superadmin, get all students in those classes directly (no enrollment filter)
+                let studentsenrolledId: string[] = [];
+                if (!isSuperAdmin) {
+                    const { data: studentIDData } = await supabase
+                        .from('student_subject_enrollments')
+                        .select('student_id, class_id')
+                        .in('class_id', classIDs)
+                        .in('subject_id', effectiveSubjectIDs);
+                    studentsenrolledId = studentIDData?.map(item => item.student_id) || [];
+                }
 
                 const { data: classesData, error: classesError } = await supabase
                     .from('classes')
@@ -117,8 +140,8 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                     return;
                 }
 
-                // Step 3: Fetch students from selected classes - FIXED TYPE HANDLING
-                const { data: studentsRaw, error: studentsError } = await supabase
+                // Step 3: Fetch students from selected classes
+                let studentsQuery = supabase
                     .from('students')
                     .select(`
                         id,
@@ -128,8 +151,14 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                         classes!inner(id, name)
                     `)
                     .in('class_id', classIds)
-                    .in('id', studentsenrolledId)
                     .eq('is_deleted', false);
+
+                // Regular teachers: restrict to enrolled students only
+                if (!isSuperAdmin && studentsenrolledId.length > 0) {
+                    studentsQuery = studentsQuery.in('id', studentsenrolledId);
+                }
+
+                const { data: studentsRaw, error: studentsError } = await studentsQuery;
 
                 if (studentsError) {
                     console.warn('Students fetch error:', studentsError);
@@ -270,7 +299,7 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
         };
 
         fetchAllData();
-    }, [profileId, selectedClass, selectedSubject, refreshKey]);
+    }, [profileId, selectedClass, selectedSubject, isSuperAdmin, refreshKey]);
 
     return {
         studentPerformances,

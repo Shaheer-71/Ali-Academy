@@ -1,5 +1,6 @@
 // services/feeService.ts
 import { supabase } from '@/src/lib/supabase';
+import { sendPushNotification } from '@/src/lib/notifications';
 
 export interface FeePayment {
     id: string;
@@ -25,6 +26,7 @@ export interface StudentWithFeeStatus {
     fee_payment_id?: string;
     current_month_payment_status: 'pending' | 'paid' | 'partial' | 'overdue';
     current_month_amount?: string;
+    amount_due?: string;
 }
 
 export const feeService = {
@@ -110,13 +112,35 @@ export const feeService = {
         }
     },
 
-    // Get fee structure for a class
+    // Get fee structure for a specific student in a class
+    async getFeeStructureForStudent(studentId: string, classId: string) {
+        try {
+            const currentYear = new Date().getFullYear();
+            const { data, error } = await supabase
+                .from('fee_structures')
+                .select('*')
+                .eq('student_id', studentId)
+                .eq('class_id', classId)
+                .eq('academic_year', currentYear)
+                .single();
+
+            if (error?.code === 'PGRST116') return null;
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.warn('Error fetching student fee structure:', error);
+            return null;
+        }
+    },
+
+    // Get fee structure for a class (legacy — kept for compatibility)
     async getFeeStructure(classId: string) {
         try {
             const { data, error } = await supabase
                 .from('fee_structures')
                 .select('*')
                 .eq('class_id', classId)
+                .is('student_id', null)
                 .single();
 
             if (error?.code === 'PGRST116') return null;
@@ -135,6 +159,8 @@ export const feeService = {
         year: number
     ): Promise<StudentWithFeeStatus[]> {
         try {
+            const currentYear = new Date().getFullYear();
+
             // Fetch all active students in class
             const { data: students, error: studentsError } = await supabase
                 .from('students')
@@ -156,20 +182,36 @@ export const feeService = {
 
             if (feesError) throw feesError;
 
-            // Create a map for quick lookup
+            // Fetch per-student fee amounts from fee_structures
+            const studentIds = students.map(s => s.id);
+            const { data: feeStructures } = await supabase
+                .from('fee_structures')
+                .select('student_id, amount')
+                .in('student_id', studentIds)
+                .eq('class_id', classId)
+                .eq('academic_year', currentYear);
+
+            // Build per-student fee map
+            const feeStructureMap = new Map(
+                (feeStructures || []).map(fs => [fs.student_id, String(fs.amount)])
+            );
+
+            // Create fee payment lookup map
             const feeMap = new Map(
                 (feePayments || []).map(fee => [fee.student_id, fee])
             );
 
-            // Combine students with their current month fee status
+            // Combine students with their fee status and individual fee amount
             return students.map(student => {
                 const payment = feeMap.get(student.id);
+                const studentAmount = feeStructureMap.get(student.id);
 
                 return {
                     ...student,
                     fee_payment_id: payment?.id,
                     current_month_payment_status: payment?.payment_status || 'pending',
-                    current_month_amount: payment?.amount_paid,
+                    current_month_amount: payment?.amount_paid ?? studentAmount,
+                    amount_due: studentAmount,
                 };
             });
         } catch (error) {
@@ -191,6 +233,20 @@ export const feeService = {
     ) {
         try {
             const now = new Date();
+            const currentYear = new Date().getFullYear();
+
+            // Resolve the student's specific fee amount from fee_structures
+            const { data: studentFeeStructure } = await supabase
+                .from("fee_structures")
+                .select("amount")
+                .eq("student_id", studentId)
+                .eq("class_id", classId)
+                .eq("academic_year", currentYear)
+                .single();
+
+            const resolvedAmount = String(
+                feeStructure?.amount ?? studentFeeStructure?.amount ?? "0"
+            );
 
             let payment = await this.getFeePaymentForMonth(studentId, classId, month, year);
             let paymentResult;
@@ -199,7 +255,7 @@ export const feeService = {
                 paymentResult = await this.updateFeePayment(payment.id, {
                     payment_status: "paid",
                     payment_date: now.toISOString(),
-                    amount_paid: feeStructure?.amount || "0",
+                    amount_paid: resolvedAmount,
                 });
             } else {
                 const { data: studentFee, error: studentFeeError } = await supabase
@@ -220,11 +276,11 @@ export const feeService = {
                     class_id: classId,
                     month,
                     year,
-                    amount_paid: feeStructure?.amount || "0",
+                    amount_paid: String(resolvedAmount),
                     payment_status: "paid",
                     payment_date: now.toISOString(),
-                    payment_method: "manual",
-                    notes: "Marked as paid by teacher",
+                    payment_method: null,
+                    notes: null,
                 });
             }
 
@@ -235,7 +291,7 @@ export const feeService = {
                     {
                         type: "fee_paid",
                         title: `Fee Payment Confirmed`,
-                        message: `Payment for ${months[month - 1]} ${year} has been marked as paid. Amount: Rs ${feeStructure?.amount || "0"}`,
+                        message: `Payment for ${months[month - 1]} ${year} has been marked as paid. Amount: Rs ${resolvedAmount}`,
                         entity_type: "fee_payment",
                         entity_id: paymentResult?.id,
                         created_by: teacherId,
@@ -252,16 +308,47 @@ export const feeService = {
                 throw notifError;
             }
 
+            // Resolve the student's auth profile ID (may differ from students.id)
+            // Bridge via email: students.email → profiles.id (auth UUID)
+            const { data: studentRecord } = await supabase
+                .from("students")
+                .select("email")
+                .eq("id", studentId)
+                .single();
+
+            let recipientProfileId = studentId; // fallback
+            if (studentRecord?.email) {
+                const { data: profileRecord } = await supabase
+                    .from("profiles")
+                    .select("id")
+                    .eq("email", studentRecord.email)
+                    .single();
+                if (profileRecord?.id) recipientProfileId = profileRecord.id;
+            }
+
             if (notif) {
                 const { error: recError } = await supabase.from("notification_recipients").insert([
                     {
                         notification_id: notif.id,
-                        user_id: studentId,
+                        user_id: recipientProfileId,
                         is_read: false,
                         is_deleted: false,
                     },
                 ]);
                 if (recError) console.warn("Error adding notification recipient:", recError);
+
+                // Send push notification to the student's device
+                const resolvedAmount = feeStructure?.amount ?? "0";
+                try {
+                    await sendPushNotification({
+                        userId: recipientProfileId,
+                        title: "Fee Payment Confirmed ✓",
+                        body: `Your fee for ${months[month - 1]} ${year} has been marked as paid. Amount: Rs ${resolvedAmount}`,
+                        data: { type: "fee_paid", notificationId: notif.id },
+                    });
+                } catch (pushErr) {
+                    console.warn("Push notification failed (non-fatal):", pushErr);
+                }
             }
 
             return paymentResult;

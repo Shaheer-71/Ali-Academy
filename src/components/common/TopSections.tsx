@@ -18,6 +18,7 @@ import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useNotifications } from '@/src/contexts/NotificationContext';
 import { NotificationCard } from '@/src/components/common/NotificationCard';
+import { Notification } from '@/src/types/notification';
 
 interface TopSectionProps {
     showNotifications?: boolean;
@@ -44,6 +45,7 @@ export default function TopSection({ showNotifications = true, onFilterPress, is
     const [notificationsVisible, setNotificationsVisible] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [filter, setFilter] = useState<'all' | 'unread'>('all');
+    const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
     const screenName = route.name.charAt(0).toUpperCase() + route.name.slice(1);
 
@@ -57,24 +59,11 @@ export default function TopSection({ showNotifications = true, onFilterPress, is
     };
 
     const handleNotificationPress = async (notificationId: string) => {
-        await markAsRead(notificationId);
         const notification = notifications.find(n => n.id === notificationId);
-        if (notification?.entity_type && notification?.entity_id) {
-            setNotificationsVisible(false);
-            switch (notification.entity_type) {
-                case 'lecture':
-                    router.push(`/lectures/${notification.entity_id}`);
-                    break;
-                case 'quiz':
-                    router.push(`/quizzes/${notification.entity_id}`);
-                    break;
-                case 'timetable':
-                    router.push('/timetable');
-                    break;
-                default:
-                    break;
-            }
-        }
+        if (!notification) return;
+        // Mark as read then show detail
+        if (!notification.is_read) await markAsRead(notificationId);
+        setSelectedNotification(notification);
     };
 
     const filteredNotifications = filter === 'unread'
@@ -88,7 +77,7 @@ export default function TopSection({ showNotifications = true, onFilterPress, is
         >
             <View style={[styles.content, { backgroundColor: colors.background }]}>
                 <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>
-                    {screenName === 'Index' ? 'Home' : screenName === 'Dairy' ? 'Diary' : screenName || 'Untitled'}
+                    {screenName === 'Index' ? 'Home' : screenName === 'Dairy' ? 'Diary' : screenName === 'Fee-status' ? 'Fee Status' : screenName || 'Untitled'}
                 </Text>
 
                 <View style={styles.rightSection}>
@@ -122,7 +111,7 @@ export default function TopSection({ showNotifications = true, onFilterPress, is
                         </TouchableOpacity>
                     )}
 
-                    {(profile?.role === 'teacher' && profile?.email === 'rafeh@aliacademy.edu') && !inFee && (
+                    {profile?.role === 'superadmin' && !inFee && (
                         <TouchableOpacity
                             style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
                             onPress={() => router.push('/fee')}
@@ -173,110 +162,132 @@ export default function TopSection({ showNotifications = true, onFilterPress, is
                         style={[styles.modalContent, { backgroundColor: colors.background }]}
                         onPress={(e) => e.stopPropagation()}
                     >
-                        {/* Modal Header */}
-                        <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                            <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>
-                                Notifications
-                            </Text>
-                            <View style={styles.modalHeaderActions}>
-                                {notifications.length > 0 && (
-                                    <>
+                        {selectedNotification ? (
+                            /* ── Detail View ── */
+                            <>
+                                <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                                    <TouchableOpacity
+                                        style={styles.backButton}
+                                        onPress={() => setSelectedNotification(null)}
+                                    >
+                                        <Text allowFontScaling={false} style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.closeButton}
+                                        onPress={() => { setSelectedNotification(null); setNotificationsVisible(false); }}
+                                    >
+                                        <X size={24} color={colors.textSecondary} />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <ScrollView style={styles.detailContent} showsVerticalScrollIndicator={false}>
+                                    <Text allowFontScaling={false} style={[styles.detailTitle, { color: colors.text }]}>
+                                        {selectedNotification.title}
+                                    </Text>
+                                    <View style={styles.detailMeta}>
+                                        <View style={[styles.typeBadge, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                                            <Text allowFontScaling={false} style={[styles.typeBadgeText, { color: colors.primary }]}>
+                                                {selectedNotification.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                                            </Text>
+                                        </View>
+                                        <Text allowFontScaling={false} style={[styles.detailTime, { color: colors.textSecondary }]}>
+                                            {new Date(selectedNotification.created_at).toLocaleString('en-US', {
+                                                weekday: 'short', month: 'short', day: 'numeric',
+                                                hour: '2-digit', minute: '2-digit',
+                                            })}
+                                        </Text>
+                                    </View>
+                                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                                    <Text allowFontScaling={false} style={[styles.detailMessage, { color: colors.text }]}>
+                                        {selectedNotification.message}
+                                    </Text>
+                                    {selectedNotification.creator?.name && (
+                                        <Text allowFontScaling={false} style={[styles.detailSender, { color: colors.textSecondary }]}>
+                                            Sent by {selectedNotification.creator.name}
+                                        </Text>
+                                    )}
+                                </ScrollView>
+                            </>
+                        ) : (
+                            /* ── List View ── */
+                            <>
+                                <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                                    <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>
+                                        Notifications
+                                    </Text>
+                                    <View style={styles.modalHeaderActions}>
+                                        {notifications.length > 0 && (
+                                            <>
+                                                <TouchableOpacity style={styles.headerActionButton} onPress={markAllAsRead}>
+                                                    <CheckCheck size={20} color={colors.primary} />
+                                                </TouchableOpacity>
+                                                <TouchableOpacity style={styles.headerActionButton} onPress={clearAll}>
+                                                    <Trash2 size={20} color={colors.error} />
+                                                </TouchableOpacity>
+                                            </>
+                                        )}
                                         <TouchableOpacity
-                                            style={styles.headerActionButton}
-                                            onPress={markAllAsRead}
+                                            style={styles.closeButton}
+                                            onPress={() => setNotificationsVisible(false)}
                                         >
-                                            <CheckCheck size={20} color={colors.primary} />
+                                            <X size={24} color={colors.textSecondary} />
                                         </TouchableOpacity>
-                                        <TouchableOpacity
-                                            style={styles.headerActionButton}
-                                            onPress={clearAll}
-                                        >
-                                            <Trash2 size={20} color={colors.error} />
-                                        </TouchableOpacity>
-                                    </>
-                                )}
-                                <TouchableOpacity
-                                    style={styles.closeButton}
-                                    onPress={() => setNotificationsVisible(false)}
+                                    </View>
+                                </View>
+
+                                <View style={[styles.filterContainer, { backgroundColor: colors.cardBackground }]}>
+                                    <TouchableOpacity
+                                        style={[styles.filterTab, filter === 'all' && { backgroundColor: colors.primary }]}
+                                        onPress={() => setFilter('all')}
+                                    >
+                                        <Text allowFontScaling={false} style={[styles.filterText, { color: filter === 'all' ? '#fff' : colors.textSecondary }]}>
+                                            All
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.filterTab, filter === 'unread' && { backgroundColor: colors.primary }]}
+                                        onPress={() => setFilter('unread')}
+                                    >
+                                        <Text allowFontScaling={false} style={[styles.filterText, { color: filter === 'unread' ? '#fff' : colors.textSecondary }]}>
+                                            Unread ({unreadCount})
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <ScrollView
+                                    style={styles.notificationsList}
+                                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[colors.primary]} />}
+                                    showsVerticalScrollIndicator={false}
                                 >
-                                    <X size={24} color={colors.textSecondary} />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-
-                        {/* Filter Tabs */}
-                        <View style={[styles.filterContainer, { backgroundColor: colors.cardBackground }]}>
-                            <TouchableOpacity
-                                style={[
-                                    styles.filterTab,
-                                    filter === 'all' && { backgroundColor: colors.primary }
-                                ]}
-                                onPress={() => setFilter('all')}
-                            >
-                                <Text allowFontScaling={false} style={[
-                                    styles.filterText,
-                                    { color: filter === 'all' ? '#fff' : colors.textSecondary }
-                                ]}>
-                                    All
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[
-                                    styles.filterTab,
-                                    filter === 'unread' && { backgroundColor: colors.primary }
-                                ]}
-                                onPress={() => setFilter('unread')}
-                            >
-                                <Text allowFontScaling={false} style={[
-                                    styles.filterText,
-                                    { color: filter === 'unread' ? '#fff' : colors.textSecondary }
-                                ]}>
-                                    Unread ({unreadCount})
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        {/* Notifications List */}
-                        <ScrollView
-                            style={styles.notificationsList}
-                            refreshControl={
-                                <RefreshControl
-                                    refreshing={refreshing}
-                                    onRefresh={handleRefresh}
-                                    colors={[colors.primary]}
-                                />
-                            }
-                            showsVerticalScrollIndicator={false}
-                        >
-                            {loading && !refreshing ? (
-                                <View style={styles.loadingContainer}>
-                                    <ActivityIndicator size="large" color={colors.primary} />
-                                </View>
-                            ) : filteredNotifications.length === 0 ? (
-                                <View style={styles.emptyNotifications}>
-                                    <Bell size={48} color={colors.textSecondary} />
-                                    <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
-                                        {filter === 'unread'
-                                            ? "You're all caught up!"
-                                            : "No notifications yet"}
-                                    </Text>
-                                    <Text allowFontScaling={false} style={[styles.emptySubText, { color: colors.textSecondary }]}>
-                                        {filter === 'unread'
-                                            ? "Check the 'All' tab for read notifications"
-                                            : "We'll notify you when something important happens"}
-                                    </Text>
-                                </View>
-                            ) : (
-                                filteredNotifications.map((notification) => (
-                                    <NotificationCard
-                                        key={notification.id}
-                                        notification={notification}
-                                        onPress={() => handleNotificationPress(notification.id)}
-                                        onDismiss={() => deleteNotification(notification.id)}
-                                    />
-                                ))
-                            )}
-                        </ScrollView>
+                                    {loading && !refreshing ? (
+                                        <View style={styles.loadingContainer}>
+                                            <ActivityIndicator size="large" color={colors.primary} />
+                                        </View>
+                                    ) : filteredNotifications.length === 0 ? (
+                                        <View style={styles.emptyNotifications}>
+                                            <Bell size={48} color={colors.textSecondary} />
+                                            <Text allowFontScaling={false} style={[styles.emptyText, { color: colors.textSecondary }]}>
+                                                {filter === 'unread' ? "You're all caught up!" : "No notifications yet"}
+                                            </Text>
+                                            <Text allowFontScaling={false} style={[styles.emptySubText, { color: colors.textSecondary }]}>
+                                                {filter === 'unread'
+                                                    ? "Check the 'All' tab for read notifications"
+                                                    : "We'll notify you when something important happens"}
+                                            </Text>
+                                        </View>
+                                    ) : (
+                                        filteredNotifications.map((notification) => (
+                                            <NotificationCard
+                                                key={notification.id}
+                                                notification={notification}
+                                                onPress={() => handleNotificationPress(notification.id)}
+                                                onDismiss={() => deleteNotification(notification.id)}
+                                            />
+                                        ))
+                                    )}
+                                </ScrollView>
+                            </>
+                        )}
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>
@@ -440,6 +451,61 @@ const styles = StyleSheet.create({
         marginTop: 8,
         textAlign: 'center',
         paddingHorizontal: 32,
+    },
+    backButton: {
+        paddingVertical: 4,
+        paddingRight: 12,
+    },
+    backText: {
+        fontSize: TextSizes.normal,
+        fontFamily: 'Inter-Medium',
+    },
+    detailContent: {
+        paddingHorizontal: 24,
+        paddingBottom: 32,
+    },
+    detailTitle: {
+        fontSize: TextSizes.sectionTitle + 2,
+        fontFamily: 'Inter-SemiBold',
+        marginTop: 8,
+        marginBottom: 10,
+        lineHeight: 22,
+    },
+    detailMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 14,
+        flexWrap: 'wrap',
+    },
+    typeBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+        borderWidth: 1,
+    },
+    typeBadgeText: {
+        fontSize: TextSizes.small,
+        fontFamily: 'Inter-Medium',
+    },
+    detailTime: {
+        fontSize: TextSizes.small,
+        fontFamily: 'Inter-Regular',
+    },
+    divider: {
+        height: 1,
+        marginBottom: 14,
+    },
+    detailMessage: {
+        fontSize: TextSizes.normal + 1,
+        fontFamily: 'Inter-Regular',
+        lineHeight: 20,
+        marginBottom: 16,
+    },
+    detailSender: {
+        fontSize: TextSizes.small,
+        fontFamily: 'Inter-Regular',
+        fontStyle: 'italic',
     },
 });
 

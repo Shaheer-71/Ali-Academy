@@ -53,7 +53,7 @@ export default function LecturesScreen() {
 
   // Filter bottom sheet
   const [filterVisible, setFilterVisible] = useState(false);
-  const [filterStep, setFilterStep] = useState<'class' | 'subject'>('class');
+  const [expandedSection, setExpandedSection] = useState<'class' | 'subject' | 'date' | null>(null);
 
   // Applied filters
   const [filterClass, setFilterClass] = useState<string | null>(null);
@@ -81,7 +81,7 @@ export default function LecturesScreen() {
     setErrorModal({ visible: true, title: info.title, message: info.message });
   };
 
-  const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin';
+  const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin';
 
   // ── Data loading ────────────────────────────────────────────────────────────
 
@@ -114,44 +114,64 @@ export default function LecturesScreen() {
 
   // ── Filter data fetch ────────────────────────────────────────────────────────
 
+  const isSuperAdmin = profile?.role === 'superadmin';
+
   const fetchClasses = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('teacher_subject_enrollments')
-        .select('classes (id, name)')
-        .eq('teacher_id', profile?.id)
-        .eq('is_active', true);
-      if (error) throw error;
-      const unique = Array.from(
-        new Map(data?.map((i: any) => i.classes).filter(Boolean).map((c: any) => [c.id, c])).values()
-      );
-      setClasses(unique);
+      if (isSuperAdmin) {
+        const { data, error } = await supabase.from('classes').select('id, name').order('name');
+        if (error) throw error;
+        setClasses(data || []);
+      } else {
+        const { data, error } = await supabase
+          .from('teacher_subject_enrollments')
+          .select('classes (id, name)')
+          .eq('teacher_id', profile?.id)
+          .eq('is_active', true);
+        if (error) throw error;
+        const unique = Array.from(
+          new Map(data?.map((i: any) => i.classes).filter(Boolean).map((c: any) => [c.id, c])).values()
+        );
+        setClasses(unique);
+      }
     } catch (error) {
       setClasses([]);
     }
-  }, [profile?.id]);
+  }, [profile?.id, isSuperAdmin]);
 
   const fetchTeacherSubjects = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('teacher_subject_enrollments')
-        .select('subject_id, subjects (id, name)')
-        .eq('teacher_id', profile?.id)
-        .eq('is_active', true);
-      if (error) throw error;
-      const unique = Array.from(
-        new Map(data?.map((i: any) => i.subjects).filter(Boolean).map((s: any) => [s.id, s])).values()
-      );
-      setSubjects(unique);
+      if (isSuperAdmin) {
+        const { data, error } = await supabase.from('subjects').select('id, name').eq('is_active', true).order('name');
+        if (error) throw error;
+        setSubjects(data || []);
+      } else {
+        const { data, error } = await supabase
+          .from('teacher_subject_enrollments')
+          .select('subject_id, subjects (id, name)')
+          .eq('teacher_id', profile?.id)
+          .eq('is_active', true);
+        if (error) throw error;
+        const unique = Array.from(
+          new Map(data?.map((i: any) => i.subjects).filter(Boolean).map((s: any) => [s.id, s])).values()
+        );
+        setSubjects(unique);
+      }
     } catch (error) {
       showError(error, handleSubjectFetchErrorForLectures);
       setSubjects([]);
     }
-  }, [profile?.id]);
+  }, [profile?.id, isSuperAdmin]);
 
   const fetchSubjectsForClass = useCallback(async (classId: string) => {
     try {
       if (!classId) { setSubjects([]); return; }
+      if (isSuperAdmin) {
+        const { data, error } = await supabase.from('subjects').select('id, name').eq('is_active', true).order('name');
+        if (error) throw error;
+        setSubjects(data || []);
+        return;
+      }
       const { data, error } = await supabase
         .from('teacher_subject_enrollments')
         .select('subjects (id, name)')
@@ -197,7 +217,7 @@ export default function LecturesScreen() {
       setPendingClass(filterClass);
       setPendingSubject(filterSubject);
       setPendingDate(filterDate);
-      setFilterStep('class');
+      setExpandedSection(null);
       if (isTeacher && filterClass) fetchSubjectsForClass(filterClass);
       else if (isTeacher) fetchTeacherSubjects();
     }
@@ -206,9 +226,13 @@ export default function LecturesScreen() {
   const handleModalClassSelect = (classId: string | null) => {
     setPendingClass(classId);
     setPendingSubject(null);
-    setFilterStep('subject');
+    setExpandedSection(null);
     if (classId) fetchSubjectsForClass(classId);
     else fetchTeacherSubjects();
+  };
+
+  const toggleSection = (section: 'class' | 'subject' | 'date') => {
+    setExpandedSection(prev => prev === section ? null : section);
   };
 
   const applyFilter = () => {
@@ -267,161 +291,114 @@ export default function LecturesScreen() {
 
   // ── Filter Modal ─────────────────────────────────────────────────────────────
 
-  const renderFilterModal = () => (
-    <Modal
-      visible={filterVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setFilterVisible(false)}
-    >
-      <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
-        <View style={s.modalOverlay} />
-      </TouchableWithoutFeedback>
+  const renderFilterModal = () => {
+    const selectedClassName = pendingClass ? classes.find(c => c.id === pendingClass)?.name : 'All Classes';
+    const selectedSubjectName = pendingSubject ? subjects.find(s => s.id === pendingSubject)?.name : 'All Subjects';
+    const dateLabels: Record<DateFilter, string> = { all: 'All', today: 'Today', week: 'This Week', month: 'This Month' };
 
-      <View style={[s.bottomSheet, { backgroundColor: colors.cardBackground }]}>
-        <View style={[s.sheetHandle, { backgroundColor: colors.border }]} />
+    return (
+      <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={() => setFilterVisible(false)}>
+        <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
+          <View style={s.modalOverlay} />
+        </TouchableWithoutFeedback>
 
-        {/* Upload Lecture (teacher only) */}
-        {isTeacher && (
-          <TouchableOpacity
-            style={[s.addBtn, { borderColor: colors.primary }]}
-            onPress={() => { setFilterVisible(false); setSelectedLecture(null); setUploadModalVisible(true); }}
-          >
-            <Plus size={18} color={colors.primary} />
-            <Text allowFontScaling={false} style={[s.addBtnText, { color: colors.primary }]}>
-              Upload Lecture
-            </Text>
-          </TouchableOpacity>
-        )}
+        <View style={[s.bottomSheet, { backgroundColor: colors.cardBackground }]}>
+          <View style={[s.sheetHandle, { backgroundColor: colors.border }]} />
 
-        {/* Sheet header */}
-        <View style={s.sheetHeader}>
-          {isTeacher && filterStep === 'subject' && (
-            <TouchableOpacity onPress={() => setFilterStep('class')} style={s.backBtn}>
-              <ChevronRight size={20} color={colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
+          {isTeacher && (
+            <TouchableOpacity style={[s.addBtn, { borderColor: colors.primary }]} onPress={() => { setFilterVisible(false); setSelectedLecture(null); setUploadModalVisible(true); }}>
+              <Plus size={18} color={colors.primary} />
+              <Text allowFontScaling={false} style={[s.addBtnText, { color: colors.primary }]}>Upload Lecture</Text>
             </TouchableOpacity>
           )}
-          <Text allowFontScaling={false} style={[s.sheetTitle, { color: colors.text }]}>
-            {isTeacher
-              ? filterStep === 'class' ? 'Select Class' : 'Select Subject'
-              : 'Filter Lectures'}
-          </Text>
-          {(pendingClass !== null || pendingSubject !== null || pendingDate !== 'all') && (
-            <TouchableOpacity onPress={resetFilter}>
-              <Text allowFontScaling={false} style={[s.resetText, { color: '#EF4444' }]}>Reset</Text>
-            </TouchableOpacity>
-          )}
-        </View>
 
-        <ScrollView style={s.sheetScroll} showsVerticalScrollIndicator={false}>
-          {/* Class / Subject list */}
-          {isTeacher ? (
-            filterStep === 'class' ? (
+          <View style={s.sheetHeader}>
+            <Text allowFontScaling={false} style={[s.sheetTitle, { color: colors.text }]}>Filter Lectures</Text>
+            {(pendingClass !== null || pendingSubject !== null || pendingDate !== 'all') && (
+              <TouchableOpacity onPress={resetFilter}>
+                <Text allowFontScaling={false} style={[s.resetText, { color: '#EF4444' }]}>Reset</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <ScrollView style={s.sheetScroll} showsVerticalScrollIndicator={false}>
+            {/* Class accordion — teacher only */}
+            {isTeacher && (
               <>
-                <TouchableOpacity
-                  style={[s.sheetOption, { borderBottomColor: colors.border }]}
-                  onPress={() => handleModalClassSelect(null)}
-                >
-                  <Text allowFontScaling={false} style={[s.sheetOptionText, { color: colors.text }]}>All Classes</Text>
-                  <View style={s.sheetOptionRight}>
-                    {pendingClass === null && <Check size={16} color={colors.primary} />}
-                    <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} />
+                <TouchableOpacity style={[s.accordionHeader, { borderColor: colors.border }]} onPress={() => toggleSection('class')}>
+                  <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Class</Text>
+                  <View style={s.accordionRight}>
+                    <Text allowFontScaling={false} style={[s.accordionValue, { color: colors.text }]}>{selectedClassName}</Text>
+                    <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6, transform: [{ rotate: expandedSection === 'class' ? '270deg' : '90deg' }] }} />
                   </View>
                 </TouchableOpacity>
-                {classes.map(c => (
-                  <TouchableOpacity
-                    key={c.id}
-                    style={[s.sheetOption, { borderBottomColor: colors.border }]}
-                    onPress={() => handleModalClassSelect(c.id)}
-                  >
-                    <Text allowFontScaling={false} style={[s.sheetOptionText, { color: colors.text }]}>{c.name}</Text>
-                    <View style={s.sheetOptionRight}>
-                      {pendingClass === c.id && <Check size={16} color={colors.primary} />}
-                      <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} />
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                {expandedSection === 'class' && (
+                  <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                    <TouchableOpacity style={[s.sheetOption, { borderBottomColor: colors.border }]} onPress={() => handleModalClassSelect(null)}>
+                      <Text allowFontScaling={false} style={[s.sheetOptionText, { color: colors.text }]}>All Classes</Text>
+                      {pendingClass === null && <Check size={16} color={colors.primary} />}
+                    </TouchableOpacity>
+                    {classes.map(c => (
+                      <TouchableOpacity key={c.id} style={[s.sheetOption, { borderBottomColor: colors.border }]} onPress={() => handleModalClassSelect(c.id)}>
+                        <Text allowFontScaling={false} style={[s.sheetOptionText, { color: colors.text }]}>{c.name}</Text>
+                        {pendingClass === c.id && <Check size={16} color={colors.primary} />}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={[s.sheetOption, { borderBottomColor: colors.border }]}
-                  onPress={() => setPendingSubject(null)}
-                >
+            )}
+
+            {/* Subject accordion */}
+            <TouchableOpacity style={[s.accordionHeader, { borderColor: colors.border }]} onPress={() => toggleSection('subject')}>
+              <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Subject</Text>
+              <View style={s.accordionRight}>
+                <Text allowFontScaling={false} style={[s.accordionValue, { color: colors.text }]}>{selectedSubjectName}</Text>
+                <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6, transform: [{ rotate: expandedSection === 'subject' ? '270deg' : '90deg' }] }} />
+              </View>
+            </TouchableOpacity>
+            {expandedSection === 'subject' && (
+              <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                <TouchableOpacity style={[s.sheetOption, { borderBottomColor: colors.border }]} onPress={() => { setPendingSubject(null); setExpandedSection(null); }}>
                   <Text allowFontScaling={false} style={[s.sheetOptionText, { color: colors.text }]}>All Subjects</Text>
                   {pendingSubject === null && <Check size={16} color={colors.primary} />}
                 </TouchableOpacity>
                 {subjects.map(sub => (
-                  <TouchableOpacity
-                    key={sub.id}
-                    style={[s.sheetOption, { borderBottomColor: colors.border }]}
-                    onPress={() => setPendingSubject(sub.id)}
-                  >
+                  <TouchableOpacity key={sub.id} style={[s.sheetOption, { borderBottomColor: colors.border }]} onPress={() => { setPendingSubject(sub.id); setExpandedSection(null); }}>
                     <Text allowFontScaling={false} style={[s.sheetOptionText, { color: colors.text }]}>{sub.name}</Text>
                     {pendingSubject === sub.id && <Check size={16} color={colors.primary} />}
                   </TouchableOpacity>
                 ))}
-              </>
-            )
-          ) : (
-            <>
-              <TouchableOpacity
-                style={[s.sheetOption, { borderBottomColor: colors.border }]}
-                onPress={() => setPendingSubject(null)}
-              >
-                <Text allowFontScaling={false} style={[s.sheetOptionText, { color: colors.text }]}>All Subjects</Text>
-                {pendingSubject === null && <Check size={16} color={colors.primary} />}
-              </TouchableOpacity>
-              {subjects.map(sub => (
-                <TouchableOpacity
-                  key={sub.id}
-                  style={[s.sheetOption, { borderBottomColor: colors.border }]}
-                  onPress={() => setPendingSubject(sub.id)}
-                >
-                  <Text allowFontScaling={false} style={[s.sheetOptionText, { color: colors.text }]}>{sub.name}</Text>
-                  {pendingSubject === sub.id && <Check size={16} color={colors.primary} />}
-                </TouchableOpacity>
-              ))}
-            </>
-          )}
+              </View>
+            )}
 
-          {/* Date filter */}
-          <View style={[s.dateSectionHeader, { borderTopColor: colors.border }]}>
-            <Text allowFontScaling={false} style={[s.dateSectionTitle, { color: colors.textSecondary }]}>
-              Filter by Upload Date
-            </Text>
-          </View>
-          <View style={s.dateChips}>
-            {(['all', 'today', 'week', 'month'] as DateFilter[]).map(opt => (
-              <TouchableOpacity
-                key={opt}
-                style={[
-                  s.dateChip,
-                  { borderColor: colors.border, backgroundColor: colors.cardBackground },
-                  pendingDate === opt && { backgroundColor: colors.primary, borderColor: colors.primary },
-                ]}
-                onPress={() => setPendingDate(opt)}
-              >
-                <Text
-                  allowFontScaling={false}
-                  style={[s.dateChipText, { color: pendingDate === opt ? '#fff' : colors.text }]}
-                >
-                  {opt === 'all' ? 'All' : opt === 'today' ? 'Today' : opt === 'week' ? 'This Week' : 'This Month'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+            {/* Date accordion */}
+            <TouchableOpacity style={[s.accordionHeader, { borderColor: colors.border }]} onPress={() => toggleSection('date')}>
+              <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Date</Text>
+              <View style={s.accordionRight}>
+                <Text allowFontScaling={false} style={[s.accordionValue, { color: colors.text }]}>{dateLabels[pendingDate]}</Text>
+                <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6, transform: [{ rotate: expandedSection === 'date' ? '270deg' : '90deg' }] }} />
+              </View>
+            </TouchableOpacity>
+            {expandedSection === 'date' && (
+              <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                {(['all', 'today', 'week', 'month'] as DateFilter[]).map(opt => (
+                  <TouchableOpacity key={opt} style={[s.sheetOption, { borderBottomColor: colors.border }]} onPress={() => { setPendingDate(opt); setExpandedSection(null); }}>
+                    <Text allowFontScaling={false} style={[s.sheetOptionText, { color: colors.text }]}>{dateLabels[opt]}</Text>
+                    {pendingDate === opt && <Check size={16} color={colors.primary} />}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </ScrollView>
 
-        <TouchableOpacity
-          style={[s.applyBtn, { backgroundColor: colors.primary }]}
-          onPress={applyFilter}
-        >
-          <Text allowFontScaling={false} style={s.applyBtnText}>Apply Filter</Text>
-        </TouchableOpacity>
-      </View>
-    </Modal>
-  );
+          <TouchableOpacity style={[s.applyBtn, { backgroundColor: colors.primary }]} onPress={applyFilter}>
+            <Text allowFontScaling={false} style={s.applyBtnText}>Apply Filter</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    );
+  };
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -515,7 +492,7 @@ export default function LecturesScreen() {
         <UploadLectureModal
           visible={uploadModalVisible}
           onClose={handleModalClose}
-          onSuccess={() => { handleModalClose(); loadLectures(); }}
+          onSuccess={loadLectures}
           editLecture={selectedLecture}
         />
       </SafeAreaView>
@@ -549,24 +526,23 @@ const s = StyleSheet.create({
   addBtnText: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold' },
 
   sheetHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 8 },
-  backBtn: { marginRight: 8, padding: 2 },
   sheetTitle: { flex: 1, fontSize: TextSizes.sectionTitle, fontFamily: 'Inter-SemiBold' },
   resetText: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium' },
-
-  sheetScroll: { maxHeight: height * 0.38 },
+  sheetScroll: { flexGrow: 0 },
+  accordionHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginHorizontal: 16, marginBottom: 8, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 10, borderWidth: 1,
+  },
+  accordionLabel: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium', flex: 1 },
+  accordionValue: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-SemiBold' },
+  accordionRight: { flexDirection: 'row', alignItems: 'center' },
+  accordionBody: { marginHorizontal: 16, marginBottom: 8, borderRadius: 10, borderWidth: 1, overflow: 'hidden' },
   sheetOption: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   sheetOptionText: { fontSize: TextSizes.medium, fontFamily: 'Inter-Regular', flex: 1 },
-  sheetOptionRight: { flexDirection: 'row', alignItems: 'center' },
-
-  dateSectionHeader: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, borderTopWidth: StyleSheet.hairlineWidth, marginTop: 4 },
-  dateSectionTitle: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium', textTransform: 'uppercase', letterSpacing: 0.5 },
-  dateChips: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 8, paddingBottom: 8 },
-  dateChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
-  dateChipText: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium' },
-
-  applyBtn: { marginHorizontal: 16, marginTop: 12, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  applyBtn: { marginHorizontal: 16, marginTop: 8, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   applyBtnText: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold', color: '#ffffff' },
 });

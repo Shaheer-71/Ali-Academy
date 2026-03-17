@@ -63,7 +63,7 @@ export default function LectureCard({
   onGestureStartRef.current = onGestureStart;
   onGestureEndRef.current = onGestureEnd;
 
-  const canSwipe = profile?.role === 'teacher' || profile?.role === 'admin';
+  const canSwipe = profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin';
 
   const panResponder = useRef(
     PanResponder.create({
@@ -126,7 +126,6 @@ export default function LectureCard({
             setIsDeleting(true);
             try {
               await lectureService.deleteLecture(lecture.id);
-              Alert.alert('Success', 'Lecture deleted successfully');
               onRefresh?.();
             } catch (error) {
               showError(error, handleLectureDeleteError);

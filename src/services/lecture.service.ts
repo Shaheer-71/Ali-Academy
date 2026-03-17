@@ -31,6 +31,20 @@ class LectureService {
 
             // console.log(`🔍 Fetching lectures for ${role}:`, userId);
 
+            if (role === 'superadmin') {
+                // Superadmin: all lectures
+                let query = supabase
+                    .from('lectures')
+                    .select('*, classes (name), subjects (name), profiles (full_name)')
+                    .eq('is_active', true)
+                    .order('created_at', { ascending: false });
+                if (filters?.classId) query = query.eq('class_id', filters.classId);
+                if (filters?.subjectId) query = query.eq('subject_id', filters.subjectId);
+                const { data, error } = await query;
+                if (error) throw error;
+                return data ? await this.enhanceLecturesWithViewStatus(data, userId) : [];
+            }
+
             if (role === 'teacher') {
                 // ✅ For teachers, get from teacher_subject_enrollments
                 const { data: enrollments, error: enrollmentError } = await supabase
@@ -145,6 +159,12 @@ class LectureService {
                 throw new Error('User ID and role are required');
             }
 
+            if (role === 'superadmin') {
+                const { data, error } = await supabase.from('classes').select('*').order('name');
+                if (error) throw error;
+                return data || [];
+            }
+
             if (role === 'teacher') {
                 const { data: enrollments, error: enrollmentError } = await supabase
                     .from('teacher_subject_enrollments')
@@ -209,6 +229,13 @@ class LectureService {
                 throw new Error('User ID and role are required');
             }
 
+
+            if (role === 'superadmin') {
+                const { data: subjects, error } = await supabase
+                    .from('subjects').select('id, name, description').eq('is_active', true).order('name');
+                if (error) throw error;
+                return subjects || [];
+            }
 
             if (role === 'teacher') {
                 const { data: enrollments, error: enrollmentError } = await supabase

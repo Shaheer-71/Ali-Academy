@@ -35,7 +35,7 @@
 //                         placeholderTextColor={colors.textSecondary}
 //                     />
 //                 </View>
-//                 {(profile?.role === 'teacher' || profile?.role === 'admin') && ( // Only teachers can add entries
+//                 {(profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') && ( // Only teachers can add entries
 //                     <TouchableOpacity
 //                         style={[styles.addHeaderButton, { backgroundColor: colors.primary }]}
 //                         onPress={() => {
@@ -139,7 +139,7 @@ export default function Header({
                     placeholderTextColor={colors.textSecondary}
                 />
             </View>
-            {(profile?.role === 'teacher') && (
+            {profile?.role === 'superadmin' && (
                 <TouchableOpacity
                     style={[styles.addHeaderButton, { backgroundColor: colors.primary }]}
                     onPress={() => {

@@ -6,6 +6,16 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { supabase } from './supabase';
 import { Platform } from 'react-native';
+import { router } from 'expo-router';
+
+const FEE_TYPES = ['fee_reminder', 'fee_paid', 'fee'];
+
+function handleNotificationTap(data: Record<string, any> | undefined) {
+    if (!data) return;
+    if (FEE_TYPES.includes(data.type)) {
+        router.push('/fee-status' as any);
+    }
+}
 
 // ============================================
 // HELPER: GET DEVICE IP ADDRESS
@@ -65,21 +75,11 @@ export function setupNotificationHandlers() {
         }
     );
 
-    // Handle when user taps notification (foreground)
+    // Handle when user taps notification (foreground + background)
     const tapListener = Notifications.addNotificationResponseReceivedListener(
         (response) => {
-            console.log('👆 [TAP] User tapped notification:', {
-                title: response.notification.request.content.title,
-                body: response.notification.request.content.body,
-                data: response.notification.request.content.data,
-            });
-
-            // You can navigate or show modal here
             const data = response.notification.request.content.data;
-            if (data?.type === 'fee') {
-                console.log('💰 [ACTION] Navigating to fee screen for:', data.feeId);
-                // router.push(`/fee/${data.feeId}`);
-            }
+            handleNotificationTap(data as Record<string, any>);
         }
     );
 
@@ -206,40 +206,43 @@ export async function sendPushNotification({
         let sentCount = 0;
         let failedCount = 0;
 
-        for (let i = 0; i < devices.length; i++) {
-            const device = devices[i];
-            console.log(`📱 [SEND] Sending to device ${i + 1}/${devices.length}:`, {
-                platform: device.platform,
-                ip: device.ip_address || 'Unknown',
-                token: device.token.substring(0, 30) + '...',
+        // Batch all tokens into a single Expo push request
+        const messages = devices.map(device => ({
+            to: device.token,
+            title,
+            body,
+            data: data || {},
+            sound: 'default',
+            badge: 1,
+            channelId: 'default',
+        }));
+
+        try {
+            const response = await fetch('https://exp.host/--/api/v2/push/send', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(messages),
             });
 
-            try {
-                // Call Supabase Edge Function for each device
-                const { data: result, error } = await supabase.functions.invoke(
-                    'send-notification',
-                    {
-                        body: {
-                            token: device.token,
-                            title: title,
-                            body: body,
-                            data: data,
-                        },
-                    }
-                );
+            const result = await response.json();
+            console.log(`✅ [SEND] Expo response:`, JSON.stringify(result));
 
-                if (error) {
-                    console.log(`❌ [SEND] Device ${i + 1} failed:`, error.message);
+            // result.data is an array of per-message statuses
+            const statuses = Array.isArray(result?.data) ? result.data : [result?.data];
+            statuses.forEach((s: any, i: number) => {
+                if (s?.status === 'error') {
+                    console.log(`⚠️ [SEND] Token ${i + 1} error:`, s.message, s.details);
                     failedCount++;
-                    continue;
+                } else {
+                    sentCount++;
                 }
-
-                console.log(`✅ [SEND] Device ${i + 1} success:`, result);
-                sentCount++;
-            } catch (deviceError) {
-                console.log(`❌ [SEND] Device ${i + 1} error:`, deviceError);
-                failedCount++;
-            }
+            });
+        } catch (fetchError) {
+            console.log('❌ [SEND] Fetch error:', fetchError);
+            failedCount = devices.length;
         }
 
         console.log(`📊 [SEND] Notification summary: ${sentCount} sent, ${failedCount} failed out of ${devices.length} devices`);

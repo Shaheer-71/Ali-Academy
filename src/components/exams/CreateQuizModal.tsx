@@ -51,6 +51,8 @@ interface CreateQuizModalProps {
     selectedClass: string;
     createQuiz: (quizData: QuizData) => { success: boolean; error?: any; data?: any };
     getSubjectsForClass: (classId: string) => Subject[];
+    editingQuiz?: any;
+    updateQuiz?: (quizId: string, quizData: Partial<QuizData>) => Promise<{ success: boolean; error?: any }>;
 }
 
 const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
@@ -62,7 +64,10 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
     selectedClass,
     createQuiz,
     getSubjectsForClass,
+    editingQuiz,
+    updateQuiz,
 }) => {
+    const isEditing = !!editingQuiz;
     const [creating, setCreating] = useState<boolean>(false);
     const { profile } = useAuth();
     const [newQuiz, setNewQuiz] = useState({
@@ -100,23 +105,37 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
         });
     };
 
-    // Reset form when modal is opened
+    // Reset / populate form when modal is opened
     useEffect(() => {
         if (modalVisible) {
-            setNewQuiz({
-                title: '',
-                description: '',
-                subject_id: '',
-                class_id: selectedClass === 'all' ? '' : selectedClass,
-                scheduled_date: '',
-                duration_minutes: '60',
-                total_marks: '100',
-                passing_marks: '40',
-                instructions: '',
-            });
-            setAvailableSubjects([]);
+            if (isEditing && editingQuiz) {
+                setNewQuiz({
+                    title: editingQuiz.title || '',
+                    description: editingQuiz.description || '',
+                    subject_id: editingQuiz.subject_id || '',
+                    class_id: editingQuiz.class_id || '',
+                    scheduled_date: editingQuiz.scheduled_date || '',
+                    duration_minutes: String(editingQuiz.duration_minutes ?? 60),
+                    total_marks: String(editingQuiz.total_marks ?? 100),
+                    passing_marks: String(editingQuiz.passing_marks ?? 40),
+                    instructions: editingQuiz.instructions || '',
+                });
+            } else {
+                setNewQuiz({
+                    title: '',
+                    description: '',
+                    subject_id: '',
+                    class_id: selectedClass === 'all' ? '' : selectedClass,
+                    scheduled_date: '',
+                    duration_minutes: '60',
+                    total_marks: '100',
+                    passing_marks: '40',
+                    instructions: '',
+                });
+                setAvailableSubjects([]);
+            }
         }
-    }, [modalVisible, selectedClass]);
+    }, [modalVisible, selectedClass, isEditing, editingQuiz]);
 
     // Update available subjects when class changes
     useEffect(() => {
@@ -184,13 +203,26 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
 
         setCreating(true);
         try {
-            const result = await createQuiz({
+            const quizPayload = {
                 ...newQuiz,
                 duration_minutes: duration,
                 total_marks: totalMarks,
                 passing_marks: passingMarks,
                 quiz_type: 'quiz',
-            });
+            };
+
+            if (isEditing && updateQuiz) {
+                const result = await updateQuiz(editingQuiz.id, quizPayload);
+                if (result.success) {
+                    Alert.alert('Success', 'Quiz updated successfully');
+                    setModalVisible(false);
+                } else {
+                    Alert.alert('Error', 'Failed to update quiz. Please try again.');
+                }
+                return;
+            }
+
+            const result = await createQuiz(quizPayload);
 
             if (result.success && result.data) {
                 Alert.alert('Success', 'Quiz scheduled successfully');
@@ -288,7 +320,10 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
 
         } catch (error: any) {
             console.warn('Error creating quiz:', error);
-            Alert.alert('Error', error.message);
+            const msg = error?.message?.includes('quizzes_class_subject_unique') || error?.code === '23505'
+                ? 'A quiz already exists for this class and subject. Only one quiz per class per subject is allowed.'
+                : error.message;
+            Alert.alert('Error', msg);
         } finally {
             setCreating(false);
         }
@@ -315,7 +350,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
 
 
                     <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Schedule Quiz</Text>
+                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>{isEditing ? 'Edit Quiz' : 'Schedule Quiz'}</Text>
                         <TouchableOpacity
                             style={styles.closeButton}
                             onPress={() => setModalVisible(false)}
@@ -513,7 +548,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                             {creating ? (
                                 <ActivityIndicator color="#ffffff" />
                             ) : (
-                                <Text allowFontScaling={false} style={styles.submitButtonText}>Schedule Quiz</Text>
+                                <Text allowFontScaling={false} style={styles.submitButtonText}>{isEditing ? 'Save Changes' : 'Schedule Quiz'}</Text>
                             )}
                         </TouchableOpacity>
                     </ScrollView>

@@ -16,12 +16,11 @@ interface AttendanceRecord {
   id: string;
   student_id: string;
   class_id: string;
-  subject_id: string;
-  teacher_id: string;
   date: string;
   arrival_time?: string;
   status: 'present' | 'late' | 'absent';
   late_minutes?: number;
+  marked_by?: string;
   students?: {
     full_name: string;
     roll_number: string;
@@ -33,8 +32,6 @@ interface AttendanceRecord {
 interface AttendanceSession {
   id: string;
   class_id: string;
-  subject_id: string;
-  teacher_id: string;
   date: string;
   total_students: number;
   present_count: number;
@@ -42,7 +39,6 @@ interface AttendanceSession {
   absent_count: number;
   posted_at: string;
   classes?: { name: string };
-  subjects?: { name: string };
 }
 
 interface AttendanceStats {
@@ -61,7 +57,7 @@ interface Student {
   classes?: { name: string };
 }
 
-export const useAttendance = (classId?: string, subjectId?: string) => {
+export const useAttendance = (classId?: string) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [attendanceSessions, setAttendanceSessions] = useState<AttendanceSession[]>([]);
@@ -80,9 +76,9 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
   const [error, setError] = useState<ErrorResponse | null>(null);
   const { profile, student } = useAuth();
 
-  // Clear all data when classId or subjectId changes
+  // Clear all data when classId changes
   useEffect(() => {
-    if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+    if ((profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')) {
       setStudents([]);
       setAttendanceRecords([]);
       setAttendanceSessions([]);
@@ -97,7 +93,7 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
         attendanceRate: 0,
       });
 
-      if (classId && subjectId) {
+      if (classId) {
         setLoading(true);
         fetchStudents();
         fetchAttendanceData();
@@ -115,10 +111,10 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
       });
       fetchStudentAttendance();
     }
-  }, [classId, subjectId, profile]);
+  }, [classId, profile]);
 
   const fetchStudents = async () => {
-    if (!classId || !subjectId) {
+    if (!classId) {
       setStudents([]);
       setLoading(false);
       return;
@@ -127,29 +123,6 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
     try {
       setError(null);
 
-      // Get students enrolled in this specific class + subject
-      const { data: enrollments, error: enrollmentError } = await supabase
-        .from('student_subject_enrollments')
-        .select('student_id')
-        .eq('class_id', classId)
-        .eq('subject_id', subjectId)
-        .eq('is_active', true);
-
-      if (enrollmentError) {
-        throw new Error('Failed to fetch enrollments: ' + enrollmentError.message);
-      }
-
-      if (!enrollments || enrollments.length === 0) {
-        const errorResponse = handleStudentFetchError(new Error('No enrollments found'));
-        setError(errorResponse);
-        setStudents([]);
-        setLoading(false);
-        return;
-      }
-
-      const studentIds = [...new Set(enrollments.map(e => e.student_id))];
-
-      // Fetch student details
       const { data, error: studentsError } = await supabase
         .from('students')
         .select(`
@@ -159,7 +132,7 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
           parent_contact,
           classes (name)
         `)
-        .in('id', studentIds)
+        .eq('class_id', classId)
         .eq('is_deleted', false)
         .order('roll_number');
 
@@ -182,7 +155,7 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
   };
 
   const fetchTodaysAttendance = async (date: string) => {
-    if (!classId || !subjectId) {
+    if (!classId) {
       setTodaysAttendance({});
       return;
     }
@@ -199,7 +172,6 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
           )
         `)
         .eq('class_id', classId)
-        .eq('subject_id', subjectId)
         .eq('date', date);
 
       if (fetchError) throw fetchError;
@@ -242,15 +214,10 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
             full_name,
             roll_number,
             parent_contact
-          ),
-          subjects (name)
+          )
         `)
         .eq('class_id', classId)
         .order('date', { ascending: false });
-
-      if (subjectId) {
-        query = query.eq('subject_id', subjectId);
-      }
 
       if (startDate) {
         query = query.gte('date', startDate);
@@ -287,7 +254,6 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
         .from('attendance')
         .select(`
           *,
-          subjects (name),
           classes (name)
         `)
         .eq('student_id', student?.id)
@@ -326,15 +292,10 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
         .from('attendance_sessions')
         .select(`
           *,
-          classes (name),
-          subjects (name)
+          classes (name)
         `)
         .eq('class_id', classId)
         .order('date', { ascending: false });
-
-      if (subjectId) {
-        query = query.eq('subject_id', subjectId);
-      }
 
       if (startDate) {
         query = query.gte('date', startDate);
@@ -403,8 +364,6 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
       [studentId]: {
         student_id: studentId,
         class_id: classId!,
-        subject_id: subjectId!,
-        teacher_id: profile!.id,
         date: new Date().toISOString().split('T')[0],
         arrival_time: currentTime,
         status: finalStatus,
@@ -414,7 +373,7 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
   };
 
   const postAttendance = async (date: string = new Date().toISOString().split('T')[0]) => {
-    if (!classId || !subjectId || Object.keys(currentAttendance).length === 0) {
+    if (!classId || Object.keys(currentAttendance).length === 0) {
       const errorResponse = handleAttendancePostError(new Error('No attendance data to post'));
       return { success: false, error: errorResponse.message };
     }
@@ -426,8 +385,6 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
       const attendanceData = Object.values(currentAttendance).map(record => ({
         student_id: record.student_id,
         class_id: record.class_id,
-        subject_id: record.subject_id,
-        teacher_id: record.teacher_id,
         date,
         arrival_time: record.arrival_time,
         status: record.status,
@@ -435,19 +392,18 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
         marked_by: profile!.id,
       }));
 
-      // Check if attendance already exists
+      // Check if attendance already exists for this class+date
       const { data: existing, error: checkError } = await supabase
         .from('attendance')
         .select('id')
         .eq('class_id', classId)
-        .eq('subject_id', subjectId)
         .eq('date', date)
         .limit(1);
 
       if (checkError) throw checkError;
 
       if (existing && existing.length > 0) {
-        throw new Error('Attendance already posted for this subject today');
+        throw new Error('Attendance already marked for this class today');
       }
 
       const { error: attendanceError } = await supabase
@@ -634,7 +590,7 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
     setError(null);
 
     try {
-      if ((profile?.role === 'teacher' || profile?.role === 'admin') && classId) {
+      if ((profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') && classId) {
         setStudents([]);
         setAttendanceRecords([]);
         setAttendanceSessions([]);
@@ -657,15 +613,10 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
               full_name,
               roll_number,
               parent_contact
-            ),
-            subjects (name)
+            )
           `)
           .eq('class_id', classId)
           .order('date', { ascending: false });
-
-        if (subjectId) {
-          query = query.eq('subject_id', subjectId);
-        }
 
         const { data, error: fetchError } = await query;
 
@@ -717,7 +668,7 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
   };
 
   const checkAttendanceForDate = async (date: string) => {
-    if (!classId || !subjectId) return [];
+    if (!classId) return [];
 
     try {
       const { data, error: fetchError } = await supabase
@@ -731,7 +682,6 @@ export const useAttendance = (classId?: string, subjectId?: string) => {
           )
         `)
         .eq('class_id', classId)
-        .eq('subject_id', subjectId)
         .eq('date', date);
 
       if (fetchError) throw fetchError;

@@ -1,8 +1,19 @@
 // src/contexts/NotificationContext.tsx
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
 import { supabase } from '@/src/lib/supabase';
 import { Notification } from '@/src/types/notification';
 import * as Notifications from 'expo-notifications';
+
+// Android requires a notification channel for local notifications
+if (Platform.OS === 'android') {
+  Notifications.setNotificationChannelAsync('default', {
+    name: 'Default',
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#b6d509',
+  });
+}
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -37,7 +48,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           *,
           notification:notifications!inner(
             *,
-            creator:created_by(
+            creator:profiles!notifications_created_by_fkey(
                 id,
                 full_name,
                 role
@@ -84,7 +95,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (notifIds.length > 0) {
           const { data: notifsData, error: notifsError } = await supabase
             .from('notifications')
-            .select(`*, creator:created_by(id, full_name, avatar_url, role)`)
+            .select(`*, creator:profiles!notifications_created_by_fkey(id, full_name, avatar_url, role)`)
             .in('id', notifIds);
 
           if (notifsError) throw notifsError;
@@ -227,35 +238,27 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, []);
 
-  // Set up real-time subscription
+  // Re-fetch and set up realtime whenever auth state changes
   useEffect(() => {
-    const setupRealtimeSubscription = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    let subscription: ReturnType<typeof supabase.channel> | null = null;
 
-      const subscription = supabase
-        .channel('notifications')
+    const setupForUser = async (userId: string) => {
+      await fetchNotifications();
+
+      subscription = supabase
+        .channel(`notifications:${userId}`)
         .on(
           'postgres_changes',
           {
             event: 'INSERT',
             schema: 'public',
             table: 'notification_recipients',
-            filter: `user_id=eq.${user.id}`,
+            filter: `user_id=eq.${userId}`,
           },
           async (payload) => {
-            // Fetch the full notification details
             const { data } = await supabase
               .from('notifications')
-              .select(`
-                *,
-                creator:created_by(
-                      id,
-                      full_name,
-                      avatar_url,
-                      role
-                    )
-              `)
+              .select(`*, creator:profiles!notifications_created_by_fkey(id, full_name, avatar_url, role)`)
               .eq('id', payload.new.notification_id)
               .single();
 
@@ -274,34 +277,47 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 creator,
                 is_read: false,
               };
-              
+
               setNotifications(prev => [newNotification, ...prev]);
-              
-              // Show push notification
+
               await Notifications.scheduleNotificationAsync({
                 content: {
                   title: data.title,
                   body: data.message,
-                  data: { notificationId: data.id },
+                  data: { notificationId: data.id, type: data.type },
+                  sound: true,
                 },
-                trigger: null,
+                trigger: Platform.OS === 'android'
+                  ? { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 1, channelId: 'default' }
+                  : { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 1 },
               });
             }
           }
         )
         .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-      };
     };
 
-    setupRealtimeSubscription();
-  }, []);
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setupForUser(session.user.id);
+      } else {
+        setNotifications([]);
+        if (subscription) {
+          subscription.unsubscribe();
+          subscription = null;
+        }
+      }
+    });
 
-  // Initial fetch
-  useEffect(() => {
-    fetchNotifications();
+    // Also try immediately in case already logged in
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setupForUser(user.id);
+    });
+
+    return () => {
+      authSub.unsubscribe();
+      if (subscription) subscription.unsubscribe();
+    };
   }, [fetchNotifications]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;

@@ -51,6 +51,28 @@ export const useDiaryAssignments = (
                 return;
             }
 
+            // SUPERADMIN — sees everything
+            if (profile.role === "superadmin") {
+                const { data: allAssignments, error: allErr } = await supabase
+                    .from("diary_assignments")
+                    .select(`
+                        *,
+                        classes(name),
+                        students(full_name),
+                        subjects(name),
+                        profiles:assigned_by(full_name)
+                    `)
+                    .eq("is_deleted", false)
+                    .order("created_at", { ascending: false });
+
+                if (allErr) throw allErr;
+
+                const data = allAssignments || [];
+                setAssignments(data);
+                await fetchStudentNames(data);
+                return;
+            }
+
             // TEACHER
             if (profile.role === "teacher") {
                 const { data: teacherEnrollments, error: teacherErr } = await supabase
@@ -92,11 +114,11 @@ export const useDiaryAssignments = (
             }
 
             // STUDENT
-            if (profile.role === "student" && profile?.id) {
+            if (profile.role === "student" && student?.id) {
                 const { data: studentEnrollments, error: enrollErr } = await supabase
                     .from("student_subject_enrollments")
                     .select("class_id, subject_id")
-                    .eq("student_id", profile?.id)
+                    .eq("student_id", student?.id)
                     .eq("is_active", true);
 
                 if (enrollErr) throw enrollErr;
@@ -121,7 +143,7 @@ export const useDiaryAssignments = (
             subjects(name),
             profiles:assigned_by(full_name)
           `)
-                    .contains("student_ids", [profile?.id])
+                    .contains("student_ids", [student?.id])
                     .eq("is_deleted", false)
                     .order("created_at", { ascending: false });
 

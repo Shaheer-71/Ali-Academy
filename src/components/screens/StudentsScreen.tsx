@@ -31,6 +31,8 @@ import {
     Check,
 } from 'lucide-react-native';
 import { Dimensions, TouchableWithoutFeedback } from 'react-native';
+
+const { height } = Dimensions.get('window');
 import { supabase } from '@/src/lib/supabase';
 import TopSection from '../common/TopSections';
 import { useScreenAnimation } from '@/src/utils/animations';
@@ -94,7 +96,7 @@ export default function StudentsScreen() {
 
     // Filter state
     const [filterVisible, setFilterVisible] = useState(false);
-    const [filterStep, setFilterStep] = useState<'class' | 'subject'>('class');
+    const [expandedSection, setExpandedSection] = useState<'class' | 'subject' | null>(null);
     const [pendingFilterClass, setPendingFilterClass] = useState('all');
     const [pendingFilterSubject, setPendingFilterSubject] = useState('all');
     const [selectedFilterClass, setSelectedFilterClass] = useState('all');
@@ -118,6 +120,7 @@ export default function StudentsScreen() {
         parent_name: '',
         medical_conditions: '',
         notes: '',
+        monthly_fee: '',
     });
 
     const onRefresh = async () => {
@@ -159,7 +162,7 @@ export default function StudentsScreen() {
 
 
     useEffect(() => {
-        if ((profile?.role === 'teacher' || profile?.role === 'admin')) {
+        if ((profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')) {
             fetchClasses();
             fetchStudentsPasswordStatus();
         }
@@ -250,6 +253,7 @@ export default function StudentsScreen() {
             parent_name: '',
             medical_conditions: '',
             notes: '',
+            monthly_fee: '',
         });
         setSelectedSubjects([]);
         setSubjects([]);
@@ -292,10 +296,17 @@ export default function StudentsScreen() {
             showModalError({ field: 'subject_ids' }, () => handleValidationError('subject_ids'));
             return;
         }
+        if (!newStudent.monthly_fee.trim() || isNaN(parseFloat(newStudent.monthly_fee)) || parseFloat(newStudent.monthly_fee) < 0) {
+            Alert.alert('Validation Error', 'Please enter a valid monthly fee amount.');
+            return;
+        }
 
         setCreating(true);
         try {
-            const result = await createStudentSimple(newStudent, profile!.id);
+            const result = await createStudentSimple({
+                ...newStudent,
+                monthly_fee: parseFloat(newStudent.monthly_fee),
+            }, profile!.id);
 
             if (result.success) {
                 await addStudent({
@@ -562,16 +573,20 @@ export default function StudentsScreen() {
     const openFilter = () => {
         setPendingFilterClass(selectedFilterClass);
         setPendingFilterSubject(selectedFilterSubject);
-        setFilterStep('class');
+        setExpandedSection(null);
         if (selectedFilterClass !== 'all') fetchFilterSubjects(selectedFilterClass);
         setFilterVisible(true);
+    };
+
+    const toggleSection = (section: 'class' | 'subject') => {
+        setExpandedSection(prev => prev === section ? null : section);
     };
 
     const handlePendingFilterClassSelect = (id: string) => {
         setPendingFilterClass(id);
         setPendingFilterSubject('all');
         fetchFilterSubjects(id);
-        setFilterStep('subject');
+        setExpandedSection(null);
     };
 
     const applyStudentFilter = async () => {
@@ -617,7 +632,7 @@ export default function StudentsScreen() {
         setNewStudent(prev => ({ ...prev, subject_ids: newSelection }));
     };
 
-    if (profile?.role !== 'teacher' && profile?.role !== 'admin') {
+    if (profile?.role !== 'teacher' && profile?.role !== 'admin' && profile?.role !== 'superadmin') {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -632,49 +647,25 @@ export default function StudentsScreen() {
         );
     }
 
-    const { height } = Dimensions.get('window');
-
     return (
         <>
             <TopSection onFilterPress={openFilter} isFiltered={isFiltered} />
 
             {/* Filter Bottom Sheet */}
-            <Modal
-                visible={filterVisible}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setFilterVisible(false)}
-            >
+            <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={() => setFilterVisible(false)}>
                 <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
                     <View style={styles.filterOverlay} />
                 </TouchableWithoutFeedback>
                 <View style={[styles.filterSheet, { backgroundColor: colors.cardBackground }]}>
                     <View style={[styles.filterHandle, { backgroundColor: colors.border }]} />
 
-                    {/* Add Student — always at top */}
-                    <TouchableOpacity
-                        style={[styles.addStudentRow, { borderColor: colors.primary }]}
-                        onPress={() => {
-                            setFilterVisible(false);
-                            resetForm();
-                            setModalVisible(true);
-                        }}
-                    >
+                    <TouchableOpacity style={[styles.addStudentRow, { borderColor: colors.primary }]} onPress={() => { setFilterVisible(false); resetForm(); setModalVisible(true); }}>
                         <Plus size={18} color={colors.primary} />
-                        <Text allowFontScaling={false} style={[styles.addStudentText, { color: colors.primary }]}>
-                            Add New Student
-                        </Text>
+                        <Text allowFontScaling={false} style={[styles.addStudentText, { color: colors.primary }]}>Add New Student</Text>
                     </TouchableOpacity>
 
                     <View style={styles.filterSheetHeader}>
-                        {filterStep === 'subject' && (
-                            <TouchableOpacity onPress={() => setFilterStep('class')} style={styles.filterBackBtn}>
-                                <ChevronRight size={20} color={colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
-                            </TouchableOpacity>
-                        )}
-                        <Text allowFontScaling={false} style={[styles.filterSheetTitle, { color: colors.text }]}>
-                            {filterStep === 'class' ? 'Filter by Class' : 'Filter by Subject'}
-                        </Text>
+                        <Text allowFontScaling={false} style={[styles.filterSheetTitle, { color: colors.text }]}>Filter Students</Text>
                         {isFiltered && (
                             <TouchableOpacity onPress={resetStudentFilter}>
                                 <Text allowFontScaling={false} style={styles.filterResetText}>Reset</Text>
@@ -682,60 +673,59 @@ export default function StudentsScreen() {
                         )}
                     </View>
 
-                    <ScrollView style={{ maxHeight: height * 0.35 }} showsVerticalScrollIndicator={false}>
-                        {filterStep === 'class' ? (
-                            <>
-                                <TouchableOpacity
-                                    style={[styles.filterOption, { borderBottomColor: colors.border }]}
-                                    onPress={() => handlePendingFilterClassSelect('all')}
-                                >
+                    <ScrollView style={styles.filterScroll} showsVerticalScrollIndicator={false}>
+                        {/* Class accordion */}
+                        <TouchableOpacity style={[styles.filterAccordionHeader, { borderColor: colors.border }]} onPress={() => toggleSection('class')}>
+                            <Text allowFontScaling={false} style={[styles.filterAccordionLabel, { color: colors.textSecondary }]}>Class</Text>
+                            <View style={styles.filterAccordionRight}>
+                                <Text allowFontScaling={false} style={[styles.filterAccordionValue, { color: colors.text }]}>
+                                    {pendingFilterClass === 'all' ? 'All Classes' : classes.find(c => c.id === pendingFilterClass)?.name ?? 'All Classes'}
+                                </Text>
+                                <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6, transform: [{ rotate: expandedSection === 'class' ? '270deg' : '90deg' }] }} />
+                            </View>
+                        </TouchableOpacity>
+                        {expandedSection === 'class' && (
+                            <View style={[styles.filterAccordionBody, { borderColor: colors.border }]}>
+                                <TouchableOpacity style={[styles.filterOption, { borderBottomColor: colors.border }]} onPress={() => handlePendingFilterClassSelect('all')}>
                                     <Text allowFontScaling={false} style={[styles.filterOptionText, { color: colors.text }]}>All Classes</Text>
-                                    <View style={styles.filterOptionRight}>
-                                        {pendingFilterClass === 'all' && <Check size={16} color={colors.primary} />}
-                                        <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} />
-                                    </View>
+                                    {pendingFilterClass === 'all' && <Check size={16} color={colors.primary} />}
                                 </TouchableOpacity>
-                                {classes.map((c) => (
-                                    <TouchableOpacity
-                                        key={c.id}
-                                        style={[styles.filterOption, { borderBottomColor: colors.border }]}
-                                        onPress={() => handlePendingFilterClassSelect(c.id)}
-                                    >
+                                {classes.map(c => (
+                                    <TouchableOpacity key={c.id} style={[styles.filterOption, { borderBottomColor: colors.border }]} onPress={() => handlePendingFilterClassSelect(c.id)}>
                                         <Text allowFontScaling={false} style={[styles.filterOptionText, { color: colors.text }]}>{c.name}</Text>
-                                        <View style={styles.filterOptionRight}>
-                                            {pendingFilterClass === c.id && <Check size={16} color={colors.primary} />}
-                                            <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} />
-                                        </View>
+                                        {pendingFilterClass === c.id && <Check size={16} color={colors.primary} />}
                                     </TouchableOpacity>
                                 ))}
-                            </>
-                        ) : (
-                            <>
-                                <TouchableOpacity
-                                    style={[styles.filterOption, { borderBottomColor: colors.border }]}
-                                    onPress={() => setPendingFilterSubject('all')}
-                                >
+                            </View>
+                        )}
+
+                        {/* Subject accordion */}
+                        <TouchableOpacity style={[styles.filterAccordionHeader, { borderColor: colors.border }]} onPress={() => toggleSection('subject')}>
+                            <Text allowFontScaling={false} style={[styles.filterAccordionLabel, { color: colors.textSecondary }]}>Subject</Text>
+                            <View style={styles.filterAccordionRight}>
+                                <Text allowFontScaling={false} style={[styles.filterAccordionValue, { color: colors.text }]}>
+                                    {pendingFilterSubject === 'all' ? 'All Subjects' : filterSubjects.find(s => s.id === pendingFilterSubject)?.name ?? 'All Subjects'}
+                                </Text>
+                                <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6, transform: [{ rotate: expandedSection === 'subject' ? '270deg' : '90deg' }] }} />
+                            </View>
+                        </TouchableOpacity>
+                        {expandedSection === 'subject' && (
+                            <View style={[styles.filterAccordionBody, { borderColor: colors.border }]}>
+                                <TouchableOpacity style={[styles.filterOption, { borderBottomColor: colors.border }]} onPress={() => { setPendingFilterSubject('all'); setExpandedSection(null); }}>
                                     <Text allowFontScaling={false} style={[styles.filterOptionText, { color: colors.text }]}>All Subjects</Text>
                                     {pendingFilterSubject === 'all' && <Check size={16} color={colors.primary} />}
                                 </TouchableOpacity>
-                                {filterSubjects.map((s) => (
-                                    <TouchableOpacity
-                                        key={s.id}
-                                        style={[styles.filterOption, { borderBottomColor: colors.border }]}
-                                        onPress={() => setPendingFilterSubject(s.id)}
-                                    >
+                                {filterSubjects.map(s => (
+                                    <TouchableOpacity key={s.id} style={[styles.filterOption, { borderBottomColor: colors.border }]} onPress={() => { setPendingFilterSubject(s.id); setExpandedSection(null); }}>
                                         <Text allowFontScaling={false} style={[styles.filterOptionText, { color: colors.text }]}>{s.name}</Text>
                                         {pendingFilterSubject === s.id && <Check size={16} color={colors.primary} />}
                                     </TouchableOpacity>
                                 ))}
-                            </>
+                            </View>
                         )}
                     </ScrollView>
 
-                    <TouchableOpacity
-                        style={[styles.filterApplyBtn, { backgroundColor: colors.primary }]}
-                        onPress={applyStudentFilter}
-                    >
+                    <TouchableOpacity style={[styles.filterApplyBtn, { backgroundColor: colors.primary }]} onPress={applyStudentFilter}>
                         <Text allowFontScaling={false} style={styles.filterApplyBtnText}>Apply Filter</Text>
                     </TouchableOpacity>
                 </View>
@@ -820,7 +810,7 @@ export default function StudentsScreen() {
                                         key={student.id}
                                         student={student}
                                         colors={colors}
-                                        isTeacher={profile?.role === 'teacher' || profile?.role === 'admin'}
+                                        isTeacher={profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin'}
                                         isOpen={openCardId === student.id}
                                         onSwipeOpen={(id) => setOpenCardId(id)}
                                         onSwipeClose={() => setOpenCardId(null)}
@@ -1017,6 +1007,23 @@ export default function StudentsScreen() {
                                                 keyboardType="phone-pad"
                                             />
                                         </View>
+
+                                        {!editingStudent && (
+                                            <View style={styles.inputGroup}>
+                                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Monthly Fee (Rs) *</Text>
+                                                <TextInput
+                                                    style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                    value={newStudent.monthly_fee}
+                                                    onChangeText={(text) => setNewStudent({ ...newStudent, monthly_fee: text })}
+                                                    placeholder="e.g. 3000"
+                                                    placeholderTextColor={colors.textSecondary}
+                                                    keyboardType="numeric"
+                                                />
+                                                <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary }]}>
+                                                    Monthly fee amount for this student
+                                                </Text>
+                                            </View>
+                                        )}
 
                                         <View style={styles.inputGroup}>
                                             <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Gender *</Text>
@@ -1548,82 +1555,37 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.4)',
     },
     filterSheet: {
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        paddingTop: 12,
-        paddingBottom: 32,
+        borderTopLeftRadius: 20, borderTopRightRadius: 20,
+        paddingTop: 12, paddingBottom: 32, maxHeight: height * 0.65,
     },
-    filterHandle: {
-        width: 40,
-        height: 4,
-        borderRadius: 2,
-        alignSelf: 'center',
-        marginBottom: 12,
-    },
-    filterSheetHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        marginBottom: 8,
-    },
-    filterBackBtn: {
-        marginRight: 8,
-        padding: 2,
-    },
-    filterSheetTitle: {
-        flex: 1,
-        fontSize: TextSizes.sectionTitle,
-        fontFamily: 'Inter-SemiBold',
-    },
-    filterResetText: {
-        fontSize: TextSizes.filterLabel,
-        fontFamily: 'Inter-Medium',
-        color: '#EF4444',
-    },
+    filterHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
+    filterSheetHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 8 },
+    filterSheetTitle: { flex: 1, fontSize: TextSizes.sectionTitle, fontFamily: 'Inter-SemiBold' },
+    filterResetText: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium', color: '#EF4444' },
     addStudentRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginHorizontal: 16,
-        marginBottom: 12,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 10,
-        borderWidth: 1,
-        gap: 8,
+        flexDirection: 'row', alignItems: 'center',
+        marginHorizontal: 16, marginBottom: 12,
+        paddingVertical: 12, paddingHorizontal: 16,
+        borderRadius: 10, borderWidth: 1, gap: 8,
     },
-    addStudentText: {
-        fontSize: TextSizes.medium,
-        fontFamily: 'Inter-SemiBold',
+    addStudentText: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold' },
+    filterScroll: { flexGrow: 0 },
+    filterAccordionHeader: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        marginHorizontal: 16, marginBottom: 8, paddingHorizontal: 14, paddingVertical: 12,
+        borderRadius: 10, borderWidth: 1,
     },
+    filterAccordionLabel: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium', flex: 1 },
+    filterAccordionValue: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-SemiBold' },
+    filterAccordionRight: { flexDirection: 'row', alignItems: 'center' },
+    filterAccordionBody: { marginHorizontal: 16, marginBottom: 8, borderRadius: 10, borderWidth: 1, overflow: 'hidden' },
     filterOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderBottomWidth: StyleSheet.hairlineWidth,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth,
     },
-    filterOptionText: {
-        fontSize: TextSizes.medium,
-        fontFamily: 'Inter-Regular',
-        flex: 1,
-    },
-    filterOptionRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    filterApplyBtn: {
-        marginHorizontal: 16,
-        marginTop: 12,
-        borderRadius: 10,
-        paddingVertical: 12,
-        alignItems: 'center',
-    },
-    filterApplyBtnText: {
-        fontSize: TextSizes.medium,
-        fontFamily: 'Inter-SemiBold',
-        color: '#ffffff',
-    },
+    filterOptionText: { fontSize: TextSizes.medium, fontFamily: 'Inter-Regular', flex: 1 },
+    filterApplyBtn: { marginHorizontal: 16, marginTop: 8, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+    filterApplyBtnText: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold', color: '#ffffff' },
 });
 
 // const styles = StyleSheet.create({

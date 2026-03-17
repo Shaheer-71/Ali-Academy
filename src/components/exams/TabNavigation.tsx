@@ -89,7 +89,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
                     />
 
                     {/* Reports Button */}
-                    {/* {(profile?.role === 'teacher' || profile?.role === 'admin') && ( */}
+                    {/* {(profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') && ( */}
                     <TabButton
                         title="Reports"
                         isActive={activeTab === 'reports'}
@@ -99,7 +99,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
                     {/* )} */}
 
                     {/* Add Button (only for teachers) */}
-                    {(profile?.role === 'teacher' || profile?.role === 'admin') && (
+                    {(profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') && (
                         <TabButton
                             title="Add"
                             isActive={isModalVisible}
@@ -110,7 +110,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
                 </View>
 
                 {/* Filter Button - Icon only */}
-                {(profile?.role === 'teacher' || profile?.role === 'admin') && (
+                {(profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') && (
                     <TabButton
                         title="Filter"
                         isActive={false}

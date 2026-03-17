@@ -19,14 +19,15 @@ interface TeacherAnalyticsViewProps {
     filterVisible: boolean;
     onFilterClose: () => void;
     onFilterChange: (isFiltered: boolean) => void;
+    isSuperAdmin?: boolean;
 }
 
-export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterChange }: TeacherAnalyticsViewProps) => {
+export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterChange, isSuperAdmin = false }: TeacherAnalyticsViewProps) => {
     const { profile } = useAuth();
     const { colors } = useTheme();
     const [selectedClass, setSelectedClass] = useState('all');
     const [selectedSubject, setSelectedSubject] = useState('all');
-    const { studentPerformances, classAnalytics, classes, subjects, loading, error, refetch } = useTeacherAnalytics(profile?.id, selectedClass, selectedSubject);
+    const { studentPerformances, classAnalytics, classes, subjects, loading, error, refetch } = useTeacherAnalytics(profile?.id, selectedClass, selectedSubject, isSuperAdmin);
 
     // Reset subject filter whenever class changes
     useEffect(() => {
@@ -34,24 +35,26 @@ export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterCha
     }, [selectedClass]);
 
     // Inside modal: which step — 'class' or 'subject'
-    const [filterStep, setFilterStep] = useState<'class' | 'subject'>('class');
-    // Pending selections (committed only on Apply)
+    const [expandedSection, setExpandedSection] = useState<'class' | 'subject' | null>(null);
     const [pendingClass, setPendingClass] = useState('all');
     const [pendingSubject, setPendingSubject] = useState('all');
 
-    // Sync pending state when modal opens
     useEffect(() => {
         if (filterVisible) {
             setPendingClass(selectedClass);
             setPendingSubject(selectedSubject);
-            setFilterStep('class');
+            setExpandedSection(null);
         }
     }, [filterVisible]);
+
+    const toggleSection = (section: 'class' | 'subject') => {
+        setExpandedSection(prev => prev === section ? null : section);
+    };
 
     const handlePendingClassSelect = (id: string) => {
         setPendingClass(id);
         setPendingSubject('all');
-        setFilterStep('subject');
+        setExpandedSection(null);
     };
 
     const applyFilter = () => {
@@ -134,34 +137,20 @@ export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterCha
 
     // ── Filter bottom sheet ──────────────────────────────────────────────────
     const renderFilterModal = () => {
-        // subjects relevant to pending class selection
-        const modalSubjects = pendingClass === 'all' ? subjects : subjects;
+        const selectedClassName = pendingClass === 'all' ? 'All Classes' : classes.find(c => c.id === pendingClass)?.name ?? 'All Classes';
+        const selectedSubjectName = pendingSubject === 'all' ? 'All Subjects' : subjects.find(s => s.id === pendingSubject)?.name ?? 'All Subjects';
 
         return (
-            <Modal
-                visible={filterVisible}
-                transparent
-                animationType="fade"
-                onRequestClose={onFilterClose}
-            >
+            <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={onFilterClose}>
                 <TouchableWithoutFeedback onPress={onFilterClose}>
                     <View style={styles.modalOverlay} />
                 </TouchableWithoutFeedback>
 
                 <View style={[styles.bottomSheet, { backgroundColor: colors.cardBackground }]}>
-                    {/* Handle */}
                     <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
 
-                    {/* Sheet header */}
                     <View style={styles.sheetHeader}>
-                        {filterStep === 'subject' && (
-                            <TouchableOpacity onPress={() => setFilterStep('class')} style={styles.backBtn}>
-                                <ChevronRight size={20} color={colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
-                            </TouchableOpacity>
-                        )}
-                        <Text allowFontScaling={false} style={[styles.sheetTitle, { color: colors.text }]}>
-                            {filterStep === 'class' ? 'Select Class' : 'Select Subject'}
-                        </Text>
+                        <Text allowFontScaling={false} style={[styles.sheetTitle, { color: colors.text }]}>Filter Analytics</Text>
                         {isFiltered && (
                             <TouchableOpacity onPress={resetFilter}>
                                 <Text allowFontScaling={false} style={[styles.resetText, { color: '#EF4444' }]}>Reset</Text>
@@ -170,70 +159,54 @@ export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterCha
                     </View>
 
                     <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
-                        {filterStep === 'class' ? (
-                            <>
-                                {/* All Classes option */}
-                                <TouchableOpacity
-                                    style={[styles.sheetOption, { borderBottomColor: colors.border }]}
-                                    onPress={() => handlePendingClassSelect('all')}
-                                >
-                                    <Text allowFontScaling={false} style={[styles.sheetOptionText, { color: colors.text }]}>
-                                        All Classes
-                                    </Text>
-                                    <View style={styles.sheetOptionRight}>
-                                        {pendingClass === 'all' && <Check size={16} color={colors.primary} />}
-                                        <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} />
-                                    </View>
+                        {/* Class accordion */}
+                        <TouchableOpacity style={[styles.accordionHeader, { borderColor: colors.border }]} onPress={() => toggleSection('class')}>
+                            <Text allowFontScaling={false} style={[styles.accordionLabel, { color: colors.textSecondary }]}>Class</Text>
+                            <View style={styles.accordionRight}>
+                                <Text allowFontScaling={false} style={[styles.accordionValue, { color: colors.text }]}>{selectedClassName}</Text>
+                                <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6, transform: [{ rotate: expandedSection === 'class' ? '270deg' : '90deg' }] }} />
+                            </View>
+                        </TouchableOpacity>
+                        {expandedSection === 'class' && (
+                            <View style={[styles.accordionBody, { borderColor: colors.border }]}>
+                                <TouchableOpacity style={[styles.sheetOption, { borderBottomColor: colors.border }]} onPress={() => handlePendingClassSelect('all')}>
+                                    <Text allowFontScaling={false} style={[styles.sheetOptionText, { color: colors.text }]}>All Classes</Text>
+                                    {pendingClass === 'all' && <Check size={16} color={colors.primary} />}
                                 </TouchableOpacity>
-                                {[...classes].sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
-                                    <TouchableOpacity
-                                        key={c.id}
-                                        style={[styles.sheetOption, { borderBottomColor: colors.border }]}
-                                        onPress={() => handlePendingClassSelect(c.id)}
-                                    >
-                                        <Text allowFontScaling={false} style={[styles.sheetOptionText, { color: colors.text }]}>
-                                            {c.name}
-                                        </Text>
-                                        <View style={styles.sheetOptionRight}>
-                                            {pendingClass === c.id && <Check size={16} color={colors.primary} />}
-                                            <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} />
-                                        </View>
+                                {[...classes].sort((a, b) => a.name.localeCompare(b.name)).map(c => (
+                                    <TouchableOpacity key={c.id} style={[styles.sheetOption, { borderBottomColor: colors.border }]} onPress={() => handlePendingClassSelect(c.id)}>
+                                        <Text allowFontScaling={false} style={[styles.sheetOptionText, { color: colors.text }]}>{c.name}</Text>
+                                        {pendingClass === c.id && <Check size={16} color={colors.primary} />}
                                     </TouchableOpacity>
                                 ))}
-                            </>
-                        ) : (
-                            <>
-                                {/* All Subjects option */}
-                                <TouchableOpacity
-                                    style={[styles.sheetOption, { borderBottomColor: colors.border }]}
-                                    onPress={() => setPendingSubject('all')}
-                                >
-                                    <Text allowFontScaling={false} style={[styles.sheetOptionText, { color: colors.text }]}>
-                                        All Subjects
-                                    </Text>
+                            </View>
+                        )}
+
+                        {/* Subject accordion */}
+                        <TouchableOpacity style={[styles.accordionHeader, { borderColor: colors.border }]} onPress={() => toggleSection('subject')}>
+                            <Text allowFontScaling={false} style={[styles.accordionLabel, { color: colors.textSecondary }]}>Subject</Text>
+                            <View style={styles.accordionRight}>
+                                <Text allowFontScaling={false} style={[styles.accordionValue, { color: colors.text }]}>{selectedSubjectName}</Text>
+                                <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6, transform: [{ rotate: expandedSection === 'subject' ? '270deg' : '90deg' }] }} />
+                            </View>
+                        </TouchableOpacity>
+                        {expandedSection === 'subject' && (
+                            <View style={[styles.accordionBody, { borderColor: colors.border }]}>
+                                <TouchableOpacity style={[styles.sheetOption, { borderBottomColor: colors.border }]} onPress={() => { setPendingSubject('all'); setExpandedSection(null); }}>
+                                    <Text allowFontScaling={false} style={[styles.sheetOptionText, { color: colors.text }]}>All Subjects</Text>
                                     {pendingSubject === 'all' && <Check size={16} color={colors.primary} />}
                                 </TouchableOpacity>
-                                {subjects.map((s) => (
-                                    <TouchableOpacity
-                                        key={s.id}
-                                        style={[styles.sheetOption, { borderBottomColor: colors.border }]}
-                                        onPress={() => setPendingSubject(s.id)}
-                                    >
-                                        <Text allowFontScaling={false} style={[styles.sheetOptionText, { color: colors.text }]}>
-                                            {s.name}
-                                        </Text>
+                                {subjects.map(s => (
+                                    <TouchableOpacity key={s.id} style={[styles.sheetOption, { borderBottomColor: colors.border }]} onPress={() => { setPendingSubject(s.id); setExpandedSection(null); }}>
+                                        <Text allowFontScaling={false} style={[styles.sheetOptionText, { color: colors.text }]}>{s.name}</Text>
                                         {pendingSubject === s.id && <Check size={16} color={colors.primary} />}
                                     </TouchableOpacity>
                                 ))}
-                            </>
+                            </View>
                         )}
                     </ScrollView>
 
-                    {/* Apply button */}
-                    <TouchableOpacity
-                        style={[styles.applyBtn, { backgroundColor: colors.primary }]}
-                        onPress={applyFilter}
-                    >
+                    <TouchableOpacity style={[styles.applyBtn, { backgroundColor: colors.primary }]} onPress={applyFilter}>
                         <Text allowFontScaling={false} style={styles.applyBtnText}>Apply Filter</Text>
                     </TouchableOpacity>
                 </View>
@@ -439,57 +412,26 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         marginBottom: 12,
     },
-    sheetHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        marginBottom: 8,
+    sheetHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 8 },
+    sheetTitle: { flex: 1, fontSize: TextSizes.sectionTitle, fontFamily: 'Inter-SemiBold' },
+    resetText: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium' },
+    sheetScroll: { flexGrow: 0 },
+    accordionHeader: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        marginHorizontal: 16, marginBottom: 8, paddingHorizontal: 14, paddingVertical: 12,
+        borderRadius: 10, borderWidth: 1,
     },
-    backBtn: {
-        marginRight: 8,
-        padding: 2,
-    },
-    sheetTitle: {
-        flex: 1,
-        fontSize: TextSizes.sectionTitle,
-        fontFamily: 'Inter-SemiBold',
-    },
-    resetText: {
-        fontSize: TextSizes.filterLabel,
-        fontFamily: 'Inter-Medium',
-    },
-    sheetScroll: {
-        maxHeight: height * 0.35,
-    },
+    accordionLabel: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium', flex: 1 },
+    accordionValue: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-SemiBold' },
+    accordionRight: { flexDirection: 'row', alignItems: 'center' },
+    accordionBody: { marginHorizontal: 16, marginBottom: 8, borderRadius: 10, borderWidth: 1, overflow: 'hidden' },
     sheetOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderBottomWidth: StyleSheet.hairlineWidth,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth,
     },
-    sheetOptionText: {
-        fontSize: TextSizes.medium,
-        fontFamily: 'Inter-Regular',
-        flex: 1,
-    },
-    sheetOptionRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    applyBtn: {
-        marginHorizontal: 16,
-        marginTop: 12,
-        borderRadius: 10,
-        paddingVertical: 12,
-        alignItems: 'center',
-    },
-    applyBtnText: {
-        fontSize: TextSizes.medium,
-        fontFamily: 'Inter-SemiBold',
-        color: '#ffffff',
-    },
+    sheetOptionText: { fontSize: TextSizes.medium, fontFamily: 'Inter-Regular', flex: 1 },
+    applyBtn: { marginHorizontal: 16, marginTop: 8, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+    applyBtnText: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold', color: '#ffffff' },
     // ── Overview ────────────────────────────────────────────────────
     overviewContainer: {
         paddingTop: 12,

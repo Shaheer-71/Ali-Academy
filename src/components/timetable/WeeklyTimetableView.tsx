@@ -70,7 +70,12 @@ export default function TimetableScreen() {
 
     const fetchClasses = async () => {
         try {
-            if (profile.role === 'teacher') {
+            if (profile.role === 'superadmin') {
+                const { data, error } = await supabase.from('classes').select('id, name').order('name');
+                if (error) throw error;
+                setClasses(data || []);
+                if (data && data.length > 0) setFilters({ class_id: data[0].id });
+            } else if (profile.role === 'teacher') {
                 // ✅ For teachers, get classes from teacher_subject_enrollments
                 const { data: teacherEnrollments, error: enrollmentError } = await supabase
                     .from('teacher_subject_enrollments')
@@ -98,7 +103,7 @@ export default function TimetableScreen() {
 
                 if (error) throw error;
                 setClasses(data || []);
-                
+
                 // ✅ Set first class as default filter
                 if (data && data.length > 0) {
                     setFilters({ class_id: data[0].id });
@@ -124,6 +129,12 @@ export default function TimetableScreen() {
 
     const fetchSubjects = async () => {
         try {
+            if (profile.role === 'superadmin') {
+                const { data, error } = await supabase.from('subjects').select('id, name').eq('is_active', true).order('name');
+                if (error) throw error;
+                setSubjects(data || []);
+                return;
+            }
             if (profile.role === 'teacher') {
                 // ✅ For teachers, get subjects from teacher_subject_enrollments
                 const { data: teacherEnrollments, error: enrollmentError } = await supabase
@@ -291,6 +302,7 @@ export default function TimetableScreen() {
     };
 
     const handleEditEntry = (entry: TimetableEntryWithDetails) => {
+        if (profile.role !== 'superadmin') return; // view-only for teachers/students
         setEditingEntry(entry);
 
         const formatTimeForInput = (time: string) => time.substring(0, 5);
@@ -318,7 +330,7 @@ export default function TimetableScreen() {
     );
 
     const weekDates = getCurrentWeekDates();
-    const isTeacher = profile.role === 'teacher';
+    const isTeacher = profile.role === 'teacher' || profile.role === 'superadmin';
 
     return (
         <>
@@ -370,7 +382,7 @@ export default function TimetableScreen() {
                     </View>
                 </ScrollView>
 
-                {isTeacher && (
+                {profile.role === 'superadmin' && (
                     <TimetableEntryModal
                         modalVisible={modalVisible}
                         setModalVisible={setModalVisible}

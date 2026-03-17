@@ -10,6 +10,7 @@ import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '
 import * as SplashScreen from 'expo-splash-screen';
 import '@/src/constants/TextScaling';
 import { registerDeviceForNotifications, setupNotificationHandlers } from '@/src/lib/notifications';
+import * as Notifications from 'expo-notifications';
 import { AppSplashScreen } from '@/src/components/common/AppSplashScreen';
 
 
@@ -24,6 +25,16 @@ function RootLayoutNav() {
   // Setup notification handlers ONCE on mount
   useEffect(() => {
     setupNotificationHandlers();
+
+    // Cold-start: app was killed and opened by tapping a notification
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (!response) return;
+      const data = response.notification.request.content.data as Record<string, any>;
+      const FEE_TYPES = ['fee_reminder', 'fee_paid', 'fee'];
+      if (data?.type && FEE_TYPES.includes(data.type)) {
+        router.push('/fee-status' as any);
+      }
+    });
   }, []);
 
   // Register device when user is loaded
@@ -66,7 +77,8 @@ function RootLayoutNav() {
     if (inAuthGroup) {
       switch (profile.role) {
         case 'teacher':
-          console.log('[Route] teacher → /(teacher)');
+        case 'superadmin':
+          console.log('[Route] teacher/superadmin → /(teacher)');
           router.replace('/(teacher)');
           break;
         case 'student':
@@ -79,7 +91,7 @@ function RootLayoutNav() {
       return;
     }
 
-    if (profile.role === 'teacher' && !inTeacherGroup) {
+    if ((profile.role === 'teacher' || profile.role === 'superadmin') && !inTeacherGroup) {
       router.replace('/(teacher)');
     } else if (profile.role === 'student' && !inStudentGroup) {
       router.replace('/(student)');
@@ -99,6 +111,7 @@ function RootLayoutNav() {
       <Stack.Screen name="fee" options={{ headerShown: false }} />
       <Stack.Screen name="notifications" options={{ headerShown: false }} />
       <Stack.Screen name="students" options={{ headerShown: false }} />
+      <Stack.Screen name="fee-status" options={{ headerShown: false }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );

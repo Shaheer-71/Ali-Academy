@@ -82,8 +82,8 @@ export default function SignInScreen() {
             <View style={styles.header}>
               <View style={styles.iconContainer}>
                 <Image
-                  source={require('@/src/assets/icons/logo.jpg')}
-                  style={{ width: 170, height: 170, resizeMode: 'contain' }}
+                  source={require('@/src/assets/icons/logo.png')}
+                  style={{ width: 200, height: 200, resizeMode: 'contain' }}
                 />
               </View>
               <Text allowFontScaling={false} style={styles.title}>
@@ -205,8 +205,8 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   iconContainer: {
-    width: 100,
-    height: 100,
+    width: 200,
+    height: 200,
     backgroundColor: '#204040',
     borderRadius: 20,
     alignItems: 'center',

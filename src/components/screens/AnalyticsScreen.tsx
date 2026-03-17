@@ -11,7 +11,8 @@ export default function AnalyticsScreen() {
     const { profile } = useAuth();
     const { colors } = useTheme();
 
-    const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin';
+    const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin';
+    const isSuperAdmin = profile?.role === 'superadmin';
 
     const [filterVisible, setFilterVisible] = useState(false);
     const [isFiltered, setIsFiltered] = useState(false);
@@ -29,6 +30,7 @@ export default function AnalyticsScreen() {
                     filterVisible={filterVisible}
                     onFilterClose={() => setFilterVisible(false)}
                     onFilterChange={setIsFiltered}
+                    isSuperAdmin={isSuperAdmin}
                 />
             )}
         </View>

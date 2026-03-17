@@ -2,15 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Bell, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Info, X } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
-
-interface Notification {
-  id: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-  title: string;
-  message: string;
-  timestamp: string;
-  read?: boolean;
-}
+import { Notification } from '@/src/types/notification';
+import { TextSizes } from '@/src/styles/TextSizes';
 
 interface NotificationCardProps {
   notification: Notification;
@@ -23,29 +16,29 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   onPress,
   onDismiss,
 }) => {
+  const { colors } = useTheme();
+
   const getNotificationIcon = () => {
     switch (notification.type) {
-      case 'success':
-        return <CheckCircle size={20} color="#10B981" />;
-      case 'warning':
-        return <AlertCircle size={20} color="#F59E0B" />;
-      case 'error':
-        return <AlertCircle size={20} color="#EF4444" />;
+      case 'quiz_graded':
+        return <CheckCircle size={18} color="#10B981" />;
+      case 'quiz_added':
+      case 'timetable_changed':
+        return <AlertCircle size={18} color="#F59E0B" />;
+      case 'lecture_added':
+      case 'assignment_added':
+        return <Bell size={18} color="#3B82F6" />;
       default:
-        return <Info size={20} color="#3B82F6" />;
+        return <Info size={18} color="#3B82F6" />;
     }
   };
 
-  const getNotificationColor = () => {
+  const getIconBg = () => {
     switch (notification.type) {
-      case 'success':
-        return '#DCFCE7';
-      case 'warning':
-        return '#FEF3C7';
-      case 'error':
-        return '#FEE2E2';
-      default:
-        return '#DBEAFE';
+      case 'quiz_graded':   return '#DCFCE7';
+      case 'quiz_added':
+      case 'timetable_changed': return '#FEF3C7';
+      default:              return '#DBEAFE';
     }
   };
 
@@ -53,129 +46,125 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
     const now = new Date();
     const time = new Date(timestamp);
     const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
-
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-
     const diffInHours = Math.floor(diffInMinutes / 60);
     if (diffInHours < 24) return `${diffInHours}h ago`;
-
     return time.toLocaleDateString();
   };
 
-  const { colors } = useTheme();
-
   return (
     <TouchableOpacity
+      activeOpacity={0.7}
       style={[
         styles.container,
-        !notification.read && styles.unreadContainer,
-        { backgroundColor: colors.cardBackground }
+        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        !notification.is_read && { borderLeftColor: '#b6d509', borderLeftWidth: 3 },
       ]}
       onPress={onPress}
     >
-      <View style={[styles.iconContainer, { backgroundColor: getNotificationColor() }]}>
+      {/* Icon */}
+      <View style={[styles.iconContainer, { backgroundColor: getIconBg() }]}>
         {getNotificationIcon()}
       </View>
 
+      {/* Content */}
       <View style={styles.content}>
-        <View style={styles.header}>
-          <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+        <View style={styles.titleRow}>
+          <Text
+            allowFontScaling={false}
+            style={[styles.title, { color: colors.text }]}
+            numberOfLines={1}
+          >
             {notification.title}
           </Text>
-          <Text allowFontScaling={false} style={styles.timestamp}>
-            {getTimeAgo(notification.timestamp)}
-          </Text>
+          {!notification.is_read && <View style={styles.unreadDot} />}
         </View>
-
-        <Text allowFontScaling={false} style={styles.message} numberOfLines={2}>
+        <Text
+          allowFontScaling={false}
+          style={[styles.message, { color: colors.textSecondary }]}
+          numberOfLines={2}
+        >
           {notification.message}
         </Text>
-
-        {!notification.read && (
-          <View style={styles.unreadIndicator} />
-        )}
+        <Text allowFontScaling={false} style={styles.timestamp}>
+          {getTimeAgo(notification.created_at)}
+        </Text>
       </View>
 
+      {/* Dismiss */}
       {onDismiss && (
-        <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
-          <X size={16} color="#9CA3AF" />
+        <TouchableOpacity
+          style={styles.dismissButton}
+          onPress={(e) => { e.stopPropagation(); onDismiss(); }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <X size={14} color={colors.textSecondary} />
         </TouchableOpacity>
       )}
     </TouchableOpacity>
   );
 };
 
-import { TextSizes } from '@/src/styles/TextSizes';
-
-export const styles = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    alignItems: 'flex-start',
     borderRadius: 12,
-    padding: 14,
+    padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
-  unreadContainer: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#204040',
-  },
   iconContainer: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+    flexShrink: 0,
   },
   content: {
     flex: 1,
-    position: 'relative',
+    minWidth: 0,
   },
-  header: {
+  titleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 2,
+    alignItems: 'center',
+    marginBottom: 3,
+    gap: 6,
   },
   title: {
-    fontSize: TextSizes.large, // was 14
+    fontSize: TextSizes.header,
     fontFamily: 'Inter-SemiBold',
     flex: 1,
-    marginRight: 8,
+  },
+  unreadDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#b6d509',
+    flexShrink: 0,
+  },
+  message: {
+    fontSize: TextSizes.normal,
+    fontFamily: 'Inter-Regular',
+    lineHeight: 16,
+    marginBottom: 4,
   },
   timestamp: {
-    fontSize: TextSizes.large, // was 11
+    fontSize: TextSizes.small,
     fontFamily: 'Inter-Regular',
     color: '#9CA3AF',
   },
-  message: {
-    fontSize: TextSizes.medium, // was 13
-    fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-    lineHeight: 16,
-  },
-  unreadIndicator: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 8,
-    height: 8,
-    backgroundColor: '#b6d509',
-    borderRadius: 4,
-  },
   dismissButton: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
+    paddingLeft: 8,
+    paddingTop: 2,
+    flexShrink: 0,
   },
 });
