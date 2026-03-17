@@ -57,9 +57,10 @@ export function setupNotificationHandlers() {
         handleNotification: async () => {
             console.log('🔔 [HANDLER] Notification received in foreground');
             return {
-                shouldShowAlert: true,      // Show popup
-                shouldPlaySound: true,       // Play sound
-                shouldSetBadge: false,       // Don't update badge
+                shouldShowBanner: true,      // Show banner (replaces shouldShowAlert)
+                shouldShowList: true,        // Show in notification list
+                shouldPlaySound: true,
+                shouldSetBadge: false,
             };
         },
     });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  TextInput,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
   Linking,
-  ActivityIndicator,
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,7 +18,6 @@ import {
   Mail,
   Phone,
   Lock,
-  X,
   ChevronRight,
   Send,
   User,
@@ -34,112 +28,7 @@ import TopSections from '@/src/components/common/TopSections';
 import { useRouter } from 'expo-router';
 import { TextSizes } from '@/src/styles/TextSizes';
 import { useScreenAnimation } from '@/src/utils/animations';
-import { supabase } from '@/src/lib/supabase';
 
-
-function PasswordChangeModal({
-  visible,
-  colors,
-  isLoading,
-  passwordData,
-  setPasswordData,
-  handlePasswordChange,
-  setPasswordModalVisible
-}) {
-  return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent={true}
-      onRequestClose={() => setPasswordModalVisible(false)}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.modalContainer}
-      >
-        <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-          <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Change Password
-            </Text>
-            <TouchableOpacity onPress={() => setPasswordModalVisible(false)}>
-              <X size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.modalBody}>
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>
-                Current Password
-              </Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
-                value={passwordData.currentPassword}
-                onChangeText={(text) => setPasswordData(prev => ({ ...prev, currentPassword: text }))}
-                placeholder="Enter current password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>
-                New Password
-              </Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
-                value={passwordData.newPassword}
-                onChangeText={(text) => setPasswordData(prev => ({ ...prev, newPassword: text }))}
-                placeholder="Enter new password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>
-                Confirm New Password
-              </Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
-                value={passwordData.confirmPassword}
-                onChangeText={(text) => setPasswordData(prev => ({ ...prev, confirmPassword: text }))}
-                placeholder="Confirm new password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-              />
-            </View>
-          </View>
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.background }]}
-              onPress={() => setPasswordModalVisible(false)}
-            >
-              <Text style={[styles.buttonText, { color: colors.text }]}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.primary }]}
-              onPress={handlePasswordChange}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#b6d509" />
-              ) : (
-                <Text style={[styles.buttonText, { color: '#b6d509' }]}>
-                  Change Password
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-}
 
 
 export default function SettingsScreen() {
@@ -148,49 +37,11 @@ export default function SettingsScreen() {
   const router = useRouter();
   const screenStyle = useScreenAnimation();
 
-  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-
   const handleNavigateToActivateUsers = () => {
     try {
       (router as any).push('/activate-users');
     } catch (err) {
       console.warn('Navigation to /activate-users failed:', err);
-    }
-  };
-
-  const handlePasswordChange = async () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match');
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: passwordData.newPassword,
-      });
-
-      if (error) throw error;
-
-      Alert.alert('Success', 'Password changed successfully');
-      setPasswordModalVisible(false);
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to change password');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -252,7 +103,7 @@ export default function SettingsScreen() {
           title: 'Change Password',
           subtitle: 'Update your password',
           icon: Lock,
-          onPress: () => setPasswordModalVisible(true),
+          onPress: () => (router as any).push('/change-password'),
         },
         ...(isStudent
           ? [
@@ -451,16 +302,6 @@ export default function SettingsScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      <PasswordChangeModal
-        visible={passwordModalVisible}
-        colors={colors}
-        isLoading={isLoading}
-        passwordData={passwordData}
-        setPasswordData={setPasswordData}
-        handlePasswordChange={handlePasswordChange}
-        setPasswordModalVisible={setPasswordModalVisible}
-      />
-
     </Animated.View>
   );
 }
@@ -589,75 +430,6 @@ const styles = StyleSheet.create({
   },
   footerSubtext: {
     fontSize: TextSizes.tiny,
-    fontFamily: 'Inter-Regular',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: '90%',
-    maxWidth: 400,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
-  },
-  modalTitle: {
-    fontSize: TextSizes.large,
-    fontFamily: 'Inter-SemiBold',
-  },
-  modalBody: {
-    padding: 20,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e5e5',
-    gap: 12,
-  },
-  modalButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    borderWidth: 1,
-    borderColor: '#e5e5e5',
-  },
-  saveButton: {},
-  buttonText: {
-    fontSize: TextSizes.medium,
-    fontFamily: 'Inter-SemiBold',
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: TextSizes.medium,
-    fontFamily: 'Inter-SemiBold',
-    marginBottom: 8,
-  },
-  input: {
-    borderRadius: 8,
-    padding: 12,
-    fontSize: TextSizes.medium,
     fontFamily: 'Inter-Regular',
   },
 });

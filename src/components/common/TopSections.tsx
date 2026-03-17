@@ -77,7 +77,7 @@ export default function TopSection({ showNotifications = true, onFilterPress, is
         >
             <View style={[styles.content, { backgroundColor: colors.background }]}>
                 <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>
-                    {screenName === 'Index' ? 'Home' : screenName === 'Dairy' ? 'Diary' : screenName === 'Fee-status' ? 'Fee Status' : screenName || 'Untitled'}
+                    {screenName === 'Index' ? 'Home' : screenName === 'Dairy' ? 'Diary' : screenName === 'Fee-status' ? 'Fee Status' : screenName === 'Change-password' ? 'Change Password' : screenName === 'Activate-users' ? 'Activate Users' : screenName || 'Untitled'}
                 </Text>
 
                 <View style={styles.rightSection}>
