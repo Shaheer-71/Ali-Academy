@@ -35,7 +35,6 @@ yarn-error.*
 *.tsbuildinfo
 
 # Firebase config files
-google-services.json
 GoogleService-Info.plist
 
 # Supabase sensitive files
@@ -47,3 +46,7 @@ scripts/
 
 # Claude Code local settings (may contain credentials)
 .claude/
+
+# Local signing credentials
+ali-academy.keystore
+credentials.json
