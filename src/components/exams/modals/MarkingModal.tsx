@@ -10,8 +10,11 @@ import {
     Alert,
     ActivityIndicator,
     StyleSheet,
-    Keyboard
+    Keyboard,
+    Dimensions,
 } from 'react-native';
+
+const SHEET_HEIGHT = Dimensions.get('window').height * 0.75;
 import { X, Save } from 'lucide-react-native';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
 import { handleMarkingError } from '@/src/utils/errorHandler/quizErrorHandler';
@@ -218,10 +221,10 @@ const styles = StyleSheet.create({
     markingModalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '80%',
+        height: SHEET_HEIGHT,
     },
     markingContent: {
-        maxHeight: '70%',
+        flex: 1,
     },
     markingScrollContent: {
         paddingHorizontal: 24,

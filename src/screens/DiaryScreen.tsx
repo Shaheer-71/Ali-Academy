@@ -144,27 +144,18 @@ export default function DiaryScreen() {
 
   // Refresh every time the screen is focused; also handle deep-link target
   useFocusEffect(useCallback(() => {
-    console.log('[DIARY FOCUS] Screen focused');
-    console.log('[DIARY FOCUS] pendingNavigation.diaryAssignmentId =', pendingNavigation.diaryAssignmentId);
-    console.log('[DIARY FOCUS] pendingAssignmentId.current (before) =', pendingAssignmentId.current);
-
     if (pendingNavigation.diaryAssignmentId) {
       pendingAssignmentId.current = pendingNavigation.diaryAssignmentId;
       pendingNavigation.diaryAssignmentId = null;
-      console.log('[DIARY FOCUS] Consumed pendingNavigation → pendingAssignmentId.current =', pendingAssignmentId.current);
     }
-
-    console.log('[DIARY FOCUS] Calling handleRefresh...');
     handleRefresh();
   }, [profile]));
 
-  // AppState listener: handles the case where app comes from background while dairy
+  // AppState listener: handles the case where app comes from background while diary
   // is already the active tab — useFocusEffect won't fire, but this will.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState) => {
-      console.log('[DIARY APPSTATE] AppState changed to:', nextState, '| pendingNavigation.diaryAssignmentId =', pendingNavigation.diaryAssignmentId);
       if (nextState === 'active' && pendingNavigation.diaryAssignmentId) {
-        console.log('[DIARY APPSTATE] App came to foreground with pending assignment — consuming and refreshing');
         pendingAssignmentId.current = pendingNavigation.diaryAssignmentId;
         pendingNavigation.diaryAssignmentId = null;
         handleRefresh();
@@ -175,16 +166,10 @@ export default function DiaryScreen() {
 
   // After every assignments update, open the pending diary if we have one
   useEffect(() => {
-    console.log('[DIARY ASSIGNMENTS] assignments updated, count =', assignments.length, '| pendingAssignmentId =', pendingAssignmentId.current);
-
     if (!pendingAssignmentId.current || assignments.length === 0) return;
-
     const found = assignments.find(a => a.id === pendingAssignmentId.current);
-    console.log('[DIARY ASSIGNMENTS] Looking for assignment id =', pendingAssignmentId.current, '| found =', !!found);
-
     if (found) {
       pendingAssignmentId.current = null;
-      console.log('[DIARY ASSIGNMENTS] Opening detail modal for assignment:', found.title);
       setSelectedAssignment(found);
       setDetailModalVisible(true);
     }

@@ -161,7 +161,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                     (profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') && { opacity: 1 },
                 ]}
                 onPress={() => handleResultPress(result)}
-                disabled={readOnly || profile?.role !== 'teacher'}
+                disabled={readOnly || (profile?.role !== 'teacher' && profile?.role !== 'admin' && profile?.role !== 'superadmin')}
             >
                 <View style={styles.resultHeader}>
                     <View style={styles.resultInfo}>

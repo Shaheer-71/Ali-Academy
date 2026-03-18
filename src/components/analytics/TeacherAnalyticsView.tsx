@@ -27,7 +27,7 @@ export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterCha
     const { colors } = useTheme();
     const [selectedClass, setSelectedClass] = useState('all');
     const [selectedSubject, setSelectedSubject] = useState('all');
-    const { studentPerformances, classAnalytics, classes, subjects, loading, error, refetch } = useTeacherAnalytics(profile?.id, selectedClass, selectedSubject, isSuperAdmin);
+    const { studentPerformances, classAnalytics, classes, subjects, subjectsByClass, loading, error, refetch } = useTeacherAnalytics(profile?.id, selectedClass, selectedSubject, isSuperAdmin);
 
     // Reset subject filter whenever class changes
     useEffect(() => {
@@ -138,7 +138,9 @@ export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterCha
     // ── Filter bottom sheet ──────────────────────────────────────────────────
     const renderFilterModal = () => {
         const selectedClassName = pendingClass === 'all' ? 'All Classes' : classes.find(c => c.id === pendingClass)?.name ?? 'All Classes';
-        const selectedSubjectName = pendingSubject === 'all' ? 'All Subjects' : subjects.find(s => s.id === pendingSubject)?.name ?? 'All Subjects';
+        // subjects available for the currently pending class selection
+        const pendingSubjects = pendingClass === 'all' ? subjects : (subjectsByClass[pendingClass] ?? []);
+        const selectedSubjectName = pendingSubject === 'all' ? 'All Subjects' : pendingSubjects.find(s => s.id === pendingSubject)?.name ?? subjects.find(s => s.id === pendingSubject)?.name ?? 'All Subjects';
 
         return (
             <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={onFilterClose}>
@@ -196,7 +198,7 @@ export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterCha
                                     <Text allowFontScaling={false} style={[styles.sheetOptionText, { color: colors.text }]}>All Subjects</Text>
                                     {pendingSubject === 'all' && <Check size={16} color={colors.primary} />}
                                 </TouchableOpacity>
-                                {subjects.map(s => (
+                                {pendingSubjects.map(s => (
                                     <TouchableOpacity key={s.id} style={[styles.sheetOption, { borderBottomColor: colors.border }]} onPress={() => { setPendingSubject(s.id); setExpandedSection(null); }}>
                                         <Text allowFontScaling={false} style={[styles.sheetOptionText, { color: colors.text }]}>{s.name}</Text>
                                         {pendingSubject === s.id && <Check size={16} color={colors.primary} />}

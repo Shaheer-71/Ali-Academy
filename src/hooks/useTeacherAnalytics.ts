@@ -21,6 +21,7 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
     const [classAnalytics, setClassAnalytics] = useState<ClassAnalytics[]>([]);
     const [classes, setClasses] = useState<Class[]>([]);
     const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
+    const [subjectsByClass, setSubjectsByClass] = useState<Record<string, { id: string; name: string }[]>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshKey, setRefreshKey] = useState(0);
@@ -45,21 +46,36 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
                 const subjectsMap = new Map<string, string>();
 
                 if (isSuperAdmin) {
-                    // Superadmin: pull all classes and all subjects directly
-                    const [{ data: allClasses, error: allClassesErr }, { data: allSubjects, error: allSubjectsErr }] = await Promise.all([
+                    // Superadmin: pull all classes + class→subject mapping from classes_subjects
+                    const [
+                        { data: allClasses, error: allClassesErr },
+                        { data: classSubjectRows, error: csError },
+                    ] = await Promise.all([
                         supabase.from('classes').select('id, name').order('name'),
-                        supabase.from('subjects').select('id, name').order('name'),
+                        supabase.from('classes_subjects').select('class_id, subject_id, subjects(id, name)').eq('is_active', true),
                     ]);
                     if (allClassesErr) throw allClassesErr;
-                    if (allSubjectsErr) throw allSubjectsErr;
+                    if (csError) throw csError;
+
                     classIDs = (allClasses || []).map((c: any) => c.id);
-                    subjectIDs = (allSubjects || []).map((s: any) => s.id);
-                    // Build subjects list for filter
-                    const relevantSubjects = selectedClass === 'all'
-                        ? (allSubjects || [])
-                        : (allSubjects || []); // show all subjects regardless for superadmin
-                    relevantSubjects.forEach((s: any) => subjectsMap.set(s.id, s.name));
-                    setSubjects(relevantSubjects.map((s: any) => ({ id: s.id, name: s.name })));
+
+                    // Build subjectsByClass map + full subjects list
+                    const byClass: Record<string, { id: string; name: string }[]> = {};
+                    const allSubjectsMap = new Map<string, string>();
+                    (classSubjectRows || []).forEach((item: any) => {
+                        const sub = item.subjects;
+                        if (!sub) return;
+                        allSubjectsMap.set(sub.id, sub.name);
+                        if (!byClass[item.class_id]) byClass[item.class_id] = [];
+                        if (!byClass[item.class_id].find((s: any) => s.id === sub.id)) {
+                            byClass[item.class_id].push({ id: sub.id, name: sub.name });
+                        }
+                    });
+                    setSubjectsByClass(byClass);
+                    subjectIDs = [...allSubjectsMap.keys()];
+                    const allSubjectsList = Array.from(allSubjectsMap.entries()).map(([id, name]) => ({ id, name }));
+                    allSubjectsList.forEach(s => subjectsMap.set(s.id, s.name));
+                    setSubjects(allSubjectsList);
                 } else {
                     const { data: classesIDData, error: classesIDError } = await supabase
                         .from('teacher_subject_enrollments')
@@ -73,6 +89,17 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
 
                     classIDs = [...new Set(classesIDData?.map(item => item.class_id) || [])];
                     subjectIDs = [...new Set(classesIDData?.map(item => item.subject_id) || [])];
+
+                    // Build subjectsByClass map (all classes, not filtered) for modal subject dropdown
+                    const byClass: Record<string, { id: string; name: string }[]> = {};
+                    (classesIDData || []).forEach((item: any) => {
+                        const subName = (item.subjects as any)?.name || item.subject_id;
+                        if (!byClass[item.class_id]) byClass[item.class_id] = [];
+                        if (!byClass[item.class_id].find(s => s.id === item.subject_id)) {
+                            byClass[item.class_id].push({ id: item.subject_id, name: subName });
+                        }
+                    });
+                    setSubjectsByClass(byClass);
 
                     const relevantEnrollments = selectedClass === 'all'
                         ? (classesIDData || [])
@@ -306,6 +333,7 @@ export const useTeacherAnalytics = (profileId: string | undefined, selectedClass
         classAnalytics,
         classes,
         subjects,
+        subjectsByClass,
         loading,
         error,
         refetch

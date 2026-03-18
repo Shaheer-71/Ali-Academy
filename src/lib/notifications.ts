@@ -14,6 +14,8 @@ export const pendingNavigation = {
     diaryAssignmentId: null as string | null,
     lectureId: null as string | null,
     timetableEntry: null as boolean | null,
+    quizId: null as string | null,            // quiz_added  → open QuizDetailModal
+    quizMarkedResultId: null as string | null, // quiz_marked → open StudentMarkModal
 };
 
 // ============================================
