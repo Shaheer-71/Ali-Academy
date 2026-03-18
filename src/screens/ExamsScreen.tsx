@@ -1,8 +1,8 @@
 // ExamsScreen.tsx — flat quiz list + filter sheet
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Modal, TouchableWithoutFeedback, Dimensions, RefreshControl, Alert,
+  Modal, TouchableWithoutFeedback, Dimensions, RefreshControl, Alert, AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Animated } from 'react-native';
@@ -14,11 +14,14 @@ import TopSections from '@/src/components/common/TopSections';
 import { SkeletonBox } from '@/src/components/common/Skeleton';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
 import CreateQuizModal from '../components/exams/modals/CreateQuizModal';
-import MarkingModal from '../components/exams/modals/MarkingModal';
-import ResultsTab from '../components/exams/ResultsTab';
+import BulkMarkingModal from '../components/exams/modals/BulkMarkingModal';
+import BulkResultsModal from '../components/exams/modals/BulkResultsModal';
 import SwipeableQuizCard from '../components/exams/SwipeableQuizCard';
 import QuizDetailModal from '../components/exams/modals/QuizDetailModal';
+import StudentMarkModal from '../components/exams/modals/StudentMarkModal';
+import StudentResultsListModal from '../components/exams/modals/StudentResultsListModal';
 import { supabase } from '@/src/lib/supabase';
+import { pendingNavigation } from '@/src/lib/notifications';
 import { useFocusEffect } from '@react-navigation/native';
 import { useScreenAnimation } from '@/src/utils/animations';
 import { handleError } from '@/src/utils/errorHandler/homeErrorHandler';
@@ -27,8 +30,8 @@ import { TextSizes } from '@/src/styles/TextSizes';
 const { height } = Dimensions.get('window');
 
 export default function ExamsScreen() {
-  const { profile } = useAuth();
-  const { colors } = useTheme();
+  const { profile, student } = useAuth();
+  const { colors, isDark } = useTheme();
   const screenStyle = useScreenAnimation();
   const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin';
   const isSuperAdmin = profile?.role === 'superadmin';
@@ -50,14 +53,18 @@ export default function ExamsScreen() {
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<any>(null);
   const [resultsVisible, setResultsVisible] = useState(false);
-  const [markingPanelVisible, setMarkingPanelVisible] = useState(false);
-  const [markingModalVisible, setMarkingModalVisible] = useState(false);
-  const [selectedResult, setSelectedResult] = useState<any>(null);
+  const [bulkMarkingVisible, setBulkMarkingVisible] = useState(false);
+  const [studentResultsVisible, setStudentResultsVisible] = useState(false);
 
   // ── Swipeable card state ─────────────────────────────────────────────────────
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [detailQuiz, setDetailQuiz] = useState<any>(null);
+  const [studentMarkResult, setStudentMarkResult] = useState<any>(null);
+
+  // ── Deep-link pending refs ───────────────────────────────────────────────────
+  const pendingQuizIdRef = useRef<string | null>(null);
+  const pendingResultIdRef = useRef<string | null>(null);
 
   const [errorModal, setErrorModal] = useState({ visible: false, title: '', message: '' });
   const showError = (error: any, handler?: (e: any) => any) => {
@@ -67,12 +74,20 @@ export default function ExamsScreen() {
 
   const {
     quizzes, quizResults, loading,
-    createQuiz, updateQuiz, deleteQuiz, markQuizResult, areAllResultsMarked, refetch,
+    subjects: enrolledSubjects,
+    createQuiz, updateQuiz, deleteQuiz, markQuizResult, bulkMarkQuizResults, refetch,
   } = useQuizzes();
+
+  // For students: populate subjects from their quiz enrollments (already enrollment-filtered in useQuizzes)
+  useEffect(() => {
+    if (!isTeacher && enrolledSubjects.length > 0) {
+      setSubjects(enrolledSubjects);
+    }
+  }, [isTeacher, enrolledSubjects]);
 
   // ── Fetch classes + subjects ─────────────────────────────────────────────────
   const fetchClassesAndSubjects = useCallback(async () => {
-    if (!isTeacher || !profile?.id) return;
+    if (!profile?.id) return;
     try {
       if (isSuperAdmin) {
         const [{ data: allClasses }, { data: allSubjects }] = await Promise.all([
@@ -81,7 +96,7 @@ export default function ExamsScreen() {
         ]);
         setClasses(allClasses || []);
         setSubjects(allSubjects || []);
-      } else {
+      } else if (isTeacher) {
         const { data, error } = await supabase
           .from('teacher_subject_enrollments')
           .select('class_id, subject_id, classes(id, name), subjects(id, name)')
@@ -96,9 +111,21 @@ export default function ExamsScreen() {
         ) as any[];
         setClasses(uniqueClasses);
         setSubjects(uniqueSubjects);
+      } else if (student?.id) {
+        // Student: fetch their enrolled subjects
+        const { data, error } = await supabase
+          .from('student_subject_enrollments')
+          .select('subject_id, subjects(id, name)')
+          .eq('student_id', student.id)
+          .eq('is_active', true);
+        if (error) throw error;
+        const uniqueSubjects = Array.from(
+          new Map((data || []).map((e: any) => e.subjects).filter(Boolean).map((s: any) => [s.id, s])).values()
+        ) as any[];
+        setSubjects(uniqueSubjects);
       }
     } catch (error) { showError(error); }
-  }, [profile?.id, isSuperAdmin]);
+  }, [profile?.id, isSuperAdmin, isTeacher, student?.id]);
 
   const getSubjectsForClass = useCallback(async (classId: string) => {
     if (!classId || !profile?.id) return [];
@@ -134,7 +161,7 @@ export default function ExamsScreen() {
     setSubjects(subs);
   }, [getSubjectsForClass]);
 
-  useEffect(() => { fetchClassesAndSubjects(); }, [profile?.id]);
+  useEffect(() => { fetchClassesAndSubjects(); }, [profile?.id, student?.id]);
 
   // ── Refresh ──────────────────────────────────────────────────────────────────
   const handleRefresh = useCallback(async () => {
@@ -147,9 +174,54 @@ export default function ExamsScreen() {
   }, [refetch, fetchClassesAndSubjects]);
 
   useFocusEffect(useCallback(() => {
+    if (pendingNavigation.quizId) {
+      pendingQuizIdRef.current = pendingNavigation.quizId;
+      pendingNavigation.quizId = null;
+    }
+    if (pendingNavigation.quizMarkedResultId) {
+      pendingResultIdRef.current = pendingNavigation.quizMarkedResultId;
+      pendingNavigation.quizMarkedResultId = null;
+    }
     refetch();
     fetchClassesAndSubjects();
   }, [profile?.id]));
+
+  // AppState: handles background→foreground when exams is already the active tab
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        if (pendingNavigation.quizId) {
+          pendingQuizIdRef.current = pendingNavigation.quizId;
+          pendingNavigation.quizId = null;
+        }
+        if (pendingNavigation.quizMarkedResultId) {
+          pendingResultIdRef.current = pendingNavigation.quizMarkedResultId;
+          pendingNavigation.quizMarkedResultId = null;
+        }
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
+  // Open QuizDetailModal when quizzes load and we have a pending quiz id
+  useEffect(() => {
+    if (!pendingQuizIdRef.current || quizzes.length === 0) return;
+    const found = quizzes.find(q => q.id === pendingQuizIdRef.current);
+    if (found) {
+      pendingQuizIdRef.current = null;
+      setDetailQuiz(found);
+    }
+  }, [quizzes]);
+
+  // Open StudentMarkModal when quizResults load and we have a pending result id
+  useEffect(() => {
+    if (!pendingResultIdRef.current || quizResults.length === 0) return;
+    const found = quizResults.find(r => r.id === pendingResultIdRef.current);
+    if (found) {
+      pendingResultIdRef.current = null;
+      setStudentMarkResult(found);
+    }
+  }, [quizResults]);
 
   // ── Filter sheet sync ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -192,52 +264,16 @@ export default function ExamsScreen() {
 
   const isFiltered = filterClass !== null || filterSubject !== null;
 
-  // ── Results filters — inherit main screen filter ──────────────────────────────
-  const [resultsClass, setResultsClass] = useState('all');
-  const [resultsSubject, setResultsSubject] = useState('all');
-  const [checkedFilter, setCheckedFilter] = useState<'all' | 'checked' | 'unchecked'>('all');
+  // For student "My Results" modal — filter results to match the active subject filter
+  const filteredStudentResults = useMemo(() => {
+    if (!filterSubject) return quizResults;
+    const filteredIds = new Set(displayQuizzes.map(q => q.id));
+    return quizResults.filter(r => filteredIds.has(r.quiz_id));
+  }, [quizResults, displayQuizzes, filterSubject]);
 
-  // Sync results/marking filters from main filter when opening
-  const openResults = () => {
-    setResultsClass(filterClass || 'all');
-    setResultsSubject(filterSubject || 'all');
-    setFilterVisible(false);
-    setResultsVisible(true);
-  };
+  const openResults = () => { setFilterVisible(false); setResultsVisible(true); };
+  const openMarking = () => { setFilterVisible(false); setBulkMarkingVisible(true); };
 
-  const openMarking = () => {
-    setResultsClass(filterClass || 'all');
-    setResultsSubject(filterSubject || 'all');
-    setFilterVisible(false);
-    setMarkingPanelVisible(true);
-  };
-
-  const applyClassSubjectFilter = useCallback((results: any[]) => {
-    let filtered = results;
-    const teacherQuizIds = isTeacher
-      ? quizzes.filter(q => q.created_by === profile?.id).map(q => q.id)
-      : quizzes.map(q => q.id);
-    filtered = filtered.filter(r => teacherQuizIds.includes(r.quiz_id));
-    if (resultsClass && resultsClass !== 'all') {
-      const ids = quizzes.filter(q => q.class_id === resultsClass).map(q => q.id);
-      filtered = filtered.filter(r => ids.includes(r.quiz_id));
-    }
-    if (resultsSubject && resultsSubject !== 'all') {
-      const ids = quizzes.filter(q => q.subject_id === resultsSubject && (resultsClass === 'all' || q.class_id === resultsClass)).map(q => q.id);
-      filtered = filtered.filter(r => ids.includes(r.quiz_id));
-    }
-    return filtered;
-  }, [quizzes, resultsClass, resultsSubject, profile?.id, isTeacher]);
-
-  // Results: only marked entries
-  const getFilteredResults = useCallback(() => {
-    return applyClassSubjectFilter(quizResults).filter(r => r.is_checked);
-  }, [quizResults, applyClassSubjectFilter]);
-
-  // Marking: only unmarked entries
-  const getMarkingResults = useCallback(() => {
-    return applyClassSubjectFilter(quizResults).filter(r => !r.is_checked);
-  }, [quizResults, applyClassSubjectFilter]);
 
   // ── Filter bottom sheet ──────────────────────────────────────────────────────
   const renderFilterSheet = () => {
@@ -246,12 +282,11 @@ export default function ExamsScreen() {
     const hasChanges = pendingClass !== null || pendingSubject !== null;
 
     return (
-      <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={() => setFilterVisible(false)}>
+      <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={() => setFilterVisible(false)} statusBarTranslucent presentationStyle="overFullScreen">
         <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
-          <View style={s.modalOverlay} />
-        </TouchableWithoutFeedback>
-
-        <View style={[s.bottomSheet, { backgroundColor: colors.cardBackground }]}>
+          <View style={s.modalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={[s.bottomSheet, { backgroundColor: colors.cardBackground }]}>
           <View style={[s.sheetHandle, { backgroundColor: colors.border }]} />
 
           {/* Action buttons — teacher only */}
@@ -274,6 +309,18 @@ export default function ExamsScreen() {
                 onPress={openResults}>
                 <Award size={15} color={colors.text} />
                 <Text allowFontScaling={false} style={[s.actionBtnText, { color: colors.text }]}>Results</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* My Results button — student only */}
+          {!isTeacher && (
+            <View style={s.actionRow}>
+              <TouchableOpacity
+                style={[s.actionBtn, { borderColor: colors.primary }]}
+                onPress={() => { setFilterVisible(false); setStudentResultsVisible(true); }}>
+                <Award size={15} color={colors.primary} />
+                <Text allowFontScaling={false} style={[s.actionBtnText, { color: colors.primary }]}>My Results</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -348,13 +395,17 @@ export default function ExamsScreen() {
           <TouchableOpacity style={[s.applyBtn, { backgroundColor: colors.primary }]} onPress={applyFilter}>
             <Text allowFontScaling={false} style={s.applyBtnText}>Apply Filter</Text>
           </TouchableOpacity>
-        </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
     );
   };
 
   // ── Quiz edit / delete ───────────────────────────────────────────────────────
   const handleEditQuiz = (quiz: any) => {
+    if (!isSuperAdmin) return;
     setEditingQuiz(quiz);
     setCreateModalVisible(true);
   };
@@ -375,6 +426,12 @@ export default function ExamsScreen() {
       ]
     );
   };
+
+  // ── Student: view marks for a quiz ──────────────────────────────────────────
+  const handleViewStudentMark = useCallback((quiz: any) => {
+    const result = quizResults.find(r => r.quiz_id === quiz.id && r.is_checked);
+    if (result) setStudentMarkResult(result);
+  }, [quizResults]);
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -435,6 +492,7 @@ export default function ExamsScreen() {
                 quiz={quiz}
                 colors={colors}
                 canSwipe={isTeacher}
+                canEdit={isSuperAdmin}
                 isOpen={openCardId === quiz.id}
                 onSwipeOpen={(id) => setOpenCardId(id)}
                 onSwipeClose={() => setOpenCardId(null)}
@@ -443,116 +501,38 @@ export default function ExamsScreen() {
                 onEdit={handleEditQuiz}
                 onDelete={handleDeleteQuiz}
                 onPress={(q) => setDetailQuiz(q)}
+                onViewMarks={!isTeacher ? handleViewStudentMark : undefined}
+                hasMarks={!isTeacher && quizResults.some(r => r.quiz_id === quiz.id && r.is_checked)}
               />
             ))
           )}
         </ScrollView>
 
-        {/* Results modal — marked entries only */}
-        <Modal
+        {/* Results modal — quiz-grouped results */}
+        <BulkResultsModal
+          colors={colors}
           visible={resultsVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setResultsVisible(false)}
-          statusBarTranslucent
-          presentationStyle="overFullScreen"
-        >
-          <View style={s.resultsOverlay}>
-            <View style={[s.resultsSheet, { backgroundColor: colors.background }]}>
-              <View style={[s.resultsHeader, { borderBottomColor: colors.border }]}>
-                <Text allowFontScaling={false} style={[s.resultsTitle, { color: colors.text }]}>Results</Text>
-                <TouchableOpacity style={s.resultsCloseBtn} onPress={() => setResultsVisible(false)}>
-                  <X size={24} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-              <ResultsTab
-                colors={colors}
-                profile={profile}
-                selectedClass={resultsClass || 'all'}
-                selectedSubject={resultsSubject || 'all'}
-                setSelectedSubject={(v) => setResultsSubject(v || 'all')}
-                checkedFilter={checkedFilter}
-                setCheckedFilter={setCheckedFilter}
-                getSubjectsWithAll={() => []}
-                getFilteredResults={getFilteredResults}
-                setSelectedResult={setSelectedResult}
-                setMarkingModalVisible={setMarkingModalVisible}
-                quizzes={quizzes}
-                quizResults={quizResults}
-                subjects={subjects}
-                classes={classes}
-                onRefresh={handleRefresh}
-                emptyMessage="No marked results yet"
-                emptySubMessage="Mark quizzes from the Marking section first."
-              />
-            </View>
-          </View>
+          onClose={() => setResultsVisible(false)}
+          quizzes={displayQuizzes}
+          quizResults={quizResults}
+          classes={classes}
+          subjects={subjects}
+        />
 
-          {/* MarkingModal inside Results so it stacks correctly on Android */}
-          {isTeacher && (
-            <MarkingModal
-              colors={colors}
-              markingModalVisible={markingModalVisible}
-              setMarkingModalVisible={setMarkingModalVisible}
-              selectedResult={selectedResult}
-              setSelectedResult={setSelectedResult}
-              markQuizResult={markQuizResult}
-            />
-          )}
-        </Modal>
-
-        {/* Marking modal — unmarked entries only, with MarkingModal inside */}
-        <Modal
-          visible={markingPanelVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setMarkingPanelVisible(false)}
-          statusBarTranslucent
-          presentationStyle="overFullScreen"
-        >
-          <View style={s.resultsOverlay}>
-            <View style={[s.resultsSheet, { backgroundColor: colors.background }]}>
-              <View style={[s.resultsHeader, { borderBottomColor: colors.border }]}>
-                <Text allowFontScaling={false} style={[s.resultsTitle, { color: colors.text }]}>Marking</Text>
-                <TouchableOpacity style={s.resultsCloseBtn} onPress={() => setMarkingPanelVisible(false)}>
-                  <X size={24} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-              <ResultsTab
-                colors={colors}
-                profile={profile}
-                selectedClass={resultsClass || 'all'}
-                selectedSubject={resultsSubject || 'all'}
-                setSelectedSubject={(v) => setResultsSubject(v || 'all')}
-                checkedFilter={checkedFilter}
-                setCheckedFilter={setCheckedFilter}
-                getSubjectsWithAll={() => []}
-                getFilteredResults={getMarkingResults}
-                setSelectedResult={setSelectedResult}
-                setMarkingModalVisible={setMarkingModalVisible}
-                quizzes={quizzes}
-                quizResults={quizResults}
-                subjects={subjects}
-                classes={classes}
-                onRefresh={handleRefresh}
-                emptyMessage="All quizzes are marked!"
-                emptySubMessage="There are no pending entries to mark."
-              />
-            </View>
-          </View>
-
-          {/* MarkingModal must be inside this Modal to stack correctly on Android */}
-          {isTeacher && (
-            <MarkingModal
-              colors={colors}
-              markingModalVisible={markingModalVisible}
-              setMarkingModalVisible={setMarkingModalVisible}
-              selectedResult={selectedResult}
-              setSelectedResult={setSelectedResult}
-              markQuizResult={markQuizResult}
-            />
-          )}
-        </Modal>
+        {/* Bulk marking modal — mark all students for a quiz at once */}
+        {isTeacher && (
+          <BulkMarkingModal
+            colors={colors}
+            visible={bulkMarkingVisible}
+            onClose={() => setBulkMarkingVisible(false)}
+            quizzes={displayQuizzes}
+            quizResults={quizResults}
+            classes={classes}
+            subjects={subjects}
+            bulkMarkQuizResults={bulkMarkQuizResults}
+            onRefresh={handleRefresh}
+          />
+        )}
 
         <QuizDetailModal
           visible={!!detailQuiz}
@@ -561,9 +541,27 @@ export default function ExamsScreen() {
           onClose={() => setDetailQuiz(null)}
         />
 
+        <StudentMarkModal
+          visible={!!studentMarkResult}
+          result={studentMarkResult}
+          colors={colors}
+          onClose={() => setStudentMarkResult(null)}
+        />
+
+        {!isTeacher && (
+          <StudentResultsListModal
+            visible={studentResultsVisible}
+            colors={colors}
+            quizResults={filteredStudentResults}
+            onClose={() => setStudentResultsVisible(false)}
+            onViewResult={(result) => { setStudentResultsVisible(false); setStudentMarkResult(result); }}
+          />
+        )}
+
         {isTeacher && (
           <CreateQuizModal
             colors={colors}
+            isDark={isDark}
             modalVisible={createModalVisible}
             setModalVisible={(v) => { setCreateModalVisible(v); if (!v) setEditingQuiz(null); }}
             subjects={subjects}
@@ -592,8 +590,12 @@ const s = StyleSheet.create({
   card: { borderRadius: 12, padding: 14, borderWidth: 1, marginBottom: 12 },
 
   // bottom sheet
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
-  bottomSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 12, paddingBottom: 32, maxHeight: height * 0.7 },
+  modalOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 12, paddingBottom: 32, height: height * 0.45 },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
 
   actionRow: { flexDirection: 'row', gap: 10, marginHorizontal: 16, marginBottom: 12 },
@@ -606,7 +608,7 @@ const s = StyleSheet.create({
   sheetHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 8 },
   sheetTitle: { flex: 1, fontSize: TextSizes.sectionTitle, fontFamily: 'Inter-SemiBold' },
   resetText: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium' },
-  sheetScroll: { flexGrow: 0 },
+  sheetScroll: { flex: 1 },
 
   accordionHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -626,13 +628,4 @@ const s = StyleSheet.create({
   applyBtn: { marginHorizontal: 16, marginTop: 8, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   applyBtnText: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold', color: '#ffffff' },
 
-  // results modal
-  resultsOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  resultsSheet: { height: '85%', borderTopLeftRadius: 24, borderTopRightRadius: 24 },
-  resultsHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 24, paddingTop: 24, paddingBottom: 16, borderBottomWidth: 1,
-  },
-  resultsTitle: { fontSize: TextSizes.modalTitle, fontFamily: 'Inter-SemiBold' },
-  resultsCloseBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
 });

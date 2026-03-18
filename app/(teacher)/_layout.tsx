@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as NavigationBar from 'expo-navigation-bar';
 import {
     House as Home,
     ClipboardCheck,
@@ -29,6 +30,13 @@ export default function TeacherLayout() {
             router.replace('/(auth)/sign-in');
         }
     }, [loading, user?.id, profile?.role]);
+
+    useEffect(() => {
+        if (Platform.OS === 'android') {
+            NavigationBar.setVisibilityAsync('hidden');
+            NavigationBar.setBehaviorAsync('overlay-swipe');
+        }
+    }, []);
 
     if (loading || !user || !profile || !isAllowed) {
         return null;

@@ -1,4 +1,3 @@
-// CreateQuizModal.tsx - Fixed with async getSubjectsForClass
 import React, { useState, useEffect } from 'react';
 import {
     Modal,
@@ -6,18 +5,27 @@ import {
     Text,
     ScrollView,
     TouchableOpacity,
+    TouchableWithoutFeedback,
     TextInput,
     Alert,
     ActivityIndicator,
-    StyleSheet
+    StyleSheet,
+    Dimensions,
+    Platform,
 } from 'react-native';
-import { X } from 'lucide-react-native';
+
+const SHEET_HEIGHT = Dimensions.get('window').height * 0.75;
+
+import { X, ChevronRight, Check } from 'lucide-react-native';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { sendPushNotification } from '@/src/lib/notifications';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
 import { handleQuizCreationError, handleSubjectFetchForClassError } from '@/src/utils/errorHandler/quizErrorHandler';
-
+import { TextSizes } from '@/src/styles/TextSizes';
+import { modalShell, modalForm } from '@/src/styles/creationModalStyles';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Subject {
     id: string;
@@ -44,6 +52,7 @@ interface QuizData {
 
 interface CreateQuizModalProps {
     colors: any;
+    isDark?: boolean;
     modalVisible: boolean;
     setModalVisible: (visible: boolean) => void;
     subjects: Subject[];
@@ -57,9 +66,9 @@ interface CreateQuizModalProps {
 
 const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
     colors,
+    isDark,
     modalVisible,
     setModalVisible,
-    subjects,
     classes,
     selectedClass,
     createQuiz,
@@ -68,8 +77,10 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
     updateQuiz,
 }) => {
     const isEditing = !!editingQuiz;
-    const [creating, setCreating] = useState<boolean>(false);
+    const [creating, setCreating] = useState(false);
     const { profile } = useAuth();
+    const { bottom: bottomInset } = useSafeAreaInsets();
+
     const [newQuiz, setNewQuiz] = useState({
         title: '',
         description: '',
@@ -82,30 +93,27 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
         instructions: '',
     });
 
-    // Available subjects based on selected class
     const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
-    const [loadingSubjects, setLoadingSubjects] = useState<boolean>(false);
+    const [loadingSubjects, setLoadingSubjects] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
-    const [errorModal, setErrorModal] = useState<{
-        visible: boolean;
-        title: string;
-        message: string;
-    }>({
-        visible: false,
-        title: '',
-        message: '',
+    type DropdownKey = 'class' | 'subject' | 'date' | null;
+    const [openDropdown, setOpenDropdown] = useState<DropdownKey>(null);
+    const toggle = (key: DropdownKey) => setOpenDropdown(prev => prev === key ? null : key);
+
+    const [errorModal, setErrorModal] = useState<{ visible: boolean; title: string; message: string }>({
+        visible: false, title: '', message: '',
     });
 
     const showError = (error: any, handler?: (error: any) => any) => {
-        const errorInfo = handler ? handler(error) : handleError(error);
-        setErrorModal({
-            visible: true,
-            title: errorInfo.title,
-            message: errorInfo.message,
-        });
+        const errorInfo = handler ? handler(error) : { title: 'Error', message: error?.message || 'An error occurred' };
+        setErrorModal({ visible: true, title: errorInfo.title, message: errorInfo.message });
     };
 
-    // Reset / populate form when modal is opened
+    useEffect(() => {
+        if (!modalVisible) { setOpenDropdown(null); setShowDatePicker(false); }
+    }, [modalVisible]);
+
     useEffect(() => {
         if (modalVisible) {
             if (isEditing && editingQuiz) {
@@ -137,18 +145,15 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
         }
     }, [modalVisible, selectedClass, isEditing, editingQuiz]);
 
-    // Update available subjects when class changes
     useEffect(() => {
         const loadSubjects = async () => {
-            if (newQuiz.class_id && newQuiz.class_id !== '') {
+            if (newQuiz.class_id) {
                 setLoadingSubjects(true);
                 try {
                     const classSubjects = await getSubjectsForClass(newQuiz.class_id);
                     setAvailableSubjects(classSubjects);
-                    // Reset subject selection when class changes
                     setNewQuiz(prev => ({ ...prev, subject_id: '' }));
                 } catch (error) {
-                    console.warn("❌ Error loading subjects:", error);
                     showError(error, handleSubjectFetchForClassError);
                     setAvailableSubjects([]);
                 } finally {
@@ -159,12 +164,10 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                 setNewQuiz(prev => ({ ...prev, subject_id: '' }));
             }
         };
-
         loadSubjects();
     }, [newQuiz.class_id]);
 
     const handleCreateQuiz = async () => {
-        // Validation
         const missingFields: string[] = [];
         if (!newQuiz.title.trim()) missingFields.push('Title');
         if (!newQuiz.class_id) missingFields.push('Class');
@@ -172,13 +175,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
         if (!newQuiz.scheduled_date.trim()) missingFields.push('Scheduled Date');
 
         if (missingFields.length > 0) {
-            Alert.alert('Error', `Please fill in the following required fields: ${missingFields.join(', ')}`);
-            return;
-        }
-
-        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-        if (!dateRegex.test(newQuiz.scheduled_date)) {
-            Alert.alert('Error', 'Please enter date in YYYY-MM-DD format');
+            Alert.alert('Error', `Please fill in: ${missingFields.join(', ')}`);
             return;
         }
 
@@ -190,12 +187,10 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
             Alert.alert('Error', 'Duration must be a valid number greater than 0');
             return;
         }
-
         if (isNaN(totalMarks) || totalMarks <= 0) {
             Alert.alert('Error', 'Total marks must be a valid number greater than 0');
             return;
         }
-
         if (isNaN(passingMarks) || passingMarks < 0 || passingMarks > totalMarks) {
             Alert.alert('Error', 'Passing marks must be between 0 and total marks');
             return;
@@ -222,72 +217,68 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                 return;
             }
 
+            // Check for duplicate: same class + subject + date
+            const { data: existing } = await supabase
+                .from('quizzes')
+                .select('id')
+                .eq('class_id', newQuiz.class_id)
+                .eq('subject_id', newQuiz.subject_id)
+                .eq('scheduled_date', newQuiz.scheduled_date)
+                .maybeSingle();
+
+            if (existing) {
+                Alert.alert(
+                    'Already Scheduled',
+                    'A quiz for this class and subject already exists on this date. You cannot add another.',
+                );
+                return;
+            }
+
             const result = await createQuiz(quizPayload);
 
             if (result.success && result.data) {
                 Alert.alert('Success', 'Quiz scheduled successfully');
                 setModalVisible(false);
 
-                // ✅ 1️⃣ Fetch all students in the class
-                const { data: students, error: studentError } = await supabase
-                    .from('students')
-                    .select('id')
-                    .eq('class_id', newQuiz.class_id);
+                // Fetch only students enrolled in this class+subject
+                const { data: enrollments, error: studentError } = await supabase
+                    .from('student_subject_enrollments')
+                    .select('student_id')
+                    .eq('class_id', newQuiz.class_id)
+                    .eq('subject_id', newQuiz.subject_id)
+                    .eq('is_active', true);
 
-                if (studentError) {
-                    console.warn('Error fetching students:', studentError);
-                    return;
-                }
+                if (studentError || !enrollments?.length) return;
+                const students = enrollments.map(e => ({ id: e.student_id }));
 
-                if (!students || students.length === 0) {
-                    console.warn('No students found for class:', newQuiz.class_id);
-                    return;
-                }
-
-                // ✅ 2️⃣ Create one notification for this quiz
                 const { data: notification, error: notifError } = await supabase
                     .from('notifications')
-                    .insert([
-                        {
-                            type: 'quiz_added',
-                            title: `${newQuiz.title} Scheduled`,
-                            message: `A new quiz has been scheduled for ${newQuiz.scheduled_date}. Prepare well!`,
-                            entity_type: 'quiz',
-                            entity_id: result.data.id,
-                            created_by: profile?.id,
-                            target_type: 'students',
-                            target_id: newQuiz.class_id,
-                            priority: 'high',
-                        },
-                    ])
+                    .insert([{
+                        type: 'quiz_added',
+                        title: `${newQuiz.title} Scheduled`,
+                        message: `A new quiz has been scheduled for ${newQuiz.scheduled_date}. Prepare well!`,
+                        entity_type: 'quiz',
+                        entity_id: result.data.id,
+                        created_by: profile?.id,
+                        target_type: 'students',
+                        target_id: newQuiz.class_id,
+                        priority: 'high',
+                    }])
                     .select('id')
                     .single();
 
-                if (notifError) {
-                    console.warn('Error creating notification:', notifError);
-                    return;
-                }
+                if (notifError) return;
 
-                // ✅ 3️⃣ Add all students as recipients
                 const recipientRows = students.map(s => ({
                     notification_id: notification.id,
                     user_id: s.id,
                     is_read: false,
                     is_deleted: false,
                 }));
+                await supabase.from('notification_recipients').insert(recipientRows);
 
-                const { error: recipientError } = await supabase
-                    .from('notification_recipients')
-                    .insert(recipientRows);
-
-                // ✅ 4️⃣ SEND PUSH NOTIFICATIONS TO ALL STUDENTS
-                let sentCount = 0;
-                let failedCount = 0;
-
-                for (let i = 0; i < students.length; i++) {
-                    const student = students[i];
+                for (const student of students) {
                     try {
-
                         await sendPushNotification({
                             userId: student.id,
                             title: `📝 ${newQuiz.title}`,
@@ -297,538 +288,376 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                                 quizId: result.data.id,
                                 className: newQuiz.class_id,
                                 scheduledDate: newQuiz.scheduled_date,
-                                totalMarks: totalMarks,
-                                duration: duration,
+                                totalMarks,
+                                duration,
                                 notificationId: notification.id,
                             },
                         });
-
-                        sentCount++;
-                    } catch (studentError) {
-                        console.warn(`❌ [QUIZ] Failed to send notification to student ${i + 1}:`, studentError);
-                        failedCount++;
-                        continue;
-                    }
-                }
-
-                if (recipientError) {
-                    console.warn('Error adding recipients:', recipientError);
+                    } catch { /* continue */ }
                 }
             } else {
                 showError(result.error, handleQuizCreationError);
             }
-
         } catch (error: any) {
-            console.warn('Error creating quiz:', error);
-            const msg = error?.message?.includes('quizzes_class_subject_unique') || error?.code === '23505'
-                ? 'A quiz already exists for this class and subject. Only one quiz per class per subject is allowed.'
-                : error.message;
-            Alert.alert('Error', msg);
+            Alert.alert('Error', error?.message || 'An unexpected error occurred.');
         } finally {
             setCreating(false);
         }
     };
 
+    const selectedClassName = classes.find(c => c.id === newQuiz.class_id)?.name ?? 'Select class';
+    const selectedSubjectName = availableSubjects.find(s => s.id === newQuiz.subject_id)?.name ?? 'Select subject';
+
+    const chevronStyle = (key: DropdownKey) => ({
+        marginLeft: 6,
+        transform: [{ rotate: openDropdown === key ? '270deg' : '90deg' }] as any,
+    });
+
     return (
         <Modal
             animationType="fade"
-            transparent={true}
+            transparent
             visible={modalVisible}
             onRequestClose={() => setModalVisible(false)}
-            statusBarTranslucent={true}  // ← ADD THIS
+            statusBarTranslucent
             presentationStyle="overFullScreen"
         >
-            <View style={styles.modalOverlay}>
-                <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <ErrorModal
+                visible={errorModal.visible}
+                title={errorModal.title}
+                message={errorModal.message}
+                onClose={() => setErrorModal({ ...errorModal, visible: false })}
+            />
 
-                    <ErrorModal
-                        visible={errorModal.visible}
-                        title={errorModal.title}
-                        message={errorModal.message}
-                        onClose={() => setErrorModal({ ...errorModal, visible: false })}
-                    />
+            <View style={s.root}>
+                <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+                    <View style={StyleSheet.absoluteFillObject} />
+                </TouchableWithoutFeedback>
+                    <View style={[modalShell.sheet, { backgroundColor: colors.background, maxHeight: SHEET_HEIGHT, paddingBottom: bottomInset }]}>
 
-
-                    <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>{isEditing ? 'Edit Quiz' : 'Schedule Quiz'}</Text>
-                        <TouchableOpacity
-                            style={styles.closeButton}
-                            onPress={() => setModalVisible(false)}
-                        >
-                            <X size={24} color={colors.textSecondary} />
-                        </TouchableOpacity>
-                    </View>
-
-                    <ScrollView style={styles.modalScrollView} contentContainerStyle={styles.modalScrollViewContent}>
-                        <View style={styles.inputGroup}>
-                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Quiz Title *</Text>
-                            <TextInput
-                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                value={newQuiz.title}
-                                onChangeText={(text) => setNewQuiz({ ...newQuiz, title: text })}
-                                placeholder="Enter quiz title"
-                                placeholderTextColor={colors.textSecondary}
-                            />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Description</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                value={newQuiz.description}
-                                onChangeText={(text) => setNewQuiz({ ...newQuiz, description: text })}
-                                placeholder="Enter quiz description"
-                                placeholderTextColor={colors.textSecondary}
-                                multiline
-                                numberOfLines={3}
-                            />
-                        </View>
-
-                        {/* STEP 1: Select Class First */}
-                        <View style={styles.inputGroup}>
-                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Class *</Text>
-                            <Text allowFontScaling={false} style={[styles.helperText, { color: colors.textSecondary }]}>
-                                {newQuiz.class_id ? `Selected: ${classes.find(c => c.id === newQuiz.class_id)?.name}` : 'Please select a class first'}
-                            </Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                <View style={styles.options}>
-                                    {classes.filter(c => c.id !== 'all').map((classItem) => (
-                                        <TouchableOpacity
-                                            key={classItem.id}
-                                            style={[
-                                                styles.option,
-                                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                                newQuiz.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
-                                            ]}
-                                            onPress={() => setNewQuiz({ ...newQuiz, class_id: classItem.id, subject_id: '' })}
-                                        >
-                                            <Text allowFontScaling={false} style={[
-                                                styles.optionText,
-                                                { color: colors.text },
-                                                newQuiz.class_id === classItem.id && { color: '#ffffff' },
-                                            ]}>
-                                                {classItem.name}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </ScrollView>
-                        </View>
-
-                        {/* STEP 2: Select Subject (only after class is selected) */}
-                        {newQuiz.class_id && (
-                            <View style={styles.inputGroup}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Subject *</Text>
-                                <Text allowFontScaling={false} style={[styles.helperText, { color: colors.textSecondary }]}>
-                                    {loadingSubjects
-                                        ? 'Loading subjects...'
-                                        : newQuiz.subject_id
-                                            ? `Selected: ${availableSubjects.find(s => s.id === newQuiz.subject_id)?.name}`
-                                            : `Available subjects for ${classes.find(c => c.id === newQuiz.class_id)?.name}`
-                                    }
+                            {/* Header */}
+                            <View style={[modalShell.header, { borderBottomColor: colors.border }]}>
+                                <Text allowFontScaling={false} style={[modalShell.title, { color: colors.text }]}>
+                                    {isEditing ? 'Edit Quiz' : 'Schedule Quiz'}
                                 </Text>
-                                {loadingSubjects ? (
-                                    <View style={[styles.loadingContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                                        <ActivityIndicator color={colors.primary} />
-                                        <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>
-                                            Loading subjects...
-                                        </Text>
-                                    </View>
-                                ) : availableSubjects.length > 0 ? (
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                        <View style={styles.options}>
-                                            {availableSubjects.map((subject) => (
-                                                <TouchableOpacity
-                                                    key={subject.id}
-                                                    style={[
-                                                        styles.option,
-                                                        { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                                        newQuiz.subject_id === subject.id && { backgroundColor: colors.primary, borderColor: colors.primary },
-                                                    ]}
-                                                    onPress={() => setNewQuiz({ ...newQuiz, subject_id: subject.id })}
-                                                >
-                                                    <Text allowFontScaling={false} style={[
-                                                        styles.optionText,
-                                                        { color: colors.text },
-                                                        newQuiz.subject_id === subject.id && { color: '#ffffff' },
-                                                    ]}>
-                                                        {subject.name}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            ))}
+                                <TouchableOpacity style={modalShell.closeBtn} onPress={() => setModalVisible(false)}>
+                                    <X size={24} color={colors.text} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <ScrollView
+                                style={modalShell.scroll}
+                                keyboardShouldPersistTaps="handled"
+                                automaticallyAdjustKeyboardInsets
+                                contentContainerStyle={modalShell.scrollContent}
+                            >
+
+                                {/* Title */}
+                                <View style={modalForm.group}>
+                                    <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Title *</Text>
+                                    <TextInput
+                                        style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                        value={newQuiz.title}
+                                        onChangeText={(t) => setNewQuiz({ ...newQuiz, title: t })}
+                                        placeholder="Enter quiz title"
+                                        placeholderTextColor={colors.textSecondary}
+                                    />
+                                </View>
+
+                                {/* Description */}
+                                <View style={modalForm.group}>
+                                    <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Description</Text>
+                                    <TextInput
+                                        style={[modalForm.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                        value={newQuiz.description}
+                                        onChangeText={(t) => setNewQuiz({ ...newQuiz, description: t })}
+                                        placeholder="Enter quiz description"
+                                        placeholderTextColor={colors.textSecondary}
+                                        multiline
+                                        numberOfLines={3}
+                                    />
+                                </View>
+
+                                {/* Class */}
+                                <View style={modalForm.group}>
+                                    <TouchableOpacity
+                                        style={[s.accordionHeader, { borderColor: colors.border }]}
+                                        onPress={() => toggle('class')}
+                                    >
+                                        <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Class *</Text>
+                                        <View style={s.accordionRight}>
+                                            <Text allowFontScaling={false} style={[s.accordionValue, { color: newQuiz.class_id ? colors.text : colors.textSecondary }]}>
+                                                {selectedClassName}
+                                            </Text>
+                                            <ChevronRight size={16} color={colors.textSecondary} style={chevronStyle('class')} />
                                         </View>
-                                    </ScrollView>
-                                ) : (
-                                    <View style={[styles.noSubjectsContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                                        <Text allowFontScaling={false} style={[styles.noSubjectsText, { color: colors.textSecondary }]}>
-                                            No subjects assigned to this class. Please contact admin to assign subjects.
-                                        </Text>
+                                    </TouchableOpacity>
+                                    {openDropdown === 'class' && (
+                                        <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                                            <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={s.dropdownScroll}>
+                                                {classes.filter(c => c.id !== 'all').map((cls) => (
+                                                    <TouchableOpacity
+                                                        key={cls.id}
+                                                        style={[s.option, { borderBottomColor: colors.border }]}
+                                                        onPress={() => {
+                                                            setNewQuiz(prev => ({ ...prev, class_id: cls.id, subject_id: '' }));
+                                                            setOpenDropdown(null);
+                                                        }}
+                                                    >
+                                                        <Text allowFontScaling={false} style={[s.optionText, { color: colors.text }]}>{cls.name}</Text>
+                                                        {newQuiz.class_id === cls.id && <Check size={16} color={colors.primary} />}
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </ScrollView>
+                                        </View>
+                                    )}
+                                </View>
+
+                                {/* Subject */}
+                                {newQuiz.class_id ? (
+                                    <View style={modalForm.group}>
+                                        {loadingSubjects ? (
+                                            <View style={[s.accordionHeader, { borderColor: colors.border }]}>
+                                                <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Subject *</Text>
+                                                <ActivityIndicator size="small" color={colors.primary} />
+                                            </View>
+                                        ) : availableSubjects.length === 0 ? (
+                                            <Text allowFontScaling={false} style={[modalForm.hint, { color: colors.textSecondary }]}>
+                                                No subjects assigned to this class
+                                            </Text>
+                                        ) : (
+                                            <>
+                                                <TouchableOpacity
+                                                    style={[s.accordionHeader, { borderColor: colors.border }]}
+                                                    onPress={() => toggle('subject')}
+                                                >
+                                                    <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Subject *</Text>
+                                                    <View style={s.accordionRight}>
+                                                        <Text allowFontScaling={false} style={[s.accordionValue, { color: newQuiz.subject_id ? colors.text : colors.textSecondary }]}>
+                                                            {selectedSubjectName}
+                                                        </Text>
+                                                        <ChevronRight size={16} color={colors.textSecondary} style={chevronStyle('subject')} />
+                                                    </View>
+                                                </TouchableOpacity>
+                                                {openDropdown === 'subject' && (
+                                                    <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                                                        <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={s.dropdownScroll}>
+                                                            {availableSubjects.map((sub) => (
+                                                                <TouchableOpacity
+                                                                    key={sub.id}
+                                                                    style={[s.option, { borderBottomColor: colors.border }]}
+                                                                    onPress={() => {
+                                                                        setNewQuiz(prev => ({ ...prev, subject_id: sub.id }));
+                                                                        setOpenDropdown(null);
+                                                                    }}
+                                                                >
+                                                                    <Text allowFontScaling={false} style={[s.optionText, { color: colors.text }]}>{sub.name}</Text>
+                                                                    {newQuiz.subject_id === sub.id && <Check size={16} color={colors.primary} />}
+                                                                </TouchableOpacity>
+                                                            ))}
+                                                        </ScrollView>
+                                                    </View>
+                                                )}
+                                            </>
+                                        )}
                                     </View>
-                                )}
-                            </View>
-                        )}
+                                ) : null}
 
-                        <View style={styles.inputGroup}>
-                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Scheduled Date *</Text>
-                            <TextInput
-                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                value={newQuiz.scheduled_date}
-                                onChangeText={(text) => setNewQuiz({ ...newQuiz, scheduled_date: text })}
-                                placeholder="YYYY-MM-DD (e.g., 2025-08-20)"
-                                placeholderTextColor={colors.textSecondary}
-                            />
-                        </View>
+                                {/* Scheduled Date */}
+                                <View style={modalForm.group}>
+                                    <TouchableOpacity
+                                        style={[s.accordionHeader, { borderColor: colors.border }]}
+                                        onPress={() => {
+                                            if (Platform.OS === 'android') {
+                                                setOpenDropdown(null);
+                                                setShowDatePicker(true);
+                                            } else {
+                                                toggle('date');
+                                            }
+                                        }}
+                                    >
+                                        <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Scheduled Date *</Text>
+                                        <View style={s.accordionRight}>
+                                            <Text allowFontScaling={false} style={[s.accordionValue, { color: newQuiz.scheduled_date ? colors.text : colors.textSecondary }]}>
+                                                {newQuiz.scheduled_date || 'Select date'}
+                                            </Text>
+                                            <ChevronRight size={16} color={colors.textSecondary} style={chevronStyle('date')} />
+                                        </View>
+                                    </TouchableOpacity>
 
-                        <View style={styles.rowInputs}>
-                            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Duration (min)</Text>
-                                <TextInput
-                                    style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                    value={newQuiz.duration_minutes}
-                                    onChangeText={(text) => setNewQuiz({ ...newQuiz, duration_minutes: text })}
-                                    placeholder="60"
-                                    placeholderTextColor={colors.textSecondary}
-                                    keyboardType="numeric"
-                                />
-                            </View>
-                            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Total Marks</Text>
-                                <TextInput
-                                    style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                    value={newQuiz.total_marks}
-                                    onChangeText={(text) => setNewQuiz({ ...newQuiz, total_marks: text })}
-                                    placeholder="100"
-                                    placeholderTextColor={colors.textSecondary}
-                                    keyboardType="numeric"
-                                />
-                            </View>
-                        </View>
+                                    {Platform.OS === 'ios' && openDropdown === 'date' && (
+                                        <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                                            <DateTimePicker
+                                                value={newQuiz.scheduled_date ? new Date(newQuiz.scheduled_date) : new Date()}
+                                                mode="date"
+                                                display="inline"
+                                                minimumDate={new Date()}
+                                                themeVariant={isDark ? 'dark' : 'light'}
+                                                onChange={(_, selectedDate) => {
+                                                    if (selectedDate) {
+                                                        setNewQuiz(prev => ({
+                                                            ...prev,
+                                                            scheduled_date: selectedDate.toISOString().split('T')[0],
+                                                        }));
+                                                    }
+                                                }}
+                                            />
+                                        </View>
+                                    )}
 
-                        <View style={styles.inputGroup}>
-                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Passing Marks</Text>
-                            <TextInput
-                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                value={newQuiz.passing_marks}
-                                onChangeText={(text) => setNewQuiz({ ...newQuiz, passing_marks: text })}
-                                placeholder="40"
-                                placeholderTextColor={colors.textSecondary}
-                                keyboardType="numeric"
-                            />
-                        </View>
+                                    {showDatePicker && Platform.OS === 'android' && (
+                                        <DateTimePicker
+                                            value={newQuiz.scheduled_date ? new Date(newQuiz.scheduled_date) : new Date()}
+                                            mode="date"
+                                            display="default"
+                                            minimumDate={new Date()}
+                                            themeVariant={isDark ? 'dark' : 'light'}
+                                            onChange={(event, selectedDate) => {
+                                                setShowDatePicker(false);
+                                                if (event.type !== 'dismissed' && selectedDate) {
+                                                    setNewQuiz(prev => ({
+                                                        ...prev,
+                                                        scheduled_date: selectedDate.toISOString().split('T')[0],
+                                                    }));
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                </View>
 
-                        <View style={styles.inputGroup}>
-                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Instructions</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                value={newQuiz.instructions}
-                                onChangeText={(text) => setNewQuiz({ ...newQuiz, instructions: text })}
-                                placeholder="Enter special instructions for students"
-                                placeholderTextColor={colors.textSecondary}
-                                multiline
-                                numberOfLines={3}
-                            />
-                        </View>
+                                {/* Duration + Total Marks */}
+                                <View style={s.rowInputs}>
+                                    <View style={[modalForm.group, { flex: 1, marginRight: 8 }]}>
+                                        <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Duration (min)</Text>
+                                        <TextInput
+                                            style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                            value={newQuiz.duration_minutes}
+                                            onChangeText={(t) => setNewQuiz({ ...newQuiz, duration_minutes: t })}
+                                            placeholder="60"
+                                            placeholderTextColor={colors.textSecondary}
+                                            keyboardType="numeric"
+                                        />
+                                    </View>
+                                    <View style={[modalForm.group, { flex: 1, marginLeft: 8 }]}>
+                                        <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Total Marks</Text>
+                                        <TextInput
+                                            style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                            value={newQuiz.total_marks}
+                                            onChangeText={(t) => setNewQuiz({ ...newQuiz, total_marks: t })}
+                                            placeholder="100"
+                                            placeholderTextColor={colors.textSecondary}
+                                            keyboardType="numeric"
+                                        />
+                                    </View>
+                                </View>
 
-                        {/* Quiz Type Info (hardcoded) */}
-                        <View style={[styles.infoContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                            <Text allowFontScaling={false} style={[styles.infoText, { color: colors.textSecondary }]}>
-                                ℹ️ Quiz Type: <Text allowFontScaling={false} style={[styles.infoValue, { color: colors.text }]}>Quiz</Text>
-                            </Text>
-                        </View>
+                                {/* Passing Marks */}
+                                <View style={modalForm.group}>
+                                    <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Passing Marks</Text>
+                                    <TextInput
+                                        style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                        value={newQuiz.passing_marks}
+                                        onChangeText={(t) => setNewQuiz({ ...newQuiz, passing_marks: t })}
+                                        placeholder="40"
+                                        placeholderTextColor={colors.textSecondary}
+                                        keyboardType="numeric"
+                                    />
+                                </View>
 
-                        <TouchableOpacity
-                            style={[
-                                styles.submitButton,
-                                { backgroundColor: colors.primary },
-                                (!newQuiz.class_id || !newQuiz.subject_id || loadingSubjects) && { backgroundColor: colors.textSecondary }
-                            ]}
-                            onPress={handleCreateQuiz}
-                            disabled={creating || !newQuiz.class_id || !newQuiz.subject_id || loadingSubjects}
-                        >
-                            {creating ? (
-                                <ActivityIndicator color="#ffffff" />
-                            ) : (
-                                <Text allowFontScaling={false} style={styles.submitButtonText}>{isEditing ? 'Save Changes' : 'Schedule Quiz'}</Text>
-                            )}
-                        </TouchableOpacity>
-                    </ScrollView>
-                </View>
+                                {/* Instructions */}
+                                <View style={modalForm.group}>
+                                    <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Instructions</Text>
+                                    <TextInput
+                                        style={[modalForm.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                        value={newQuiz.instructions}
+                                        onChangeText={(t) => setNewQuiz({ ...newQuiz, instructions: t })}
+                                        placeholder="Enter special instructions for students"
+                                        placeholderTextColor={colors.textSecondary}
+                                        multiline
+                                        numberOfLines={3}
+                                    />
+                                </View>
+
+                                {/* Submit */}
+                                <TouchableOpacity
+                                    style={[
+                                        modalForm.submitBtn,
+                                        { backgroundColor: colors.primary },
+                                        (!newQuiz.class_id || !newQuiz.subject_id || loadingSubjects || creating) && { opacity: 0.4 },
+                                    ]}
+                                    onPress={handleCreateQuiz}
+                                    disabled={creating || !newQuiz.class_id || !newQuiz.subject_id || loadingSubjects}
+                                >
+                                    {creating ? (
+                                        <ActivityIndicator color="#ffffff" />
+                                    ) : (
+                                        <Text allowFontScaling={false} style={modalForm.submitText}>
+                                            {isEditing ? 'Save Changes' : 'Schedule Quiz'}
+                                        </Text>
+                                    )}
+                                </TouchableOpacity>
+
+                            </ScrollView>
+                    </View>
             </View>
         </Modal>
     );
 };
 
-
-import { TextSizes } from '@/src/styles/TextSizes';
-import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
-
-const styles = StyleSheet.create({
-    modalOverlay: {
+const s = StyleSheet.create({
+    root: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.5)',
     },
-    modalContent: {
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        maxHeight: '65%',
-    },
-    modalScrollView: {
-        maxHeight: '65%',
-    },
-    modalScrollViewContent: {
-        paddingHorizontal: 24,
-        paddingVertical: 20,
-        paddingBottom: 40,
-    },
-    modalHeader: {
+    accordionHeader: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 24,
-        paddingTop: 24,
-        paddingBottom: 16,
-        borderBottomWidth: 1,
+        justifyContent: 'space-between',
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderRadius: 10,
+        borderWidth: 1,
     },
-    modalTitle: {
-        fontSize: TextSizes.extraLarge,  // from 20
+    accordionLabel: {
+        fontSize: TextSizes.filterLabel,
+        fontFamily: 'Inter-Medium',
+        flex: 1,
+    },
+    accordionValue: {
+        fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-SemiBold',
     },
-    closeButton: {
-        width: 32,
-        height: 32,
+    accordionRight: {
+        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
     },
-    inputGroup: {
-        marginBottom: 20,
-    },
-    label: {
-        fontSize: TextSizes.medium,      // from 14
-        fontFamily: 'Inter-Medium',
-        marginBottom: 8,
-    },
-    helperText: {
-        fontSize: TextSizes.small,       // from 12
-        fontFamily: 'Inter-Regular',
-        marginBottom: 8,
-    },
-    input: {
-        height: 50,
+    accordionBody: {
+        marginTop: 6,
+        borderRadius: 10,
         borderWidth: 1,
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        fontSize: TextSizes.medium,      // from 16
-        fontFamily: 'Inter-Regular',
+        overflow: 'hidden',
     },
-    textArea: {
-        height: 80,
-        textAlignVertical: 'top',
-        paddingTop: 16,
+    dropdownScroll: {
+        maxHeight: 200,
+    },
+    option: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    optionText: {
+        fontSize: TextSizes.medium,
+        fontFamily: 'Inter-Regular',
+        flex: 1,
     },
     rowInputs: {
         flexDirection: 'row',
-        alignItems: 'flex-end',
-    },
-    options: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    option: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderWidth: 1,
-        borderRadius: 8,
-    },
-    optionText: {
-        fontSize: TextSizes.medium,      // from 14
-        fontFamily: 'Inter-Medium',
-    },
-    loadingContainer: {
-        borderRadius: 8,
-        padding: 16,
-        borderWidth: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 12,
-    },
-    loadingText: {
-        fontSize: TextSizes.medium,      // from 14
-        fontFamily: 'Inter-Regular',
-    },
-    noSubjectsContainer: {
-        borderRadius: 8,
-        padding: 16,
-        borderWidth: 1,
-    },
-    noSubjectsText: {
-        fontSize: TextSizes.medium,      // from 14
-        fontFamily: 'Inter-Regular',
-        textAlign: 'center',
-    },
-    infoContainer: {
-        borderRadius: 8,
-        padding: 12,
-        borderWidth: 1,
-        marginBottom: 20,
-    },
-    infoText: {
-        fontSize: TextSizes.medium,      // from 14
-        fontFamily: 'Inter-Regular',
-    },
-    infoValue: {
-        fontFamily: 'Inter-SemiBold',
-    },
-    submitButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: 50,
-        borderRadius: 12,
-        marginTop: 12,
-        gap: 8,
-    },
-    submitButtonText: {
-        color: '#ffffff',
-        fontSize: TextSizes.medium,      // from 16
-        fontFamily: 'Inter-SemiBold',
+        alignItems: 'flex-start',
     },
 });
-
-
-// const styles = StyleSheet.create({
-//     modalOverlay: {
-//         flex: 1,
-//         backgroundColor: 'rgba(0, 0, 0, 0.5)',
-//         justifyContent: 'flex-end',
-//     },
-//     modalContent: {
-//         borderTopLeftRadius: 24,
-//         borderTopRightRadius: 24,
-//         maxHeight: '90%',
-//     },
-//     modalScrollView: {
-//         maxHeight: '80%',
-//     },
-//     modalScrollViewContent: {
-//         paddingHorizontal: 24,
-//         paddingVertical: 20,
-//         paddingBottom: 40,
-//     },
-//     modalHeader: {
-//         flexDirection: 'row',
-//         justifyContent: 'space-between',
-//         alignItems: 'center',
-//         paddingHorizontal: 24,
-//         paddingTop: 24,
-//         paddingBottom: 16,
-//         borderBottomWidth: 1,
-//     },
-//     modalTitle: {
-//         fontSize: 20,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     closeButton: {
-//         width: 32,
-//         height: 32,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//     },
-//     inputGroup: {
-//         marginBottom: 20,
-//     },
-//     label: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//         marginBottom: 8,
-//     },
-//     helperText: {
-//         fontSize: 12,
-//         fontFamily: 'Inter-Regular',
-//         marginBottom: 8,
-//     },
-//     input: {
-//         height: 50,
-//         borderWidth: 1,
-//         borderRadius: 12,
-//         paddingHorizontal: 16,
-//         fontSize: 16,
-//         fontFamily: 'Inter-Regular',
-//     },
-//     textArea: {
-//         height: 80,
-//         textAlignVertical: 'top',
-//         paddingTop: 16,
-//     },
-//     rowInputs: {
-//         flexDirection: 'row',
-//         alignItems: 'flex-end',
-//     },
-//     options: {
-//         flexDirection: 'row',
-//         gap: 8,
-//     },
-//     option: {
-//         paddingHorizontal: 16,
-//         paddingVertical: 12,
-//         borderWidth: 1,
-//         borderRadius: 8,
-//     },
-//     optionText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//     },
-//     loadingContainer: {
-//         borderRadius: 8,
-//         padding: 16,
-//         borderWidth: 1,
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         gap: 12,
-//     },
-//     loadingText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//     },
-//     noSubjectsContainer: {
-//         borderRadius: 8,
-//         padding: 16,
-//         borderWidth: 1,
-//     },
-//     noSubjectsText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         textAlign: 'center',
-//     },
-//     infoContainer: {
-//         borderRadius: 8,
-//         padding: 12,
-//         borderWidth: 1,
-//         marginBottom: 20,
-//     },
-//     infoText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//     },
-//     infoValue: {
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     submitButton: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         height: 50,
-//         borderRadius: 12,
-//         marginTop: 12,
-//         gap: 8,
-//     },
-//     submitButtonText: {
-//         color: '#ffffff',
-//         fontSize: 16,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-// });
 
 export default CreateQuizModal;

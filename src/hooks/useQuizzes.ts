@@ -1,5 +1,5 @@
 // hooks/useQuizzes.ts - Fixed validation
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/contexts/AuthContext';
 import {
@@ -83,6 +83,8 @@ export const useQuizzes = () => {
     const [classesSubjects, setClassesSubjects] = useState<ClassSubject[]>([]);
     const [loading, setLoading] = useState(true);
     const { profile, student } = useAuth();
+    const quizTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const resultsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         fetchSubjects();
@@ -101,39 +103,35 @@ export const useQuizzes = () => {
         };
     }, [profile]);
 
+    // student loads async after profile — re-fetch subjects + results once student.id is available
+    useEffect(() => {
+        if (profile?.role === 'student' && student?.id) {
+            fetchSubjects();
+            fetchStudentResults();
+        }
+    }, [student?.id]);
+
     const setupRealtimeSubscriptions = () => {
         const quizChannel = supabase
             .channel('quiz-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'quizzes'
-                },
-                (payload) => {
-                    fetchQuizzes();
-                }
-            )
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'quizzes' }, () => {
+                if (quizTimerRef.current) clearTimeout(quizTimerRef.current);
+                quizTimerRef.current = setTimeout(fetchQuizzes, 800);
+            })
             .subscribe();
 
         const resultsChannel = supabase
             .channel('quiz-results-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'quiz_results'
-                },
-                (payload) => {
-                    if ((profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')) {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'quiz_results' }, () => {
+                if (resultsTimerRef.current) clearTimeout(resultsTimerRef.current);
+                resultsTimerRef.current = setTimeout(() => {
+                    if (profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin') {
                         fetchQuizResults();
                     } else if (profile?.role === 'student') {
                         fetchStudentResults();
                     }
-                }
-            )
+                }, 800);
+            })
             .subscribe();
     };
 
@@ -324,6 +322,7 @@ export const useQuizzes = () => {
                     quizzes (
                         title,
                         total_marks,
+                        passing_marks,
                         scheduled_date,
                         class_id,
                         subject_id,
@@ -591,19 +590,20 @@ export const useQuizzes = () => {
 
             if (error) throw error;
 
-            // Create quiz results for ALL students in the class (not filtered by subject)
+            // Create quiz results only for students enrolled in this class + subject
             const { data: enrolledStudents, error: studentsError } = await supabase
-                .from('students')
-                .select('id')
+                .from('student_subject_enrollments')
+                .select('student_id')
                 .eq('class_id', quizData.class_id)
-                .eq('is_deleted', false);
+                .eq('subject_id', quizData.subject_id)
+                .eq('is_active', true);
 
             if (studentsError) {
                 console.warn('❌ Error fetching enrolled students:', studentsError);
             } else if (enrolledStudents && enrolledStudents.length > 0) {
-                const resultEntries = enrolledStudents.map(student => ({
+                const resultEntries = enrolledStudents.map(enrollment => ({
                     quiz_id: data.id,
-                    student_id: student.id,
+                    student_id: enrollment.student_id,
                     total_marks: quizData.total_marks,
                     is_checked: false,
                     submission_status: 'submitted'
@@ -684,6 +684,61 @@ export const useQuizzes = () => {
         } catch (error) {
             console.warn('❌ Error marking quiz result:', error);
             return { success: false, error };
+        }
+    };
+
+    const bulkMarkQuizResults = async (
+        entries: Array<{
+            resultId: string;
+            marks: number | null;
+            remarks?: string;
+            isAbsent?: boolean;
+        }>,
+        quizId: string
+    ): Promise<{ success: boolean; failed: number; results: any[] }> => {
+        try {
+            // All updates in parallel — no sequential waiting
+            const updates = await Promise.all(
+                entries.map(({ resultId, marks, remarks, isAbsent }) => {
+                    const updateData: any = {
+                        is_checked: true,
+                        remarks,
+                        marked_by: profile!.id,
+                        marked_at: new Date().toISOString(),
+                    };
+                    if (isAbsent) {
+                        updateData.marks_obtained = null;
+                        updateData.submission_status = 'absent';
+                    } else {
+                        updateData.marks_obtained = marks;
+                        updateData.submission_status = 'submitted';
+                    }
+                    return supabase
+                        .from('quiz_results')
+                        .update(updateData)
+                        .eq('id', resultId)
+                        .select()
+                        .single();
+                })
+            );
+
+            const failed = updates.filter(u => u.error).length;
+            const succeeded = updates.filter(u => !u.error).map(u => u.data);
+
+            // Update quiz status ONCE (not per student)
+            const quiz = quizzes.find(q => q.id === quizId);
+            if (quiz && (quiz.status === 'scheduled' || quiz.status === 'active')) {
+                await supabase.from('quizzes').update({ status: 'completed' }).eq('id', quizId);
+            }
+
+            // Single refetch after everything
+            await fetchQuizResults();
+            await fetchQuizzes();
+
+            return { success: failed === 0, failed, results: succeeded };
+        } catch (error) {
+            console.warn('❌ Error bulk marking quiz results:', error);
+            return { success: false, failed: entries.length, results: [] };
         }
     };
 
@@ -810,6 +865,7 @@ export const useQuizzes = () => {
         updateQuiz,
         deleteQuiz,
         markQuizResult,
+        bulkMarkQuizResults,
         updateQuizStatus,
         getQuizResultsBySubject,
         getStudentQuizStats,

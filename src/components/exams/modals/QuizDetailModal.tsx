@@ -1,8 +1,10 @@
 import React from 'react';
 import {
   Modal, View, Text, TouchableOpacity, ScrollView,
-  StyleSheet, TouchableWithoutFeedback,
+  StyleSheet, TouchableWithoutFeedback, Dimensions,
 } from 'react-native';
+
+const SHEET_HEIGHT = Dimensions.get('window').height * 0.60;
 import { X, Calendar, Clock, FileText, BookOpen, Award, Info, Hash } from 'lucide-react-native';
 import { TextSizes } from '@/src/styles/TextSizes';
 
@@ -47,116 +49,127 @@ const QuizDetailModal: React.FC<QuizDetailModalProps> = ({ visible, quiz, colors
       statusBarTranslucent
       presentationStyle="overFullScreen"
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={s.overlay} />
-      </TouchableWithoutFeedback>
+      <View style={s.root}>
+        {/* Tappable backdrop */}
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={s.backdrop} />
+        </TouchableWithoutFeedback>
 
-      <View style={[s.sheet, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={[s.header, { borderBottomColor: colors.border }]}>
-          <View style={s.headerLeft}>
-            <Text allowFontScaling={false} style={[s.title, { color: colors.text }]} numberOfLines={2}>
-              {quiz.title}
-            </Text>
-            <View style={[s.statusBadge, { backgroundColor: statusColor + '20' }]}>
-              <Text allowFontScaling={false} style={[s.statusText, { color: statusColor }]}>
-                {quiz.status?.charAt(0).toUpperCase() + quiz.status?.slice(1)}
+        {/* Sheet */}
+        <View style={[s.sheet, { backgroundColor: colors.background }]}>
+          {/* Header */}
+          <View style={[s.header, { borderBottomColor: colors.border }]}>
+            <View style={s.headerLeft}>
+              <Text allowFontScaling={false} style={[s.title, { color: colors.text }]} numberOfLines={2}>
+                {quiz.title}
               </Text>
-            </View>
-          </View>
-          <TouchableOpacity style={s.closeBtn} onPress={onClose}>
-            <X size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView
-          style={s.scroll}
-          contentContainerStyle={{ paddingBottom: 40 }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Details */}
-          <View style={[s.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-            <Row
-              icon={<BookOpen size={15} color={colors.textSecondary} />}
-              label="Subject"
-              value={quiz.subjects?.name || '—'}
-            />
-            <Row
-              icon={<Hash size={15} color={colors.textSecondary} />}
-              label="Class"
-              value={quiz.classes?.name || '—'}
-            />
-            <Row
-              icon={<Calendar size={15} color={colors.textSecondary} />}
-              label="Scheduled Date"
-              value={quiz.scheduled_date || '—'}
-            />
-            <Row
-              icon={<Clock size={15} color={colors.textSecondary} />}
-              label="Duration"
-              value={`${quiz.duration_minutes} minutes`}
-            />
-            <Row
-              icon={<FileText size={15} color={colors.textSecondary} />}
-              label="Quiz Type"
-              value={quiz.quiz_type ? quiz.quiz_type.charAt(0).toUpperCase() + quiz.quiz_type.slice(1) : '—'}
-            />
-          </View>
-
-          {/* Marks */}
-          <View style={[s.marksCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-            <Text allowFontScaling={false} style={[s.sectionTitle, { color: colors.textSecondary }]}>Marks</Text>
-            <View style={s.marksRow}>
-              <View style={s.markBox}>
-                <Text allowFontScaling={false} style={[s.markValue, { color: colors.text }]}>{quiz.total_marks}</Text>
-                <Text allowFontScaling={false} style={[s.markLabel, { color: colors.textSecondary }]}>Total</Text>
-              </View>
-              <View style={[s.markDivider, { backgroundColor: colors.border }]} />
-              <View style={s.markBox}>
-                <Text allowFontScaling={false} style={[s.markValue, { color: '#10B981' }]}>{quiz.passing_marks}</Text>
-                <Text allowFontScaling={false} style={[s.markLabel, { color: colors.textSecondary }]}>Passing</Text>
-              </View>
-              <View style={[s.markDivider, { backgroundColor: colors.border }]} />
-              <View style={s.markBox}>
-                <Text allowFontScaling={false} style={[s.markValue, { color: '#EF4444' }]}>
-                  {quiz.total_marks && quiz.passing_marks ? quiz.total_marks - quiz.passing_marks : '—'}
+              <View style={[s.statusBadge, { backgroundColor: statusColor + '20' }]}>
+                <Text allowFontScaling={false} style={[s.statusText, { color: statusColor }]}>
+                  {quiz.status?.charAt(0).toUpperCase() + quiz.status?.slice(1)}
                 </Text>
-                <Text allowFontScaling={false} style={[s.markLabel, { color: colors.textSecondary }]}>Failing</Text>
               </View>
             </View>
+            <TouchableOpacity style={s.closeBtn} onPress={onClose}>
+              <X size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
           </View>
 
-          {/* Description */}
-          {!!quiz.description && (
+          <ScrollView
+            style={s.scroll}
+            contentContainerStyle={{ paddingBottom: 40 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Details */}
             <View style={[s.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-              <View style={s.descHeader}>
-                <Info size={15} color={colors.textSecondary} />
-                <Text allowFontScaling={false} style={[s.sectionTitle, { color: colors.textSecondary }]}>Description</Text>
-              </View>
-              <Text allowFontScaling={false} style={[s.descText, { color: colors.text }]}>{quiz.description}</Text>
+              <Row
+                icon={<BookOpen size={15} color={colors.textSecondary} />}
+                label="Subject"
+                value={quiz.subjects?.name || '—'}
+              />
+              <Row
+                icon={<Hash size={15} color={colors.textSecondary} />}
+                label="Class"
+                value={quiz.classes?.name || '—'}
+              />
+              <Row
+                icon={<Calendar size={15} color={colors.textSecondary} />}
+                label="Scheduled Date"
+                value={quiz.scheduled_date || '—'}
+              />
+              <Row
+                icon={<Clock size={15} color={colors.textSecondary} />}
+                label="Duration"
+                value={`${quiz.duration_minutes} minutes`}
+              />
+              <Row
+                icon={<FileText size={15} color={colors.textSecondary} />}
+                label="Quiz Type"
+                value={quiz.quiz_type ? quiz.quiz_type.charAt(0).toUpperCase() + quiz.quiz_type.slice(1) : '—'}
+              />
             </View>
-          )}
 
-          {/* Instructions */}
-          {!!quiz.instructions && (
-            <View style={[s.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-              <View style={s.descHeader}>
-                <Award size={15} color={colors.textSecondary} />
-                <Text allowFontScaling={false} style={[s.sectionTitle, { color: colors.textSecondary }]}>Instructions</Text>
+            {/* Marks */}
+            <View style={[s.marksCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <Text allowFontScaling={false} style={[s.sectionTitle, { color: colors.textSecondary }]}>Marks</Text>
+              <View style={s.marksRow}>
+                <View style={s.markBox}>
+                  <Text allowFontScaling={false} style={[s.markValue, { color: colors.text }]}>{quiz.total_marks}</Text>
+                  <Text allowFontScaling={false} style={[s.markLabel, { color: colors.textSecondary }]}>Total</Text>
+                </View>
+                <View style={[s.markDivider, { backgroundColor: colors.border }]} />
+                <View style={s.markBox}>
+                  <Text allowFontScaling={false} style={[s.markValue, { color: '#10B981' }]}>{quiz.passing_marks}</Text>
+                  <Text allowFontScaling={false} style={[s.markLabel, { color: colors.textSecondary }]}>Passing</Text>
+                </View>
+                <View style={[s.markDivider, { backgroundColor: colors.border }]} />
+                <View style={s.markBox}>
+                  <Text allowFontScaling={false} style={[s.markValue, { color: '#EF4444' }]}>
+                    {quiz.total_marks && quiz.passing_marks ? quiz.total_marks - quiz.passing_marks : '—'}
+                  </Text>
+                  <Text allowFontScaling={false} style={[s.markLabel, { color: colors.textSecondary }]}>Failing</Text>
+                </View>
               </View>
-              <Text allowFontScaling={false} style={[s.descText, { color: colors.text }]}>{quiz.instructions}</Text>
             </View>
-          )}
-        </ScrollView>
+
+            {/* Description */}
+            {!!quiz.description && (
+              <View style={[s.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                <View style={s.descHeader}>
+                  <Info size={15} color={colors.textSecondary} />
+                  <Text allowFontScaling={false} style={[s.sectionTitle, { color: colors.textSecondary }]}>Description</Text>
+                </View>
+                <Text allowFontScaling={false} style={[s.descText, { color: colors.text }]}>{quiz.description}</Text>
+              </View>
+            )}
+
+            {/* Instructions */}
+            {!!quiz.instructions && (
+              <View style={[s.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                <View style={s.descHeader}>
+                  <Award size={15} color={colors.textSecondary} />
+                  <Text allowFontScaling={false} style={[s.sectionTitle, { color: colors.textSecondary }]}>Instructions</Text>
+                </View>
+                <Text allowFontScaling={false} style={[s.descText, { color: colors.text }]}>{quiz.instructions}</Text>
+              </View>
+            )}
+          </ScrollView>
+        </View>
       </View>
     </Modal>
   );
 };
 
 const s = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+  root: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
   sheet: {
-    maxHeight: '80%',
+    height: SHEET_HEIGHT,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -176,7 +189,7 @@ const s = StyleSheet.create({
   statusText: { fontSize: TextSizes.small, fontFamily: 'Inter-Medium' },
   closeBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
 
-  scroll: { paddingHorizontal: 16, paddingTop: 16 },
+  scroll: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
 
   section: {
     borderRadius: 12,

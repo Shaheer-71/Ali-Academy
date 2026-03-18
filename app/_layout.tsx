@@ -118,6 +118,30 @@ function RootLayoutNav() {
           router.navigate('/(teacher)/timetable' as any);
         }
       }, 300);
+      return;
+    }
+
+    if (type === 'quiz_added') {
+      const role = profileRef.current.role;
+      const { quizId } = data;
+      if (quizId) pendingNavigation.quizId = quizId;
+      setTimeout(() => {
+        if (role === 'student') {
+          router.navigate('/(student)/exams' as any);
+        } else {
+          router.navigate('/(teacher)/exams' as any);
+        }
+      }, 300);
+      return;
+    }
+
+    if (type === 'quiz_marked') {
+      const { resultId } = data;
+      if (resultId) pendingNavigation.quizMarkedResultId = resultId;
+      setTimeout(() => {
+        router.navigate('/(student)/exams' as any);
+      }, 300);
+      return;
     }
   });
 
@@ -136,6 +160,12 @@ function RootLayoutNav() {
     const sub = AppState.addEventListener('change', async (nextState) => {
       console.log('[DEEPLINK][appstate] AppState →', nextState);
       if (nextState !== 'active') return;
+
+      // Re-hide system navigation bar every time app comes to foreground
+      if (Platform.OS === 'android') {
+        NavigationBar.setVisibilityAsync('hidden');
+        NavigationBar.setBehaviorAsync('overlay-swipe');
+      }
 
       const response = await Notifications.getLastNotificationResponseAsync();
       if (!response) {
