@@ -34,10 +34,10 @@ import { Dimensions, TouchableWithoutFeedback } from 'react-native';
 
 const { height } = Dimensions.get('window');
 import { supabase } from '@/src/lib/supabase';
-import TopSection from '../common/TopSections';
+import TopSection from '../components/common/TopSections';
 import { useScreenAnimation } from '@/src/utils/animations';
 import { SwipeableStudentCard } from '@/src/components/students/SwipeableStudentCard';
-import StudentDetailModal from '../students/StudentDetailModal';
+import StudentDetailModal from '../components/students/StudentDetailModal';
 import {
     handleStudentFetchError,
     handleStudentCreateError,
@@ -46,7 +46,7 @@ import {
     handleSubjectFetchErrorForStudents,
     handlePasswordStatusFetchError,
     handleValidationError,
-} from '@/src/utils/errorHandler/studentErrorHandling';
+} from '@/src/utils/errorHandler/studentErrorHandler';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
 import { RefreshControl } from 'react-native';
 import { SkeletonBox } from '@/src/components/common/Skeleton';

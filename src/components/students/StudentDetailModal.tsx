@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { Text } from 'react-native';
 import { X, Users, User, Calendar, Phone, Home, Mail, UserCheck, AlertCircle } from 'lucide-react-native';
-import styles from '../dairy/styles';
+import styles from '../diary/styles';
 import { useTheme } from '@/src/contexts/ThemeContext';
 
 export const StudentDetailModal = ({

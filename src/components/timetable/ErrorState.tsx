@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { AlertCircle } from 'lucide-react-native';
-import TopSection from '@/src/components/common/TopSection';
+import TopSection from '@/src/components/common/TopSections';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeColors } from '@/src/types/timetable';
 

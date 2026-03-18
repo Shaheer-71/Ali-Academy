@@ -27,7 +27,7 @@ import {
     handleBulkPaymentUpdateError,
     handleStudentFeeRecordError,
     handleMonthlySummaryError,
-} from '@/src/utils/errorHandler/feeErrorHandling';
+} from '@/src/utils/errorHandler/feeErrorHandler';
 
 interface UseFeeDependencies {
     userId?: string;

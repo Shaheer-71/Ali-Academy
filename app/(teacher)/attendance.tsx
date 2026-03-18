@@ -1,1 +1,1 @@
-export { default } from '@/src/components/screens/AttendanceScreen';
+export { default } from '@/src/screens/AttendanceScreen';

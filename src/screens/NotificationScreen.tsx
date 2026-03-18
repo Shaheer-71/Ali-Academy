@@ -39,8 +39,8 @@ import {
 import TopSections from '@/src/components/common/TopSections';
 import { SkeletonBox } from '@/src/components/common/Skeleton';
 import { modalShell, modalForm } from '@/src/styles/creationModalStyles';
-import { useNotificationForm } from '../../hooks/useNotificationForm';
-import { useNotificationHistory } from '../../hooks/useNotificationHistory';
+import { useNotificationForm } from '../hooks/useNotificationForm';
+import { useNotificationHistory } from '../hooks/useNotificationHistory';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Animated } from 'react-native';
 import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';

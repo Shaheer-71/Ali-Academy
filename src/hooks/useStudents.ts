@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { handleStudentFetchError } from '@/src/utils/errorHandler/studentErrorHandling';
+import { handleStudentFetchError } from '@/src/utils/errorHandler/studentErrorHandler';
 
 
 interface Student {

@@ -1,4 +1,4 @@
-// src/utils/errorHandler/feeErrorHandling.ts
+// src/utils/errorHandler/feeErrorHandler.ts
 
 interface ErrorResponse {
     title: string;

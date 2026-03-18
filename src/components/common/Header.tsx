@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { Bell, Menu, DollarSign } from 'lucide-react-native';
-import { TitleText, CaptionText, SmallText } from '../ConsistentText';
+import { TitleText, CaptionText, SmallText } from './ConsistentText';
 
 interface HeaderProps {
   title: string;

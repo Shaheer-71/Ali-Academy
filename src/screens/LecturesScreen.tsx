@@ -1,4 +1,4 @@
-// src/components/screens/LecturesScreen.tsx
+// src/screens/LecturesScreen.tsx
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,

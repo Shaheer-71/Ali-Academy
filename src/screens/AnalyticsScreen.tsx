@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
-import { StudentAnalyticsView } from '../analytics/StudentAnalyticsView';
-import { TeacherAnalyticsView } from '../analytics/TeacherAnalyticsView';
+import { StudentAnalyticsView } from '../components/analytics/StudentAnalyticsView';
+import { TeacherAnalyticsView } from '../components/analytics/TeacherAnalyticsView';
 import TopSections from '@/src/components/common/TopSections';
 
 export default function AnalyticsScreen() {
