@@ -1,5 +1,5 @@
 // src/components/screens/LecturesScreen.tsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,9 @@ import {
   TouchableWithoutFeedback,
   Dimensions,
   RefreshControl,
+  AppState,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Animated } from 'react-native';
 import { BookOpen, Plus, ChevronRight, Check } from 'lucide-react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -21,10 +22,12 @@ import { supabase } from '@/src/lib/supabase';
 import { Lecture } from '@/src/types/lectures';
 import LectureCard from '@/src/components/lectures/LectureCard';
 import UploadLectureModal from '@/src/components/lectures/UploadLectureModal';
+import { LectureDetailModal } from '@/src/components/lectures/LectureDetailModal';
 import TopSections from '@/src/components/common/TopSections';
 import { SkeletonBox } from '@/src/components/common/Skeleton';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
 import { useFocusEffect } from '@react-navigation/native';
+import { pendingNavigation } from '@/src/lib/notifications';
 import { useScreenAnimation } from '@/src/utils/animations';
 import {
   handleLectureFetchError,
@@ -41,6 +44,7 @@ export default function LecturesScreen() {
   const { profile, student } = useAuth();
   const { colors } = useTheme();
   const screenStyle = useScreenAnimation();
+  const { bottom: bottomInset } = useSafeAreaInsets();
 
   // Data
   const [lectures, setLectures] = useState<Lecture[]>([]);
@@ -50,6 +54,7 @@ export default function LecturesScreen() {
   // Modals
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
+  const [deepLinkLecture, setDeepLinkLecture] = useState<Lecture | null>(null);
 
   // Filter bottom sheet
   const [filterVisible, setFilterVisible] = useState(false);
@@ -108,9 +113,41 @@ export default function LecturesScreen() {
     loadLectures();
   }, [loadLectures]);
 
+  // Holds the target lecture id to open after the next fetch
+  const pendingLectureId = useRef<string | null>(null);
+
   useEffect(() => { loadLectures(); }, [profile?.id, profile?.role]);
 
-  useFocusEffect(useCallback(() => { loadLectures(); }, [profile?.id, profile?.role]));
+  // On screen focus: consume any pending lecture id from notification deep-link, then refresh
+  useFocusEffect(useCallback(() => {
+    if (pendingNavigation.lectureId) {
+      pendingLectureId.current = pendingNavigation.lectureId;
+      pendingNavigation.lectureId = null;
+    }
+    loadLectures();
+  }, [profile?.id, profile?.role]));
+
+  // When app comes to foreground while already on this screen
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && pendingNavigation.lectureId) {
+        pendingLectureId.current = pendingNavigation.lectureId;
+        pendingNavigation.lectureId = null;
+        loadLectures();
+      }
+    });
+    return () => sub.remove();
+  }, [loadLectures]);
+
+  // After every lectures update: if a pending lecture id exists, find and open it
+  useEffect(() => {
+    if (!pendingLectureId.current || lectures.length === 0) return;
+    const found = lectures.find(l => l.id === pendingLectureId.current);
+    if (found) {
+      pendingLectureId.current = null;
+      setDeepLinkLecture(found);
+    }
+  }, [lectures]);
 
   // ── Filter data fetch ────────────────────────────────────────────────────────
 
@@ -166,28 +203,35 @@ export default function LecturesScreen() {
   const fetchSubjectsForClass = useCallback(async (classId: string) => {
     try {
       if (!classId) { setSubjects([]); return; }
+      // Step 1: get all subjects for this class from classes_subjects
+      const { data: classSubjects, error: csError } = await supabase
+        .from('classes_subjects')
+        .select('subject_id, subjects (id, name)')
+        .eq('class_id', classId)
+        .eq('is_active', true);
+      if (csError) throw csError;
+      let allSubjects = (classSubjects || []).map((i: any) => i.subjects).filter(Boolean);
+
       if (isSuperAdmin) {
-        const { data, error } = await supabase.from('subjects').select('id, name').eq('is_active', true).order('name');
-        if (error) throw error;
-        setSubjects(data || []);
+        setSubjects(Array.from(new Map(allSubjects.map((s: any) => [s.id, s])).values()));
         return;
       }
-      const { data, error } = await supabase
+
+      // Step 2 (teacher): intersect with teacher_subject_enrollments
+      const { data: teacherEnrollments, error: teError } = await supabase
         .from('teacher_subject_enrollments')
-        .select('subjects (id, name)')
+        .select('subject_id')
         .eq('teacher_id', profile?.id)
         .eq('class_id', classId)
         .eq('is_active', true);
-      if (error) throw error;
-      const unique = Array.from(
-        new Map(data?.map((i: any) => i.subjects).filter(Boolean).map((s: any) => [s.id, s])).values()
-      );
-      setSubjects(unique);
+      if (teError) throw teError;
+      const teacherSubjectIds = new Set((teacherEnrollments || []).map((e: any) => e.subject_id));
+      setSubjects(allSubjects.filter((s: any) => teacherSubjectIds.has(s.id)));
     } catch (error) {
       showError(error, handleSubjectFetchErrorForLectures);
       setSubjects([]);
     }
-  }, [profile?.id]);
+  }, [profile?.id, isSuperAdmin]);
 
   const fetchStudentSubjects = useCallback(async () => {
     try {
@@ -279,6 +323,9 @@ export default function LecturesScreen() {
 
   // ── Edit handlers ────────────────────────────────────────────────────────────
 
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
   const handleEdit = (lecture: Lecture) => {
     setSelectedLecture(lecture);
     setUploadModalVisible(true);
@@ -297,12 +344,13 @@ export default function LecturesScreen() {
     const dateLabels: Record<DateFilter, string> = { all: 'All', today: 'Today', week: 'This Week', month: 'This Month' };
 
     return (
-      <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={() => setFilterVisible(false)}>
-        <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
-          <View style={s.modalOverlay} />
-        </TouchableWithoutFeedback>
+      <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={() => setFilterVisible(false)} statusBarTranslucent>
+        <View style={s.modalContainer}>
+          <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
+            <View style={s.modalOverlay} />
+          </TouchableWithoutFeedback>
 
-        <View style={[s.bottomSheet, { backgroundColor: colors.cardBackground }]}>
+        <View style={[s.bottomSheet, { backgroundColor: colors.cardBackground, paddingBottom: Math.max(32, bottomInset + 16) }]}>
           <View style={[s.sheetHandle, { backgroundColor: colors.border }]} />
 
           {isTeacher && (
@@ -395,6 +443,7 @@ export default function LecturesScreen() {
           <TouchableOpacity style={[s.applyBtn, { backgroundColor: colors.primary }]} onPress={applyFilter}>
             <Text allowFontScaling={false} style={s.applyBtnText}>Apply Filter</Text>
           </TouchableOpacity>
+        </View>
         </View>
       </Modal>
     );
@@ -495,6 +544,15 @@ export default function LecturesScreen() {
           onSuccess={loadLectures}
           editLecture={selectedLecture}
         />
+
+        {/* Deep-link: open lecture detail from notification */}
+        <LectureDetailModal
+          visible={!!deepLinkLecture}
+          lecture={deepLinkLecture}
+          onClose={() => setDeepLinkLecture(null)}
+          colors={colors}
+          formatDate={formatDate}
+        />
       </SafeAreaView>
     </Animated.View>
   );
@@ -513,8 +571,9 @@ const s = StyleSheet.create({
   skeletonHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
 
   // bottom sheet
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
-  bottomSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 12, paddingBottom: 32, maxHeight: height * 0.65 },
+  modalContainer: { flex: 1, justifyContent: 'flex-end' },
+  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
+  bottomSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 12, maxHeight: height * 0.45 },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
 
   addBtn: {

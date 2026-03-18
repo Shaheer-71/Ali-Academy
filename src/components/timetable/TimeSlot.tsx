@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Clock, MapPin, User, BookOpen } from 'lucide-react-native';
 import { TimetableEntryWithDetails, UserProfile, ThemeColors } from '@/src/types/timetable';
 import { formatTimeForDisplay } from '@/src/utils/timetable';
@@ -86,13 +86,13 @@ const styles = StyleSheet.create({
         borderBottomColor: '#204040',
     },
     timeSlotContent: {
-        padding: 16,
+        padding: Platform.OS === 'android' ? 10 : 16,
     },
     timeSlotHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 8,
+        marginBottom: Platform.OS === 'android' ? 4 : 8,
     },
     timeInfo: {
         flexDirection: 'row',
@@ -107,8 +107,8 @@ const styles = StyleSheet.create({
     roomBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        paddingHorizontal: Platform.OS === 'android' ? 6 : 8,
+        paddingVertical: Platform.OS === 'android' ? 2 : 4,
         borderRadius: 6,
         gap: 4,
     },
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     subjectText: {
         fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 6,
+        marginBottom: Platform.OS === 'android' ? 3 : 6,
     },
     entryDetails: {
         flexDirection: 'row',

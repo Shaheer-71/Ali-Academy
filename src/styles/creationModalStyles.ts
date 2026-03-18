@@ -9,14 +9,18 @@ import { TextSizes } from './TextSizes';
 // ─── Shell (overlay + sheet + header) ────────────────────────────────────────
 export const modalShell = StyleSheet.create({
     overlay: {
-        flex: 1,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
     },
     sheet: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '85%',
+        maxHeight: '75%',
     },
     header: {
         flexDirection: 'row',

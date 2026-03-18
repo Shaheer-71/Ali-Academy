@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Alert,
-  ActivityIndicator, Animated, PanResponder,
+  ActivityIndicator, Animated, PanResponder, Platform,
 } from 'react-native';
 import {
   FileText, Youtube, Calendar, BookOpen, Edit, Trash2,
@@ -259,11 +259,12 @@ export default function LectureCard({
           {/* Action buttons */}
           <View style={s.actions}>
             <TouchableOpacity
-              style={[s.actionButton, { backgroundColor: colors.primary + '10', borderColor: colors.border }]}
+              style={[s.actionButton, { backgroundColor: colors.primary + '10', borderColor: colors.border, opacity: lecture.file_url ? 1 : 0.5 }]}
               onPress={handleView}
+              disabled={!lecture.file_url}
             >
-              <FileText size={14} color={colors.primary} />
-              <Text allowFontScaling={false} style={[s.actionText, { color: colors.primary }]}>Attachment</Text>
+              <FileText size={14} color={lecture.file_url ? colors.primary : colors.textSecondary} />
+              <Text allowFontScaling={false} style={[s.actionText, { color: lecture.file_url ? colors.primary : colors.textSecondary }]}>Attachment</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.actionButton, { backgroundColor: colors.primary + '10', borderColor: colors.border, opacity: lecture.youtube_link ? 1 : 0.5 }]}
@@ -283,7 +284,7 @@ export default function LectureCard({
 }
 
 const s = StyleSheet.create({
-  container: { marginBottom: 12, position: 'relative' },
+  container: { marginBottom: Platform.OS === 'android' ? 8 : 12, position: 'relative' },
   actionsBackground: {
     position: 'absolute', right: 0, top: 0, bottom: 0,
     width: ACTION_WIDTH, flexDirection: 'column',
@@ -292,9 +293,9 @@ const s = StyleSheet.create({
   actionBtn: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', gap: 4 },
   actionBtnText: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold' },
   cardWrapper: { width: '100%' },
-  card: { borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1 },
+  card: { borderRadius: 12, paddingVertical: Platform.OS === 'android' ? 10 : 12, paddingHorizontal: Platform.OS === 'android' ? 12 : 16, borderWidth: 1 },
   header: { flexDirection: 'row', marginBottom: 8 },
-  iconBox: { width: 40, height: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  iconBox: { width: Platform.OS === 'android' ? 34 : 40, height: Platform.OS === 'android' ? 34 : 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   info: { flex: 1 },
   title: { fontSize: TextSizes.header, fontFamily: 'Inter-SemiBold', marginBottom: 4 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 4 },
@@ -302,11 +303,11 @@ const s = StyleSheet.create({
   metaText: { fontSize: TextSizes.medium, fontFamily: 'Inter-Regular' },
   byDateRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   byText: { fontSize: TextSizes.medium, fontFamily: 'Inter-Italic' },
-  description: { fontSize: TextSizes.large, fontFamily: 'Inter-Regular', lineHeight: 18, marginBottom: 10 },
+  description: { fontSize: TextSizes.large, fontFamily: 'Inter-Regular', lineHeight: Platform.OS === 'android' ? 16 : 18, marginBottom: Platform.OS === 'android' ? 8 : 10 },
   actions: { flexDirection: 'row', gap: 8, marginTop: 4 },
   actionButton: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 8, borderRadius: 8, borderWidth: 1, gap: 6,
+    paddingVertical: Platform.OS === 'android' ? 6 : 8, borderRadius: 8, borderWidth: 1, gap: 6,
   },
   actionText: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold' },
 });

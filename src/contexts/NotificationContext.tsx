@@ -1,6 +1,6 @@
 // src/contexts/NotificationContext.tsx
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import { supabase } from '@/src/lib/supabase';
 import { Notification } from '@/src/types/notification';
 import * as Notifications from 'expo-notifications';
@@ -238,11 +238,33 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, []);
 
+  // Refresh when a push notification arrives in foreground
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener(() => {
+      setTimeout(() => fetchNotifications(), 0);
+    });
+    return () => sub.remove();
+  }, [fetchNotifications]);
+
+  // Refresh when app comes back to foreground (catches background notifications)
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') setTimeout(() => fetchNotifications(), 0);
+    });
+    return () => sub.remove();
+  }, [fetchNotifications]);
+
   // Re-fetch and set up realtime whenever auth state changes
   useEffect(() => {
     let subscription: ReturnType<typeof supabase.channel> | null = null;
 
     const setupForUser = async (userId: string) => {
+      // Unsubscribe any existing subscription before creating a new one
+      if (subscription) {
+        await subscription.unsubscribe();
+        subscription = null;
+      }
+
       await fetchNotifications();
 
       subscription = supabase

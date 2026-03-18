@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'; // useState kept for splashVisible
-import { LogBox, AppState } from 'react-native';
+import { LogBox, AppState, Platform } from 'react-native';
+import * as NavigationBar from 'expo-navigation-bar';
 
 LogBox.ignoreLogs([
   'expo-notifications: Android Push notifications',
@@ -78,10 +79,10 @@ function RootLayoutNav() {
       return;
     }
 
-    if (type === 'assignment_added' && assignmentId) {
+    if (type === 'assignment_added') {
       if (profileRef.current.role === 'student') {
         console.log(`[DEEPLINK][${source}] → dairy, assignmentId =`, assignmentId);
-        pendingNavigation.diaryAssignmentId = assignmentId;
+        if (assignmentId) pendingNavigation.diaryAssignmentId = assignmentId;
         // Small delay to let the navigation stack settle on Android
         setTimeout(() => {
           console.log(`[DEEPLINK][${source}] Calling router.navigate to dairy`);
@@ -90,6 +91,33 @@ function RootLayoutNav() {
       } else {
         console.log(`[DEEPLINK][${source}] Not a student — skipping`);
       }
+      return;
+    }
+
+    const { lectureId } = data;
+    if (type === 'lecture_added') {
+      const role = profileRef.current.role;
+      if (lectureId) pendingNavigation.lectureId = lectureId;
+      setTimeout(() => {
+        if (role === 'student') {
+          router.navigate('/(student)/lectures' as any);
+        } else {
+          router.navigate('/(teacher)/lectures' as any);
+        }
+      }, 300);
+      return;
+    }
+
+    if (type === 'timetable_added') {
+      const role = profileRef.current.role;
+      pendingNavigation.timetableEntry = true;
+      setTimeout(() => {
+        if (role === 'student') {
+          router.navigate('/(student)/timetable' as any);
+        } else {
+          router.navigate('/(teacher)/timetable' as any);
+        }
+      }, 300);
     }
   });
 
@@ -217,6 +245,10 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
+      if (Platform.OS === 'android') {
+        NavigationBar.setVisibilityAsync('hidden');
+        NavigationBar.setBehaviorAsync('overlay-swipe');
+      }
       // Keep custom splash visible for at least 1.5s after fonts load
       const t = setTimeout(() => setSplashVisible(false), 1500);
       return () => clearTimeout(t);

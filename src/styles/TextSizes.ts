@@ -1,31 +1,42 @@
 // src/styles/TextSizes.ts
-import { Platform } from 'react-native';
+import { Dimensions, PixelRatio } from 'react-native';
 
-// Android renders Inter font slightly smaller than iOS at the same dp value.
-// Adding +1 on Android brings them visually in line.
-const p = Platform.OS === 'android' ? 1 : 0;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const BASE_WIDTH = 375; // iPhone 6/7/8 — design baseline
+
+/**
+ * Normalizes a font size to the current screen width.
+ * Only 35% of the deviation from the 375dp baseline is applied,
+ * so a 412dp Android phone gets ~3% bigger text instead of ~10%.
+ * This keeps cards and text visually consistent across all devices.
+ */
+const normalize = (size: number): number => {
+  const scale = SCREEN_WIDTH / BASE_WIDTH;
+  const dampened = 1 + (scale - 1) * 0.15;
+  return Math.round(PixelRatio.roundToNearestPixel(size * dampened));
+};
 
 export const TextSizes = {
-    // ── Base scale (compact UI) ────────────────────────────────────────────
-    tiny:   8  + p,   // overdue badges, very fine print
-    small:  10 + p,   // timestamps, secondary meta
-    normal: 11 + p,   // default body text, input text
-    medium: 11 + p,   // UI labels, meta info (alias of normal)
-    large:  12 + p,   // card descriptions, sub-content
-    xlarge: 12 + p,   // same tier as large (unify)
-    header: 13 + p,   // card titles, row headers
+  // ── Base scale (compact UI) ────────────────────────────────────────────
+  tiny:   normalize(8),    // overdue badges, very fine print
+  small:  normalize(10),   // timestamps, secondary meta
+  normal: normalize(11),   // default body text, input text
+  medium: normalize(11),   // UI labels, meta info (alias of normal)
+  large:  normalize(11),   // card descriptions, sub-content
+  xlarge: normalize(11),   // same tier as large (unify)
+  header: normalize(12),   // card titles, row headers
 
-    // ── Semantic roles ─────────────────────────────────────────────────────
-    sectionTitle:   13 + p,   // screen section headers
-    bannerTitle:    12 + p,   // banner/card headlines
-    bannerSubtitle: 10 + p,   // banner supporting text
+  // ── Semantic roles ─────────────────────────────────────────────────────
+  sectionTitle:   normalize(12),   // screen section headers
+  bannerTitle:    normalize(11),   // banner/card headlines
+  bannerSubtitle: normalize(10),   // banner supporting text
 
-    statValue:  16 + p,   // large numbers (%, counts) — needs visual weight
-    statLabel:  10 + p,   // small labels under stat values
+  statValue:  normalize(16),   // large numbers (%, counts) — needs visual weight
+  statLabel:  normalize(10),   // small labels under stat values
 
-    modalTitle: 15 + p,   // modal sheet header (was 11 — too small!)
-    modalText:  11 + p,   // modal body text
+  modalTitle: normalize(15),   // modal sheet header
+  modalText:  normalize(11),   // modal body text
 
-    filterLabel: 11 + p,  // form field labels, filter chips
-    buttonText:  12 + p,  // button labels
+  filterLabel: normalize(11),  // form field labels, filter chips
+  buttonText:  normalize(12),  // button labels
 };

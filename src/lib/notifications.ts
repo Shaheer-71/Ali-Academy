@@ -12,6 +12,8 @@ import { Platform } from 'react-native';
 // so it always runs inside the React/Expo Router tree — reliable on Android.
 export const pendingNavigation = {
     diaryAssignmentId: null as string | null,
+    lectureId: null as string | null,
+    timetableEntry: null as boolean | null,
 };
 
 // ============================================

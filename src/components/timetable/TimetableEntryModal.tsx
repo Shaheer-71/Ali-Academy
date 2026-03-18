@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-    View, Text, ScrollView, TouchableOpacity,
+    View, Text, ScrollView, TouchableOpacity, TouchableWithoutFeedback,
     TextInput, Modal, StyleSheet, ActivityIndicator,
-    Keyboard, Platform,
+    Keyboard, Platform, Dimensions,
 } from 'react-native';
-import { X, Trash2, ChevronRight, Clock, BookOpen, MapPin, User } from 'lucide-react-native';
+import { X, Trash2, ChevronRight, Clock, BookOpen, MapPin, User, Check } from 'lucide-react-native';
 import {
     TimetableEntryWithDetails,
     CreateTimetableEntry,
@@ -18,6 +18,10 @@ import { TextSizes } from '@/src/styles/TextSizes';
 import { modalShell, modalForm } from '@/src/styles/creationModalStyles';
 import { supabase } from '@/src/lib/supabase';
 import { formatTimeForDisplay, timeToMinutes } from '@/src/utils/timetable';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const ADD_SHEET_HEIGHT = SCREEN_HEIGHT * 0.75;
+const DETAIL_SHEET_HEIGHT = SCREEN_HEIGHT * 0.60;
 
 // ── 4:00 PM – 9:00 PM in 15-min steps ─────────────────────────────────────────
 const TIME_SLOTS: string[] = (() => {
@@ -104,23 +108,28 @@ export default function TimetableEntryModal({
     const fetchSubjectsForClass = async (classId: string) => {
         if (!profile?.id) return;
         try {
+            // Step 1: get all subjects for this class from classes_subjects
+            const { data: classSubjects } = await supabase
+                .from('classes_subjects')
+                .select('subject_id, subjects(id, name)')
+                .eq('class_id', classId)
+                .eq('is_active', true);
+            const allSubjects = (classSubjects || []).map((i: any) => i.subjects).filter(Boolean);
+
             if (profile.role === 'superadmin') {
-                const { data } = await supabase.from('subjects').select('id, name').eq('is_active', true).order('name');
-                setModalSubjects((data || []) as Subject[]);
+                setModalSubjects(Array.from(new Map(allSubjects.map((s: any) => [s.id, s])).values()) as Subject[]);
                 return;
             }
-            const { data } = await supabase
+
+            // Step 2 (teacher): intersect with teacher_subject_enrollments
+            const { data: teacherEnrollments } = await supabase
                 .from('teacher_subject_enrollments')
-                .select('subjects (id, name)')
+                .select('subject_id')
                 .eq('teacher_id', profile.id)
                 .eq('class_id', classId)
                 .eq('is_active', true);
-            const unique: Subject[] = Array.from(
-                new Map(
-                    (data || []).map((i: any) => i.subjects).filter(Boolean).map((s: any) => [s.id, s])
-                ).values()
-            );
-            setModalSubjects(unique);
+            const teacherSubjectIds = new Set((teacherEnrollments || []).map((e: any) => e.subject_id));
+            setModalSubjects(allSubjects.filter((s: any) => teacherSubjectIds.has(s.id)) as Subject[]);
         } catch { setModalSubjects([]); }
     };
 
@@ -184,11 +193,18 @@ export default function TimetableEntryModal({
     };
 
     const WEEK_DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const selectedClassName = classes.find(c => c.id === newEntry.class_id)?.name;
-    const selectedSubjectName = modalSubjects.find(s => s.name === newEntry.subject)?.name;
 
-    const PickerRow = ({ label, value, placeholder, onPress, isOpen }: {
-        label: string; value?: string; placeholder: string; onPress: () => void; isOpen: boolean;
+    const isFormValid = !!(
+        newEntry.day &&
+        newEntry.class_id &&
+        newEntry.subject &&
+        newEntry.start_time &&
+        newEntry.end_time &&
+        newEntry.room_number?.trim()
+    );
+
+    const PickerRow = ({ value, placeholder, onPress, isOpen }: {
+        value?: string; placeholder: string; onPress: () => void; isOpen: boolean;
     }) => (
         <TouchableOpacity
             style={[modalForm.pickerRow, { backgroundColor: colors.cardBackground, borderColor: isOpen ? colors.primary : colors.border }]}
@@ -206,7 +222,9 @@ export default function TimetableEntryModal({
         return (
             <Modal animationType="fade" transparent visible={modalVisible}
                 onRequestClose={closeModal} statusBarTranslucent presentationStyle="overFullScreen">
+                <TouchableWithoutFeedback onPress={closeModal}>
                 <View style={s.overlay}>
+                <TouchableWithoutFeedback onPress={() => {}}>
                     <View style={[s.detailSheet, { backgroundColor: colors.background }]}>
                         {/* Header */}
                         <View style={[modalShell.header, { borderBottomColor: colors.border }]}>
@@ -269,16 +287,20 @@ export default function TimetableEntryModal({
                             )}
                         </View>
                     </View>
+                </TouchableWithoutFeedback>
                 </View>
+                </TouchableWithoutFeedback>
             </Modal>
         );
     }
 
-    // ── Add mode (new entry — full form) ──────────────────────────────────────
+    // ── Add mode (new entry — full form, all sections visible at once) ─────────
     return (
         <Modal animationType="fade" transparent visible={modalVisible}
             onRequestClose={closeModal} statusBarTranslucent presentationStyle="overFullScreen">
+            <TouchableWithoutFeedback onPress={closeModal}>
             <View style={s.overlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
                 <View style={[s.sheet, { backgroundColor: colors.background }]}>
                     <View style={[modalShell.header, { borderBottomColor: colors.border }]}>
                         <Text allowFontScaling={false} style={[modalShell.title, { color: colors.text }]}>Add Timetable Entry</Text>
@@ -287,206 +309,232 @@ export default function TimetableEntryModal({
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView style={modalShell.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={[modalShell.scrollContent, { paddingBottom: keyboardHeight + 24 }]}>
+                    <ScrollView style={[modalShell.scroll, { flex: 1 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={[modalShell.scrollContent, { paddingBottom: keyboardHeight + 24 }]}>
 
-                        {/* Step 1: Day */}
+                        {/* Day */}
                         <View style={modalForm.group}>
-                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Day</Text>
-                            <PickerRow label="Day" value={newEntry.day} placeholder="Select day"
-                                onPress={() => toggle('day')} isOpen={openPicker === 'day'} />
+                            <TouchableOpacity
+                                style={[s.accordionHeader, { borderColor: colors.border }]}
+                                onPress={() => toggle('day')}
+                            >
+                                <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Day *</Text>
+                                <View style={s.accordionRight}>
+                                    <Text allowFontScaling={false} style={[s.accordionValue, { color: newEntry.day ? colors.text : colors.textSecondary }]}>
+                                        {newEntry.day || 'Select day'}
+                                    </Text>
+                                    <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6, transform: [{ rotate: openPicker === 'day' ? '270deg' : '90deg' }] as any }} />
+                                </View>
+                            </TouchableOpacity>
                             {openPicker === 'day' && (
-                                <View style={[modalForm.dropdown, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                                    {WEEK_DAYS.map(day => (
-                                        <TouchableOpacity key={day}
-                                            style={[modalForm.dropdownOption, { borderBottomColor: colors.border },
-                                                newEntry.day === day && { backgroundColor: colors.primary + '18' }]}
-                                            onPress={() => {
-                                                setNewEntry({ ...newEntry, day, class_id: '', subject: '', start_time: '', end_time: '' });
-                                                setOpenPicker(null);
-                                            }}>
-                                            <Text allowFontScaling={false} style={[modalForm.dropdownOptionText, { color: newEntry.day === day ? colors.primary : colors.text }]}>
-                                                {day}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
+                                <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                                    <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={s.dropdownScroll}>
+                                        {WEEK_DAYS.map(day => (
+                                            <TouchableOpacity
+                                                key={day}
+                                                style={[s.option, { borderBottomColor: colors.border }]}
+                                                onPress={() => {
+                                                    setNewEntry({ ...newEntry, day, class_id: '', subject: '', start_time: '', end_time: '' });
+                                                    setOpenPicker(null);
+                                                }}
+                                            >
+                                                <Text allowFontScaling={false} style={[s.optionText, { color: colors.text }]}>{day}</Text>
+                                                {newEntry.day === day && <Check size={16} color={colors.primary} />}
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
                                 </View>
                             )}
                         </View>
 
-                        {/* Step 2: Class */}
-                        {newEntry.day && (
-                            <View style={modalForm.group}>
-                                <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Class</Text>
-                                <PickerRow label="Class" value={selectedClassName} placeholder="Select class"
-                                    onPress={() => toggle('class')} isOpen={openPicker === 'class'} />
-                                {openPicker === 'class' && (
-                                    <View style={[modalForm.dropdown, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+                        {/* Class */}
+                        <View style={modalForm.group}>
+                            <TouchableOpacity
+                                style={[s.accordionHeader, { borderColor: colors.border }]}
+                                onPress={() => toggle('class')}
+                            >
+                                <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Class *</Text>
+                                <View style={s.accordionRight}>
+                                    <Text allowFontScaling={false} style={[s.accordionValue, { color: newEntry.class_id ? colors.text : colors.textSecondary }]}>
+                                        {classes.find(c => c.id === newEntry.class_id)?.name || 'Select class'}
+                                    </Text>
+                                    <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6, transform: [{ rotate: openPicker === 'class' ? '270deg' : '90deg' }] as any }} />
+                                </View>
+                            </TouchableOpacity>
+                            {openPicker === 'class' && (
+                                <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                                    <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={s.dropdownScroll}>
                                         {classes.map(c => (
-                                            <TouchableOpacity key={c.id}
-                                                style={[modalForm.dropdownOption, { borderBottomColor: colors.border },
-                                                    newEntry.class_id === c.id && { backgroundColor: colors.primary + '18' }]}
+                                            <TouchableOpacity
+                                                key={c.id}
+                                                style={[s.option, { borderBottomColor: colors.border }]}
                                                 onPress={() => {
                                                     setNewEntry({ ...newEntry, class_id: c.id, subject: '', start_time: '', end_time: '' });
                                                     setOpenPicker(null);
-                                                }}>
-                                                <Text allowFontScaling={false} style={[modalForm.dropdownOptionText, { color: newEntry.class_id === c.id ? colors.primary : colors.text }]}>
-                                                    {c.name}
-                                                </Text>
+                                                }}
+                                            >
+                                                <Text allowFontScaling={false} style={[s.optionText, { color: colors.text }]}>{c.name}</Text>
+                                                {newEntry.class_id === c.id && <Check size={16} color={colors.primary} />}
                                             </TouchableOpacity>
                                         ))}
-                                    </View>
-                                )}
-                            </View>
-                        )}
+                                    </ScrollView>
+                                </View>
+                            )}
+                        </View>
 
-                        {/* Step 3: Subject */}
-                        {newEntry.day && newEntry.class_id && (
-                            <View style={modalForm.group}>
-                                <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Subject</Text>
-                                <PickerRow label="Subject" value={selectedSubjectName} placeholder="Select subject"
-                                    onPress={() => toggle('subject')} isOpen={openPicker === 'subject'} />
-                                {openPicker === 'subject' && (
-                                    <View style={[modalForm.dropdown, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+                        {/* Subject */}
+                        <View style={modalForm.group}>
+                            <TouchableOpacity
+                                style={[s.accordionHeader, { borderColor: colors.border }]}
+                                onPress={() => { if (newEntry.class_id) toggle('subject'); }}
+                            >
+                                <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Subject *</Text>
+                                <View style={s.accordionRight}>
+                                    <Text allowFontScaling={false} style={[s.accordionValue, { color: newEntry.subject ? colors.text : colors.textSecondary }]}>
+                                        {newEntry.subject || (newEntry.class_id ? 'Select subject' : 'Select class first')}
+                                    </Text>
+                                    <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6, transform: [{ rotate: openPicker === 'subject' ? '270deg' : '90deg' }] as any }} />
+                                </View>
+                            </TouchableOpacity>
+                            {openPicker === 'subject' && (
+                                <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                                    <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={s.dropdownScroll}>
                                         {modalSubjects.length === 0 ? (
-                                            <View style={modalForm.dropdownEmptyOption}>
-                                                <Text allowFontScaling={false} style={[modalForm.dropdownOptionText, { color: colors.textSecondary }]}>No subjects found</Text>
+                                            <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
+                                                <Text allowFontScaling={false} style={[s.optionText, { color: colors.textSecondary }]}>No subjects for this class</Text>
                                             </View>
                                         ) : modalSubjects.map(sub => (
-                                            <TouchableOpacity key={sub.id}
-                                                style={[modalForm.dropdownOption, { borderBottomColor: colors.border },
-                                                    newEntry.subject === sub.name && { backgroundColor: colors.primary + '18' }]}
+                                            <TouchableOpacity
+                                                key={sub.id}
+                                                style={[s.option, { borderBottomColor: colors.border }]}
                                                 onPress={() => {
                                                     setNewEntry({ ...newEntry, subject: sub.name, start_time: '', end_time: '' });
                                                     setOpenPicker(null);
-                                                }}>
-                                                <Text allowFontScaling={false} style={[modalForm.dropdownOptionText, { color: newEntry.subject === sub.name ? colors.primary : colors.text }]}>
-                                                    {sub.name}
-                                                </Text>
+                                                }}
+                                            >
+                                                <Text allowFontScaling={false} style={[s.optionText, { color: colors.text }]}>{sub.name}</Text>
+                                                {newEntry.subject === sub.name && <Check size={16} color={colors.primary} />}
                                             </TouchableOpacity>
                                         ))}
-                                    </View>
-                                )}
+                                    </ScrollView>
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Time — pickers (kept as dropdowns due to booked/conflict logic) */}
+                        {loadingSlots ? (
+                            <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
+                        ) : (
+                            <View style={modalForm.timeRow}>
+                                {/* Start Time */}
+                                <View style={[modalForm.group, { flex: 1, marginRight: 8 }]}>
+                                    <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Start Time</Text>
+                                    <PickerRow
+                                        value={newEntry.start_time ? formatTimeForDisplay(newEntry.start_time, true) : undefined}
+                                        placeholder="Select time"
+                                        onPress={() => toggle('start')} isOpen={openPicker === 'start'} />
+                                    {openPicker === 'start' && (
+                                        <View style={[modalForm.dropdown, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+                                            <ScrollView style={modalForm.dropdownScroll} showsVerticalScrollIndicator={false} nestedScrollEnabled>
+                                                {TIME_SLOTS.map(slot => {
+                                                    const disabled = isStartDisabled(slot);
+                                                    return (
+                                                        <TouchableOpacity key={slot}
+                                                            style={[modalForm.dropdownOption, { borderBottomColor: colors.border },
+                                                                disabled && { opacity: 0.35 },
+                                                                newEntry.start_time === slot && { backgroundColor: colors.primary + '18' }]}
+                                                            onPress={() => {
+                                                                if (disabled) return;
+                                                                setNewEntry({ ...newEntry, start_time: slot, end_time: '' });
+                                                                setOpenPicker(null);
+                                                            }}
+                                                            activeOpacity={disabled ? 1 : 0.7}>
+                                                            <Text allowFontScaling={false} style={[modalForm.dropdownOptionText,
+                                                                { color: disabled ? colors.textSecondary : newEntry.start_time === slot ? colors.primary : colors.text }]}>
+                                                                {formatTimeForDisplay(slot, true)}
+                                                            </Text>
+                                                            {disabled && <Text allowFontScaling={false} style={[modalForm.slotTag, { color: '#EF4444' }]}>Booked</Text>}
+                                                        </TouchableOpacity>
+                                                    );
+                                                })}
+                                            </ScrollView>
+                                        </View>
+                                    )}
+                                </View>
+
+                                {/* End Time */}
+                                <View style={[modalForm.group, { flex: 1, marginLeft: 8 }]}>
+                                    <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>End Time</Text>
+                                    <PickerRow
+                                        value={newEntry.end_time ? formatTimeForDisplay(newEntry.end_time, true) : undefined}
+                                        placeholder="Select time"
+                                        onPress={() => { if (newEntry.start_time) toggle('end'); }}
+                                        isOpen={openPicker === 'end'} />
+                                    {openPicker === 'end' && (
+                                        <View style={[modalForm.dropdown, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+                                            <ScrollView style={modalForm.dropdownScroll} showsVerticalScrollIndicator={false} nestedScrollEnabled>
+                                                {TIME_SLOTS.map(slot => {
+                                                    const disabled = isEndDisabled(slot);
+                                                    return (
+                                                        <TouchableOpacity key={slot}
+                                                            style={[modalForm.dropdownOption, { borderBottomColor: colors.border },
+                                                                disabled && { opacity: 0.35 },
+                                                                newEntry.end_time === slot && { backgroundColor: colors.primary + '18' }]}
+                                                            onPress={() => {
+                                                                if (disabled) return;
+                                                                setNewEntry({ ...newEntry, end_time: slot });
+                                                                setOpenPicker(null);
+                                                            }}
+                                                            activeOpacity={disabled ? 1 : 0.7}>
+                                                            <Text allowFontScaling={false} style={[modalForm.dropdownOptionText,
+                                                                { color: disabled ? colors.textSecondary : newEntry.end_time === slot ? colors.primary : colors.text }]}>
+                                                                {formatTimeForDisplay(slot, true)}
+                                                            </Text>
+                                                            {disabled && timeToMinutes(slot) > timeToMinutes(newEntry.start_time || '00:00') && (
+                                                                <Text allowFontScaling={false} style={[modalForm.slotTag, { color: '#EF4444' }]}>Conflict</Text>
+                                                            )}
+                                                        </TouchableOpacity>
+                                                    );
+                                                })}
+                                            </ScrollView>
+                                        </View>
+                                    )}
+                                </View>
                             </View>
-                        )}
-
-                        {/* Step 4 & 5: Time */}
-                        {newEntry.day && newEntry.class_id && newEntry.subject && (
-                            <>
-                                {loadingSlots ? (
-                                    <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
-                                ) : (
-                                    <View style={modalForm.timeRow}>
-                                        {/* Start Time */}
-                                        <View style={[modalForm.group, { flex: 1, marginRight: 8 }]}>
-                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Start Time</Text>
-                                            <PickerRow label="Start"
-                                                value={newEntry.start_time ? formatTimeForDisplay(newEntry.start_time, true) : undefined}
-                                                placeholder="Select time"
-                                                onPress={() => toggle('start')} isOpen={openPicker === 'start'} />
-                                            {openPicker === 'start' && (
-                                                <View style={[modalForm.dropdown, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                                                    <ScrollView style={modalForm.dropdownScroll} showsVerticalScrollIndicator={false} nestedScrollEnabled>
-                                                        {TIME_SLOTS.map(slot => {
-                                                            const disabled = isStartDisabled(slot);
-                                                            return (
-                                                                <TouchableOpacity key={slot}
-                                                                    style={[modalForm.dropdownOption, { borderBottomColor: colors.border },
-                                                                        disabled && { opacity: 0.35 },
-                                                                        newEntry.start_time === slot && { backgroundColor: colors.primary + '18' }]}
-                                                                    onPress={() => {
-                                                                        if (disabled) return;
-                                                                        setNewEntry({ ...newEntry, start_time: slot, end_time: '' });
-                                                                        setOpenPicker(null);
-                                                                    }}
-                                                                    activeOpacity={disabled ? 1 : 0.7}>
-                                                                    <Text allowFontScaling={false} style={[modalForm.dropdownOptionText,
-                                                                        { color: disabled ? colors.textSecondary : newEntry.start_time === slot ? colors.primary : colors.text }]}>
-                                                                        {formatTimeForDisplay(slot, true)}
-                                                                    </Text>
-                                                                    {disabled && <Text allowFontScaling={false} style={[modalForm.slotTag, { color: '#EF4444' }]}>Booked</Text>}
-                                                                </TouchableOpacity>
-                                                            );
-                                                        })}
-                                                    </ScrollView>
-                                                </View>
-                                            )}
-                                        </View>
-
-                                        {/* End Time */}
-                                        <View style={[modalForm.group, { flex: 1, marginLeft: 8 }]}>
-                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>End Time</Text>
-                                            <PickerRow label="End"
-                                                value={newEntry.end_time ? formatTimeForDisplay(newEntry.end_time, true) : undefined}
-                                                placeholder="Select time"
-                                                onPress={() => { if (newEntry.start_time) toggle('end'); }}
-                                                isOpen={openPicker === 'end'} />
-                                            {openPicker === 'end' && (
-                                                <View style={[modalForm.dropdown, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                                                    <ScrollView style={modalForm.dropdownScroll} showsVerticalScrollIndicator={false} nestedScrollEnabled>
-                                                        {TIME_SLOTS.map(slot => {
-                                                            const disabled = isEndDisabled(slot);
-                                                            return (
-                                                                <TouchableOpacity key={slot}
-                                                                    style={[modalForm.dropdownOption, { borderBottomColor: colors.border },
-                                                                        disabled && { opacity: 0.35 },
-                                                                        newEntry.end_time === slot && { backgroundColor: colors.primary + '18' }]}
-                                                                    onPress={() => {
-                                                                        if (disabled) return;
-                                                                        setNewEntry({ ...newEntry, end_time: slot });
-                                                                        setOpenPicker(null);
-                                                                    }}
-                                                                    activeOpacity={disabled ? 1 : 0.7}>
-                                                                    <Text allowFontScaling={false} style={[modalForm.dropdownOptionText,
-                                                                        { color: disabled ? colors.textSecondary : newEntry.end_time === slot ? colors.primary : colors.text }]}>
-                                                                        {formatTimeForDisplay(slot, true)}
-                                                                    </Text>
-                                                                    {disabled && timeToMinutes(slot) > timeToMinutes(newEntry.start_time || '00:00') && (
-                                                                        <Text allowFontScaling={false} style={[modalForm.slotTag, { color: '#EF4444' }]}>Conflict</Text>
-                                                                    )}
-                                                                </TouchableOpacity>
-                                                            );
-                                                        })}
-                                                    </ScrollView>
-                                                </View>
-                                            )}
-                                        </View>
-                                    </View>
-                                )}
-                            </>
                         )}
 
                         {/* Room Number */}
-                        {newEntry.day && newEntry.class_id && newEntry.subject && (
-                            <View style={modalForm.group}>
-                                <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Room Number</Text>
-                                <TextInput
-                                    style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                    value={newEntry.room_number || ''}
-                                    onChangeText={text => setNewEntry({ ...newEntry, room_number: text })}
-                                    placeholder="e.g. Room 101"
-                                    placeholderTextColor={colors.textSecondary}
-                                />
-                            </View>
-                        )}
+                        <View style={modalForm.group}>
+                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Room Number</Text>
+                            <TextInput
+                                style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                value={newEntry.room_number || ''}
+                                onChangeText={text => setNewEntry({ ...newEntry, room_number: text })}
+                                placeholder="e.g. Room 101"
+                                placeholderTextColor={colors.textSecondary}
+                            />
+                        </View>
 
                         {/* Add button */}
                         <TouchableOpacity
-                            style={[modalForm.submitBtn, { backgroundColor: colors.primary }]}
-                            onPress={handleAddEntry}>
+                            style={[modalForm.submitBtn, { backgroundColor: colors.primary }, !isFormValid && { opacity: 0.4 }]}
+                            onPress={handleAddEntry}
+                            disabled={!isFormValid}>
                             <Text allowFontScaling={false} style={modalForm.submitText}>Add to Timetable</Text>
                         </TouchableOpacity>
 
                     </ScrollView>
                 </View>
+            </TouchableWithoutFeedback>
             </View>
+            </TouchableWithoutFeedback>
         </Modal>
     );
 }
 
 const s = StyleSheet.create({
-    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '85%' },
-    detailSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '70%' },
+    overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, height: ADD_SHEET_HEIGHT },
+    detailSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, height: DETAIL_SHEET_HEIGHT },
 
     // Detail view
     detailBody: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32, gap: 10 },
@@ -501,5 +549,51 @@ const s = StyleSheet.create({
     deleteBtn: {
         height: 50, borderRadius: 12,
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    },
+
+    // Accordion dropdowns — same as CreateAssignmentModal / UploadLectureModal
+    accordionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+    },
+    accordionLabel: {
+        fontSize: TextSizes.filterLabel,
+        fontFamily: 'Inter-Medium',
+        flex: 1,
+    },
+    accordionValue: {
+        fontSize: TextSizes.filterLabel,
+        fontFamily: 'Inter-SemiBold',
+    },
+    accordionRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    accordionBody: {
+        marginTop: 6,
+        borderRadius: 10,
+        borderWidth: 1,
+        overflow: 'hidden',
+    },
+    dropdownScroll: {
+        maxHeight: 200,
+    },
+    option: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    optionText: {
+        fontSize: TextSizes.medium,
+        fontFamily: 'Inter-Regular',
+        flex: 1,
     },
 });

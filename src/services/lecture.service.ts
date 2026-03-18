@@ -230,37 +230,34 @@ class LectureService {
             }
 
 
-            if (role === 'superadmin') {
-                const { data: subjects, error } = await supabase
-                    .from('subjects').select('id, name, description').eq('is_active', true).order('name');
-                if (error) throw error;
-                return subjects || [];
-            }
+            if (role === 'superadmin' || role === 'teacher') {
+                // Step 1: get all subjects for this class from classes_subjects
+                const { data: classSubjects, error: csError } = await supabase
+                    .from('classes_subjects')
+                    .select('subject_id, subjects(id, name, description)')
+                    .eq('class_id', classId)
+                    .eq('is_active', true);
+                if (csError) throw csError;
 
-            if (role === 'teacher') {
-                const { data: enrollments, error: enrollmentError } = await supabase
+                let allSubjects = (classSubjects || [])
+                    .map((e: any) => e.subjects)
+                    .filter(Boolean);
+
+                if (role === 'superadmin') {
+                    return Array.from(new Map(allSubjects.map((s: any) => [s.id, s])).values());
+                }
+
+                // Step 2 (teacher): intersect with teacher_subject_enrollments
+                const { data: teacherEnrollments, error: teError } = await supabase
                     .from('teacher_subject_enrollments')
                     .select('subject_id')
                     .eq('teacher_id', userId)
                     .eq('class_id', classId)
                     .eq('is_active', true);
+                if (teError) throw teError;
 
-                if (enrollmentError) throw enrollmentError;
-
-                if (!enrollments || enrollments.length === 0) {
-                    return [];
-                }
-
-                const subjectIds = [...new Set(enrollments.map(e => e.subject_id))];
-
-                const { data: subjects, error: subjectError } = await supabase
-                    .from('subjects')
-                    .select('id, name, description')
-                    .in('id', subjectIds)
-                    .eq('is_active', true);
-
-                if (subjectError) throw subjectError;
-                return subjects || [];
+                const teacherSubjectIds = new Set((teacherEnrollments || []).map((e: any) => e.subject_id));
+                return allSubjects.filter((s: any) => teacherSubjectIds.has(s.id));
             } else if (role === 'student') {
                 const { data: enrollments, error: enrollmentError } = await supabase
                     .from('student_subject_enrollments')
@@ -335,7 +332,7 @@ class LectureService {
      */
     async uploadLecture(formData: LectureFormData, uploaderId: string) {
         try {
-            const fileUrl = await uploadToCloudinary(formData.file);
+            const fileUrl = formData.file ? await uploadToCloudinary(formData.file) : null;
 
             const { data: lecture, error } = await supabase
                 .from('lectures')
@@ -343,9 +340,9 @@ class LectureService {
                     title: formData.title.trim(),
                     description: formData.description?.trim() || null,
                     file_url: fileUrl,
-                    file_name: formData.file.name,
-                    file_type: formData.file.mimeType || 'application/pdf',
-                    file_size: formData.file.size || null,
+                    file_name: formData.file?.name || null,
+                    file_type: formData.file?.mimeType || null,
+                    file_size: formData.file?.size || null,
                     youtube_link: formData.youtube_link?.trim() || null,
                     class_id: formData.class_id,
                     subject_id: formData.subject_id,

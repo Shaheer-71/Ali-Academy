@@ -5,25 +5,27 @@ import {
     Text,
     Modal,
     TouchableOpacity,
+    TouchableWithoutFeedback,
     TextInput,
     ScrollView,
-    Alert,
     StyleSheet,
     ActivityIndicator,
     Keyboard,
     Platform,
+    Dimensions,
 } from 'react-native';
-import { X, Upload, Youtube } from 'lucide-react-native';
+
+const SHEET_HEIGHT = Dimensions.get('window').height * 0.75;
+import { X, Upload } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { lectureService } from '@/src/services/lecture.service';
-import { Lecture, LectureFormData, Class, Subject, Student } from '@/src/types/lectures';
+import { Lecture, LectureFormData, Class, Subject } from '@/src/types/lectures';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
 import {
     handleClassFetchErrorForLectures,
     handleSubjectFetchErrorForLectures,
-    handleStudentFetchErrorForLectures,
     handleFilePickError,
     handleLectureUploadError,
     handleLectureUpdateError,
@@ -38,6 +40,7 @@ interface UploadLectureModalProps {
     onSuccess: () => void;
     editLecture?: Lecture | null;
 }
+
 
 export default function UploadLectureModal({
     visible,
@@ -63,7 +66,6 @@ export default function UploadLectureModal({
 
     const [classes, setClasses] = useState<Class[]>([]);
     const [subjects, setSubjects] = useState<Subject[]>([]);
-    const [students, setStudents] = useState<Student[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const submittingRef = useRef(false);
 
@@ -87,6 +89,11 @@ export default function UploadLectureModal({
         setErrorModal({ visible: true, title: info.title, message: info.message });
     };
 
+    /* ── Derived ──────────────────────────────────────────────────────────── */
+    const isFormValid = isEditMode
+        ? formData.title.trim() !== '' && formData.description.trim() !== ''
+        : formData.title.trim() !== '' && formData.description.trim() !== '' && !!formData.class_id && !!formData.subject_id;
+
     /* ── Reset ────────────────────────────────────────────────────────────── */
     const resetForm = () => {
         setFormData({
@@ -100,7 +107,6 @@ export default function UploadLectureModal({
             selected_students: [],
         });
         setSubjects([]);
-        setStudents([]);
     };
 
     /* ── File picker ──────────────────────────────────────────────────────── */
@@ -131,21 +137,11 @@ export default function UploadLectureModal({
 
     /* ── Submit ───────────────────────────────────────────────────────────── */
     const handleSubmit = async () => {
-        // Guard against double-tap before React re-renders
-        if (submittingRef.current) return;
+        if (submittingRef.current || !isFormValid) return;
 
-        // Validate before locking the button
-        if (!formData.title.trim()) { Alert.alert('Error', 'Please enter a title'); return; }
         if (formData.youtube_link && !validateYouTubeLink(formData.youtube_link)) {
-            Alert.alert('Error', 'Please enter a valid YouTube link'); return;
-        }
-        if (!isEditMode) {
-            if (!formData.class_id) { Alert.alert('Error', 'Please select a class'); return; }
-            if (!formData.subject_id) { Alert.alert('Error', 'Please select a subject'); return; }
-            if (!formData.file) { Alert.alert('Error', 'Please select a file'); return; }
-            if (formData.access_type === 'individual' && formData.selected_students.length === 0) {
-                Alert.alert('Error', 'Please select at least one student'); return;
-            }
+            showError({ message: 'Please enter a valid YouTube link' });
+            return;
         }
 
         submittingRef.current = true;
@@ -161,7 +157,6 @@ export default function UploadLectureModal({
             } else {
                 await lectureService.uploadLecture(formData, profile!.id);
             }
-            // Close and refresh immediately — no OK-press required
             onSuccess();
             onClose();
         } catch (error) {
@@ -172,33 +167,11 @@ export default function UploadLectureModal({
         }
     };
 
-    /* ── Student toggle ───────────────────────────────────────────────────── */
-    const toggleStudent = (studentId: string) => {
-        setFormData(prev => ({
-            ...prev,
-            selected_students: prev.selected_students.includes(studentId)
-                ? prev.selected_students.filter(id => id !== studentId)
-                : [...prev.selected_students, studentId],
-        }));
-    };
-
     /* ── Load helpers ─────────────────────────────────────────────────────── */
-    const loadStudentsForSubject = async (classId: string, subjectId: string) => {
-        try {
-            const data = await lectureService.fetchClassStudents(classId, subjectId);
-            setStudents(data);
-        } catch (err) {
-            showError(err, handleStudentFetchErrorForLectures);
-        }
-    };
-
     const loadClasses = async () => {
         try {
             const data = await lectureService.fetchClasses(profile!.id, profile?.role);
             setClasses(data);
-            if (!isEditMode && data.length > 0) {
-                setFormData(prev => ({ ...prev, class_id: data[0].id, subject_id: '' }));
-            }
         } catch (error) {
             showError(error, handleClassFetchErrorForLectures);
         }
@@ -206,22 +179,28 @@ export default function UploadLectureModal({
 
     const loadClassData = async (classId: string) => {
         try {
-            const subjectsData = await lectureService.fetchClassSubjects(classId, profile?.id, profile?.role);
-            setSubjects(subjectsData);
-            if (!isEditMode && subjectsData.length > 0) {
-                setFormData(prev => ({ ...prev, subject_id: subjectsData[0].id }));
-            }
+            const data = await lectureService.fetchClassSubjects(classId, profile?.id, profile?.role);
+            setSubjects(data);
         } catch (err) {
             showError(err, handleSubjectFetchErrorForLectures);
             setSubjects([]);
         }
     };
 
+    const handleClassSelect = (classId: string) => {
+        setFormData(prev => ({ ...prev, class_id: classId, subject_id: '' }));
+        setSubjects([]);
+        loadClassData(classId);
+    };
+
+    const handleSubjectSelect = (subjectId: string) => {
+        setFormData(prev => ({ ...prev, subject_id: subjectId }));
+    };
+
     /* ── Effects ──────────────────────────────────────────────────────────── */
     useEffect(() => {
         if (visible && profile) {
             if (isEditMode && editLecture) {
-                // Pre-populate for edit
                 setFormData({
                     title: editLecture.title || '',
                     description: editLecture.description || '',
@@ -232,7 +211,6 @@ export default function UploadLectureModal({
                     access_type: 'class',
                     selected_students: [],
                 });
-                // Load classes/subjects for display (read-only chips)
                 loadClasses();
                 if (editLecture.class_id) loadClassData(editLecture.class_id);
             } else {
@@ -244,18 +222,6 @@ export default function UploadLectureModal({
         }
     }, [visible, editLecture]);
 
-    useEffect(() => {
-        if (!isEditMode && formData.class_id) {
-            loadClassData(formData.class_id);
-        }
-    }, [formData.class_id]);
-
-    useEffect(() => {
-        if (!isEditMode && formData.class_id && formData.subject_id) {
-            loadStudentsForSubject(formData.class_id, formData.subject_id);
-        }
-    }, [formData.subject_id]);
-
     /* ── UI ───────────────────────────────────────────────────────────────── */
     return (
         <Modal
@@ -265,210 +231,219 @@ export default function UploadLectureModal({
             statusBarTranslucent
             presentationStyle="overFullScreen"
         >
-            <View style={modalShell.overlay}>
-                <View style={s.backdrop} />
-                <View style={[modalShell.sheet, { backgroundColor: colors.background }]}>
+            <TouchableWithoutFeedback onPress={isSubmitting ? undefined : onClose}>
+                <View style={modalShell.overlay}>
+                    <TouchableWithoutFeedback onPress={() => {}}>
+                        <View style={[modalShell.sheet, { backgroundColor: colors.background, height: SHEET_HEIGHT }]}>
 
-                    {/* Header */}
-                    <View style={[modalShell.header, { borderBottomColor: colors.border }]}>
-                        <Text allowFontScaling={false} style={[modalShell.title, { color: colors.text }]}>
-                            {isEditMode ? 'Edit Lecture' : 'Upload Lecture'}
-                        </Text>
-                        <TouchableOpacity style={modalShell.closeBtn} onPress={onClose} disabled={isSubmitting}>
-                            <X size={24} color={colors.text} />
-                        </TouchableOpacity>
-                    </View>
-
-                    <ScrollView style={modalShell.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
-                        contentContainerStyle={[modalShell.scrollContent, { paddingBottom: keyboardHeight + 24 }]}>
-                        <ErrorModal
-                            visible={errorModal.visible}
-                            title={errorModal.title}
-                            message={errorModal.message}
-                            onClose={() => setErrorModal({ ...errorModal, visible: false })}
-                        />
-
-                        {/* Title */}
-                        <View style={modalForm.group}>
-                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Title *</Text>
-                            <TextInput
-                                style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                placeholder="Enter lecture title"
-                                value={formData.title}
-                                onChangeText={text => setFormData(prev => ({ ...prev, title: text }))}
-                                placeholderTextColor={colors.textSecondary}
-                            />
-                        </View>
-
-                        {/* Description */}
-                        <View style={modalForm.group}>
-                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Description</Text>
-                            <TextInput
-                                style={[modalForm.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                placeholder="Enter description (optional)"
-                                value={formData.description}
-                                onChangeText={text => setFormData(prev => ({ ...prev, description: text }))}
-                                multiline
-                                numberOfLines={3}
-                                placeholderTextColor={colors.textSecondary}
-                            />
-                        </View>
-
-                        {/* YouTube Link */}
-                        <View style={modalForm.group}>
-                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>
-                                YouTube Link (Optional)
-                            </Text>
-                            <TextInput
-                                style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                placeholder="https://youtube.com/watch?v=..."
-                                value={formData.youtube_link}
-                                onChangeText={text => setFormData(prev => ({ ...prev, youtube_link: text }))}
-                                placeholderTextColor={colors.textSecondary}
-                            />
-                        </View>
-
-                        {/* Class Selection */}
-                        <View style={modalForm.group}>
-                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>
-                                {isEditMode ? 'Class' : 'Select Class *'}
-                            </Text>
-                            <View style={modalForm.chipRow}>
-                                {classes.map(cls => (
-                                    <TouchableOpacity
-                                        key={cls.id}
-                                        style={[
-                                            modalForm.chip,
-                                            { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                            formData.class_id === cls.id && { backgroundColor: colors.primary, borderColor: colors.primary },
-                                        ]}
-                                        onPress={() => {
-                                            if (!isEditMode) setFormData(prev => ({ ...prev, class_id: cls.id, subject_id: '' }));
-                                        }}
-                                        disabled={isEditMode}
-                                    >
-                                        <Text allowFontScaling={false} style={[modalForm.chipText, { color: formData.class_id === cls.id ? '#fff' : colors.text }]}>
-                                            {cls.name}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-
-                        {/* Subject Selection */}
-                        {subjects.length > 0 && (
-                            <View style={modalForm.group}>
-                                <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>
-                                    {isEditMode ? 'Subject' : 'Select Subject *'}
+                            {/* Header */}
+                            <View style={[modalShell.header, { borderBottomColor: colors.border }]}>
+                                <Text allowFontScaling={false} style={[modalShell.title, { color: colors.text }]}>
+                                    {isEditMode ? 'Edit Lecture' : 'Upload Lecture'}
                                 </Text>
-                                <View style={modalForm.chipRow}>
-                                    {subjects.map(subject => (
-                                        <TouchableOpacity
-                                            key={subject.id}
-                                            style={[
-                                                modalForm.chip,
-                                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                                formData.subject_id === subject.id && { backgroundColor: colors.primary, borderColor: colors.primary },
-                                            ]}
-                                            onPress={() => {
-                                                if (!isEditMode) setFormData(prev => ({ ...prev, subject_id: subject.id }));
-                                            }}
-                                            disabled={isEditMode}
-                                        >
-                                            <Text allowFontScaling={false} style={[modalForm.chipText, { color: formData.subject_id === subject.id ? '#fff' : colors.text }]}>
-                                                {subject.name}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </View>
-                        )}
-
-                        {/* Students (create mode only) */}
-                        {!isEditMode && formData.access_type === 'individual' && students.length > 0 && (
-                            <View style={modalForm.group}>
-                                <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>
-                                    Select Students ({formData.selected_students.length}/{students.length})
-                                </Text>
-                                <ScrollView style={s.studentList} nestedScrollEnabled>
-                                    {students.map(student => (
-                                        <TouchableOpacity
-                                            key={student.id}
-                                            style={[
-                                                modalForm.dropdownOption,
-                                                { borderBottomColor: colors.border, backgroundColor: formData.selected_students.includes(student.user_id) ? colors.primary + '18' : 'transparent' },
-                                            ]}
-                                            onPress={() => toggleStudent(student.user_id)}
-                                        >
-                                            <Text allowFontScaling={false} style={[modalForm.dropdownOptionText, { color: colors.text }]}>
-                                                {student.profiles?.full_name || `Roll: ${student.roll_number}`}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        )}
-
-                        {/* File Picker — create mode only */}
-                        {!isEditMode && (
-                            <View style={modalForm.group}>
-                                <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Select File *</Text>
-                                <TouchableOpacity
-                                    style={[modalForm.filePicker, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-                                    onPress={pickFile}
-                                >
-                                    <Upload size={20} color={colors.primary} />
-                                    <Text allowFontScaling={false} style={[modalForm.filePickerText, { color: formData.file ? colors.text : colors.textSecondary }]}>
-                                        {formData.file ? formData.file.name : 'Tap to select file (PDF, Image, Video)'}
-                                    </Text>
+                                <TouchableOpacity style={modalShell.closeBtn} onPress={onClose} disabled={isSubmitting}>
+                                    <X size={24} color={colors.text} />
                                 </TouchableOpacity>
-                                {formData.file && (
-                                    <Text allowFontScaling={false} style={[modalForm.fileSize, { color: colors.textSecondary }]}>
-                                        Size: {((formData.file.size || 0) / (1024 * 1024)).toFixed(1)} MB
-                                    </Text>
+                            </View>
+
+                            <ScrollView
+                                style={[modalShell.scroll, { flex: 1 }]}
+                                showsVerticalScrollIndicator={false}
+                                keyboardShouldPersistTaps="handled"
+                                contentContainerStyle={[modalShell.scrollContent, { paddingBottom: keyboardHeight + 24 }]}
+                            >
+                                <ErrorModal
+                                    visible={errorModal.visible}
+                                    title={errorModal.title}
+                                    message={errorModal.message}
+                                    onClose={() => setErrorModal({ ...errorModal, visible: false })}
+                                />
+
+                                {/* Title */}
+                                <View style={modalForm.group}>
+                                    <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Title *</Text>
+                                    <TextInput
+                                        style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                        placeholder="Enter lecture title"
+                                        placeholderTextColor={colors.textSecondary}
+                                        value={formData.title}
+                                        onChangeText={t => setFormData(prev => ({ ...prev, title: t }))}
+                                    />
+                                </View>
+
+                                {/* Description */}
+                                <View style={modalForm.group}>
+                                    <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Description *</Text>
+                                    <TextInput
+                                        style={[modalForm.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                        placeholder="Enter lecture description"
+                                        placeholderTextColor={colors.textSecondary}
+                                        value={formData.description}
+                                        onChangeText={t => setFormData(prev => ({ ...prev, description: t }))}
+                                        multiline
+                                        numberOfLines={4}
+                                    />
+                                </View>
+
+                                {/* Class */}
+                                {!isEditMode && (
+                                    <View style={modalForm.group}>
+                                        <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Class *</Text>
+                                        {classes.length === 0 ? (
+                                            <Text allowFontScaling={false} style={[modalForm.hint, { color: colors.textSecondary }]}>No classes available</Text>
+                                        ) : (
+                                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                                <View style={modalForm.chipRow}>
+                                                    {classes.map(cls => (
+                                                        <TouchableOpacity
+                                                            key={cls.id}
+                                                            style={[
+                                                                modalForm.chip,
+                                                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                                                formData.class_id === cls.id && { backgroundColor: colors.primary, borderColor: colors.primary },
+                                                            ]}
+                                                            onPress={() => handleClassSelect(cls.id)}
+                                                        >
+                                                            <Text allowFontScaling={false} style={[
+                                                                modalForm.chipText,
+                                                                { color: colors.text },
+                                                                formData.class_id === cls.id && { color: '#ffffff' },
+                                                            ]}>
+                                                                {cls.name}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            </ScrollView>
+                                        )}
+                                    </View>
                                 )}
-                            </View>
-                        )}
 
-                        {/* Edit mode note */}
-                        {isEditMode && (
-                            <View style={[modalForm.infoBox, { backgroundColor: colors.cardBackground }]}>
-                                <Text allowFontScaling={false} style={[modalForm.infoText, { color: colors.textSecondary }]}>
-                                    Class, subject, and file cannot be changed after uploading.
-                                </Text>
-                            </View>
-                        )}
+                                {/* Subject */}
+                                {!isEditMode && (
+                                    <View style={modalForm.group}>
+                                        <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Subject *</Text>
+                                        {!formData.class_id ? (
+                                            <Text allowFontScaling={false} style={[modalForm.hint, { color: colors.textSecondary }]}>Select a class first</Text>
+                                        ) : subjects.length === 0 ? (
+                                            <Text allowFontScaling={false} style={[modalForm.hint, { color: colors.textSecondary }]}>No subjects for this class</Text>
+                                        ) : (
+                                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                                <View style={modalForm.chipRow}>
+                                                    {subjects.map(sub => (
+                                                        <TouchableOpacity
+                                                            key={sub.id}
+                                                            style={[
+                                                                modalForm.chip,
+                                                                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                                                formData.subject_id === sub.id && { backgroundColor: colors.primary, borderColor: colors.primary },
+                                                            ]}
+                                                            onPress={() => handleSubjectSelect(sub.id)}
+                                                        >
+                                                            <Text allowFontScaling={false} style={[
+                                                                modalForm.chipText,
+                                                                { color: colors.text },
+                                                                formData.subject_id === sub.id && { color: '#ffffff' },
+                                                            ]}>
+                                                                {sub.name}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            </ScrollView>
+                                        )}
+                                    </View>
+                                )}
 
-                        {/* Submit Button */}
-                        <TouchableOpacity
-                            style={[modalForm.submitBtn, { backgroundColor: isSubmitting ? colors.textSecondary : colors.primary, flexDirection: 'row', gap: 6 }]}
-                            onPress={handleSubmit}
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? (
-                                <ActivityIndicator size="small" color="white" />
-                            ) : (
-                                <>
-                                    <Upload size={20} color="white" />
-                                    <Text allowFontScaling={false} style={modalForm.submitText}>
-                                        {isEditMode ? 'Update Lecture' : 'Upload Lecture'}
-                                    </Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
-                    </ScrollView>
+                                {/* Edit mode: show class & subject as read-only */}
+                                {isEditMode && (
+                                    <View style={[modalForm.infoBox, { backgroundColor: colors.cardBackground }]}>
+                                        <Text allowFontScaling={false} style={[modalForm.infoText, { color: colors.textSecondary }]}>
+                                            Class, subject, and file cannot be changed after uploading.
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {/* YouTube Link */}
+                                <View style={modalForm.group}>
+                                    <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>YouTube Link (Optional)</Text>
+                                    <TextInput
+                                        style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                        placeholder="https://youtube.com/watch?v=..."
+                                        placeholderTextColor={colors.textSecondary}
+                                        value={formData.youtube_link}
+                                        onChangeText={t => setFormData(prev => ({ ...prev, youtube_link: t }))}
+                                        autoCapitalize="none"
+                                        keyboardType="url"
+                                    />
+                                </View>
+
+                                {/* File — create mode only */}
+                                {!isEditMode && (
+                                    <View style={modalForm.group}>
+                                        <TouchableOpacity
+                                            style={[s.accordionHeader, { borderColor: colors.border }]}
+                                            onPress={pickFile}
+                                        >
+                                            <View style={s.attachLeft}>
+                                                <Upload size={16} color={colors.primary} />
+                                                <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary, marginLeft: 8 }]}>
+                                                    Attachment (Optional)
+                                                </Text>
+                                            </View>
+                                            <Text
+                                                allowFontScaling={false}
+                                                numberOfLines={1}
+                                                ellipsizeMode="tail"
+                                                style={[s.accordionValue, { color: formData.file ? colors.text : colors.textSecondary, maxWidth: '45%' }]}
+                                            >
+                                                {formData.file ? formData.file.name : 'No file'}
+                                            </Text>
+                                        </TouchableOpacity>
+                                        {formData.file && (
+                                            <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, file: null }))}>
+                                                <Text allowFontScaling={false} style={[s.removeFile, { color: '#EF4444' }]}>Remove file</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                )}
+
+                                {/* Submit */}
+                                <TouchableOpacity
+                                    style={[
+                                        modalForm.submitBtn,
+                                        { backgroundColor: colors.primary },
+                                        (!isFormValid || isSubmitting) && { opacity: 0.4 },
+                                    ]}
+                                    onPress={handleSubmit}
+                                    disabled={!isFormValid || isSubmitting}
+                                >
+                                    {isSubmitting
+                                        ? <ActivityIndicator size="small" color="white" />
+                                        : <Text allowFontScaling={false} style={modalForm.submitText}>
+                                            {isEditMode ? 'Update Lecture' : 'Upload Lecture'}
+                                          </Text>
+                                    }
+                                </TouchableOpacity>
+                            </ScrollView>
+                        </View>
+                    </TouchableWithoutFeedback>
                 </View>
-            </View>
+            </TouchableWithoutFeedback>
         </Modal>
     );
 }
 
 const s = StyleSheet.create({
-    backdrop: { flex: 1 },
-    studentList: {
-        maxHeight: 200,
-        borderWidth: 1,
-        borderRadius: 12,
-        overflow: 'hidden',
+    attachLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        marginRight: 8,
+    },
+    removeFile: {
+        fontSize: TextSizes.filterLabel,
+        fontFamily: 'Inter-Medium',
+        marginTop: 6,
     },
 });

@@ -12,7 +12,7 @@ import {
   Dimensions,
   AppState,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { supabase } from '@/src/lib/supabase';
@@ -66,7 +66,8 @@ interface DiaryAssignment {
 
 export default function DiaryScreen() {
   const { profile, student } = useAuth();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const [classes, setClasses] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -272,17 +273,30 @@ export default function DiaryScreen() {
   const fetchSubjectsForClass = async (classId: string) => {
     try {
       if (!classId) { setSubjects([]); return; }
-      const { data, error } = await supabase
+      // Step 1: get all subjects for this class from classes_subjects
+      const { data: classSubjects, error: csError } = await supabase
+        .from('classes_subjects')
+        .select('subject_id, subjects (id, name)')
+        .eq('class_id', classId)
+        .eq('is_active', true);
+      if (csError) throw csError;
+      let allSubjects = (classSubjects || []).map((item: any) => item.subjects).filter(Boolean);
+
+      if (profile?.role === 'superadmin') {
+        setSubjects(Array.from(new Map(allSubjects.map((s: any) => [s.id, s])).values()));
+        return;
+      }
+
+      // Step 2 (teacher): intersect with teacher_subject_enrollments
+      const { data: teacherEnrollments, error: teError } = await supabase
         .from('teacher_subject_enrollments')
-        .select('subjects (id, name)')
+        .select('subject_id')
         .eq('teacher_id', profile?.id)
         .eq('class_id', classId)
         .eq('is_active', true);
-      if (error) throw error;
-      const uniqueSubjects = Array.from(
-        new Map(data?.map(item => item.subjects).filter(Boolean).map((s: any) => [s.id, s])).values()
-      );
-      setSubjects(uniqueSubjects);
+      if (teError) throw teError;
+      const teacherSubjectIds = new Set((teacherEnrollments || []).map((e: any) => e.subject_id));
+      setSubjects(allSubjects.filter((s: any) => teacherSubjectIds.has(s.id)));
     } catch (error) {
       showError(error, handleSubjectFetchErrorForDiary);
       setSubjects([]);
@@ -439,12 +453,13 @@ export default function DiaryScreen() {
     const dateLabels: Record<DateFilter, string> = { all: 'All', today: 'Today', week: 'This Week', overdue: 'Overdue' };
 
     return (
-      <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={() => setFilterVisible(false)}>
-        <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
-          <View style={localStyles.modalOverlay} />
-        </TouchableWithoutFeedback>
+      <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={() => setFilterVisible(false)} statusBarTranslucent>
+        <View style={localStyles.modalContainer}>
+          <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
+            <View style={localStyles.modalOverlay} />
+          </TouchableWithoutFeedback>
 
-        <View style={[localStyles.bottomSheet, { backgroundColor: colors.cardBackground }]}>
+          <View style={[localStyles.bottomSheet, { backgroundColor: colors.cardBackground, paddingBottom: Math.max(32, bottomInset + 16) }]}>
           <View style={[localStyles.sheetHandle, { backgroundColor: colors.border }]} />
 
           {isTeacher && (
@@ -540,6 +555,7 @@ export default function DiaryScreen() {
           <TouchableOpacity style={[localStyles.applyBtn, { backgroundColor: colors.primary }]} onPress={applyDiaryFilter}>
             <Text allowFontScaling={false} style={localStyles.applyBtnText}>Apply Filter</Text>
           </TouchableOpacity>
+          </View>
         </View>
       </Modal>
     );
@@ -648,6 +664,7 @@ export default function DiaryScreen() {
             visible={modalVisible}
             onClose={() => { setModalVisible(false); resetForm(); }}
             colors={colors}
+            isDark={isDark}
             newAssignment={newAssignment}
             setNewAssignment={setNewAssignment}
             classes={classes}
@@ -693,8 +710,16 @@ export default function DiaryScreen() {
 
 const localStyles = StyleSheet.create({
   // ── Bottom sheet ──────────────────────────────────────────────────────
-  modalOverlay: {
+  modalContainer: {
     flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
   bottomSheet: {
@@ -702,7 +727,7 @@ const localStyles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingTop: 12,
     paddingBottom: 32,
-    maxHeight: height * 0.65,
+    maxHeight: height * 0.45, // filter modal — 45%
   },
   sheetHandle: {
     width: 40,

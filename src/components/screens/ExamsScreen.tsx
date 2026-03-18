@@ -103,20 +103,29 @@ export default function ExamsScreen() {
   const getSubjectsForClass = useCallback(async (classId: string) => {
     if (!classId || !profile?.id) return [];
     try {
+      // Step 1: get all subjects for this class from classes_subjects
+      const { data: classSubjects, error: csError } = await supabase
+        .from('classes_subjects')
+        .select('subject_id, subjects(id, name)')
+        .eq('class_id', classId)
+        .eq('is_active', true);
+      if (csError) throw csError;
+      const allSubjects = (classSubjects || []).map((i: any) => i.subjects).filter(Boolean);
+
       if (isSuperAdmin) {
-        const { data } = await supabase.from('subjects').select('id, name').eq('is_active', true).order('name');
-        return (data || []) as any[];
+        return Array.from(new Map(allSubjects.map((s: any) => [s.id, s])).values()) as any[];
       }
-      const { data, error } = await supabase
+
+      // Step 2 (teacher): intersect with teacher_subject_enrollments
+      const { data: teacherEnrollments, error: teError } = await supabase
         .from('teacher_subject_enrollments')
-        .select('subjects(id, name)')
+        .select('subject_id')
         .eq('teacher_id', profile.id)
         .eq('class_id', classId)
         .eq('is_active', true);
-      if (error) throw error;
-      return Array.from(
-        new Map(data?.map((i: any) => i.subjects).filter(Boolean).map((s: any) => [s.id, s])).values()
-      ) as any[];
+      if (teError) throw teError;
+      const teacherSubjectIds = new Set((teacherEnrollments || []).map((e: any) => e.subject_id));
+      return allSubjects.filter((s: any) => teacherSubjectIds.has(s.id)) as any[];
     } catch { return []; }
   }, [profile?.id, isSuperAdmin]);
 

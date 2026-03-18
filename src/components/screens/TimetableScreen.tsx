@@ -3,9 +3,9 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     ScrollView, RefreshControl, StyleSheet, Alert,
     View, TouchableOpacity, Text, Modal,
-    TouchableWithoutFeedback, Dimensions,
+    TouchableWithoutFeedback, Dimensions, AppState,
 } from 'react-native';
-import { Plus, Check, ChevronRight } from 'lucide-react-native';
+import { Plus, Check, ChevronRight, Calendar } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Animated } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -16,11 +16,13 @@ import DayRow from '@/src/components/timetable/DayRow';
 import TimetableEntryModal from '@/src/components/timetable/TimetableEntryModal';
 import ErrorState from '@/src/components/timetable/ErrorState';
 import { supabase } from '@/src/lib/supabase';
+import { sendPushNotification } from '@/src/lib/notifications';
 import {
     Class, Subject, TimetableEntryWithDetails,
     CreateTimetableEntry, DAYS_ORDER, ThemeColors, DayOfWeek,
 } from '@/src/types/timetable';
 import { useFocusEffect } from '@react-navigation/native';
+import { pendingNavigation } from '@/src/lib/notifications';
 import { useScreenAnimation } from '@/src/utils/animations';
 import {
     handleClassesFetchError, handleSubjectsFetchError,
@@ -261,6 +263,66 @@ export default function TimetableScreen() {
         newEntry.day && newEntry.start_time && newEntry.end_time &&
         newEntry.subject && newEntry.room_number && newEntry.class_id;
 
+    const sendTimetableNotification = async (entry: TimetableEntryWithDetails) => {
+        // Find the teacher assigned to this class+subject
+        const { data: teacherRows } = await supabase
+            .from('teacher_subject_enrollments')
+            .select('teacher_id')
+            .eq('class_id', entry.class_id)
+            .eq('subject_id', entry.subject_id)
+            .eq('is_active', true);
+
+        // Find students enrolled in this class+subject
+        const { data: studentRows } = await supabase
+            .from('student_subject_enrollments')
+            .select('student_id')
+            .eq('class_id', entry.class_id)
+            .eq('subject_id', entry.subject_id)
+            .eq('is_active', true);
+
+        const teacherIds = [...new Set((teacherRows || []).map((r: any) => r.teacher_id))];
+        const studentIds = [...new Set((studentRows || []).map((r: any) => r.student_id))];
+        const allRecipients = [...teacherIds, ...studentIds];
+
+        if (allRecipients.length === 0) return;
+
+        const notifTitle = `📅 Timetable Updated`;
+        const notifBody = `${entry.subject_name} has been scheduled on ${entry.day} from ${entry.start_time.substring(0,5)} – ${entry.end_time.substring(0,5)} in ${entry.room_number}`;
+
+        const { data: notification } = await supabase
+            .from('notifications')
+            .insert([{
+                type: 'timetable_added',
+                title: notifTitle,
+                message: notifBody,
+                entity_type: 'timetable',
+                entity_id: entry.id,
+                created_by: profile!.id,
+                target_type: 'class',
+                target_id: entry.class_id,
+                priority: 'medium',
+            }])
+            .select('id')
+            .single();
+
+        if (!notification) return;
+
+        await supabase.from('notification_recipients').insert(
+            allRecipients.map(uid => ({ notification_id: notification.id, user_id: uid, is_read: false, is_deleted: false }))
+        );
+
+        for (const uid of allRecipients) {
+            try {
+                await sendPushNotification({
+                    userId: uid,
+                    title: notifTitle,
+                    body: notifBody,
+                    data: { type: 'timetable_added', notificationId: notification.id, classId: entry.class_id, subjectId: entry.subject_id },
+                });
+            } catch (e) { console.warn('Push error:', e); }
+        }
+    };
+
     const handleAddEntry = async () => {
         try {
             if (!validateEntry()) { Alert.alert('Error', 'Please fill in all fields'); return; }
@@ -270,7 +332,12 @@ export default function TimetableScreen() {
                 room_number: newEntry.room_number!, class_id: newEntry.class_id!,
                 teacher_id: newEntry.teacher_id || profile.id,
             });
-            if (result) { setModalVisible(false); resetForm(); await refreshTimetable(); }
+            if (result) {
+                setModalVisible(false);
+                resetForm();
+                await refreshTimetable();
+                sendTimetableNotification(result).catch(e => console.warn('Timetable notification error:', e));
+            }
         } catch (err: any) { setErrorModal(handleTimetableCreateError(err)); }
     };
 
@@ -336,7 +403,22 @@ export default function TimetableScreen() {
         resetForm(); setEditingEntry(null); setModalVisible(true);
     };
 
-    useFocusEffect(useCallback(() => { refreshTimetable(); }, [profile]));
+    useFocusEffect(useCallback(() => {
+        refreshTimetable();
+        if (pendingNavigation.timetableEntry) {
+            pendingNavigation.timetableEntry = null;
+        }
+    }, [profile]));
+
+    // When app returns from background while already on this screen
+    useEffect(() => {
+        const sub = AppState.addEventListener('change', (nextState) => {
+            if (nextState === 'active' && pendingNavigation.timetableEntry) {
+                pendingNavigation.timetableEntry = null;
+            }
+        });
+        return () => sub.remove();
+    }, []);
 
     if (error && !loading) {
         return <ErrorState error={error} colors={colors} refreshTimetable={refreshTimetable} />;
@@ -360,8 +442,10 @@ export default function TimetableScreen() {
                 visible={filterVisible}
                 transparent
                 animationType="fade"
+                statusBarTranslucent
                 onRequestClose={() => setFilterVisible(false)}
             >
+                <View style={s.modalContainer}>
                 <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
                     <View style={s.modalOverlay} />
                 </TouchableWithoutFeedback>
@@ -517,6 +601,7 @@ export default function TimetableScreen() {
                         <Text allowFontScaling={false} style={s.applyBtnText}>Apply Filter</Text>
                     </TouchableOpacity>
                 </View>
+                </View>
             </Modal>
         );
     };
@@ -540,10 +625,18 @@ export default function TimetableScreen() {
 
                     {renderFilterModal()}
 
-                    {isTeacher && classes.length === 0 && !loading && (
+                    {timetable.length === 0 && !loading && (
                         <View style={s.emptyState}>
+                            <Calendar size={48} color={colors.textSecondary} />
+                            <Text allowFontScaling={false} style={[s.emptyStateTitle, { color: colors.text }]}>
+                                No timetable yet
+                            </Text>
                             <Text allowFontScaling={false} style={[s.emptyStateText, { color: colors.textSecondary }]}>
-                                No classes assigned to you yet
+                                {isSuperAdmin
+                                    ? 'Add your first class schedule to get started'
+                                    : isTeacher
+                                    ? 'Your class schedule will appear here'
+                                    : 'Your class schedule will appear here'}
                             </Text>
                         </View>
                     )}
@@ -625,13 +718,15 @@ const s = StyleSheet.create({
     scrollView: { flex: 1, paddingHorizontal: 16 },
 
     emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-    emptyStateText: { fontSize: TextSizes.normal, fontFamily: 'Inter-Regular' },
+    emptyStateTitle: { fontSize: TextSizes.xlarge, fontFamily: 'Inter-SemiBold', marginTop: 16, marginBottom: 8 },
+    emptyStateText: { fontSize: TextSizes.medium, fontFamily: 'Inter-Regular', textAlign: 'center' },
 
     // bottom sheet
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+    modalContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end' },
+    modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
     bottomSheet: {
         borderTopLeftRadius: 20, borderTopRightRadius: 20,
-        paddingTop: 12, paddingBottom: 32, maxHeight: height * 0.65,
+        paddingTop: 12, paddingBottom: 32, height: height * 0.45,
     },
     sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
 
@@ -647,7 +742,7 @@ const s = StyleSheet.create({
     sheetTitle: { flex: 1, fontSize: TextSizes.sectionTitle, fontFamily: 'Inter-SemiBold' },
     resetText: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium' },
 
-    sheetScroll: { flexGrow: 0 },
+    sheetScroll: { flex: 1 },
 
     // Accordion
     accordionHeader: {

@@ -2,18 +2,21 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Modal, TouchableOpacity, ScrollView, TextInput,
-    Keyboard, Platform, StyleSheet,
+    Keyboard, Platform, StyleSheet, TouchableWithoutFeedback,
 } from 'react-native';
 import { Text } from 'react-native';
-import { X, Upload, Check, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { X, Upload, Check, ChevronRight } from 'lucide-react-native';
 import { TextSizes } from '@/src/styles/TextSizes';
 import { SkeletonBox } from '@/src/components/common/Skeleton';
 import { modalShell, modalForm } from '@/src/styles/creationModalStyles';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const CreateAssignmentModal = ({
     visible,
     onClose,
     colors,
+    isDark,
     newAssignment,
     setNewAssignment,
     classes,
@@ -29,6 +32,7 @@ export const CreateAssignmentModal = ({
     visible: boolean;
     onClose: () => void;
     colors: any;
+    isDark?: boolean;
     newAssignment: any;
     setNewAssignment: (val: any) => void;
     classes: any[];
@@ -41,14 +45,19 @@ export const CreateAssignmentModal = ({
     fetchSubjectsForClass: (classId: string) => void;
     showError?: (error: any, handler?: (error: any) => any) => void;
 }) => {
-
+    const { bottom: bottomInset } = useSafeAreaInsets();
     const [loadingStudents, setLoadingStudents] = useState(false);
-    const [studentDropdownOpen, setStudentDropdownOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [keyboardHeight, setKeyboardHeight] = useState(0);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+
+    // One open dropdown at a time
+    type DropdownKey = 'assignTo' | 'class' | 'subject' | 'students' | 'date' | null;
+    const [openDropdown, setOpenDropdown] = useState<DropdownKey>(null);
+    const toggle = (key: DropdownKey) => setOpenDropdown(prev => prev === key ? null : key);
 
     useEffect(() => {
-        if (!visible) setIsSubmitting(false);
+        if (!visible) { setIsSubmitting(false); setOpenDropdown(null); setShowDatePicker(false); }
     }, [visible]);
 
     useEffect(() => {
@@ -63,15 +72,23 @@ export const CreateAssignmentModal = ({
         return () => { show.remove(); hide.remove(); };
     }, []);
 
+    const isFormValid =
+        newAssignment.title?.trim() !== '' &&
+        newAssignment.description?.trim() !== '' &&
+        newAssignment.due_date?.trim() !== '' &&
+        newAssignment.class_id !== '' &&
+        (newAssignment.assignTo === 'class' ||
+            (newAssignment.assignTo === 'students' && (newAssignment.student_ids?.length ?? 0) > 0));
+
     const handleSubmit = () => {
-        if (isSubmitting || uploading) return;
+        if (isSubmitting || uploading || !isFormValid) return;
         setIsSubmitting(true);
         onSubmit();
     };
 
     const handleClassSelect = async (classId: string) => {
         setNewAssignment((prev: any) => ({ ...prev, class_id: classId, subject_id: '', student_ids: [] }));
-        setStudentDropdownOpen(false);
+        setOpenDropdown(null);
         await fetchSubjectsForClass(classId);
         if (newAssignment.assignTo === 'students') {
             setLoadingStudents(true);
@@ -81,7 +98,7 @@ export const CreateAssignmentModal = ({
 
     const handleSubjectSelect = async (subjectId: string) => {
         setNewAssignment((prev: any) => ({ ...prev, subject_id: subjectId, student_ids: [] }));
-        setStudentDropdownOpen(false);
+        setOpenDropdown(null);
         if (newAssignment.assignTo === 'students' && newAssignment.class_id) {
             setLoadingStudents(true);
             try { await fetchStudents(newAssignment.class_id, subjectId); } finally { setLoadingStudents(false); }
@@ -96,6 +113,18 @@ export const CreateAssignmentModal = ({
         setNewAssignment((prev: any) => ({ ...prev, student_ids: updated }));
     };
 
+    const selectedClassName = classes.find(c => c.id === newAssignment.class_id)?.name ?? 'Select class';
+    const selectedSubjectName = subjects.find(s => s.id === newAssignment.subject_id)?.name ?? 'Select subject';
+    const assignToLabel = newAssignment.assignTo === 'class' ? 'Whole Class' : 'Specific Students';
+    const studentsLabel = (newAssignment.student_ids?.length ?? 0) > 0
+        ? `${newAssignment.student_ids.length} student${newAssignment.student_ids.length > 1 ? 's' : ''} selected`
+        : 'Select students';
+
+    const chevronStyle = (key: DropdownKey) => ({
+        marginLeft: 6,
+        transform: [{ rotate: openDropdown === key ? '270deg' : '90deg' }] as any,
+    });
+
     return (
         <Modal
             visible={visible}
@@ -105,8 +134,10 @@ export const CreateAssignmentModal = ({
             statusBarTranslucent={true}
             presentationStyle="overFullScreen"
         >
-            <View style={modalShell.overlay}>
-                <View style={[modalShell.sheet, { backgroundColor: colors.background }]}>
+            <TouchableWithoutFeedback onPress={onClose}>
+                <View style={modalShell.overlay}>
+                    <TouchableWithoutFeedback onPress={() => {}}>
+                        <View style={[modalShell.sheet, { backgroundColor: colors.background, paddingBottom: bottomInset }]}>
                     {/* Header */}
                     <View style={[modalShell.header, { borderBottomColor: colors.border }]}>
                         <Text allowFontScaling={false} style={[modalShell.title, { color: colors.text }]}>
@@ -148,103 +179,188 @@ export const CreateAssignmentModal = ({
 
                         {/* Due Date */}
                         <View style={modalForm.group}>
-                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Due Date *</Text>
-                            <TextInput
-                                style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                placeholder="YYYY-MM-DD"
-                                placeholderTextColor={colors.textSecondary}
-                                value={newAssignment.due_date}
-                                onChangeText={(t) => setNewAssignment((p: any) => ({ ...p, due_date: t }))}
-                            />
+                            <TouchableOpacity
+                                style={[s.accordionHeader, { borderColor: colors.border }]}
+                                onPress={() => {
+                                    if (Platform.OS === 'android') {
+                                        // Android shows a native dialog — no inline body needed
+                                        setOpenDropdown(null);
+                                        setShowDatePicker(true);
+                                    } else {
+                                        toggle('date');
+                                    }
+                                }}
+                            >
+                                <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Due Date *</Text>
+                                <View style={s.accordionRight}>
+                                    <Text allowFontScaling={false} style={[s.accordionValue, { color: newAssignment.due_date ? colors.text : colors.textSecondary }]}>
+                                        {newAssignment.due_date || 'Select date'}
+                                    </Text>
+                                    <ChevronRight size={16} color={colors.textSecondary} style={chevronStyle('date')} />
+                                </View>
+                            </TouchableOpacity>
+
+                            {/* iOS: inline picker in accordion body */}
+                            {Platform.OS === 'ios' && openDropdown === 'date' && (
+                                <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                                    <DateTimePicker
+                                        value={newAssignment.due_date ? new Date(newAssignment.due_date) : new Date()}
+                                        mode="date"
+                                        display="inline"
+                                        minimumDate={new Date()}
+                                        themeVariant={isDark ? 'dark' : 'light'}
+                                        onChange={(_, selectedDate) => {
+                                            if (selectedDate) {
+                                                setNewAssignment((p: any) => ({
+                                                    ...p,
+                                                    due_date: selectedDate.toISOString().split('T')[0],
+                                                }));
+                                            }
+                                        }}
+                                    />
+                                </View>
+                            )}
+
+                            {/* Android: native dialog */}
+                            {showDatePicker && Platform.OS === 'android' && (
+                                <DateTimePicker
+                                    value={newAssignment.due_date ? new Date(newAssignment.due_date) : new Date()}
+                                    mode="date"
+                                    display="default"
+                                    minimumDate={new Date()}
+                                    themeVariant={isDark ? 'dark' : 'light'}
+                                    onChange={(event, selectedDate) => {
+                                        setShowDatePicker(false);
+                                        if (event.type !== 'dismissed' && selectedDate) {
+                                            setNewAssignment((p: any) => ({
+                                                ...p,
+                                                due_date: selectedDate.toISOString().split('T')[0],
+                                            }));
+                                        }
+                                    }}
+                                />
+                            )}
                         </View>
 
                         {/* Assign To */}
                         <View style={modalForm.group}>
-                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Assign To *</Text>
-                            <View style={modalForm.chipRow}>
-                                {(['class', 'students'] as const).map((opt) => (
-                                    <TouchableOpacity
-                                        key={opt}
-                                        style={[
-                                            modalForm.chip,
-                                            { borderColor: colors.border, backgroundColor: colors.cardBackground },
-                                            newAssignment.assignTo === opt && { backgroundColor: colors.primary, borderColor: colors.primary },
-                                        ]}
-                                        onPress={() => {
-                                            setNewAssignment((p: any) => ({ ...p, assignTo: opt, student_ids: [] }));
-                                            if (opt === 'students' && newAssignment.class_id && newAssignment.subject_id) {
-                                                setLoadingStudents(true);
-                                                fetchStudents(newAssignment.class_id, newAssignment.subject_id)
-                                                    .finally(() => setLoadingStudents(false));
-                                            }
-                                        }}
-                                    >
-                                        <Text allowFontScaling={false} style={[modalForm.chipText, { color: newAssignment.assignTo === opt ? '#fff' : colors.text }]}>
-                                            {opt === 'class' ? 'Whole Class' : 'Specific Students'}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-
-                        {/* Class Selection */}
-                        <View style={modalForm.group}>
-                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Select Class *</Text>
-                            {classes.length === 0 ? (
-                                <Text allowFontScaling={false} style={[modalForm.hint, { color: colors.textSecondary }]}>No classes available</Text>
-                            ) : (
-                                <View style={modalForm.chipRow}>
-                                    {classes.map((cls) => (
+                            <TouchableOpacity
+                                style={[s.accordionHeader, { borderColor: colors.border }]}
+                                onPress={() => toggle('assignTo')}
+                            >
+                                <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Assign To *</Text>
+                                <View style={s.accordionRight}>
+                                    <Text allowFontScaling={false} style={[s.accordionValue, { color: colors.text }]}>{assignToLabel}</Text>
+                                    <ChevronRight size={16} color={colors.textSecondary} style={chevronStyle('assignTo')} />
+                                </View>
+                            </TouchableOpacity>
+                            {openDropdown === 'assignTo' && (
+                                <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                                    {(['class', 'students'] as const).map((opt) => (
                                         <TouchableOpacity
-                                            key={cls.id}
-                                            style={[
-                                                modalForm.chip,
-                                                { borderColor: colors.border, backgroundColor: colors.cardBackground },
-                                                newAssignment.class_id === cls.id && { backgroundColor: colors.primary, borderColor: colors.primary },
-                                            ]}
-                                            onPress={() => handleClassSelect(cls.id)}
+                                            key={opt}
+                                            style={[s.option, { borderBottomColor: colors.border }]}
+                                            onPress={() => {
+                                                setNewAssignment((p: any) => ({ ...p, assignTo: opt, student_ids: [] }));
+                                                setOpenDropdown(null);
+                                                if (opt === 'students' && newAssignment.class_id && newAssignment.subject_id) {
+                                                    setLoadingStudents(true);
+                                                    fetchStudents(newAssignment.class_id, newAssignment.subject_id)
+                                                        .finally(() => setLoadingStudents(false));
+                                                }
+                                            }}
                                         >
-                                            <Text allowFontScaling={false} style={[modalForm.chipText, { color: newAssignment.class_id === cls.id ? '#fff' : colors.text }]}>
-                                                {cls.name}
+                                            <Text allowFontScaling={false} style={[s.optionText, { color: colors.text }]}>
+                                                {opt === 'class' ? 'Whole Class' : 'Specific Students'}
                                             </Text>
+                                            {newAssignment.assignTo === opt && <Check size={16} color={colors.primary} />}
                                         </TouchableOpacity>
                                     ))}
                                 </View>
                             )}
                         </View>
 
-                        {/* Subject — only after class selected */}
+                        {/* Select Class */}
+                        <View style={modalForm.group}>
+                            {classes.length === 0 ? (
+                                <Text allowFontScaling={false} style={[modalForm.hint, { color: colors.textSecondary }]}>No classes available</Text>
+                            ) : (
+                                <>
+                                    <TouchableOpacity
+                                        style={[s.accordionHeader, { borderColor: colors.border }]}
+                                        onPress={() => toggle('class')}
+                                    >
+                                        <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Class *</Text>
+                                        <View style={s.accordionRight}>
+                                            <Text allowFontScaling={false} style={[s.accordionValue, { color: newAssignment.class_id ? colors.text : colors.textSecondary }]}>
+                                                {selectedClassName}
+                                            </Text>
+                                            <ChevronRight size={16} color={colors.textSecondary} style={chevronStyle('class')} />
+                                        </View>
+                                    </TouchableOpacity>
+                                    {openDropdown === 'class' && (
+                                        <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                                            <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={s.dropdownScroll}>
+                                                {classes.map((cls) => (
+                                                    <TouchableOpacity
+                                                        key={cls.id}
+                                                        style={[s.option, { borderBottomColor: colors.border }]}
+                                                        onPress={() => handleClassSelect(cls.id)}
+                                                    >
+                                                        <Text allowFontScaling={false} style={[s.optionText, { color: colors.text }]}>{cls.name}</Text>
+                                                        {newAssignment.class_id === cls.id && <Check size={16} color={colors.primary} />}
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </ScrollView>
+                                        </View>
+                                    )}
+                                </>
+                            )}
+                        </View>
+
+                        {/* Select Subject */}
                         {newAssignment.class_id ? (
                             <View style={modalForm.group}>
-                                <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Select Subject *</Text>
                                 {subjects.length === 0 ? (
                                     <Text allowFontScaling={false} style={[modalForm.hint, { color: colors.textSecondary }]}>No subjects for this class</Text>
                                 ) : (
-                                    <View style={modalForm.chipRow}>
-                                        {subjects.map((sub) => (
-                                            <TouchableOpacity
-                                                key={sub.id}
-                                                style={[
-                                                    modalForm.chip,
-                                                    { borderColor: colors.border, backgroundColor: colors.cardBackground },
-                                                    newAssignment.subject_id === sub.id && { backgroundColor: colors.primary, borderColor: colors.primary },
-                                                ]}
-                                                onPress={() => handleSubjectSelect(sub.id)}
-                                            >
-                                                <Text allowFontScaling={false} style={[modalForm.chipText, { color: newAssignment.subject_id === sub.id ? '#fff' : colors.text }]}>
-                                                    {sub.name}
+                                    <>
+                                        <TouchableOpacity
+                                            style={[s.accordionHeader, { borderColor: colors.border }]}
+                                            onPress={() => toggle('subject')}
+                                        >
+                                            <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Subject</Text>
+                                            <View style={s.accordionRight}>
+                                                <Text allowFontScaling={false} style={[s.accordionValue, { color: newAssignment.subject_id ? colors.text : colors.textSecondary }]}>
+                                                    {selectedSubjectName}
                                                 </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
+                                                <ChevronRight size={16} color={colors.textSecondary} style={chevronStyle('subject')} />
+                                            </View>
+                                        </TouchableOpacity>
+                                        {openDropdown === 'subject' && (
+                                            <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                                                <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={s.dropdownScroll}>
+                                                    {subjects.map((sub) => (
+                                                        <TouchableOpacity
+                                                            key={sub.id}
+                                                            style={[s.option, { borderBottomColor: colors.border }]}
+                                                            onPress={() => handleSubjectSelect(sub.id)}
+                                                        >
+                                                            <Text allowFontScaling={false} style={[s.optionText, { color: colors.text }]}>{sub.name}</Text>
+                                                            {newAssignment.subject_id === sub.id && <Check size={16} color={colors.primary} />}
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </ScrollView>
+                                            </View>
+                                        )}
+                                    </>
                                 )}
                             </View>
                         ) : null}
 
-                        {/* Students — only for 'students' mode */}
+                        {/* Select Students */}
                         {newAssignment.assignTo === 'students' && newAssignment.class_id ? (
                             <View style={modalForm.group}>
-                                <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Select Students *</Text>
                                 {loadingStudents ? (
                                     <View style={{ gap: 8 }}>
                                         {[...Array(4)].map((_, i) => (
@@ -258,32 +374,29 @@ export const CreateAssignmentModal = ({
                                 ) : (
                                     <>
                                         <TouchableOpacity
-                                            style={[modalForm.pickerRow, { backgroundColor: colors.cardBackground, borderColor: studentDropdownOpen ? colors.primary : colors.border }]}
-                                            onPress={() => setStudentDropdownOpen(o => !o)}
+                                            style={[s.accordionHeader, { borderColor: colors.border }]}
+                                            onPress={() => toggle('students')}
                                         >
-                                            <Text allowFontScaling={false} style={[modalForm.pickerValue, { color: newAssignment.student_ids?.length > 0 ? colors.text : colors.textSecondary }]}>
-                                                {newAssignment.student_ids?.length > 0
-                                                    ? `${newAssignment.student_ids.length} student${newAssignment.student_ids.length > 1 ? 's' : ''} selected`
-                                                    : 'Tap to select students'}
-                                            </Text>
-                                            {studentDropdownOpen
-                                                ? <ChevronUp size={18} color={colors.textSecondary} />
-                                                : <ChevronDown size={18} color={colors.textSecondary} />}
+                                            <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Students *</Text>
+                                            <View style={s.accordionRight}>
+                                                <Text allowFontScaling={false} style={[s.accordionValue, { color: (newAssignment.student_ids?.length ?? 0) > 0 ? colors.text : colors.textSecondary }]}>
+                                                    {studentsLabel}
+                                                </Text>
+                                                <ChevronRight size={16} color={colors.textSecondary} style={chevronStyle('students')} />
+                                            </View>
                                         </TouchableOpacity>
-                                        {studentDropdownOpen && (
-                                            <View style={[modalForm.dropdown, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                                                <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={modalForm.dropdownScroll}>
+                                        {openDropdown === 'students' && (
+                                            <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                                                <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={s.dropdownScroll}>
                                                     {students.map((st) => {
                                                         const selected = (newAssignment.student_ids || []).includes(st.id);
                                                         return (
                                                             <TouchableOpacity
                                                                 key={st.id}
-                                                                style={[modalForm.dropdownOption, { borderBottomColor: colors.border, backgroundColor: selected ? colors.primary + '18' : 'transparent' }]}
+                                                                style={[s.option, { borderBottomColor: colors.border }]}
                                                                 onPress={() => toggleStudent(st.id)}
                                                             >
-                                                                <Text allowFontScaling={false} style={[modalForm.dropdownOptionText, { color: colors.text }]}>
-                                                                    {st.full_name}
-                                                                </Text>
+                                                                <Text allowFontScaling={false} style={[s.optionText, { color: colors.text }]}>{st.full_name}</Text>
                                                                 {selected && <Check size={16} color={colors.primary} />}
                                                             </TouchableOpacity>
                                                         );
@@ -296,17 +409,26 @@ export const CreateAssignmentModal = ({
                             </View>
                         ) : null}
 
-                        {/* Attachment */}
+                        {/* Attachment — optional */}
                         <View style={modalForm.group}>
-                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Attachment (Optional)</Text>
                             <TouchableOpacity
-                                style={[modalForm.filePicker, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                                style={[s.accordionHeader, { borderColor: colors.border }]}
                                 onPress={pickDocument}
                                 disabled={uploading}
                             >
-                                <Upload size={20} color={colors.primary} />
-                                <Text allowFontScaling={false} style={[modalForm.filePickerText, { color: newAssignment.file ? colors.text : colors.textSecondary }]}>
-                                    {newAssignment.file ? newAssignment.file.name : 'Select file (PDF, Image)'}
+                                <View style={s.attachLeft}>
+                                    <Upload size={16} color={colors.primary} />
+                                    <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary, marginLeft: 8 }]}>
+                                        Attachment (Optional)
+                                    </Text>
+                                </View>
+                                <Text
+                                    allowFontScaling={false}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                    style={[s.accordionValue, { color: newAssignment.file ? colors.text : colors.textSecondary, maxWidth: '45%' }]}
+                                >
+                                    {newAssignment.file ? newAssignment.file.name : 'No file'}
                                 </Text>
                             </TouchableOpacity>
                             {newAssignment.file && (
@@ -318,9 +440,13 @@ export const CreateAssignmentModal = ({
 
                         {/* Submit */}
                         <TouchableOpacity
-                            style={[modalForm.submitBtn, { backgroundColor: colors.primary }, (isSubmitting || uploading) && { opacity: 0.6 }]}
+                            style={[
+                                modalForm.submitBtn,
+                                { backgroundColor: colors.primary },
+                                (!isFormValid || isSubmitting || uploading) && { opacity: 0.4 },
+                            ]}
                             onPress={handleSubmit}
-                            disabled={isSubmitting || uploading}
+                            disabled={!isFormValid || isSubmitting || uploading}
                         >
                             <Text allowFontScaling={false} style={modalForm.submitText}>
                                 {isSubmitting || uploading ? 'Creating...' : 'Create Assignment'}
@@ -328,13 +454,66 @@ export const CreateAssignmentModal = ({
                         </TouchableOpacity>
 
                     </ScrollView>
+                        </View>
+                    </TouchableWithoutFeedback>
                 </View>
-            </View>
+            </TouchableWithoutFeedback>
         </Modal>
     );
 };
 
 const s = StyleSheet.create({
+    // Matches DiaryScreen filter accordion exactly
+    accordionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+    },
+    accordionLabel: {
+        fontSize: TextSizes.filterLabel,
+        fontFamily: 'Inter-Medium',
+        flex: 1,
+    },
+    accordionValue: {
+        fontSize: TextSizes.filterLabel,
+        fontFamily: 'Inter-SemiBold',
+    },
+    accordionRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    accordionBody: {
+        marginTop: 6,
+        borderRadius: 10,
+        borderWidth: 1,
+        overflow: 'hidden',
+    },
+    dropdownScroll: {
+        maxHeight: 200,
+    },
+    option: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    optionText: {
+        fontSize: TextSizes.medium,
+        fontFamily: 'Inter-Regular',
+        flex: 1,
+    },
+    attachLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        marginRight: 8,
+    },
     removeFile: {
         fontSize: TextSizes.filterLabel,
         fontFamily: 'Inter-Medium',

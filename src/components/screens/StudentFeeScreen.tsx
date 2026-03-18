@@ -51,7 +51,7 @@ interface StudentFeeInfo {
 }
 
 export default function StudentFeeScreen() {
-    const { profile, student } = useAuth();
+    const { profile } = useAuth();
     const { colors } = useTheme();
     const screenStyle = useScreenAnimation();
 
@@ -76,16 +76,17 @@ export default function StudentFeeScreen() {
         setLoading(true);
         try {
             // No student_id filter — RLS scopes to this student's records
-            const { data: fsData, error: fsError } = await supabase
+            const { data: fsData } = await supabase
                 .from('fee_structures')
                 .select('amount, class_id, classes(name)')
                 .eq('academic_year', CURRENT_YEAR)
                 .maybeSingle();
 
 
+            const fs = fsData as any;
             setStudentFeeInfo({
-                amount_due: fsData?.amount ?? null,
-                class_name: (fsData?.classes as any)?.name ?? null,
+                amount_due: fs?.amount ?? null,
+                class_name: fs?.classes?.name ?? null,
             });
         } catch (err) {
             console.warn('[FeeScreen] Error fetching fee structure:', err);
@@ -330,7 +331,7 @@ export default function StudentFeeScreen() {
             <Modal
                 visible={filterVisible}
                 transparent
-                animationType="slide"
+                animationType="fade"
                 onRequestClose={() => setFilterVisible(false)}
                 statusBarTranslucent
             >
@@ -673,7 +674,11 @@ const styles = StyleSheet.create({
     },
     // Modal
     modalOverlay: {
-        flex: 1,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         backgroundColor: 'rgba(0,0,0,0.45)',
         justifyContent: 'flex-end',
     },

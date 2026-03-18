@@ -1,6 +1,6 @@
 // components/diary/SwipeableAssignmentCard.tsx
 import React, { useRef, useEffect } from 'react';
-import { View, Animated, PanResponder, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import { View, Animated, PanResponder, TouchableOpacity, StyleSheet, Text, Platform } from 'react-native';
 import { NotebookPen, Calendar, FileText, Clock, Edit, Trash2, BookOpen } from 'lucide-react-native';
 import { TextSizes } from '@/src/styles/TextSizes';
 
@@ -169,7 +169,7 @@ export const SwipeableAssignmentCard = ({
                     {/* Header: icon + title + meta */}
                     <View style={cardStyles.header}>
                         <View style={[cardStyles.iconBox, { backgroundColor: colors.primary }]}>
-                            <NotebookPen size={20} color="#ffffff" />
+                            <NotebookPen size={Platform.OS === 'android' ? 17 : 20} color="#ffffff" />
                         </View>
                         <View style={cardStyles.info}>
                             <Text allowFontScaling={false} style={[cardStyles.title, { color: colors.text }]}>
@@ -254,7 +254,7 @@ export const SwipeableAssignmentCard = ({
 
 const cardStyles = StyleSheet.create({
     container: {
-        marginBottom: 12,
+        marginBottom: Platform.OS === 'android' ? 8 : 12,
         position: 'relative',
     },
     actionsBackground: {
@@ -283,21 +283,21 @@ const cardStyles = StyleSheet.create({
     },
     card: {
         borderRadius: 12,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
+        paddingVertical: Platform.OS === 'android' ? 10 : 12,
+        paddingHorizontal: Platform.OS === 'android' ? 12 : 16,
         borderWidth: 1,
     },
     header: {
         flexDirection: 'row',
-        marginBottom: 8,
+        marginBottom: Platform.OS === 'android' ? 6 : 8,
     },
     iconBox: {
-        width: 40,
-        height: 40,
+        width: Platform.OS === 'android' ? 34 : 40,
+        height: Platform.OS === 'android' ? 34 : 40,
         borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 12,
+        marginRight: Platform.OS === 'android' ? 10 : 12,
     },
     info: {
         flex: 1,
@@ -334,14 +334,14 @@ const cardStyles = StyleSheet.create({
     description: {
         fontSize: TextSizes.xlarge,
         fontFamily: 'Inter-Regular',
-        lineHeight: 18,
-        marginBottom: 10,
+        lineHeight: Platform.OS === 'android' ? 16 : 18,
+        marginBottom: Platform.OS === 'android' ? 8 : 10,
     },
     attachmentBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 8,
+        paddingVertical: Platform.OS === 'android' ? 6 : 8,
         borderRadius: 8,
         borderWidth: 1,
         gap: 6,

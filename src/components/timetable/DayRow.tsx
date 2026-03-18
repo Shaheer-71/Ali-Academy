@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Calendar } from 'lucide-react-native';
 import TimeSlot from './TimeSlot';
 import { DAYS_SHORT, TimetableEntryWithDetails, DayOfWeek, UserProfile, ThemeColors } from '@/src/types/timetable';
@@ -83,45 +83,45 @@ import { TextSizes } from '@/src/styles/TextSizes';
 const styles = StyleSheet.create({
     dayRow: {
         flexDirection: 'row',
-        marginBottom: 20,
-        minHeight: 120,
+        marginBottom: Platform.OS === 'android' ? 12 : 20,
+        minHeight: Platform.OS === 'android' ? 80 : 120,
     },
     dayHeader: {
-        width: 80,
+        width: Platform.OS === 'android' ? 60 : 80,
         borderRadius: 12,
-        padding: 12,
+        padding: Platform.OS === 'android' ? 8 : 12,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 16,
+        marginRight: Platform.OS === 'android' ? 10 : 16,
         borderWidth: 1,
     },
     dayName: {
-        fontSize: TextSizes.medium, // updated
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 4,
+        marginBottom: Platform.OS === 'android' ? 2 : 4,
         textAlign: 'center',
     },
     dayDate: {
-        fontSize: TextSizes.large, // updated
+        fontSize: TextSizes.large,
         fontFamily: 'Inter-SemiBold',
     },
     timeSlots: {
         flex: 1,
-        gap: 8,
+        gap: Platform.OS === 'android' ? 6 : 8,
     },
     emptyDay: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: 12,
-        padding: 20,
+        padding: Platform.OS === 'android' ? 14 : 20,
         borderWidth: 1,
         borderStyle: 'dashed',
     },
     emptyDayText: {
-        fontSize: TextSizes.medium, // updated
+        fontSize: TextSizes.medium,
         fontFamily: 'Inter-Regular',
-        marginTop: 8,
+        marginTop: Platform.OS === 'android' ? 4 : 8,
         textAlign: 'center',
     },
 });
