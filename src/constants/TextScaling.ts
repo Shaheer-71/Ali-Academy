@@ -1,7 +1,8 @@
 import { Text, TextInput } from 'react-native';
 
-if (Text.defaultProps == null) Text.defaultProps = {};
-if (TextInput.defaultProps == null) TextInput.defaultProps = {};
+// Disable font scaling globally so device text size settings don't affect the app
+(Text as any).defaultProps = (Text as any).defaultProps ?? {};
+(Text as any).defaultProps.allowFontScaling = false;
 
-Text.defaultProps.allowFontScaling = false;
-TextInput.defaultProps.allowFontScaling = false;
+(TextInput as any).defaultProps = (TextInput as any).defaultProps ?? {};
+(TextInput as any).defaultProps.allowFontScaling = false;
