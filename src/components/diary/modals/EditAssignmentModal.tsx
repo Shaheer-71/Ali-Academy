@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Modal, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Text } from 'react-native';
 import { X, Upload } from 'lucide-react-native';
-import styles from './styles';
+import styles from '../styles';
 
 export const EditAssignmentModal = ({
     visible,

@@ -37,7 +37,7 @@ import { supabase } from '@/src/lib/supabase';
 import TopSection from '../components/common/TopSections';
 import { useScreenAnimation } from '@/src/utils/animations';
 import { SwipeableStudentCard } from '@/src/components/students/SwipeableStudentCard';
-import StudentDetailModal from '../components/students/StudentDetailModal';
+import StudentDetailModal from '../components/students/modals/StudentDetailModal';
 import {
     handleStudentFetchError,
     handleStudentCreateError,

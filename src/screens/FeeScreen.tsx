@@ -22,7 +22,7 @@ import {
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import TopSections from '@/src/components/common/TopSections';
-import { FeeDetailsModal } from '../components/fee/FeeDetailsModal';
+import { FeeDetailsModal } from '../components/fee/modals/FeeDetailsModal';
 import { feeService, StudentWithFeeStatus, FeePayment } from '@/src/services/feeService';
 import { classService } from '@/src/services/feeService';
 import { notificationService } from '@/src/services/feeService';

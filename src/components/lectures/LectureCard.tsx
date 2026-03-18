@@ -17,7 +17,7 @@ import {
 } from '@/src/utils/errorHandler/lectureErrorHandler';
 import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
 import { ErrorModal } from '../common/ErrorModal';
-import { LectureDetailModal } from '@/src/components/lectures/LectureDetailModal';
+import { LectureDetailModal } from '@/src/components/lectures/modals/LectureDetailModal';
 
 const ACTION_WIDTH = 90;
 const SWIPE_THRESHOLD = -8;

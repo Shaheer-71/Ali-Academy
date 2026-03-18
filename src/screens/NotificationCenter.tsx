@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bell, CheckCheck, Filter, Search } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useNotifications } from '@/src/contexts/NotificationContext';
-import { NotificationCard } from '@/src/components/notifications/NotificationCard';
+import { NotificationCard } from '@/src/components/common/NotificationCard';
 import { Animated } from 'react-native';
 import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
 

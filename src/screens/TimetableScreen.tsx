@@ -13,7 +13,7 @@ import { useTheme } from '@/src/contexts/ThemeContext';
 import { useTimetable } from '@/src/hooks/useTimetable';
 import TopSection from '@/src/components/common/TopSections';
 import DayRow from '@/src/components/timetable/DayRow';
-import TimetableEntryModal from '@/src/components/timetable/TimetableEntryModal';
+import TimetableEntryModal from '@/src/components/timetable/modals/TimetableEntryModal';
 import ErrorState from '@/src/components/timetable/ErrorState';
 import { supabase } from '@/src/lib/supabase';
 import { sendPushNotification } from '@/src/lib/notifications';
