@@ -50,3 +50,5 @@ scripts/
 # Local signing credentials
 ali-academy.keystore
 credentials.json
+google-services.json
+GoogleService-Info.plist
