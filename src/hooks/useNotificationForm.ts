@@ -96,64 +96,50 @@ export const useNotificationForm = (profile: any) => {
 
             if (recipientError) throw recipientError;
 
-            let sentCount = 0;
-            let failedCount = 0;
+            // DB work done — tell user immediately
+            showSuccess('Success', `Notification sent to ${recipients.length} recipient(s)`);
+            resetForm();
 
-            // Batch: fetch ALL device tokens for ALL recipients in ONE query
+            // Fire push notifications in background
             const recipientIds = recipients.map((r) => r.id);
-            const { data: devices } = await supabase
-                .from('devices')
-                .select('token')
-                .in('user_id', recipientIds);
-
-            if (devices && devices.length > 0) {
-                const notifData = {
-                    type: formData.type,
-                    notificationId: notification.id,
-                    priority: formData.priority,
-                    target_type: formData.target_type,
-                    timestamp: new Date().toISOString(),
-                };
-
-                const messages = devices.map((device) => ({
-                    to: device.token,
-                    title: formData.title,
-                    body: formData.message,
-                    data: notifData,
-                    sound: 'default',
-                    badge: 1,
-                    channelId: 'default',
-                }));
-
+            const notifTitle = formData.title;
+            const notifBody = formData.message;
+            const notifData = {
+                type: formData.type,
+                notificationId: notification.id,
+                priority: formData.priority,
+                target_type: formData.target_type,
+                timestamp: new Date().toISOString(),
+            };
+            ;(async () => {
                 try {
-                    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+                    const { data: devices } = await supabase
+                        .from('devices')
+                        .select('token')
+                        .in('user_id', recipientIds);
+
+                    if (!devices || devices.length === 0) return;
+
+                    const messages = devices.map((device) => ({
+                        to: device.token,
+                        title: notifTitle,
+                        body: notifBody,
+                        data: notifData,
+                        sound: 'default',
+                        badge: 1,
+                        channelId: 'default',
+                    }));
+
+                    await fetch('https://exp.host/--/api/v2/push/send', {
                         method: 'POST',
-                        headers: {
-                            Accept: 'application/json',
-                            'Content-Type': 'application/json',
-                        },
+                        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
                         body: JSON.stringify(messages),
                     });
-                    const result = await response.json();
-                    const statuses = Array.isArray(result?.data) ? result.data : [result?.data];
-                    statuses.forEach((s: any) => {
-                        if (s?.status === 'error') failedCount++;
-                        else sentCount++;
-                    });
                 } catch (pushError) {
-                    console.warn('Batch push send failed:', pushError);
-                    failedCount = devices.length;
+                    console.warn('Background push send failed:', pushError);
                 }
-            } else {
-                sentCount = recipients.length;
-            }
+            })();
 
-            showSuccess(
-                'Success',
-                `Notification sent to ${sentCount} recipient(s)${failedCount > 0 ? ` (${failedCount} push notifications failed)` : ''}`
-            );
-
-            resetForm();
             return true;
         } catch (error: any) {
             console.warn('Error in sendNotification:', error);

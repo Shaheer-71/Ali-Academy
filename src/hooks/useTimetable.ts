@@ -33,6 +33,7 @@ export const useTimetable = (): UseTimetableReturn => {
     const [error, setError] = useState<string | null>(null);
     const [filters, setFiltersState] = useState<TimetableFilters>({});
     const subscriptionRef = useRef<any>(null);
+    const timetableTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Fetch timetable data with proper filtering
     const fetchTimetable = useCallback(async () => {
@@ -123,7 +124,8 @@ export const useTimetable = (): UseTimetableReturn => {
                 schema: 'public',
                 table: 'timetable'
             }, () => {
-                fetchTimetable();
+                if (timetableTimerRef.current) clearTimeout(timetableTimerRef.current);
+                timetableTimerRef.current = setTimeout(fetchTimetable, 800);
             })
             .subscribe();
     }, [fetchTimetable]);

@@ -356,66 +356,72 @@ class LectureService {
 
             await this.createAccessRecords(lecture.id, formData, uploaderId);
 
-            // Get students for notifications
-            const { data: enrollments } = await supabase
-                .from('student_subject_enrollments')
-                .select('student_id')
-                .eq('class_id', formData.class_id)
-                .eq('subject_id', formData.subject_id)
-                .eq('is_active', true);
+            // Fire notifications in background — return lecture immediately
+            const lectureId = lecture.id;
+            const lectureTitle = formData.title;
+            const classId = formData.class_id;
+            const subjectId = formData.subject_id;
+            ;(async () => {
+                try {
+                    const { data: enrollments } = await supabase
+                        .from('student_subject_enrollments')
+                        .select('student_id')
+                        .eq('class_id', classId)
+                        .eq('subject_id', subjectId)
+                        .eq('is_active', true);
 
-            if (enrollments && enrollments.length > 0) {
-                const studentIds = [...new Set(enrollments.map(e => e.student_id))];
+                    if (!enrollments || enrollments.length === 0) return;
 
-                const { data: notification } = await supabase
-                    .from('notifications')
-                    .insert([{
-                        type: 'lecture_added',
-                        title: `New Lecture – ${formData.title}`,
-                        message: `A new lecture has been uploaded. Check the lectures section to view and download the material.`,
-                        entity_type: 'lecture',
-                        entity_id: lecture.id,
-                        created_by: uploaderId,
-                        target_type: 'students',
-                        target_id: formData.class_id,
-                        priority: 'medium',
-                    }])
-                    .select('id')
-                    .single();
+                    const studentIds = [...new Set(enrollments.map(e => e.student_id))];
 
-                if (notification) {
-                    const recipientRows = studentIds.map(sid => ({
-                        notification_id: notification.id,
-                        user_id: sid,
-                        is_read: false,
-                        is_deleted: false,
-                    }));
+                    const { data: notification } = await supabase
+                        .from('notifications')
+                        .insert([{
+                            type: 'lecture_added',
+                            title: `New Lecture – ${lectureTitle}`,
+                            message: `A new lecture has been uploaded. Check the lectures section to view and download the material.`,
+                            entity_type: 'lecture',
+                            entity_id: lectureId,
+                            created_by: uploaderId,
+                            target_type: 'students',
+                            target_id: classId,
+                            priority: 'medium',
+                        }])
+                        .select('id')
+                        .single();
 
-                    await supabase
-                        .from('notification_recipients')
-                        .insert(recipientRows);
+                    if (!notification) return;
 
-                    // Send push notifications
-                    for (const studentId of studentIds) {
-                        try {
-                            await sendPushNotification({
+                    await supabase.from('notification_recipients').insert(
+                        studentIds.map(sid => ({
+                            notification_id: notification.id,
+                            user_id: sid,
+                            is_read: false,
+                            is_deleted: false,
+                        }))
+                    );
+
+                    // Push all students in parallel
+                    await Promise.all(
+                        studentIds.map(studentId =>
+                            sendPushNotification({
                                 userId: studentId,
-                                title: `New Lecture – ${formData.title}`,
+                                title: `New Lecture – ${lectureTitle}`,
                                 body: `A new lecture has been uploaded. Check the lectures section to view and download the material.`,
                                 data: {
                                     type: 'lecture_added',
                                     notificationId: notification.id,
-                                    lectureId: lecture.id,
-                                    classId: formData.class_id,
-                                    subjectId: formData.subject_id,
+                                    lectureId,
+                                    classId,
+                                    subjectId,
                                 },
-                            });
-                        } catch (pushError) {
-                            console.warn('Push notification error:', pushError);
-                        }
-                    }
+                            }).catch(e => console.warn('Push error:', e))
+                        )
+                    );
+                } catch (e) {
+                    console.warn('Lecture notification error (non-fatal):', e);
                 }
-            }
+            })();
 
             return lecture;
         } catch (error) {

@@ -615,13 +615,13 @@ export const useQuizzes = () => {
                 if (insertError) console.warn('❌ Error inserting quiz results:', insertError);
             }
 
-            // FORCE IMMEDIATE REFRESH
-            await fetchQuizzes();
-            if ((profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')) {
-                await fetchQuizResults();
-            } else if (profile?.role === 'student') {
-                await fetchStudentResults();
-            }
+            // Refresh in parallel
+            await Promise.all([
+                fetchQuizzes(),
+                (profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')
+                    ? fetchQuizResults()
+                    : fetchStudentResults(),
+            ]);
 
             return { success: true, data };
         } catch (error) {
@@ -673,12 +673,12 @@ export const useQuizzes = () => {
                 }
             }
 
-            if ((profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')) {
-                await fetchQuizResults();
-                await fetchQuizzes();
-            } else if (profile?.role === 'student') {
-                await fetchStudentResults();
-            }
+            await Promise.all([
+                fetchQuizzes(),
+                (profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin')
+                    ? fetchQuizResults()
+                    : fetchStudentResults(),
+            ]);
 
             return { success: true, data };
         } catch (error) {
@@ -731,9 +731,8 @@ export const useQuizzes = () => {
                 await supabase.from('quizzes').update({ status: 'completed' }).eq('id', quizId);
             }
 
-            // Single refetch after everything
-            await fetchQuizResults();
-            await fetchQuizzes();
+            // Refresh in parallel
+            await Promise.all([fetchQuizResults(), fetchQuizzes()]);
 
             return { success: failed === 0, failed, results: succeeded };
         } catch (error) {
@@ -763,8 +762,7 @@ export const useQuizzes = () => {
             await supabase.from('quiz_results').delete().eq('quiz_id', quizId);
             const { error } = await supabase.from('quizzes').delete().eq('id', quizId);
             if (error) throw error;
-            await fetchQuizzes();
-            await fetchQuizResults();
+            await Promise.all([fetchQuizzes(), fetchQuizResults()]);
             return { success: true };
         } catch (error) {
             console.warn('❌ Error deleting quiz:', error);
@@ -783,8 +781,7 @@ export const useQuizzes = () => {
 
             if (error) throw error;
 
-            await fetchQuizzes();
-            await fetchQuizResults();
+            await Promise.all([fetchQuizzes(), fetchQuizResults()]);
 
             return { success: true };
         } catch (error) {
