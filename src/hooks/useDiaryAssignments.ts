@@ -1,7 +1,7 @@
 // hooks/useDiaryAssignments.ts
 import { useState, useCallback } from 'react';
 import { supabase } from '@/src/lib/supabase';
-import { Alert } from 'react-native';
+import { useDialog } from '@/src/contexts/DialogContext';
 import {
     handleAssignmentFetchError,
     handleAssignmentDeleteError
@@ -29,6 +29,7 @@ export const useDiaryAssignments = (
     student: any,
     showError?: (error: any, handler?: (error: any) => any) => void
 ) => {
+    const { showError: dialogShowError, showSuccess, showConfirm } = useDialog();
     const [assignments, setAssignments] = useState<DiaryAssignment[]>([]);
     const [studentsMap, setStudentsMap] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
@@ -190,7 +191,7 @@ export const useDiaryAssignments = (
             if (showError) {
                 showError(err, handleAssignmentFetchError);
             } else {
-                Alert.alert('Error', 'Failed to load assignments. Please try again.');
+                dialogShowError('Error', 'Failed to load assignments. Please try again.');
             }
 
             setAssignments([]);
@@ -201,45 +202,38 @@ export const useDiaryAssignments = (
 
     const deleteAssignment = useCallback(async (assignment: DiaryAssignment) => {
         return new Promise((resolve) => {
-            Alert.alert(
-                'Delete Assignment',
-                'Are you sure you want to delete this assignment?',
-                [
-                    {
-                        text: 'Cancel',
-                        onPress: () => resolve(false),
-                        style: 'cancel',
-                    },
-                    {
-                        text: 'Delete',
-                        style: 'destructive',
-                        onPress: async () => {
-                            try {
-                                const { error } = await supabase
-                                    .from('diary_assignments')
-                                    .update({ is_deleted: true })
-                                    .eq('id', assignment.id);
+            showConfirm({
+                title: 'Delete Assignment',
+                message: 'Are you sure you want to delete this assignment?',
+                confirmText: 'Delete',
+                cancelText: 'Cancel',
+                destructive: true,
+                onCancel: () => resolve(false),
+                onConfirm: async () => {
+                    try {
+                        const { error } = await supabase
+                            .from('diary_assignments')
+                            .update({ is_deleted: true })
+                            .eq('id', assignment.id);
 
-                                if (error) throw error;
+                        if (error) throw error;
 
-                                Alert.alert('Success', 'Assignment deleted successfully');
-                                await fetchAssignments();
-                                resolve(true);
-                            } catch (error: any) {
-                                console.warn('❌ Delete assignment error:', error);
+                        showSuccess('Success', 'Assignment deleted successfully');
+                        await fetchAssignments();
+                        resolve(true);
+                    } catch (error: any) {
+                        console.warn('❌ Delete assignment error:', error);
 
-                                if (showError) {
-                                    showError(error, handleAssignmentDeleteError);
-                                } else {
-                                    Alert.alert('Error', error.message || 'Failed to delete assignment');
-                                }
+                        if (showError) {
+                            showError(error, handleAssignmentDeleteError);
+                        } else {
+                            dialogShowError('Error', error.message || 'Failed to delete assignment');
+                        }
 
-                                resolve(false);
-                            }
-                        },
-                    },
-                ],
-            );
+                        resolve(false);
+                    }
+                },
+            });
         });
     }, [fetchAssignments, showError]);
 

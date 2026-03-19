@@ -10,12 +10,12 @@ import {
   ScrollView,
   ActivityIndicator,
   Animated,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { useDialog } from '@/src/contexts/DialogContext';
 import { supabase } from '@/src/lib/supabase';
 import { TextSizes } from '@/src/styles/TextSizes';
 import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
@@ -25,6 +25,7 @@ import { useRouter } from 'expo-router';
 export default function ChangePasswordScreen() {
   const { colors } = useTheme();
   const { profile } = useAuth();
+  const { showError, showSuccess } = useDialog();
   const router = useRouter();
   const screenStyle = useScreenAnimation();
   const submitAnimation = useButtonAnimation();
@@ -40,23 +41,23 @@ export default function ChangePasswordScreen() {
 
   const handleSubmit = async () => {
     if (!currentPassword) {
-      Alert.alert('Missing Field', 'Please enter your current password');
+      showError('Missing Field', 'Please enter your current password');
       return;
     }
     if (!newPassword) {
-      Alert.alert('Missing Field', 'Please enter a new password');
+      showError('Missing Field', 'Please enter a new password');
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert('Weak Password', 'New password must be at least 6 characters');
+      showError('Weak Password', 'New password must be at least 6 characters');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Passwords Do Not Match', 'New password and confirm password must be the same');
+      showError('Passwords Do Not Match', 'New password and confirm password must be the same');
       return;
     }
     if (newPassword === currentPassword) {
-      Alert.alert('Same Password', 'New password must be different from your current password');
+      showError('Same Password', 'New password must be different from your current password');
       return;
     }
 
@@ -69,7 +70,7 @@ export default function ChangePasswordScreen() {
       });
 
       if (signInError) {
-        Alert.alert('Incorrect Password', 'Your current password is wrong. Please try again.');
+        showError('Incorrect Password', 'Your current password is wrong. Please try again.');
         return;
       }
 
@@ -77,11 +78,9 @@ export default function ChangePasswordScreen() {
       const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
       if (updateError) throw updateError;
 
-      Alert.alert('Success', 'Password changed successfully', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      showSuccess('Success', 'Password changed successfully', () => router.back());
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to change password');
+      showError('Error', error.message || 'Failed to change password');
     } finally {
       setIsLoading(false);
     }

@@ -3,15 +3,18 @@ import React, { useState } from 'react';
 import {
     Modal,
     ScrollView,
-    Alert,
     View,
     Text,
     StyleSheet,
     TouchableOpacity,
+    Dimensions,
 } from 'react-native';
+
+const { height: windowHeight } = Dimensions.get('window');
 import { X, Bell, CheckCircle2 } from 'lucide-react-native';
 import { feeService, FeePayment } from '@/src/services/feeService';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { useDialog } from '@/src/contexts/DialogContext';
 
 interface FeeDetailsModalProps {
     visible: boolean;
@@ -49,6 +52,7 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
 }) => {
     const [creatingPayment, setCreatingPayment] = useState(false);
     const { profile } = useAuth();
+    const { showError, showSuccess } = useDialog();
 
     // Find current month's payment record
     const currentMonthPayment = feeRecords.find(
@@ -57,7 +61,7 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
 
     const handleMarkAsPaid = async () => {
         if (!studentId || !classId) {
-            Alert.alert('Error', 'Missing required data');
+            showError('Error', 'Missing required data');
             return;
         }
 
@@ -76,14 +80,10 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
                 months
             );
 
-            Alert.alert(
-                'Success',
-                `Fee for ${months[currentMonth - 1]} marked as paid\nNotification sent to student`
-            );
-            onRefresh();
+            showSuccess('Success', `Fee for ${months[currentMonth - 1]} marked as paid\nNotification sent to student`, onRefresh);
         } catch (error: any) {
             console.warn('Error marking fee as paid:', error);
-            Alert.alert('Error', error.message || 'Failed to mark fee as paid');
+            showError('Error', error.message || 'Failed to mark fee as paid');
         } finally {
             setCreatingPayment(false);
         }
@@ -95,6 +95,7 @@ export const FeeDetailsModal: React.FC<FeeDetailsModalProps> = ({
             transparent
             animationType="fade"
             onRequestClose={onClose}
+            statusBarTranslucent={true}
         >
             <View style={styles.modalOverlay}>
                 <View
@@ -404,7 +405,8 @@ const styles = StyleSheet.create({
     modalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '90%',
+        height: windowHeight * 0.60,
+        overflow: 'hidden',
         paddingBottom: 20,
     },
     modalHeader: {

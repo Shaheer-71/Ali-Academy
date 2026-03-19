@@ -1,5 +1,5 @@
 // screens/NotificationScreen.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -9,7 +9,6 @@ import {
     TouchableWithoutFeedback,
     TextInput,
     Modal,
-    Alert,
     RefreshControl,
     ActivityIndicator,
     Platform,
@@ -19,6 +18,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useDialog } from '@/src/contexts/DialogContext';
 import {
     Plus,
     Send,
@@ -43,9 +43,10 @@ import { useNotificationForm } from '../hooks/useNotificationForm';
 import { useNotificationHistory } from '../hooks/useNotificationHistory';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Animated } from 'react-native';
-import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+import { useScreenAnimation } from '@/src/utils/animations';
 
 const { height } = Dimensions.get('window');
+const screenHeight = Dimensions.get('screen').height;
 
 
 interface NotificationFormData {
@@ -59,14 +60,52 @@ interface NotificationFormData {
     entity_id: string;
 }
 
+const NOTIFICATION_TEMPLATES = [
+    { label: 'Fee Due',          title: 'Fee Due',                  message: 'Your monthly fee is due. Please clear your dues at the earliest.',                                                              type: 'reminder'         as const },
+    { label: 'Payment Received', title: 'Payment Confirmed',        message: 'Your fee payment has been received successfully. Thank you.',                                                                   type: 'announcement'     as const },
+    { label: 'New Assignment',   title: 'New Assignment Posted',    message: 'A new assignment has been posted. Please check the diary section and submit before the deadline.',                             type: 'assignment_added' as const },
+    { label: 'Assignment Due',   title: 'Assignment Due Tomorrow',  message: 'Your assignment is due tomorrow. Make sure to submit on time.',                                                                 type: 'reminder'         as const },
+    { label: 'New Lecture',      title: 'New Lecture Available',    message: 'A new lecture has been uploaded. Check the lectures section to view and download the material.',                               type: 'announcement'     as const },
+    { label: 'Timetable Change', title: 'Timetable Updated',        message: 'The class timetable has been updated. Check the timetable section for the revised schedule.',                                  type: 'announcement'     as const },
+    { label: 'Exam Scheduled',   title: 'Exam Notice',              message: 'An exam has been scheduled. Please check the exams section for the date, time, and syllabus.',                                 type: 'event'            as const },
+    { label: 'Results Out',      title: 'Results Published',        message: 'Exam results are now available. Check the exams section to view your score.',                                                  type: 'announcement'     as const },
+    { label: 'Attendance',       title: 'Attendance Marked',        message: 'Your attendance has been recorded for today. Contact your teacher if there is a discrepancy.',                                 type: 'reminder'         as const },
+    { label: 'Academy Notice',   title: 'Academy Notice',           message: 'An important notice has been issued by the administration. Please review at your earliest convenience.',                       type: 'announcement'     as const },
+];
+
+const AUDIENCE_OPTIONS = [
+    { value: 'all' as const, label: 'All', icon: Globe },
+    { value: 'students' as const, label: 'Students', icon: Users },
+    { value: 'teachers' as const, label: 'Teachers', icon: User },
+];
+
+const DATE_RANGE_OPTIONS = [
+    { value: 'today' as const, label: 'Today' },
+    { value: 'week' as const, label: 'Last 7 Days' },
+    { value: 'month' as const, label: 'Last 30 Days' },
+    { value: 'custom' as const, label: 'Custom' },
+];
+
 export default function NotificationScreen() {
     const { profile } = useAuth();
     const { colors } = useTheme();
+    const { showError } = useDialog();
     const [modalVisible, setModalVisible] = useState(false);
     const [allProfiles, setAllProfiles] = useState<any[]>([]);
     const [refreshing, setRefreshing] = useState(false);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+    const [filterVisible, setFilterVisible] = useState(false);
+    const [selectedNotification, setSelectedNotification] = useState<any>(null);
+    const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
+    const [priorityDropdownOpen, setPriorityDropdownOpen] = useState(false);
+    const [individualDropdownOpen, setIndividualDropdownOpen] = useState(false);
+    const [audience, setAudience] = useState<'all' | 'students' | 'teachers'>('all');
+    const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'custom'>('month');
+    const [startDate, setStartDate] = useState<Date>(() => { const d = new Date(); d.setMonth(d.getMonth() - 1); return d; });
+    const [endDate, setEndDate] = useState<Date>(new Date());
+    const [showStartPicker, setShowStartPicker] = useState(false);
+    const [showEndPicker, setShowEndPicker] = useState(false);
     const screenStyle = useScreenAnimation();
-    const ButtonAnimation = useButtonAnimation();
 
     const {
         formData,
@@ -84,6 +123,18 @@ export default function NotificationScreen() {
 
     useEffect(() => {
         fetchNotifications();
+    }, []);
+
+    useEffect(() => {
+        const show = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            e => setKeyboardHeight(e.endCoordinates.height)
+        );
+        const hide = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            () => setKeyboardHeight(0)
+        );
+        return () => { show.remove(); hide.remove(); };
     }, []);
 
     // Fetch all profiles for individual selection
@@ -119,12 +170,12 @@ export default function NotificationScreen() {
 
     const handleSendNotification = async () => {
         if (!formData.title.trim() || !formData.message.trim()) {
-            Alert.alert('Error', 'Please fill in title and message');
+            showError('Error', 'Please fill in title and message');
             return;
         }
 
         if (formData.target_type === 'individual' && !formData.target_id) {
-            Alert.alert('Error', 'Please select a recipient');
+            showError('Error', 'Please select a recipient');
             return;
         }
 
@@ -156,45 +207,6 @@ export default function NotificationScreen() {
         );
     }
 
-    const [filterVisible, setFilterVisible] = useState(false);
-    const [selectedNotification, setSelectedNotification] = useState<any>(null);
-    const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
-    const [priorityDropdownOpen, setPriorityDropdownOpen] = useState(false);
-    const [individualDropdownOpen, setIndividualDropdownOpen] = useState(false);
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-    useEffect(() => {
-        const show = Keyboard.addListener(
-            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-            e => setKeyboardHeight(e.endCoordinates.height)
-        );
-        const hide = Keyboard.addListener(
-            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-            () => setKeyboardHeight(0)
-        );
-        return () => { show.remove(); hide.remove(); };
-    }, []);
-
-    // Filter state
-    const [audience, setAudience] = useState<'all' | 'students' | 'teachers'>('all');
-    const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'custom'>('month');
-    const [startDate, setStartDate] = useState<Date>(() => { const d = new Date(); d.setMonth(d.getMonth() - 1); return d; });
-    const [endDate, setEndDate] = useState<Date>(new Date());
-    const [showStartPicker, setShowStartPicker] = useState(false);
-    const [showEndPicker, setShowEndPicker] = useState(false);
-
-    const audienceOptions = [
-        { value: 'all' as const, label: 'All', icon: Globe },
-        { value: 'students' as const, label: 'Students', icon: Users },
-        { value: 'teachers' as const, label: 'Teachers', icon: User },
-    ];
-
-    const dateRangeOptions = [
-        { value: 'today' as const, label: 'Today' },
-        { value: 'week' as const, label: 'Last 7 Days' },
-        { value: 'month' as const, label: 'Last 30 Days' },
-        { value: 'custom' as const, label: 'Custom' },
-    ];
 
     const handleDateRangeChange = (range: typeof dateRange) => {
         const now = new Date();
@@ -214,7 +226,7 @@ export default function NotificationScreen() {
 
     const fmtDate = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
-    const filteredNotifications = notifications.filter(n => {
+    const filteredNotifications = useMemo(() => notifications.filter(n => {
         if (audience === 'students' && n.target_type !== 'students' && n.target_type !== 'individual') return false;
         if (audience === 'teachers' && n.target_type !== 'teachers') return false;
         if (n.created_at) {
@@ -224,7 +236,7 @@ export default function NotificationScreen() {
             if (created < start || created > end) return false;
         }
         return true;
-    });
+    }), [notifications, audience, startDate, endDate]);
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
@@ -304,12 +316,12 @@ export default function NotificationScreen() {
                 <Modal
                     visible={filterVisible}
                     transparent
+                    statusBarTranslucent
                     animationType="fade"
                     onRequestClose={() => setFilterVisible(false)}
                 >
-                    <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
-                        <View style={styles.overlay} />
-                    </TouchableWithoutFeedback>
+                    <View style={styles.overlay}>
+                        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setFilterVisible(false)} />
 
                     <View style={[styles.sheet, { backgroundColor: colors.cardBackground }]}>
                         <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
@@ -338,7 +350,7 @@ export default function NotificationScreen() {
                             {/* Date Range */}
                             <Text allowFontScaling={false} style={[styles.fieldLabel, { color: colors.textSecondary }]}>Date Range</Text>
                             <View style={styles.chipRow}>
-                                {dateRangeOptions.map(opt => (
+                                {DATE_RANGE_OPTIONS.map(opt => (
                                     <TouchableOpacity
                                         key={opt.value}
                                         style={[styles.chip, { borderColor: colors.border },
@@ -372,7 +384,7 @@ export default function NotificationScreen() {
                             {/* Audience */}
                             <Text allowFontScaling={false} style={[styles.fieldLabel, { color: colors.textSecondary }]}>Audience</Text>
                             <View style={styles.chipRow}>
-                                {audienceOptions.map(opt => (
+                                {AUDIENCE_OPTIONS.map(opt => (
                                     <TouchableOpacity
                                         key={opt.value}
                                         style={[styles.chip, { borderColor: colors.border },
@@ -395,6 +407,7 @@ export default function NotificationScreen() {
                         >
                             <Text allowFontScaling={false} style={styles.applyBtnText}>Apply Filter</Text>
                         </TouchableOpacity>
+                    </View>
                     </View>
 
                     {/* iOS date pickers as nested modals */}
@@ -449,12 +462,14 @@ export default function NotificationScreen() {
                     visible={modalVisible}
                     transparent
                     animationType="fade"
-                    onRequestClose={() => setModalVisible(false)}
                     statusBarTranslucent
-                    presentationStyle="overFullScreen"
+                    onRequestClose={() => setModalVisible(false)}
                 >
-                    <View style={modalShell.overlay}>
-                        <View style={[modalShell.sheet, { backgroundColor: colors.background }]}>
+                    <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+                            <View style={{ flex: 1 }} />
+                        </TouchableWithoutFeedback>
+                        <View style={[modalShell.sheet, { backgroundColor: colors.background, marginBottom: keyboardHeight, height: Math.min(height * 0.75, height - keyboardHeight) }]}>
 
                             {/* Header */}
                             <View style={[modalShell.header, { borderBottomColor: colors.border }]}>
@@ -469,8 +484,25 @@ export default function NotificationScreen() {
                             <ScrollView
                                 style={modalShell.scroll}
                                 keyboardShouldPersistTaps="handled"
-                                contentContainerStyle={[modalShell.scrollContent, { paddingBottom: keyboardHeight + 24 }]}
+                                automaticallyAdjustKeyboardInsets
+                                contentContainerStyle={modalShell.scrollContent}
                             >
+                                {/* Quick Templates */}
+                                <View style={modalForm.group}>
+                                    <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Quick Templates</Text>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -24 }} contentContainerStyle={{ paddingHorizontal: 24, gap: 8, flexDirection: 'row' }}>
+                                        {NOTIFICATION_TEMPLATES.map((t, i) => (
+                                            <TouchableOpacity
+                                                key={i}
+                                                style={[styles.templateChip, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                                                onPress={() => setFormData({ ...formData, title: t.title, message: t.message, type: t.type })}
+                                            >
+                                                <Text allowFontScaling={false} style={[styles.templateChipText, { color: colors.text }]}>{t.label}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+
                                 {/* Title */}
                                 <View style={modalForm.group}>
                                     <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Title *</Text>
@@ -842,9 +874,10 @@ const NotificationDetailModal = ({ notification, colors, onClose }: any) => {
 
     return (
         <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-            <TouchableWithoutFeedback onPress={onClose}>
-                <View style={detailStyles.overlay} />
-            </TouchableWithoutFeedback>
+            <View style={detailStyles.overlay}>
+                <TouchableWithoutFeedback onPress={onClose}>
+                    <View style={{ flex: 1 }} />
+                </TouchableWithoutFeedback>
 
             <View style={[detailStyles.sheet, { backgroundColor: colors.cardBackground }]}>
                 <View style={[detailStyles.handle, { backgroundColor: colors.border }]} />
@@ -916,6 +949,7 @@ const NotificationDetailModal = ({ notification, colors, onClose }: any) => {
                     <Text allowFontScaling={false} style={detailStyles.closeFullBtnText}>Close</Text>
                 </TouchableOpacity>
             </View>
+            </View>
         </Modal>
     );
 };
@@ -923,13 +957,14 @@ const NotificationDetailModal = ({ notification, colors, onClose }: any) => {
 import { TextSizes } from '@/src/styles/TextSizes';
 
 const detailStyles = StyleSheet.create({
-    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
     sheet: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         paddingTop: 12,
         paddingBottom: 32,
-        maxHeight: height * 0.75,
+        height: height * 0.60,
+        overflow: 'hidden',
     },
     handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
     headerRow: {
@@ -1014,13 +1049,14 @@ const styles = StyleSheet.create({
         marginTop: 12,
     },
     // ── Filter sheet (attendance-style) ──────────────────────────────────────
-    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
     sheet: {
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         paddingTop: 12,
-        paddingBottom: 32,
-        maxHeight: height * 0.78,
+        paddingBottom: 24,
+        height: height * 0.45,
+        overflow: 'hidden',
     },
     sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
     actionRow: { marginHorizontal: 16, marginBottom: 12 },
@@ -1037,7 +1073,7 @@ const styles = StyleSheet.create({
     sheetHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 12 },
     sheetTitle: { flex: 1, fontSize: TextSizes.sectionTitle, fontFamily: 'Inter-SemiBold' },
     resetText: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium' },
-    sheetScroll: { flexGrow: 0, paddingHorizontal: 16 },
+    sheetScroll: { flex: 1, paddingHorizontal: 16 },
     fieldLabel: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium', marginBottom: 8 },
     chipRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
     chip: { flex: 1, paddingVertical: 8, borderRadius: 8, borderWidth: 1, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 5 },
@@ -1151,6 +1187,8 @@ const styles = StyleSheet.create({
     },
     applyBtn: { marginHorizontal: 16, marginTop: 8, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
     applyBtnText: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold', color: '#fff' },
+    templateChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1 },
+    templateChipText: { fontSize: TextSizes.small, fontFamily: 'Inter-Medium' },
     // skeleton
     skeletonCard: { borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1 },
     skeletonRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },

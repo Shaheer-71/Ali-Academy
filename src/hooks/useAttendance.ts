@@ -419,13 +419,9 @@ export const useAttendance = (classId?: string) => {
       await fetchTodaysAttendance(date);
       await fetchAttendanceData();
 
-      // Send notifications (non-blocking)
-      const affectedStudents = attendanceData.filter(
-        r => r.status === 'late' || r.status === 'absent' || r.status === 'present'
-      );
-
-      // Send notifications without blocking the success response
-      sendNotificationsAsync(affectedStudents, date);
+      // Send notifications (non-blocking) — snapshot students before any re-renders
+      const studentSnapshot = [...students];
+      sendNotificationsAsync(attendanceData, date, studentSnapshot);
 
       return { success: true, message: 'Attendance marked successfully' };
     } catch (err: any) {
@@ -438,38 +434,42 @@ export const useAttendance = (classId?: string) => {
     }
   };
 
-  const sendNotificationsAsync = async (affectedStudents, date) => {
+  const sendNotificationsAsync = async (affectedStudents: any[], date: string, studentList: Student[]) => {
     try {
       for (const record of affectedStudents) {
-        if (record.status === 'present') continue; // skip present students
+        const studentName = studentList.find(s => s.id === record.student_id)?.full_name ?? 'Student';
 
-        let title, message, priority;
+        let title: string;
+        let message: string;
+        let priority: string;
 
-        if (record.status === 'late') {
-          title = 'Late Attendance Alert';
-          message = `You were marked late on ${date}. Please be punctual next time.`;
+        if (record.status === 'present') {
+          title = 'Attendance Marked';
+          message = `${studentName}, your attendance has been marked as Present on ${date}.`;
+          priority = 'low';
+        } else if (record.status === 'late') {
+          title = 'Late Attendance';
+          message = `${studentName}, you were marked Late on ${date}. Please be punctual.`;
           priority = 'medium';
-        } else if (record.status === 'absent') {
-          title = 'Absence Alert';
-          message = `You were marked absent on ${date}.`;
+        } else {
+          title = 'Absent';
+          message = `${studentName}, you were marked Absent on ${date}.`;
           priority = 'high';
         }
 
-        const notificationPayload = {
-          type: 'attendance_alert',
-          title,
-          message,
-          entity_type: 'attendance',
-          entity_id: record.class_id,
-          created_by: profile.id,
-          target_type: 'individual',
-          target_id: record.student_id,
-          priority,
-        };
-
         const { data: notification } = await supabase
           .from('notifications')
-          .insert([notificationPayload])
+          .insert([{
+            type: 'attendance_alert',
+            title,
+            message,
+            entity_type: 'attendance',
+            entity_id: record.class_id,
+            created_by: profile!.id,
+            target_type: 'individual',
+            target_id: record.student_id,
+            priority,
+          }])
           .select('id')
           .single();
 
@@ -494,61 +494,6 @@ export const useAttendance = (classId?: string) => {
     }
   };
 
-  // const sendNotificationsAsync = async (affectedStudents: any[], date: string) => {
-  //   try {
-  //     for (const record of affectedStudents) {
-  //       const notificationPayload = {
-  //         type: 'attendance_alert',
-  //         title: record.status === 'late' ? 'Late Attendance Alert' : 'Absence Alert',
-  //         message:
-  //           record.status === 'late'
-  //             ? `You were marked late on ${date}. Please be punctual next time.`
-  //             : `You were marked absent on ${date}.`,
-  //         entity_type: 'attendance',
-  //         entity_id: record.class_id,
-  //         created_by: profile!.id,
-  //         target_type: 'individual',
-  //         target_id: record.student_id,
-  //         priority: record.status === 'absent' ? 'high' : 'medium',
-  //       };
-
-  //       const { data: notification, error: notifError } = await supabase
-  //         .from('notifications')
-  //         .insert([notificationPayload])
-  //         .select('id')
-  //         .single();
-
-  //       if (!notifError && notification) {
-  //         await supabase
-  //           .from('notification_recipients')
-  //           .insert([{
-  //             notification_id: notification.id,
-  //             user_id: record.student_id,
-  //             is_read: false,
-  //             is_deleted: false,
-  //           }]);
-
-  //         await sendPushNotification({
-  //           userId: record.student_id,
-  //           title: notificationPayload.title,
-  //           body: notificationPayload.message,
-  //           data: {
-  //             type: 'attendance_alert',
-  //             status: record.status,
-  //             date,
-  //             classId: record.class_id,
-  //             subjectId: record.subject_id,
-  //             studentId: record.student_id,
-  //             notificationId: notification.id,
-  //           },
-  //         });
-  //       }
-  //     }
-  //   } catch (notifError) {
-  //     console.warn('Error sending notifications:', notifError);
-  //     // Don't set error state here as attendance was already posted successfully
-  //   }
-  // };
 
   const updateAttendance = async (
     attendanceId: string,
@@ -556,6 +501,13 @@ export const useAttendance = (classId?: string) => {
   ) => {
     try {
       setError(null);
+
+      // Fetch existing record to get student info before updating
+      const { data: existing } = await supabase
+        .from('attendance')
+        .select('student_id, class_id, date, students(full_name)')
+        .eq('id', attendanceId)
+        .single();
 
       const cleanUpdates = {
         status: updates.status,
@@ -574,6 +526,40 @@ export const useAttendance = (classId?: string) => {
         onRefresh(),
         fetchTodaysAttendance(new Date().toISOString().split('T')[0])
       ]);
+
+      // Notify the affected student (non-blocking)
+      if (existing && updates.status) {
+        const studentName = (existing.students as any)?.full_name ?? 'Student';
+        const status = updates.status;
+        const title = 'Attendance Updated';
+        const message = `${studentName}, your attendance on ${existing.date} has been updated to ${status.charAt(0).toUpperCase() + status.slice(1)}.`;
+
+        supabase.from('notifications').insert([{
+          type: 'attendance_alert',
+          title,
+          message,
+          entity_type: 'attendance',
+          entity_id: existing.class_id,
+          created_by: profile!.id,
+          target_type: 'individual',
+          target_id: existing.student_id,
+          priority: status === 'absent' ? 'high' : status === 'late' ? 'medium' : 'low',
+        }]).select('id').single().then(({ data: notif }) => {
+          if (!notif) return;
+          supabase.from('notification_recipients').insert([{
+            notification_id: notif.id,
+            user_id: existing.student_id,
+            is_read: false,
+            is_deleted: false,
+          }]);
+          sendPushNotification({
+            userId: existing.student_id,
+            title,
+            body: message,
+            data: { status, date: existing.date, notificationId: notif.id },
+          });
+        }).catch(e => console.warn('Error sending update notification:', e));
+      }
 
       return { success: true };
     } catch (err) {

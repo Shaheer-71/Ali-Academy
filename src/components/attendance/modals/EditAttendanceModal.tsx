@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
-import { X, CheckCircle, AlertCircle, XCircle } from 'lucide-react-native';
+import {
+    Modal, View, Text, TextInput, TouchableOpacity,
+    TouchableWithoutFeedback, StyleSheet, Dimensions,
+} from 'react-native';
+import { X, Check, AlertCircle, XCircle } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useDialog } from '@/src/contexts/DialogContext';
 import { AttendanceRecord } from '@/src/types/attendance';
+import { TextSizes } from '@/src/styles/TextSizes';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface EditAttendanceModalProps {
     visible: boolean;
@@ -11,51 +18,47 @@ interface EditAttendanceModalProps {
     onSave: (recordId: string, updates: any) => Promise<{ success: boolean }>;
 }
 
+const STATUS_OPTIONS = [
+    { value: 'present', label: 'Present', Icon: Check,         color: '#10B981' },
+    { value: 'late',    label: 'Late',    Icon: AlertCircle,   color: '#F59E0B' },
+    { value: 'absent',  label: 'Absent',  Icon: XCircle,       color: '#EF4444' },
+] as const;
+
+const fmtDate = (s: string) => {
+    try {
+        const [y, m, d] = s.split('-').map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+            weekday: 'short', month: 'short', day: 'numeric',
+        });
+    } catch { return s; }
+};
+
 export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
-    visible,
-    record,
-    onClose,
-    onSave,
+    visible, record, onClose, onSave,
 }) => {
     const { colors } = useTheme();
+    const { showSuccess, showError } = useDialog();
     const [editedRecord, setEditedRecord] = useState<AttendanceRecord | null>(null);
 
     useEffect(() => {
-        if (record) {
-            setEditedRecord({ ...record });
-        }
+        if (record) setEditedRecord({ ...record });
     }, [record]);
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
-    };
 
     const handleSave = async () => {
         if (!editedRecord) return;
-
         try {
-            // Only send fields that exist in your schema
-            const updates = {
-                status: editedRecord.status,
+            const result = await onSave(editedRecord.id, {
+                status:       editedRecord.status,
                 arrival_time: editedRecord.arrival_time,
                 late_minutes: editedRecord.late_minutes,
-            };
-
-            const result = await onSave(editedRecord.id, updates);
-
+            });
             if (result.success) {
-                Alert.alert('Success', 'Attendance updated successfully');
-                onClose();
+                showSuccess('Success', 'Attendance updated successfully', onClose);
             } else {
-                Alert.alert('Error', 'Failed to update attendance');
+                showError('Error', 'Failed to update attendance');
             }
-        } catch (error: any) {
-            Alert.alert('Error', error.message);
+        } catch (e: any) {
+            showError('Error', e.message);
         }
     };
 
@@ -63,175 +66,189 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
 
     return (
         <Modal
-            animationType="fade"
-            transparent={true}
             visible={visible}
+            transparent
+            animationType="fade"
             onRequestClose={onClose}
-            statusBarTranslucent={true}  // ← ADD THIS
-            presentationStyle="overFullScreen"  // ← ADD THIS
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
         >
-            <View style={styles.modalOverlay}>
-                <View style={[styles.editModalContent, { backgroundColor: colors.background }]}>
-                    <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Edit Attendance</Text>
-                        <TouchableOpacity onPress={onClose}>
-                            <X size={24} color={colors.textSecondary} />
+            <View style={s.root}>
+                <TouchableWithoutFeedback onPress={onClose}>
+                    <View style={StyleSheet.absoluteFillObject} />
+                </TouchableWithoutFeedback>
+
+                <View style={[s.sheet, { backgroundColor: colors.background }]}>
+                    {/* Handle */}
+                    <View style={[s.handle, { backgroundColor: colors.border }]} />
+
+                    {/* Header */}
+                    <View style={[s.header, { borderBottomColor: colors.border }]}>
+                        <View style={s.headerLeft}>
+                            <Text allowFontScaling={false} style={[s.title, { color: colors.text }]}>
+                                Edit Attendance
+                            </Text>
+                            {editedRecord.students && (
+                                <Text allowFontScaling={false} style={[s.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                                    {editedRecord.students.full_name}
+                                    {editedRecord.students.roll_number ? `  ·  Roll ${editedRecord.students.roll_number}` : ''}
+                                    {'  ·  '}{fmtDate(editedRecord.date)}
+                                </Text>
+                            )}
+                        </View>
+                        <TouchableOpacity onPress={onClose} style={s.closeBtn}>
+                            <X size={18} color={colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView style={styles.editModalBody}>
-                        <View style={[styles.studentInfoCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                            <Text allowFontScaling={false} style={[styles.editStudentName, { color: colors.text }]}>
-                                {editedRecord.students?.full_name}
-                            </Text>
-                            <Text allowFontScaling={false} style={[styles.editStudentDetails, { color: colors.textSecondary }]}>
-                                {editedRecord.students?.roll_number} • {formatDate(editedRecord.date)}
-                            </Text>
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Status</Text>
-                            <View style={styles.statusOptions}>
-                                {[
-                                    { value: 'present', label: 'Present', icon: CheckCircle, color: '#10B981' },
-                                    { value: 'late', label: 'Late', icon: AlertCircle, color: '#F59E0B' },
-                                    { value: 'absent', label: 'Absent', icon: XCircle, color: '#EF4444' },
-                                ].map((option) => (
+                    {/* Body */}
+                    <View style={s.body}>
+                        {/* Status chips */}
+                        <Text allowFontScaling={false} style={[s.label, { color: colors.textSecondary }]}>Status</Text>
+                        <View style={s.statusRow}>
+                            {STATUS_OPTIONS.map(({ value, label, Icon, color }) => {
+                                const active = editedRecord.status === value;
+                                return (
                                     <TouchableOpacity
-                                        key={option.value}
+                                        key={value}
                                         style={[
-                                            styles.statusOption,
-                                            { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                            editedRecord.status === option.value && { backgroundColor: option.color, borderColor: option.color },
+                                            s.chip,
+                                            { borderColor: colors.border, backgroundColor: colors.cardBackground },
+                                            active && { backgroundColor: color, borderColor: color },
                                         ]}
-                                        onPress={() => setEditedRecord({ ...editedRecord, status: option.value as any })}
+                                        onPress={() => setEditedRecord({ ...editedRecord, status: value as any })}
                                     >
-                                        <option.icon size={16} color={editedRecord.status === option.value ? '#ffffff' : option.color} />
-                                        <Text allowFontScaling={false} style={[
-                                            styles.statusOptionText,
-                                            { color: colors.text },
-                                            editedRecord.status === option.value && { color: '#ffffff' },
-                                        ]}>
-                                            {option.label}
+                                        <Icon size={14} color={active ? '#fff' : color} />
+                                        <Text allowFontScaling={false} style={[s.chipText, { color: active ? '#fff' : colors.text }]}>
+                                            {label}
                                         </Text>
                                     </TouchableOpacity>
-                                ))}
-                            </View>
+                                );
+                            })}
                         </View>
 
+                        {/* Arrival time */}
                         {editedRecord.status !== 'absent' && (
-                            <View style={styles.inputGroup}>
-                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Arrival Time</Text>
+                            <>
+                                <Text allowFontScaling={false} style={[s.label, { color: colors.textSecondary }]}>Arrival Time</Text>
                                 <TextInput
-                                    style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                    style={[s.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                     value={editedRecord.arrival_time || ''}
-                                    onChangeText={(text) => setEditedRecord({ ...editedRecord, arrival_time: text })}
+                                    onChangeText={text => setEditedRecord({ ...editedRecord, arrival_time: text })}
                                     placeholder="HH:MM:SS"
                                     placeholderTextColor={colors.textSecondary}
+                                    allowFontScaling={false}
                                 />
-                            </View>
+                            </>
                         )}
+                    </View>
 
-                        <TouchableOpacity
-                            style={[styles.saveButton, { backgroundColor: colors.primary }]}
-                            onPress={handleSave}
-                        >
-                            <Text allowFontScaling={false} style={styles.saveButtonText}>Save Changes</Text>
-                        </TouchableOpacity>
-                    </ScrollView>
+                    {/* Save button */}
+                    <TouchableOpacity
+                        style={[s.saveBtn, { backgroundColor: colors.primary }]}
+                        onPress={handleSave}
+                    >
+                        <Text allowFontScaling={false} style={s.saveBtnText}>Save Changes</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
         </Modal>
     );
 };
 
-const styles = StyleSheet.create({
-    modalOverlay: {
+const s = StyleSheet.create({
+    root: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.5)',
     },
-    editModalContent: {
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        maxHeight: '65%',
+    sheet: {
+        height: SCREEN_HEIGHT * 0.75,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingBottom: 24,
     },
-    modalHeader: {
+    handle: {
+        width: 36,
+        height: 4,
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginTop: 10,
+        marginBottom: 12,
+    },
+    header: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 24,
-        paddingTop: 24,
-        paddingBottom: 16,
-        borderBottomWidth: 1,
-    },
-    modalTitle: {
-        fontSize: 20,
-        fontFamily: 'Inter-SemiBold',
-    },
-    editModalBody: {
-        paddingHorizontal: 24,
-        paddingVertical: 20,
-    },
-    studentInfoCard: {
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 20,
-        borderWidth: 1,
-    },
-    editStudentName: {
-        fontSize: 18,
-        fontFamily: 'Inter-SemiBold',
-        marginBottom: 4,
-    },
-    editStudentDetails: {
-        fontSize: 14,
-        fontFamily: 'Inter-Regular',
-    },
-    inputGroup: {
-        marginBottom: 20,
-    },
-    label: {
-        fontSize: 14,
-        fontFamily: 'Inter-Medium',
-        marginBottom: 8,
-    },
-    input: {
-        height: 50,
-        borderWidth: 1,
-        borderRadius: 12,
         paddingHorizontal: 16,
-        fontSize: 16,
-        fontFamily: 'Inter-Regular',
-    },
-    statusOptions: {
-        flexDirection: 'row',
+        paddingBottom: 12,
+        borderBottomWidth: 1,
         gap: 8,
     },
-    statusOption: {
+    headerLeft: {
+        flex: 1,
+        gap: 3,
+    },
+    title: {
+        fontSize: TextSizes.modalTitle,
+        fontFamily: 'Inter-SemiBold',
+    },
+    subtitle: {
+        fontSize: TextSizes.small,
+        fontFamily: 'Inter-Regular',
+    },
+    closeBtn: {
+        width: 30,
+        height: 30,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    body: {
+        flex: 1,
+        paddingHorizontal: 16,
+        paddingTop: 14,
+        gap: 8,
+    },
+    label: {
+        fontSize: TextSizes.filterLabel,
+        fontFamily: 'Inter-Medium',
+        marginBottom: 2,
+    },
+    statusRow: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 6,
+    },
+    chip: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
+        paddingVertical: 9,
+        borderRadius: 9,
         borderWidth: 1,
-        borderRadius: 8,
-        gap: 6,
+        gap: 5,
     },
-    statusOptionText: {
-        fontSize: 14,
-        fontFamily: 'Inter-Medium',
+    chipText: {
+        fontSize: TextSizes.normal,
+        fontFamily: 'Inter-SemiBold',
     },
-    saveButton: {
-        height: 50,
-        borderRadius: 12,
+    input: {
+        height: 42,
+        borderWidth: 1,
+        borderRadius: 9,
+        paddingHorizontal: 12,
+        fontSize: TextSizes.normal,
+        fontFamily: 'Inter-Regular',
+    },
+    saveBtn: {
+        marginHorizontal: 16,
+        borderRadius: 10,
+        paddingVertical: 11,
         alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 12,
     },
-    saveButtonText: {
-        color: '#ffffff',
-        fontSize: 16,
+    saveBtnText: {
+        color: '#fff',
+        fontSize: TextSizes.buttonText,
         fontFamily: 'Inter-SemiBold',
     },
 });

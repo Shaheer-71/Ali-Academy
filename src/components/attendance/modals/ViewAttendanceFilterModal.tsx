@@ -1,6 +1,8 @@
 // components/attendance/modals/ViewAttendanceFilterModal.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput, Dimensions } from 'react-native';
+
+const { height: windowHeight } = Dimensions.get('window');
 import { Filter, X, Calendar, Users, Building, BookOpen, Eye, RotateCcw } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 
@@ -495,8 +497,8 @@ const styles = StyleSheet.create({
     modalContainer: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '90%',
-        minHeight: '70%',
+        height: windowHeight * 0.45,
+        overflow: 'hidden',
     },
     header: {
         flexDirection: 'row',

@@ -1,10 +1,8 @@
-// components/attendance/StudentCard.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { CheckCircle, AlertCircle, XCircle, Clock, Edit3 } from 'lucide-react-native';
+import { Check, X, Edit3, Clock } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { TextSizes } from '@/src/styles/TextSizes';
-
 
 interface Student {
     id: string;
@@ -25,14 +23,26 @@ interface AttendanceRecord {
 
 interface StudentCardProps {
     student: Student;
-    record?: AttendanceRecord; // Temporary attendance record (not yet posted)
-    dbRecord?: AttendanceRecord | null; // Database attendance record (already posted)
-    isMarkedTemporarily?: boolean; // Student is marked temporarily but not yet posted
-    isMarkedInDatabase?: boolean; // Student has attendance record in database for this date
+    record?: AttendanceRecord;
+    dbRecord?: AttendanceRecord | null;
+    isMarkedTemporarily?: boolean;
+    isMarkedInDatabase?: boolean;
     selectedDate: string;
     onMarkAttendance: (studentId: string, status: 'present' | 'late' | 'absent', arrivalTime?: string) => void;
     onEdit?: (record: AttendanceRecord) => void;
 }
+
+const STATUS_COLOR: Record<string, string> = {
+    present: '#10B981',
+    late:    '#F59E0B',
+    absent:  '#EF4444',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+    present: 'Present',
+    late:    'Late',
+    absent:  'Absent',
+};
 
 export const StudentCard: React.FC<StudentCardProps> = ({
     student,
@@ -46,488 +56,202 @@ export const StudentCard: React.FC<StudentCardProps> = ({
 }) => {
     const { colors } = useTheme();
 
-
-    const getStatusIcon = (status: 'present' | 'late' | 'absent' | undefined) => {
-        switch (status) {
-            case 'present': return <CheckCircle size={20} color="#10B981" />;
-            case 'late': return <AlertCircle size={20} color="#F59E0B" />;
-            case 'absent': return <XCircle size={20} color="#EF4444" />;
-            default: return <Clock size={20} color={colors.textSecondary} />;
-        }
-    };
-
-    const getStatusColor = (status: 'present' | 'late' | 'absent' | undefined) => {
-        switch (status) {
-            case 'present': return '#10B981';
-            case 'late': return '#F59E0B';
-            case 'absent': return '#EF4444';
-            default: return colors.textSecondary;
-        }
-    };
-
-    const getStatusText = (status: 'present' | 'late' | 'absent' | undefined) => {
-        switch (status) {
-            case 'present': return 'Present';
-            case 'late': return 'Late';
-            case 'absent': return 'Absent';
-            default: return 'Not marked';
-        }
-    };
-
-    // Primary logic: Buttons are disabled if student already has attendance in database
+    const displayRecord = dbRecord || record;
+    const status = displayRecord?.status;
+    const stripColor = status ? STATUS_COLOR[status] : colors.border;
     const buttonsDisabled = isMarkedInDatabase;
 
-    // Determine which record to display (database record takes priority)
-    const displayRecord = dbRecord || record;
-
-    // Determine the source of the record
-    const recordSource = dbRecord ? 'database' : (record ? 'temporary' : 'none');
+    const initials = student.full_name
+        .split(' ')
+        .map(w => w[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
 
     return (
         <View style={[
-            styles.modernStudentCard,
+            styles.card,
             { backgroundColor: colors.cardBackground, borderColor: colors.border },
-            isMarkedInDatabase && { borderColor: colors.primary, borderWidth: 2 }
+            isMarkedInDatabase && { borderColor: stripColor },
         ]}>
-            <View style={styles.studentCardHeader}>
-                <View style={[styles.studentAvatar, { backgroundColor: colors.primary }]}>
-                    <Text allowFontScaling={false} style={styles.studentInitial}>{student.full_name.charAt(0).toUpperCase()}</Text>
-                </View>
-                <View style={styles.studentInfo}>
-                    <Text allowFontScaling={false} style={[styles.studentName, { color: colors.text }]}>{student.full_name}</Text>
-                    <Text allowFontScaling={false} style={[styles.rollNumber, { color: colors.textSecondary }]}>Roll: {student.roll_number}</Text>
-                </View>
-                <View style={styles.statusIndicator}>
-                    {getStatusIcon(displayRecord?.status)}
-                    {displayRecord && (
-                        <Text allowFontScaling={false} style={[styles.statusText, { color: getStatusColor(displayRecord.status) }]}>
-                            {displayRecord.status?.toUpperCase()}
+            {/* Left status strip */}
+            <View style={[styles.strip, { backgroundColor: stripColor }]} />
+
+            <View style={styles.body}>
+                {/* Header row */}
+                <View style={styles.headerRow}>
+                    {/* Avatar */}
+                    <View style={[styles.avatar, { backgroundColor: colors.primary + '22' }]}>
+                        <Text allowFontScaling={false} style={[styles.avatarText, { color: colors.primary }]}>
+                            {initials}
                         </Text>
+                    </View>
+
+                    {/* Name + roll */}
+                    <View style={styles.info}>
+                        <Text allowFontScaling={false} style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+                            {student.full_name}
+                        </Text>
+                        <Text allowFontScaling={false} style={[styles.roll, { color: colors.textSecondary }]}>
+                            Roll {student.roll_number}
+                        </Text>
+                    </View>
+
+                    {/* Status badge */}
+                    {status ? (
+                        <View style={[styles.badge, { backgroundColor: STATUS_COLOR[status] + '18', borderColor: STATUS_COLOR[status] + '40' }]}>
+                            <View style={[styles.dot, { backgroundColor: STATUS_COLOR[status] }]} />
+                            <Text allowFontScaling={false} style={[styles.badgeText, { color: STATUS_COLOR[status] }]}>
+                                {STATUS_LABEL[status]}
+                            </Text>
+                            {isMarkedTemporarily && !isMarkedInDatabase && (
+                                <Clock size={10} color={STATUS_COLOR[status]} />
+                            )}
+                        </View>
+                    ) : (
+                        <View style={[styles.badge, { backgroundColor: colors.border + '40', borderColor: colors.border }]}>
+                            <Text allowFontScaling={false} style={[styles.badgeText, { color: colors.textSecondary }]}>—</Text>
+                        </View>
+                    )}
+                </View>
+
+                {/* Action buttons */}
+                <View style={styles.actions}>
+                    <TouchableOpacity
+                        style={[styles.btn, buttonsDisabled ? styles.btnDisabled : styles.btnPresent]}
+                        onPress={() => !buttonsDisabled && onMarkAttendance(student.id, 'present')}
+                        disabled={buttonsDisabled}
+                        activeOpacity={0.75}
+                    >
+                        <Check size={13} color={buttonsDisabled ? '#9CA3AF' : '#fff'} />
+                        <Text allowFontScaling={false} style={[styles.btnText, buttonsDisabled && styles.btnTextDisabled]}>
+                            Present
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.btn, buttonsDisabled ? styles.btnDisabled : styles.btnAbsent]}
+                        onPress={() => !buttonsDisabled && onMarkAttendance(student.id, 'absent')}
+                        disabled={buttonsDisabled}
+                        activeOpacity={0.75}
+                    >
+                        <X size={13} color={buttonsDisabled ? '#9CA3AF' : '#fff'} />
+                        <Text allowFontScaling={false} style={[styles.btnText, buttonsDisabled && styles.btnTextDisabled]}>
+                            Absent
+                        </Text>
+                    </TouchableOpacity>
+
+                    {isMarkedInDatabase && dbRecord && onEdit && (
+                        <TouchableOpacity
+                            style={[styles.btn, styles.btnEdit, { borderColor: colors.border }]}
+                            onPress={() => onEdit(dbRecord)}
+                            activeOpacity={0.75}
+                        >
+                            <Edit3 size={13} color={colors.primary} />
+                            <Text allowFontScaling={false} style={[styles.btnText, { color: colors.primary }]}>
+                                Edit
+                            </Text>
+                        </TouchableOpacity>
                     )}
                 </View>
             </View>
-
-            {/* Show arrival time info if available */}
-            {/* {displayRecord?.arrival_time && displayRecord?.status !== 'absent' (
-                <View style={[styles.timeInfo, { backgroundColor: colors.background }]}>
-                    <Clock size={14} color={colors.textSecondary} />
-                    <Text allowFontScaling={false} style={[styles.timeText, { color: colors.textSecondary }]}>
-                        Arrived at {displayRecord.arrival_time}
-                        {displayRecord.late_minutes && displayRecord.late_minutes > 0 && ` (${displayRecord.late_minutes} min late)`}
-                    </Text>
-                </View>
-            )} */}
-
-            {/* Status information based on record source */}
-            {recordSource === 'temporary' && (
-                <View style={[styles.temporaryInfo, { backgroundColor: '#FEF3C7' }]}>
-                    <Text allowFontScaling={false} style={[styles.temporaryText, { color: '#92400E' }]}>
-                        📝 Marked as {getStatusText(record?.status)} (Not posted yet)
-                    </Text>
-                </View>
-            )}
-
-            {/* {recordSource === 'database' && (
-                <View style={[styles.databaseInfo, { backgroundColor: colors.primary }]}>
-                    <Text allowFontScaling={false} style={styles.databaseText}>
-                        ✅ Attendance recorded for {new Date(selectedDate).toLocaleDateString()}
-                    </Text>
-                </View>
-            )} */}
-
-            {recordSource === 'none' && (
-                <View style={[styles.noRecordInfo, { backgroundColor: colors.background }]}>
-                    <Text allowFontScaling={false} style={[styles.noRecordText, { color: colors.textSecondary }]}>
-                        ⏳ No attendance marked for {new Date(selectedDate).toLocaleDateString()}
-                    </Text>
-                </View>
-            )}
-
-            {/* Action buttons - disabled if already in database */}
-            <View style={styles.actionButtons}>
-                <TouchableOpacity
-                    style={[
-                        styles.actionButton,
-                        styles.presentButton,
-                        buttonsDisabled && styles.disabledButton
-                    ]}
-                    onPress={() => !buttonsDisabled && onMarkAttendance(student.id, 'present')}
-                    disabled={buttonsDisabled}
-                    activeOpacity={buttonsDisabled ? 1 : 0.7}
-                >
-                    <CheckCircle size={16} color={buttonsDisabled ? "#999999" : "#ffffff"} />
-                    <Text allowFontScaling={false} style={[
-                        styles.actionButtonText,
-                        buttonsDisabled && styles.disabledButtonText
-                    ]}>
-                        Present
-                    </Text>
-                </TouchableOpacity>
-
-<TouchableOpacity
-                    style={[
-                        styles.actionButton,
-                        styles.absentButton,
-                        buttonsDisabled && styles.disabledButton
-                    ]}
-                    onPress={() => !buttonsDisabled && onMarkAttendance(student.id, 'absent')}
-                    disabled={buttonsDisabled}
-                    activeOpacity={buttonsDisabled ? 1 : 0.7}
-                >
-                    <XCircle size={16} color={buttonsDisabled ? "#999999" : "#ffffff"} />
-                    <Text allowFontScaling={false} style={[
-                        styles.actionButtonText,
-                        buttonsDisabled && styles.disabledButtonText
-                    ]}>
-                        Absent
-                    </Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Edit button for database records */}
-            {isMarkedInDatabase && dbRecord && onEdit && (
-                <View style={styles.editContainer}>
-                    <TouchableOpacity
-                        style={[styles.editButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-                        onPress={() => onEdit(dbRecord)}
-                    >
-                        <Edit3 size={16} color={colors.primary} />
-                        <Text allowFontScaling={false} style={[styles.editButtonText, { color: colors.primary }]}>
-                            Edit Database Record
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-
-            {/* Helper text for disabled buttons */}
-            {buttonsDisabled && (
-                <View style={[styles.disabledInfo, { backgroundColor: colors.background }]}>
-                    <Text allowFontScaling={false} style={[styles.disabledInfoText, { color: '#991B1B' }]}>
-                        🔒 Buttons disabled - attendance already recorded in database
-                    </Text>
-                </View>
-            )}
         </View>
     );
 };
 
-
 const styles = StyleSheet.create({
-    modernStudentCard: {
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 12,
+    card: {
+        flexDirection: 'row',
+        borderRadius: 10,
         borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        elevation: 3,
+        marginBottom: 8,
+        overflow: 'hidden',
     },
-    studentCardHeader: {
+    strip: {
+        width: 4,
+    },
+    body: {
+        flex: 1,
+        paddingHorizontal: 10,
+        paddingVertical: 9,
+        gap: 8,
+    },
+    headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
+        gap: 8,
     },
-    studentAvatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
+    avatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 12,
+        flexShrink: 0,
     },
-    studentInitial: {
-        fontSize: TextSizes.large, // smaller avatar text
+    avatarText: {
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-SemiBold',
-        color: '#ffffff',
     },
-    studentInfo: {
+    info: {
         flex: 1,
+        gap: 2,
     },
-    studentName: {
-        fontSize: TextSizes.xlarge, // previously 18
+    name: {
+        fontSize: TextSizes.header,
         fontFamily: 'Inter-SemiBold',
-        marginBottom: 2,
     },
-    rollNumber: {
-        fontSize: TextSizes.normal, // previously 14
+    roll: {
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-Regular',
     },
-    statusIndicator: {
-        alignItems: 'center',
-    },
-    statusText: {
-        fontSize: TextSizes.small, // previously 10
-        fontFamily: 'Inter-SemiBold',
-        marginTop: 2,
-    },
-    timeInfo: {
-        borderRadius: 6,
-        padding: 8,
-        marginBottom: 8,
+    badge: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 7,
+        paddingVertical: 3,
+        borderRadius: 20,
+        borderWidth: 1,
+        flexShrink: 0,
     },
-    timeText: {
-        fontSize: TextSizes.normal,
-        fontFamily: 'Inter-Regular',
-        marginLeft: 6,
+    dot: {
+        width: 5,
+        height: 5,
+        borderRadius: 3,
     },
-    temporaryInfo: {
-        borderRadius: 6,
-        padding: 8,
-        marginBottom: 8,
-        alignItems: 'center',
-    },
-    temporaryText: {
-        fontSize: TextSizes.normal, // previously 14
-        fontFamily: 'Inter-Medium',
-        textAlign: 'center',
-    },
-    databaseInfo: {
-        borderRadius: 6,
-        padding: 8,
-        marginBottom: 8,
-        alignItems: 'center',
-    },
-    databaseText: {
-        color: '#ffffff',
-        fontSize: TextSizes.normal,
+    badgeText: {
+        fontSize: TextSizes.small,
         fontFamily: 'Inter-SemiBold',
-        textAlign: 'center',
     },
-    noRecordInfo: {
-        borderRadius: 6,
-        padding: 8,
-        marginBottom: 8,
-        alignItems: 'center',
-    },
-    noRecordText: {
-        fontSize: TextSizes.normal,
-        fontFamily: 'Inter-Regular',
-        textAlign: 'center',
-    },
-    actionButtons: {
+    actions: {
         flexDirection: 'row',
         gap: 6,
-        marginBottom: 8,
     },
-    actionButton: {
+    btn: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 8,
-        borderRadius: 10,
+        paddingVertical: 7,
+        borderRadius: 8,
         gap: 4,
     },
-    presentButton: {
-        backgroundColor: '#10B981',
+    btnPresent: { backgroundColor: '#10B981' },
+    btnAbsent:  { backgroundColor: '#EF4444' },
+    btnDisabled: { backgroundColor: '#F3F4F6' },
+    btnEdit: {
+        flex: 0,
+        paddingHorizontal: 14,
+        borderWidth: 1,
+        backgroundColor: 'transparent',
     },
-absentButton: {
-        backgroundColor: '#EF4444',
-    },
-    disabledButton: {
-        backgroundColor: '#E5E7EB',
-        opacity: 0.6,
-    },
-    actionButtonText: {
-        color: '#ffffff',
-        fontSize: TextSizes.normal, // compact button label
+    btnText: {
+        color: '#fff',
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-SemiBold',
     },
-    disabledButtonText: {
-        color: '#999999',
-    },
-    editContainer: {
-        marginTop: 6,
-    },
-    editButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderWidth: 1,
-        borderRadius: 10,
-        gap: 6,
-    },
-    editButtonText: {
-        fontSize: TextSizes.normal,
-        fontFamily: 'Inter-Medium',
-    },
-    disabledInfo: {
-        borderRadius: 6,
-        padding: 8,
-        marginTop: 6,
-        alignItems: 'center',
-    },
-    disabledInfoText: {
-        fontSize: TextSizes.small,
-        fontFamily: 'Inter-Medium',
-        textAlign: 'center',
+    btnTextDisabled: {
+        color: '#9CA3AF',
     },
 });
-
-
-// const styles = StyleSheet.create({
-//     modernStudentCard: {
-//         borderRadius: 16,
-//         padding: 20,
-//         marginBottom: 16,
-//         borderWidth: 1,
-//         shadowColor: '#000',
-//         shadowOffset: { width: 0, height: 4 },
-//         shadowOpacity: 0.08,
-//         shadowRadius: 8,
-//         elevation: 4,
-//     },
-//     studentCardHeader: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         marginBottom: 16,
-//     },
-//     studentAvatar: {
-//         width: 48,
-//         height: 48,
-//         borderRadius: 16,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         marginRight: 16,
-//     },
-//     studentInitial: {
-//         fontSize: 20,
-//         fontFamily: 'Inter-SemiBold',
-//         color: '#ffffff',
-//     },
-//     studentInfo: {
-//         flex: 1,
-//     },
-//     studentName: {
-//         fontSize: 18,
-//         fontFamily: 'Inter-SemiBold',
-//         marginBottom: 4,
-//     },
-//     rollNumber: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//     },
-//     statusIndicator: {
-//         alignItems: 'center',
-//     },
-//     statusText: {
-//         fontSize: 10,
-//         fontFamily: 'Inter-SemiBold',
-//         marginTop: 4,
-//     },
-//     timeInfo: {
-//         borderRadius: 8,
-//         padding: 12,
-//         marginBottom: 12,
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//     },
-//     timeText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         marginLeft: 8,
-//     },
-//     temporaryInfo: {
-//         borderRadius: 8,
-//         padding: 12,
-//         marginBottom: 12,
-//         alignItems: 'center',
-//     },
-//     temporaryText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//         textAlign: 'center',
-//     },
-//     databaseInfo: {
-//         borderRadius: 8,
-//         padding: 12,
-//         marginBottom: 12,
-//         alignItems: 'center',
-//     },
-//     databaseText: {
-//         color: '#ffffff',
-//         fontSize: 14,
-//         fontFamily: 'Inter-SemiBold',
-//         textAlign: 'center',
-//     },
-//     noRecordInfo: {
-//         borderRadius: 8,
-//         padding: 12,
-//         marginBottom: 12,
-//         alignItems: 'center',
-//     },
-//     noRecordText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         textAlign: 'center',
-//     },
-//     actionButtons: {
-//         flexDirection: 'row',
-//         gap: 8,
-//         marginBottom: 12,
-//     },
-//     actionButton: {
-//         flex: 1,
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         paddingVertical: 12,
-//         borderRadius: 12,
-//         gap: 6,
-//     },
-//     presentButton: {
-//         backgroundColor: '#10B981',
-//     },
-//     customTimeButton: {
-//         backgroundColor: '#204040',
-//     },
-//     absentButton: {
-//         backgroundColor: '#EF4444',
-//     },
-//     disabledButton: {
-//         backgroundColor: '#E5E7EB',
-//         opacity: 0.6,
-//     },
-//     actionButtonText: {
-//         color: '#ffffff',
-//         fontSize: 12,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     disabledButtonText: {
-//         color: '#999999',
-//     },
-//     editContainer: {
-//         marginTop: 8,
-//     },
-//     editButton: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         paddingVertical: 12,
-//         paddingHorizontal: 16,
-//         borderWidth: 1,
-//         borderRadius: 12,
-//         gap: 8,
-//     },
-//     editButtonText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//     },
-//     disabledInfo: {
-//         borderRadius: 8,
-//         padding: 10,
-//         marginTop: 8,
-//         alignItems: 'center',
-//     },
-//     disabledInfoText: {
-//         fontSize: 12,
-//         fontFamily: 'Inter-Medium',
-//         textAlign: 'center',
-//     },
-// });

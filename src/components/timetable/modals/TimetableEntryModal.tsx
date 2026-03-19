@@ -301,7 +301,7 @@ export default function TimetableEntryModal({
             <TouchableWithoutFeedback onPress={closeModal}>
             <View style={s.overlay}>
             <TouchableWithoutFeedback onPress={() => {}}>
-                <View style={[s.sheet, { backgroundColor: colors.background }]}>
+                <View style={[s.sheet, { backgroundColor: colors.background, marginBottom: keyboardHeight, height: Math.min(ADD_SHEET_HEIGHT, SCREEN_HEIGHT - keyboardHeight) }]}>
                     <View style={[modalShell.header, { borderBottomColor: colors.border }]}>
                         <Text allowFontScaling={false} style={[modalShell.title, { color: colors.text }]}>Add Timetable Entry</Text>
                         <TouchableOpacity style={modalShell.closeBtn} onPress={closeModal}>
@@ -309,7 +309,7 @@ export default function TimetableEntryModal({
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView style={[modalShell.scroll, { flex: 1 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={[modalShell.scrollContent, { paddingBottom: keyboardHeight + 24 }]}>
+                    <ScrollView style={[modalShell.scroll, { flex: 1 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets contentContainerStyle={modalShell.scrollContent}>
 
                         {/* Day */}
                         <View style={modalForm.group}>

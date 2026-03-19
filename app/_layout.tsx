@@ -12,6 +12,7 @@ import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
 import { LoadingProvider } from '@/src/contexts/LoadingContext';
 import { ThemeProvider } from '@/src/contexts/ThemeContext';
 import { NotificationProvider } from '@/src/contexts/NotificationContext';
+import { DialogProvider } from '@/src/contexts/DialogContext';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import '@/src/constants/TextScaling';
@@ -140,6 +141,18 @@ function RootLayoutNav() {
       if (resultId) pendingNavigation.quizMarkedResultId = resultId;
       setTimeout(() => {
         router.navigate('/(student)/exams' as any);
+      }, 300);
+      return;
+    }
+
+    if (type === 'attendance_alert') {
+      const role = profileRef.current.role;
+      setTimeout(() => {
+        if (role === 'student') {
+          router.navigate('/(student)/attendance' as any);
+        } else {
+          router.navigate('/(teacher)/attendance' as any);
+        }
       }, 300);
       return;
     }
@@ -293,9 +306,11 @@ export default function RootLayout() {
     <ThemeProvider>
       <AuthProvider>
         <NotificationProvider>
-          <RootLayoutNav />
-          <AppSplashScreen visible={splashVisible} />
-          <StatusBar style="auto" />
+          <DialogProvider>
+            <RootLayoutNav />
+            <AppSplashScreen visible={splashVisible} />
+            <StatusBar style="auto" />
+          </DialogProvider>
         </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>

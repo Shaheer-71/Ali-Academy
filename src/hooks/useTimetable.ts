@@ -14,7 +14,7 @@ import {
     DayOfWeek,
     DAYS_ORDER
 } from '@/src/types/timetable';
-import { Alert } from 'react-native';
+import { useDialog } from '@/src/contexts/DialogContext';
 import {
     handleTimetableFetchError,
     handleTimetableCreateError,
@@ -23,11 +23,11 @@ import {
     handleValidationError,
     handleConflictError
 } from '@/src/utils/errorHandler/timetableErrorHandler';
-import { ErrorModal } from '@/src/components/common/ErrorModal';
 import { validateTimeRange } from '../utils/timetable';
 
 export const useTimetable = (): UseTimetableReturn => {
     const { profile, student } = useAuth();
+    const { showError, showSuccess } = useDialog();
     const [timetable, setTimetable] = useState<TimetableEntryWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -168,7 +168,7 @@ export const useTimetable = (): UseTimetableReturn => {
                     ? `Time conflict with ${validation.conflicts[0].existing_entry.subject_name}`
                     : validation.errors[0];
                 const errorResponse = handleValidationError(new Error(errorMsg));
-                Alert.alert(errorResponse.title, errorResponse.message);
+                showError(errorResponse.title, errorResponse.message);
                 return null;
             }
 
@@ -176,7 +176,7 @@ export const useTimetable = (): UseTimetableReturn => {
             const subjectId = await getSubjectId(entry.subject);
             if (!subjectId) {
                 const errorResponse = handleTimetableCreateError(new Error('subject not found'));
-                Alert.alert(errorResponse.title, errorResponse.message);
+                showError(errorResponse.title, errorResponse.message);
                 return null;
             }
 
@@ -189,7 +189,7 @@ export const useTimetable = (): UseTimetableReturn => {
 
             if (!isAssigned) {
                 const errorResponse = handleTimetableCreateError(new Error('not assigned to teach'));
-                Alert.alert(errorResponse.title, errorResponse.message);
+                showError(errorResponse.title, errorResponse.message);
                 return null;
             }
 
@@ -224,7 +224,7 @@ export const useTimetable = (): UseTimetableReturn => {
         } catch (err: any) {
             console.warn('Error creating entry:', err);
             const errorResponse = handleTimetableCreateError(err);
-            Alert.alert(errorResponse.title, errorResponse.message);
+            showError(errorResponse.title, errorResponse.message);
             return null;
         }
     }, [profile?.id]);
@@ -254,7 +254,7 @@ export const useTimetable = (): UseTimetableReturn => {
                             ? `Time conflict with ${validation.conflicts[0].existing_entry.subject_name}`
                             : validation.errors[0];
                         const errorResponse = handleValidationError(new Error(errorMsg));
-                        Alert.alert(errorResponse.title, errorResponse.message);
+                        showError(errorResponse.title, errorResponse.message);
                         return null;
                     }
                 }
@@ -273,7 +273,7 @@ export const useTimetable = (): UseTimetableReturn => {
             if (entry.subject) {
                 const subjectId = await getSubjectId(entry.subject);
                 if (!subjectId) {
-                    Alert.alert('Error', 'Subject not found');
+                    showError('Error', 'Subject not found');
                     return null;
                 }
                 updateData.subject_id = subjectId;
@@ -294,14 +294,14 @@ export const useTimetable = (): UseTimetableReturn => {
                 .single();
 
             if (completeEntry) {
-                Alert.alert('Success', 'Entry updated');
+                showSuccess('Success', 'Entry updated');
                 return completeEntry;
             }
             return null;
         } catch (err: any) {
             console.warn('Error updating entry:', err);
             const errorResponse = handleTimetableUpdateError(err);
-            Alert.alert(errorResponse.title, errorResponse.message);
+            showError(errorResponse.title, errorResponse.message);
             return null;
         }
     }, [profile?.id, timetable]);
@@ -325,7 +325,7 @@ export const useTimetable = (): UseTimetableReturn => {
         } catch (err: any) {
             console.warn('Error deleting entry:', err);
             const errorResponse = handleTimetableDeleteError(err);
-            Alert.alert(errorResponse.title, errorResponse.message);
+            showError(errorResponse.title, errorResponse.message);
             return false;
         }
     }, [profile?.id]);

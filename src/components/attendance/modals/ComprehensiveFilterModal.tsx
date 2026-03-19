@@ -1,6 +1,8 @@
 // components/attendance/modals/ComprehensiveFilterModal.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView, TextInput, Dimensions } from 'react-native';
+
+const { height: windowHeight } = Dimensions.get('window');
 import { Filter, X, Calendar, Users, Building, BookOpen, Clock, RotateCcw } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { supabase } from '@/src/lib/supabase';
@@ -512,7 +514,7 @@ const styles = StyleSheet.create({
     modalContainer: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        height: '65%',
+        height: windowHeight * 0.45,
         overflow: 'hidden',
     },
     header: {

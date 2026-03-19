@@ -9,8 +9,11 @@ import {
     ScrollView,
     RefreshControl,
     ActivityIndicator,
+    Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { height: WINDOW_HEIGHT } = Dimensions.get('window');
 import { useRoute } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { Settings, Moon, Sun, Bell, X, CheckCheck, Trash2, SlidersHorizontal } from 'lucide-react-native';
@@ -362,13 +365,10 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContent: {
-        height: '65%',
+        height: WINDOW_HEIGHT * 0.65,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
+        overflow: 'hidden',
         elevation: 5,
     },
     modalHeader: {
@@ -420,6 +420,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-Medium',
     },
     notificationsList: {
+        flex: 1,
         paddingHorizontal: 24,
         paddingVertical: 16,
     },
@@ -504,145 +505,3 @@ const styles = StyleSheet.create({
 
 
 
-// const styles = StyleSheet.create({
-//     container: {
-//         backgroundColor: '#fff',
-//     },
-//     content: {
-//         paddingHorizontal: 12,
-//         marginHorizontal: 12,
-//         justifyContent: 'space-between',
-//         flexDirection: 'row',
-//         paddingVertical: 5,
-//         marginVertical: 5,
-//         marginRight: '5%',
-//     },
-//     title: {
-//         fontWeight: 'bold',
-//         fontSize: 28,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     rightSection: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         gap: 12,
-//     },
-//     iconButton: {
-//         width: 40,
-//         height: 40,
-//         borderRadius: 12,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         position: 'relative',
-//     },
-//     notificationBadge: {
-//         position: 'absolute',
-//         top: -2,
-//         right: -2,
-//         minWidth: 18,
-//         height: 18,
-//         backgroundColor: '#EF4444',
-//         borderRadius: 9,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         paddingHorizontal: 4,
-//     },
-//     badgeText: {
-//         fontSize: 10,
-//         fontFamily: 'Inter-SemiBold',
-//         color: '#ffffff',
-//     },
-//     // FIXED: Overlay covers full screen with absolute positioning
-//     modalOverlay: {
-//         position: 'absolute',
-//         top: 0,
-//         left: 0,
-//         right: 0,
-//         bottom: 0,
-//         backgroundColor: 'rgba(0, 0, 0, 0.5)',
-//         justifyContent: 'flex-end',
-//     },
-//     modalContent: {
-//         height: '65%',  // Takes 50% of screen from bottom
-//         borderTopLeftRadius: 24,
-//         borderTopRightRadius: 24,
-//         shadowColor: '#000',
-//         shadowOffset: { width: 0, height: -2 },
-//         shadowOpacity: 0.25,
-//         shadowRadius: 8,
-//         elevation: 5,
-//     },
-//     modalHeader: {
-//         flexDirection: 'row',
-//         justifyContent: 'space-between',
-//         alignItems: 'center',
-//         paddingHorizontal: 24,
-//         paddingTop: 24,
-//         paddingBottom: 16,
-//         borderBottomWidth: 1,
-//     },
-//     modalTitle: {
-//         fontSize: 20,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     modalHeaderActions: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         gap: 12,
-//     },
-//     headerActionButton: {
-//         width: 32,
-//         height: 32,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//     },
-//     closeButton: {
-//         width: 32,
-//         height: 32,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//     },
-//     filterContainer: {
-//         flexDirection: 'row',
-//         padding: 4,
-//         marginHorizontal: 24,
-//         marginTop: 16,
-//         marginBottom: 8,
-//         borderRadius: 12,
-//     },
-//     filterTab: {
-//         flex: 1,
-//         paddingVertical: 8,
-//         alignItems: 'center',
-//         borderRadius: 8,
-//     },
-//     filterText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//     },
-//     notificationsList: {
-//         paddingHorizontal: 24,
-//         paddingVertical: 16,
-//     },
-//     loadingContainer: {
-//         paddingVertical: 40,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//     },
-//     emptyNotifications: {
-//         alignItems: 'center',
-//         paddingVertical: 40,
-//     },
-//     emptyText: {
-//         fontSize: 16,
-//         fontFamily: 'Inter-Regular',
-//         marginTop: 16,
-//     },
-//     emptySubText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         marginTop: 8,
-//         textAlign: 'center',
-//         paddingHorizontal: 32,
-//     },
-// });

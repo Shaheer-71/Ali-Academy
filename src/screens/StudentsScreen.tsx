@@ -8,15 +8,13 @@ import {
     TouchableOpacity,
     TextInput,
     Modal,
-    Alert,
     ActivityIndicator,
     Animated,
-    KeyboardAvoidingView,
-    Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useDialog } from '@/src/contexts/DialogContext';
 import { useStudents } from '@/src/hooks/useStudents';
 import { createStudentSimple, getStudentsWithoutPasswords } from '@/src/lib/api/simple-student-creation';
 import {
@@ -29,7 +27,11 @@ import {
     AlertCircle,
     ChevronRight,
     Check,
+    Calendar,
 } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Platform } from 'react-native';
+import { modalShell, modalForm } from '@/src/styles/creationModalStyles';
 import { Dimensions, TouchableWithoutFeedback } from 'react-native';
 
 const { height } = Dimensions.get('window');
@@ -76,6 +78,7 @@ interface StudentsWithoutPasswords {
 export default function StudentsScreen() {
     const { profile } = useAuth();
     const { colors } = useTheme();
+    const { showError: dialogShowError, showSuccess, showConfirm } = useDialog();
     const { students, loading, addStudent, refetch } = useStudents();
     const [classes, setClasses] = useState<Class[]>([]);
     const [studentsWithoutPasswords, setStudentsWithoutPasswords] = useState<StudentsWithoutPasswords[]>([]);
@@ -93,6 +96,24 @@ export default function StudentsScreen() {
     const [editingStudent, setEditingStudent] = useState<any>(null);
     const [openCardId, setOpenCardId] = useState<string | null>(null);
     const [scrollEnabled, setScrollEnabled] = useState(true);
+
+    // Add/Edit student modal form dropdowns
+    type FormDropdown = 'class' | 'subject' | 'gender' | null;
+    const [openFormDropdown, setOpenFormDropdown] = useState<FormDropdown>(null);
+    const [showDobPicker, setShowDobPicker] = useState(false);
+    const toggleFormDropdown = (key: FormDropdown) =>
+        setOpenFormDropdown(prev => prev === key ? null : key);
+    const chevronStyle = (key: FormDropdown) => ({
+        marginLeft: 6,
+        transform: [{ rotate: openFormDropdown === key ? '270deg' : '90deg' }] as any,
+    });
+    const dobStr2Date = (s: string) => {
+        if (!s) return new Date();
+        const [y, m, d] = s.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    };
+    const date2Str = (d: Date) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
     // Filter state
     const [filterVisible, setFilterVisible] = useState(false);
@@ -151,13 +172,13 @@ export default function StudentsScreen() {
         });
     };
 
-    // Use Alert.alert when a Modal is already open — ErrorModal renders behind it
+    // Use dialog when a Modal is already open — ErrorModal renders behind it
     const showModalError = (error: any, handler?: (error: any) => any) => {
         const errorInfo = handler ? handler(error) : {
             title: 'Error',
             message: error?.message || 'An unexpected error occurred'
         };
-        Alert.alert(errorInfo.title, errorInfo.message);
+        dialogShowError(errorInfo.title, errorInfo.message);
     };
 
 
@@ -257,6 +278,8 @@ export default function StudentsScreen() {
         });
         setSelectedSubjects([]);
         setSubjects([]);
+        setOpenFormDropdown(null);
+        setShowDobPicker(false);
     };
 
     const handleAddStudent = async () => {
@@ -297,7 +320,7 @@ export default function StudentsScreen() {
             return;
         }
         if (!newStudent.monthly_fee.trim() || isNaN(parseFloat(newStudent.monthly_fee)) || parseFloat(newStudent.monthly_fee) < 0) {
-            Alert.alert('Validation Error', 'Please enter a valid monthly fee amount.');
+            dialogShowError('Validation Error', 'Please enter a valid monthly fee amount.');
             return;
         }
 
@@ -318,20 +341,15 @@ export default function StudentsScreen() {
 
                 const studentEmail = result.data?.email;
 
-                Alert.alert(
+                showSuccess(
                     'Success',
                     `Student created successfully!\n\nEmail: ${studentEmail}\n\nThe student can now use this email to register and set their password.`,
-                    [
-                        {
-                            text: 'OK',
-                            onPress: () => {
-                                setModalVisible(false);
-                                resetForm();
-                                fetchStudentsPasswordStatus();
-                                refetch();
-                            },
-                        },
-                    ]
+                    () => {
+                        setModalVisible(false);
+                        resetForm();
+                        fetchStudentsPasswordStatus();
+                        refetch();
+                    }
                 );
             } else {
                 showModalError({ message: result.error }, handleStudentCreateError);
@@ -499,13 +517,11 @@ export default function StudentsScreen() {
                     .in('subject_id', toDisable);
             }
 
-            Alert.alert('Success', 'Student updated successfully', [{
-                text: 'OK', onPress: () => {
-                    setModalVisible(false);
-                    resetForm();
-                    refetch();
-                }
-            }]);
+            showSuccess('Success', 'Student updated successfully', () => {
+                setModalVisible(false);
+                resetForm();
+                refetch();
+            });
         } catch (error: any) {
             showModalError(error, handleStudentCreateError);
         } finally {
@@ -514,35 +530,30 @@ export default function StudentsScreen() {
     };
 
     const handleDeactivateStudent = (student: any) => {
-        Alert.alert(
-            'Deactivate Student',
-            `Are you sure you want to deactivate ${student.full_name}?\n\nThis will:\n• Disable the student account\n• Remove all subject enrollments\n• Revoke login access`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Deactivate',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            // 1. Soft-disable student — trigger syncs profiles.is_active
-                            //    and student_subject_enrollments.is_active automatically
-                            const { error: studentErr } = await supabase
-                                .from('students')
-                                .update({ is_deleted: true, student_status: 'inactive' })
-                                .eq('id', student.id);
-                            if (studentErr) throw studentErr;
+        showConfirm({
+            title: 'Deactivate Student',
+            message: `Are you sure you want to deactivate ${student.full_name}?\n\nThis will:\n• Disable the student account\n• Remove all subject enrollments\n• Revoke login access`,
+            confirmText: 'Deactivate',
+            cancelText: 'Cancel',
+            destructive: true,
+            onConfirm: async () => {
+                try {
+                    // 1. Soft-disable student — trigger syncs profiles.is_active
+                    //    and student_subject_enrollments.is_active automatically
+                    const { error: studentErr } = await supabase
+                        .from('students')
+                        .update({ is_deleted: true, student_status: 'inactive' })
+                        .eq('id', student.id);
+                    if (studentErr) throw studentErr;
 
-                            // profiles.is_active is synced automatically by DB trigger
+                    // profiles.is_active is synced automatically by DB trigger
 
-                            Alert.alert('Success', 'Student has been deactivated successfully.');
-                            refetch();
-                        } catch (error) {
-                            showError(error, handleStudentDeleteError);
-                        }
-                    },
-                },
-            ]
-        );
+                    showSuccess('Success', 'Student has been deactivated successfully.', refetch);
+                } catch (error) {
+                    showError(error, handleStudentDeleteError);
+                }
+            },
+        });
     };
 
     const handleStudentPress = (student) => {
@@ -652,10 +663,11 @@ export default function StudentsScreen() {
             <TopSection onFilterPress={openFilter} isFiltered={isFiltered} />
 
             {/* Filter Bottom Sheet */}
-            <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={() => setFilterVisible(false)}>
-                <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
-                    <View style={styles.filterOverlay} />
-                </TouchableWithoutFeedback>
+            <Modal visible={filterVisible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setFilterVisible(false)}>
+                <View style={styles.filterOverlay}>
+                    <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
+                        <View style={{ flex: 1 }} />
+                    </TouchableWithoutFeedback>
                 <View style={[styles.filterSheet, { backgroundColor: colors.cardBackground }]}>
                     <View style={[styles.filterHandle, { backgroundColor: colors.border }]} />
 
@@ -728,6 +740,7 @@ export default function StudentsScreen() {
                     <TouchableOpacity style={[styles.filterApplyBtn, { backgroundColor: colors.primary }]} onPress={applyStudentFilter}>
                         <Text allowFontScaling={false} style={styles.filterApplyBtnText}>Apply Filter</Text>
                     </TouchableOpacity>
+                </View>
                 </View>
             </Modal>
 
@@ -834,342 +847,403 @@ export default function StudentsScreen() {
                         {/* Add Student Modal */}
                         <Modal
                             animationType="fade"
-                            transparent={true}
+                            transparent
+                            statusBarTranslucent
                             visible={modalVisible}
                             onRequestClose={() => { setModalVisible(false); resetForm(); }}
-                            statusBarTranslucent={true}  // ← ADD THIS
-                            presentationStyle="overFullScreen"
                         >
-                            <KeyboardAvoidingView
-                                style={{ flex: 1 }}
-                                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                            >
-                            <View style={styles.modalOverlay}>
-                                <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-                                    <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                                        <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>{editingStudent ? 'Edit Student' : 'Add New Student'}</Text>
-                                        <TouchableOpacity
-                                            style={styles.closeButton}
-                                            onPress={() => { setModalVisible(false); resetForm(); }}
-                                        >
-                                            <X size={24} color={colors.textSecondary} />
+                            <View style={fm.root}>
+                                <TouchableWithoutFeedback onPress={() => { setModalVisible(false); resetForm(); }}>
+                                    <View style={{ flex: 1 }} />
+                                </TouchableWithoutFeedback>
+
+                                <View style={[modalShell.sheet, { backgroundColor: colors.background }]}>
+                                    {/* Header */}
+                                    <View style={[modalShell.header, { borderBottomColor: colors.border }]}>
+                                        <Text allowFontScaling={false} style={[modalShell.title, { color: colors.text }]}>
+                                            {editingStudent ? 'Edit Student' : 'Add New Student'}
+                                        </Text>
+                                        <TouchableOpacity style={modalShell.closeBtn} onPress={() => { setModalVisible(false); resetForm(); }}>
+                                            <X size={24} color={colors.text} />
                                         </TouchableOpacity>
                                     </View>
 
-                                    <ScrollView style={styles.modalScrollView} keyboardShouldPersistTaps="handled">
-                                        {/* <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Student Information</Text> */}
-
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Full Name *</Text>
+                                    <ScrollView
+                                        style={modalShell.scroll}
+                                        keyboardShouldPersistTaps="handled"
+                                        automaticallyAdjustKeyboardInsets
+                                        contentContainerStyle={modalShell.scrollContent}
+                                        showsVerticalScrollIndicator={false}
+                                    >
+                                        {/* Full Name */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Full Name *</Text>
                                             <TextInput
-                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                                 value={newStudent.full_name}
-                                                onChangeText={(text) => setNewStudent({ ...newStudent, full_name: text })}
+                                                onChangeText={t => setNewStudent({ ...newStudent, full_name: t })}
                                                 placeholder="Enter student full name"
                                                 placeholderTextColor={colors.textSecondary}
+                                                allowFontScaling={false}
                                             />
                                         </View>
 
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Roll Number {editingStudent ? '' : '*'}</Text>
+                                        {/* Roll Number */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>
+                                                Roll Number {editingStudent ? '' : '*'}
+                                            </Text>
                                             <TextInput
-                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: editingStudent ? colors.textSecondary : colors.text }]}
+                                                style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: editingStudent ? colors.textSecondary : colors.text }]}
                                                 value={newStudent.roll_number}
-                                                onChangeText={(text) => !editingStudent && setNewStudent({ ...newStudent, roll_number: text })}
+                                                onChangeText={t => !editingStudent && setNewStudent({ ...newStudent, roll_number: t })}
                                                 placeholder="Enter roll number"
                                                 placeholderTextColor={colors.textSecondary}
                                                 editable={!editingStudent}
+                                                allowFontScaling={false}
                                             />
                                             <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary }]}>
-                                                {editingStudent ? 'Roll number cannot be changed (tied to login email)' : `Email will be: ${newStudent.roll_number.toLowerCase()}@aliacademy.com`}
+                                                {editingStudent
+                                                    ? 'Roll number cannot be changed'
+                                                    : `Email: ${newStudent.roll_number.toLowerCase() || 'rollno'}@aliacademy.com`}
                                             </Text>
                                         </View>
 
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Phone Number *</Text>
+                                        {/* Phone */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Phone Number *</Text>
                                             <TextInput
-                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                                 value={newStudent.phone_number}
-                                                onChangeText={(text) => setNewStudent({ ...newStudent, phone_number: text })}
+                                                onChangeText={t => setNewStudent({ ...newStudent, phone_number: t })}
                                                 placeholder="Student phone number"
                                                 placeholderTextColor={colors.textSecondary}
                                                 keyboardType="phone-pad"
+                                                allowFontScaling={false}
                                             />
                                         </View>
 
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Class *</Text>
-                                            {classes.length === 0 ? (
-                                                <Text allowFontScaling={false} style={[styles.label, { color: colors.textSecondary }]}>No classes available</Text>
-                                            ) : (
-                                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                                    <View style={styles.classOptions}>
-                                                        {classes.map((classItem) => (
-                                                            <TouchableOpacity
-                                                                key={classItem.id}
-                                                                style={[
-                                                                    styles.classOption,
-                                                                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                                                    newStudent.class_id === classItem.id && { backgroundColor: colors.primary, borderColor: colors.primary },
-                                                                ]}
-                                                                onPress={
-                                                                    () => {
-                                                                        setNewStudent({ ...newStudent, class_id: classItem.id })
-                                                                        fetchSubjectsForClass(classItem.id);
-                                                                    }
-                                                                }>
-                                                                <Text
-                                                                    style={[
-                                                                        styles.classOptionText,
-                                                                        { color: colors.text },
-                                                                        newStudent.class_id === classItem.id && { color: '#ffffff' },
-                                                                    ]}
-                                                                >
-                                                                    {classItem.name}
-                                                                </Text>
-                                                            </TouchableOpacity>
-                                                        ))}
-                                                    </View>
-                                                </ScrollView>
-                                            )}
-                                        </View>
-
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>
-                                                Subjects * {selectedSubjects.length > 0 && `(${selectedSubjects.length} selected)`}
-                                            </Text>
-
-                                            {!newStudent.class_id ? (
-                                                <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary }]}>
-                                                    Please select a class first
-                                                </Text>
-                                            ) : loadingSubjects ? (
-                                                <View style={styles.loadingContainer}>
-                                                    <ActivityIndicator size="small" color={colors.primary} />
-                                                    <Text allowFontScaling={false} style={[styles.loadingText, { color: colors.textSecondary }]}>
-                                                        Loading subjects...
+                                        {/* Class dropdown */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Class *</Text>
+                                            <TouchableOpacity
+                                                style={[fm.accordionHeader, { borderColor: colors.border }]}
+                                                onPress={() => toggleFormDropdown('class')}
+                                            >
+                                                <Text allowFontScaling={false} style={[fm.accordionLabel, { color: colors.textSecondary }]}>Class</Text>
+                                                <View style={fm.accordionRight}>
+                                                    <Text allowFontScaling={false} style={[fm.accordionValue, { color: newStudent.class_id ? colors.text : colors.textSecondary }]}>
+                                                        {newStudent.class_id ? classes.find(c => c.id === newStudent.class_id)?.name ?? 'Select' : 'Select class'}
                                                     </Text>
+                                                    <ChevronRight size={16} color={colors.textSecondary} style={chevronStyle('class')} />
                                                 </View>
-                                            ) : subjects.length === 0 ? (
-                                                <Text allowFontScaling={false} style={[styles.helpText, { color: colors.error || '#EF4444' }]}>
-                                                    No subjects available for this class. Please assign teachers to subjects first.
-                                                </Text>
-                                            ) : (
-                                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                                    <View style={styles.classOptions}>
-                                                        {subjects.map((subject) => (
+                                            </TouchableOpacity>
+                                            {openFormDropdown === 'class' && (
+                                                <View style={[fm.accordionBody, { borderColor: colors.border }]}>
+                                                    <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={fm.dropdownScroll}>
+                                                        {classes.length === 0 ? (
+                                                            <View style={fm.option}>
+                                                                <Text allowFontScaling={false} style={[fm.optionText, { color: colors.textSecondary }]}>No classes available</Text>
+                                                            </View>
+                                                        ) : classes.map(cls => (
                                                             <TouchableOpacity
-                                                                key={subject.id}
-                                                                style={[
-                                                                    styles.classOption,
-                                                                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                                                    selectedSubjects.includes(subject.id) && {
-                                                                        backgroundColor: colors.primary,
-                                                                        borderColor: colors.primary
-                                                                    },
-                                                                ]}
-                                                                onPress={() => toggleSubject(subject.id)}
+                                                                key={cls.id}
+                                                                style={[fm.option, { borderBottomColor: colors.border }]}
+                                                                onPress={() => {
+                                                                    setNewStudent({ ...newStudent, class_id: cls.id });
+                                                                    fetchSubjectsForClass(cls.id);
+                                                                    setOpenFormDropdown(null);
+                                                                }}
                                                             >
-                                                                <Text
-                                                                    style={[
-                                                                        styles.classOptionText,
-                                                                        { color: colors.text },
-                                                                        selectedSubjects.includes(subject.id) && { color: '#ffffff' },
-                                                                    ]}
-                                                                >
-                                                                    {subject.name}
-                                                                </Text>
+                                                                <Text allowFontScaling={false} style={[fm.optionText, { color: colors.text }]}>{cls.name}</Text>
+                                                                {newStudent.class_id === cls.id && <Check size={16} color={colors.primary} />}
                                                             </TouchableOpacity>
                                                         ))}
-                                                    </View>
-                                                </ScrollView>
-                                            )}
-
-                                            {selectedSubjects.length > 0 && (
-                                                <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary, marginTop: 8 }]}>
-                                                    Selected: {subjects
-                                                        .filter(s => selectedSubjects.includes(s.id))
-                                                        .map(s => s.name)
-                                                        .join(', ')}
-                                                </Text>
+                                                    </ScrollView>
+                                                </View>
                                             )}
                                         </View>
 
+                                        {/* Subject dropdown (multi-select) */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>
+                                                Subjects *{selectedSubjects.length > 0 ? ` (${selectedSubjects.length} selected)` : ''}
+                                            </Text>
+                                            <TouchableOpacity
+                                                style={[fm.accordionHeader, { borderColor: colors.border }, !newStudent.class_id && fm.accordionDisabled]}
+                                                onPress={() => newStudent.class_id && toggleFormDropdown('subject')}
+                                                disabled={!newStudent.class_id}
+                                            >
+                                                {loadingSubjects ? (
+                                                    <ActivityIndicator size="small" color={colors.primary} style={{ flex: 1 }} />
+                                                ) : (
+                                                    <>
+                                                        <Text allowFontScaling={false} style={[fm.accordionLabel, { color: colors.textSecondary }]}>Subject</Text>
+                                                        <View style={fm.accordionRight}>
+                                                            <Text allowFontScaling={false} style={[fm.accordionValue, { color: selectedSubjects.length ? colors.text : colors.textSecondary }]} numberOfLines={1}>
+                                                                {!newStudent.class_id
+                                                                    ? 'Select class first'
+                                                                    : selectedSubjects.length
+                                                                        ? (() => {
+                                                                            const names = subjects.filter(s => selectedSubjects.includes(s.id)).map(s => s.name);
+                                                                            return names.length > 2 ? names.slice(0, 2).join(', ') + '...' : names.join(', ');
+                                                                          })()
+                                                                        : 'Select subjects'}
+                                                            </Text>
+                                                            <ChevronRight size={16} color={colors.textSecondary} style={chevronStyle('subject')} />
+                                                        </View>
+                                                    </>
+                                                )}
+                                            </TouchableOpacity>
+                                            {openFormDropdown === 'subject' && subjects.length > 0 && (
+                                                <View style={[fm.accordionBody, { borderColor: colors.border }]}>
+                                                    <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={fm.dropdownScroll}>
+                                                        {subjects.map(sub => (
+                                                            <TouchableOpacity
+                                                                key={sub.id}
+                                                                style={[fm.option, { borderBottomColor: colors.border }]}
+                                                                onPress={() => toggleSubject(sub.id)}
+                                                            >
+                                                                <Text allowFontScaling={false} style={[fm.optionText, { color: colors.text }]}>{sub.name}</Text>
+                                                                {selectedSubjects.includes(sub.id) && <Check size={16} color={colors.primary} />}
+                                                            </TouchableOpacity>
+                                                        ))}
+                                                    </ScrollView>
+                                                </View>
+                                            )}
+                                        </View>
 
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Parent Contact *</Text>
+                                        {/* Parent Contact */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Parent Contact *</Text>
                                             <TextInput
-                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                                 value={newStudent.parent_contact}
-                                                onChangeText={(text) => setNewStudent({ ...newStudent, parent_contact: text })}
+                                                onChangeText={t => setNewStudent({ ...newStudent, parent_contact: t })}
                                                 placeholder="Parent contact number"
                                                 placeholderTextColor={colors.textSecondary}
                                                 keyboardType="phone-pad"
+                                                allowFontScaling={false}
                                             />
                                         </View>
 
+                                        {/* Monthly Fee */}
                                         {!editingStudent && (
-                                            <View style={styles.inputGroup}>
-                                                <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Monthly Fee (Rs) *</Text>
+                                            <View style={modalForm.group}>
+                                                <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Monthly Fee (Rs) *</Text>
                                                 <TextInput
-                                                    style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                    style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                                     value={newStudent.monthly_fee}
-                                                    onChangeText={(text) => setNewStudent({ ...newStudent, monthly_fee: text })}
+                                                    onChangeText={t => setNewStudent({ ...newStudent, monthly_fee: t })}
                                                     placeholder="e.g. 3000"
                                                     placeholderTextColor={colors.textSecondary}
                                                     keyboardType="numeric"
+                                                    allowFontScaling={false}
                                                 />
-                                                <Text allowFontScaling={false} style={[styles.helpText, { color: colors.textSecondary }]}>
-                                                    Monthly fee amount for this student
-                                                </Text>
                                             </View>
                                         )}
 
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Gender *</Text>
-                                            <View style={styles.genderOptions}>
-                                                {[
-                                                    { value: 'male', label: 'Male' },
-                                                    { value: 'female', label: 'Female' },
-                                                    { value: 'other', label: 'Other' },
-                                                ].map((gender) => (
-                                                    <TouchableOpacity
-                                                        key={gender.value}
-                                                        style={[
-                                                            styles.genderOption,
-                                                            { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                                                            newStudent.gender === gender.value && { backgroundColor: colors.primary, borderColor: colors.primary },
-                                                        ]}
-                                                        onPress={() => setNewStudent({ ...newStudent, gender: gender.value as any })}
-                                                    >
-                                                        <Text
-                                                            style={[
-                                                                styles.genderOptionText,
-                                                                { color: colors.text },
-                                                                newStudent.gender === gender.value && { color: '#ffffff' },
-                                                            ]}
+                                        {/* Gender dropdown */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Gender *</Text>
+                                            <TouchableOpacity
+                                                style={[fm.accordionHeader, { borderColor: colors.border }]}
+                                                onPress={() => toggleFormDropdown('gender')}
+                                            >
+                                                <Text allowFontScaling={false} style={[fm.accordionLabel, { color: colors.textSecondary }]}>Gender</Text>
+                                                <View style={fm.accordionRight}>
+                                                    <Text allowFontScaling={false} style={[fm.accordionValue, { color: newStudent.gender ? colors.text : colors.textSecondary }]}>
+                                                        {newStudent.gender ? newStudent.gender.charAt(0).toUpperCase() + newStudent.gender.slice(1) : 'Select gender'}
+                                                    </Text>
+                                                    <ChevronRight size={16} color={colors.textSecondary} style={chevronStyle('gender')} />
+                                                </View>
+                                            </TouchableOpacity>
+                                            {openFormDropdown === 'gender' && (
+                                                <View style={[fm.accordionBody, { borderColor: colors.border }]}>
+                                                    {(['male', 'female', 'other'] as const).map(g => (
+                                                        <TouchableOpacity
+                                                            key={g}
+                                                            style={[fm.option, { borderBottomColor: colors.border }]}
+                                                            onPress={() => { setNewStudent({ ...newStudent, gender: g }); setOpenFormDropdown(null); }}
                                                         >
-                                                            {gender.label}
-                                                        </Text>
-                                                    </TouchableOpacity>
-                                                ))}
-                                            </View>
+                                                            <Text allowFontScaling={false} style={[fm.optionText, { color: colors.text }]}>
+                                                                {g.charAt(0).toUpperCase() + g.slice(1)}
+                                                            </Text>
+                                                            {newStudent.gender === g && <Check size={16} color={colors.primary} />}
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            )}
                                         </View>
 
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Address *</Text>
+                                        {/* Address */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Address *</Text>
                                             <TextInput
-                                                style={[styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                style={[modalForm.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                                 value={newStudent.address}
-                                                onChangeText={(text) => setNewStudent({ ...newStudent, address: text })}
+                                                onChangeText={t => setNewStudent({ ...newStudent, address: t })}
                                                 placeholder="Student home address"
                                                 placeholderTextColor={colors.textSecondary}
                                                 multiline
                                                 numberOfLines={3}
+                                                allowFontScaling={false}
                                             />
                                         </View>
 
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Admission Date *</Text>
+                                        {/* Admission Date */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Admission Date *</Text>
                                             <TextInput
-                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                                 value={newStudent.admission_date}
-                                                onChangeText={(text) => setNewStudent({ ...newStudent, admission_date: text })}
+                                                onChangeText={t => setNewStudent({ ...newStudent, admission_date: t })}
                                                 placeholder="YYYY-MM-DD"
                                                 placeholderTextColor={colors.textSecondary}
+                                                allowFontScaling={false}
                                             />
                                         </View>
 
-                                        <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>Additional Information (Optional)</Text>
-
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Date of Birth</Text>
-                                            <TextInput
-                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
-                                                value={newStudent.date_of_birth}
-                                                onChangeText={(text) => setNewStudent({ ...newStudent, date_of_birth: text })}
-                                                placeholder="YYYY-MM-DD"
-                                                placeholderTextColor={colors.textSecondary}
-                                            />
+                                        {/* Date of Birth — calendar picker */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Date of Birth (Optional)</Text>
+                                            <TouchableOpacity
+                                                style={[fm.accordionHeader, { borderColor: colors.border }]}
+                                                onPress={() => setShowDobPicker(true)}
+                                            >
+                                                <Calendar size={15} color={newStudent.date_of_birth ? colors.primary : colors.textSecondary} />
+                                                <Text allowFontScaling={false} style={[fm.fileText, { color: newStudent.date_of_birth ? colors.text : colors.textSecondary, marginLeft: 8 }]}>
+                                                    {newStudent.date_of_birth || 'Select date of birth'}
+                                                </Text>
+                                                {newStudent.date_of_birth && (
+                                                    <TouchableOpacity onPress={() => setNewStudent({ ...newStudent, date_of_birth: '' })} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                                        <X size={14} color="#EF4444" />
+                                                    </TouchableOpacity>
+                                                )}
+                                            </TouchableOpacity>
+                                            {showDobPicker && Platform.OS === 'android' && (
+                                                <DateTimePicker
+                                                    value={dobStr2Date(newStudent.date_of_birth)}
+                                                    mode="date"
+                                                    display="calendar"
+                                                    maximumDate={new Date()}
+                                                    onChange={(_, d) => {
+                                                        setShowDobPicker(false);
+                                                        if (d) setNewStudent(prev => ({ ...prev, date_of_birth: date2Str(d) }));
+                                                    }}
+                                                />
+                                            )}
                                         </View>
 
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Emergency Contact</Text>
+                                        {/* Emergency Contact */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Emergency Contact (Optional)</Text>
                                             <TextInput
-                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                                 value={newStudent.emergency_contact}
-                                                onChangeText={(text) => setNewStudent({ ...newStudent, emergency_contact: text })}
+                                                onChangeText={t => setNewStudent({ ...newStudent, emergency_contact: t })}
                                                 placeholder="Emergency contact number"
                                                 placeholderTextColor={colors.textSecondary}
                                                 keyboardType="phone-pad"
+                                                allowFontScaling={false}
                                             />
                                         </View>
 
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Parent/Guardian Name</Text>
+                                        {/* Parent Name */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Parent/Guardian Name (Optional)</Text>
                                             <TextInput
-                                                style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                style={[modalForm.input, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                                 value={newStudent.parent_name}
-                                                onChangeText={(text) => setNewStudent({ ...newStudent, parent_name: text })}
+                                                onChangeText={t => setNewStudent({ ...newStudent, parent_name: t })}
                                                 placeholder="Parent/guardian full name"
                                                 placeholderTextColor={colors.textSecondary}
+                                                allowFontScaling={false}
                                             />
                                         </View>
 
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Medical Conditions</Text>
+                                        {/* Medical Conditions */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Medical Conditions (Optional)</Text>
                                             <TextInput
-                                                style={[styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                style={[modalForm.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                                 value={newStudent.medical_conditions}
-                                                onChangeText={(text) => setNewStudent({ ...newStudent, medical_conditions: text })}
+                                                onChangeText={t => setNewStudent({ ...newStudent, medical_conditions: t })}
                                                 placeholder="Any medical conditions or allergies"
                                                 placeholderTextColor={colors.textSecondary}
                                                 multiline
                                                 numberOfLines={2}
+                                                allowFontScaling={false}
                                             />
                                         </View>
 
-                                        <View style={styles.inputGroup}>
-                                            <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Notes</Text>
+                                        {/* Notes */}
+                                        <View style={modalForm.group}>
+                                            <Text allowFontScaling={false} style={[modalForm.label, { color: colors.text }]}>Notes (Optional)</Text>
                                             <TextInput
-                                                style={[styles.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                                                style={[modalForm.textArea, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
                                                 value={newStudent.notes}
-                                                onChangeText={(text) => setNewStudent({ ...newStudent, notes: text })}
+                                                onChangeText={t => setNewStudent({ ...newStudent, notes: t })}
                                                 placeholder="Additional notes about the student"
                                                 placeholderTextColor={colors.textSecondary}
                                                 multiline
                                                 numberOfLines={2}
+                                                allowFontScaling={false}
                                             />
                                         </View>
 
-                                        {/* Info box about workflow — only shown when adding */}
-                                        {!editingStudent && <View style={[styles.infoBox, { backgroundColor: '#EBF8FF', borderColor: '#3182CE' }]}>
-                                            <Text allowFontScaling={false} style={[styles.infoTitle, { color: '#2C5282' }]}>How it works:</Text>
-                                            <Text allowFontScaling={false} style={[styles.infoText, { color: '#2A4A6B' }]}>
-                                                1. Student record is created with email: {newStudent.roll_number.toLowerCase()}@aliacademy.com{'\n'}
-                                                2. Student uses this email in the registration screen{'\n'}
-                                                3. Student sets their own password{'\n'}
-                                                4. Auth account is created automatically
-                                            </Text>
-                                        </View>}
+                                        {/* Workflow info */}
+                                        {!editingStudent && (
+                                            <View style={[modalForm.infoBox, { backgroundColor: colors.cardBackground }]}>
+                                                <Text allowFontScaling={false} style={[modalForm.infoText, { color: colors.textSecondary }]}>
+                                                    Email: {newStudent.roll_number.toLowerCase() || 'rollno'}@aliacademy.com — student will use this to register and set their password.
+                                                </Text>
+                                            </View>
+                                        )}
 
+                                        {/* Submit */}
                                         <TouchableOpacity
-                                            style={[styles.submitButton, { backgroundColor: colors.primary }]}
+                                            style={[modalForm.submitBtn, { backgroundColor: colors.primary }, creating && { opacity: 0.6 }]}
                                             onPress={editingStudent ? handleUpdateStudent : handleAddStudent}
                                             disabled={creating}
                                         >
-                                            {creating ? (
-                                                <ActivityIndicator color="#ffffff" />
-                                            ) : (
-                                                <Text allowFontScaling={false} style={styles.submitButtonText}>
-                                                    {editingStudent ? 'Save Changes' : 'Create Student (No Password)'}
-                                                </Text>
-                                            )}
+                                            {creating
+                                                ? <ActivityIndicator color="#ffffff" />
+                                                : <Text allowFontScaling={false} style={modalForm.submitText}>
+                                                    {editingStudent ? 'Save Changes' : 'Add Student'}
+                                                  </Text>
+                                            }
                                         </TouchableOpacity>
                                     </ScrollView>
                                 </View>
+
+                                {/* iOS DOB picker modal */}
+                                {showDobPicker && Platform.OS === 'ios' && (
+                                    <Modal transparent animationType="fade" onRequestClose={() => setShowDobPicker(false)}>
+                                        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+                                            <TouchableWithoutFeedback onPress={() => setShowDobPicker(false)}>
+                                                <View style={StyleSheet.absoluteFillObject} />
+                                            </TouchableWithoutFeedback>
+                                            <View style={[fm.pickerSheet, { backgroundColor: colors.cardBackground }]}>
+                                                <View style={[fm.pickerHeader, { borderBottomColor: colors.border }]}>
+                                                    <Text allowFontScaling={false} style={[fm.pickerTitle, { color: colors.text }]}>Date of Birth</Text>
+                                                    <TouchableOpacity onPress={() => setShowDobPicker(false)}>
+                                                        <Text allowFontScaling={false} style={[fm.pickerDone, { color: colors.primary }]}>Done</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                                <DateTimePicker
+                                                    value={dobStr2Date(newStudent.date_of_birth)}
+                                                    mode="date"
+                                                    display="spinner"
+                                                    maximumDate={new Date()}
+                                                    textColor={colors.text}
+                                                    onChange={(_, d) => { if (d) setNewStudent(prev => ({ ...prev, date_of_birth: date2Str(d) })); }}
+                                                />
+                                            </View>
+                                        </View>
+                                    </Modal>
+                                )}
                             </View>
-                            </KeyboardAvoidingView>
                         </Modal>
 
                         {/* Pending Registration Modal */}
@@ -1553,10 +1627,11 @@ const styles = StyleSheet.create({
     filterOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'flex-end',
     },
     filterSheet: {
         borderTopLeftRadius: 20, borderTopRightRadius: 20,
-        paddingTop: 12, paddingBottom: 32, maxHeight: height * 0.65,
+        paddingTop: 12, paddingBottom: 32, height: height * 0.45,
     },
     filterHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
     filterSheetHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 8 },
@@ -1569,7 +1644,7 @@ const styles = StyleSheet.create({
         borderRadius: 10, borderWidth: 1, gap: 8,
     },
     addStudentText: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold' },
-    filterScroll: { flexGrow: 0 },
+    filterScroll: { flex: 1 },
     filterAccordionHeader: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         marginHorizontal: 16, marginBottom: 8, paddingHorizontal: 14, paddingVertical: 12,
@@ -1586,6 +1661,24 @@ const styles = StyleSheet.create({
     filterOptionText: { fontSize: TextSizes.medium, fontFamily: 'Inter-Regular', flex: 1 },
     filterApplyBtn: { marginHorizontal: 16, marginTop: 8, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
     filterApplyBtnText: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold', color: '#ffffff' },
+});
+
+const fm = StyleSheet.create({
+    root: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+    accordionHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, borderWidth: 1, gap: 8 },
+    accordionDisabled: { opacity: 0.5 },
+    accordionLabel: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium', flex: 1 },
+    accordionRight: { flexDirection: 'row', alignItems: 'center' },
+    accordionValue: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-SemiBold' },
+    accordionBody: { marginTop: 6, borderRadius: 10, borderWidth: 1, overflow: 'hidden' },
+    dropdownScroll: { maxHeight: 180 },
+    option: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+    optionText: { fontSize: TextSizes.medium, fontFamily: 'Inter-Regular', flex: 1 },
+    fileText: { flex: 1, fontSize: TextSizes.normal, fontFamily: 'Inter-Regular' },
+    pickerSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+    pickerHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1 },
+    pickerTitle: { fontSize: TextSizes.sectionTitle, fontFamily: 'Inter-SemiBold' },
+    pickerDone: { fontSize: TextSizes.medium, fontFamily: 'Inter-SemiBold' },
 });
 
 // const styles = StyleSheet.create({

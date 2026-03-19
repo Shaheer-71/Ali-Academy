@@ -1,7 +1,7 @@
 // src/components/lectures/LectureCard.tsx
 import React, { useRef, useEffect, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Alert,
+  View, Text, TouchableOpacity, StyleSheet,
   ActivityIndicator, Animated, PanResponder, Platform,
 } from 'react-native';
 import {
@@ -17,6 +17,7 @@ import {
 } from '@/src/utils/errorHandler/lectureErrorHandler';
 import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
 import { ErrorModal } from '../common/ErrorModal';
+import { useDialog } from '@/src/contexts/DialogContext';
 import { LectureDetailModal } from '@/src/components/lectures/modals/LectureDetailModal';
 
 const ACTION_WIDTH = 90;
@@ -39,6 +40,7 @@ export default function LectureCard({
 }: LectureCardProps) {
   const { colors } = useTheme();
   const { profile } = useAuth();
+  const { showConfirm } = useDialog();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [errorModal, setErrorModal] = useState({ visible: false, title: '', message: '' });
@@ -115,27 +117,23 @@ export default function LectureCard({
 
   const handleDelete = () => {
     onSwipeClose();
-    Alert.alert(
-      'Delete Lecture',
-      `Are you sure you want to delete "${lecture.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete', style: 'destructive',
-          onPress: async () => {
-            setIsDeleting(true);
-            try {
-              await lectureService.deleteLecture(lecture.id);
-              onRefresh?.();
-            } catch (error) {
-              showError(error, handleLectureDeleteError);
-            } finally {
-              setIsDeleting(false);
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: 'Delete Lecture',
+      message: `Are you sure you want to delete "${lecture.title}"?`,
+      confirmText: 'Delete',
+      destructive: true,
+      onConfirm: async () => {
+        setIsDeleting(true);
+        try {
+          await lectureService.deleteLecture(lecture.id);
+          onRefresh?.();
+        } catch (error) {
+          showError(error, handleLectureDeleteError);
+        } finally {
+          setIsDeleting(false);
+        }
+      },
+    });
   };
 
   const handleView = async () => {

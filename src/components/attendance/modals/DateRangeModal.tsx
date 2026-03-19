@@ -1,6 +1,8 @@
 // components/attendance/modals/DateRangeModal.tsx
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+
+const { height: windowHeight } = Dimensions.get('window');
 import { Calendar, X } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 
@@ -53,8 +55,9 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
     };
 
     return (
-        <Modal visible={visible} transparent animationType="fade">
+        <Modal visible={visible} transparent animationType="fade" statusBarTranslucent={true}>
             <View style={styles.overlay}>
+                <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
                 <View style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
                     <View style={styles.header}>
                         <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>Select Date Range</Text>
@@ -270,16 +273,15 @@ const styles = StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
+        justifyContent: 'flex-end',
     },
     modalContainer: {
-        borderRadius: 20,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
         padding: 24,
         width: '100%',
-        maxWidth: 400,
-        maxHeight: '80%',
+        height: windowHeight * 0.45,
+        overflow: 'hidden',
     },
     header: {
         flexDirection: 'row',

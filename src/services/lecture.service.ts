@@ -371,8 +371,8 @@ class LectureService {
                     .from('notifications')
                     .insert([{
                         type: 'lecture_added',
-                        title: `${formData.title} Uploaded`,
-                        message: `A new lecture has been uploaded. Check it out!`,
+                        title: `New Lecture – ${formData.title}`,
+                        message: `A new lecture has been uploaded. Check the lectures section to view and download the material.`,
                         entity_type: 'lecture',
                         entity_id: lecture.id,
                         created_by: uploaderId,
@@ -400,8 +400,8 @@ class LectureService {
                         try {
                             await sendPushNotification({
                                 userId: studentId,
-                                title: `🎥 New Lecture Uploaded`,
-                                body: `The lecture "${formData.title}" has been uploaded. Check it now!`,
+                                title: `New Lecture – ${formData.title}`,
+                                body: `A new lecture has been uploaded. Check the lectures section to view and download the material.`,
                                 data: {
                                     type: 'lecture_added',
                                     notificationId: notification.id,

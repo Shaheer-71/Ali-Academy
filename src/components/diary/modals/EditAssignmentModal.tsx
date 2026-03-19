@@ -1,6 +1,6 @@
 // components/diary/EditAssignmentModal.tsx
 import React from 'react';
-import { View, Modal, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Modal, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { Text } from 'react-native';
 import { X, Upload } from 'lucide-react-native';
 import styles from '../styles';
@@ -33,10 +33,6 @@ export const EditAssignmentModal = ({
             statusBarTranslucent={true}
             presentationStyle="overFullScreen"
         >
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            >
             <View style={styles.modalOverlay}>
                 <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                     <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
@@ -51,7 +47,7 @@ export const EditAssignmentModal = ({
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView style={styles.modalScrollView} keyboardShouldPersistTaps="handled">
+                    <ScrollView style={styles.modalScrollView} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
                         {/* Title Input */}
                         <View style={styles.inputGroup}>
                             <Text allowFontScaling={false} style={[styles.label, { color: colors.text }]}>Title</Text>
@@ -117,7 +113,6 @@ export const EditAssignmentModal = ({
                     </ScrollView>
                 </View>
             </View>
-            </KeyboardAvoidingView>
         </Modal>
     );
 };

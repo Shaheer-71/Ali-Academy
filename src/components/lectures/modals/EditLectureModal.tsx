@@ -8,12 +8,15 @@ import {
     TouchableOpacity,
     TextInput,
     ScrollView,
-    Alert,
     StyleSheet,
     ActivityIndicator,
+    Dimensions,
 } from 'react-native';
+
+const { height: windowHeight } = Dimensions.get('window');
 import { X, Save, Youtube } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useDialog } from '@/src/contexts/DialogContext';
 import { lectureService } from '@/src/services/lecture.service';
 import { Lecture } from '@/src/types/lectures';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
@@ -34,6 +37,7 @@ export default function EditLectureModal({
     onSuccess
 }: EditLectureModalProps) {
     const { colors } = useTheme();
+    const { showError: showDialogError, showSuccess } = useDialog();
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -74,12 +78,12 @@ export default function EditLectureModal({
 
         // Validation
         if (!title.trim()) {
-            Alert.alert('Error', 'Please enter a title');
+            showDialogError('Error', 'Please enter a title');
             return;
         }
 
         if (youtubeLink && !validateYouTubeLink(youtubeLink)) {
-            Alert.alert('Error', 'Please enter a valid YouTube link');
+            showDialogError('Error', 'Please enter a valid YouTube link');
             return;
         }
 
@@ -91,15 +95,10 @@ export default function EditLectureModal({
                 youtube_link: youtubeLink.trim(),
             });
 
-            Alert.alert('Success', 'Lecture updated successfully', [
-                {
-                    text: 'OK',
-                    onPress: () => {
-                        onSuccess();
-                        onClose();
-                    }
-                }
-            ]);
+            showSuccess('Success', 'Lecture updated successfully', () => {
+                onSuccess();
+                onClose();
+            });
         } catch (error: any) {
             showError(error, handleLectureUpdateError);
         } finally {
@@ -121,6 +120,7 @@ export default function EditLectureModal({
             statusBarTranslucent={true}
             presentationStyle="overFullScreen">
             <View style={styles.overlay}>
+                <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={handleClose} />
                 <View style={[styles.modal, { backgroundColor: colors.background }]}>
                     {/* Header */}
                     <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -228,13 +228,14 @@ const styles = StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: 'flex-end',
     },
     modal: {
-        width: '90%',
-        maxHeight: '70%',
-        borderRadius: 20,
+        width: '100%',
+        height: windowHeight * 0.75,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        overflow: 'hidden',
     },
     header: {
         flexDirection: 'row',

@@ -1,6 +1,8 @@
 // components/diary/styles.ts
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
 import { TextSizes } from '@/src/styles/TextSizes';
+
+const { height: windowHeight } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
 
@@ -191,7 +193,8 @@ const styles = StyleSheet.create({
     modalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '65%',
+        height: windowHeight * 0.75,
+        overflow: 'hidden',
     },
     modalHeader: {
         flexDirection: 'row',
@@ -335,7 +338,8 @@ const styles = StyleSheet.create({
     detailModalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '70%',
+        height: windowHeight * 0.60,
+        overflow: 'hidden',
     },
     detailModalHeader: {
         flexDirection: 'row',

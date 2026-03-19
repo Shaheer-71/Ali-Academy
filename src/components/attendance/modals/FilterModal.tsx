@@ -1,5 +1,7 @@
 import React from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from 'react-native';
+
+const { height: windowHeight } = Dimensions.get('window');
 import { X } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 
@@ -132,7 +134,7 @@ const styles = StyleSheet.create({
     filterModalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        height: '65%',
+        height: windowHeight * 0.45,
         overflow: 'hidden',
     },
     modalHeader: {

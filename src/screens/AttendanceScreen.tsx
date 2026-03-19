@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Modal, TouchableOpacity,
-  TouchableWithoutFeedback, RefreshControl, Alert,
+  TouchableWithoutFeedback, RefreshControl,
   Dimensions, Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useDialog } from '@/src/contexts/DialogContext';
 import { useAttendance } from '@/src/hooks/useAttendance';
 import { supabase } from '@/src/lib/supabase';
 import TopSections from '@/src/components/common/TopSections';
@@ -55,6 +56,7 @@ interface AttendanceRecord {
 export default function AttendanceScreen() {
   const { profile } = useAuth();
   const { colors } = useTheme();
+  const { showSuccess, showConfirm } = useDialog();
   const screenStyle = useScreenAnimation();
   const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin';
   const isSuperAdmin = profile?.role === 'superadmin';
@@ -245,21 +247,23 @@ const [editModalVisible, setEditModalVisible] = useState(false);
   const handlePostAttendance = async () => {
     const markedCount = Object.keys(currentAttendance).length;
     if (markedCount === 0) { showError('No Students Marked', 'Please mark at least one student.'); return; }
-    Alert.alert('Post Attendance', `Post attendance for ${markedCount} of ${students.length} students?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Post', onPress: async () => {
-          const result = await postAttendance(getToday());
-          if (result.success) {
-            Alert.alert('Success', 'Attendance posted successfully');
+    showConfirm({
+      title: 'Post Attendance',
+      message: `Post attendance for ${markedCount} of ${students.length} students?`,
+      confirmText: 'Post',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        const result = await postAttendance(getToday());
+        if (result.success) {
+          showSuccess('Success', 'Attendance posted successfully', () => {
             setMarkVisible(false);
             fetchViewData(filterClass, startDate, endDate);
-          } else {
-            showError('Failed', result.error || 'Failed to post attendance');
-          }
+          });
+        } else {
+          showError('Failed', result.error || 'Failed to post attendance');
         }
-      }
-    ]);
+      },
+    });
   };
 
   // ── Refresh ───────────────────────────────────────────────────────────────────
@@ -299,128 +303,132 @@ const [editModalVisible, setEditModalVisible] = useState(false);
     const hasChanges = pendingClass !== null || pendingRange !== 'week';
 
     return (
-      <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={() => setFilterVisible(false)}>
+      <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={() => setFilterVisible(false)} statusBarTranslucent presentationStyle="overFullScreen">
         <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
-          <View style={s.overlay} />
-        </TouchableWithoutFeedback>
-        <View style={[s.sheet, { backgroundColor: colors.cardBackground }]}>
-          <View style={[s.sheetHandle, { backgroundColor: colors.border }]} />
+          <View style={s.modalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={[s.sheet, { backgroundColor: colors.cardBackground }]}>
+                <View style={[s.sheetHandle, { backgroundColor: colors.border }]} />
 
-          {/* Mark action button — teacher only */}
-          {isTeacher && (
-            <View style={s.actionRow}>
-              <TouchableOpacity style={[s.actionBtn, { borderColor: colors.primary }]} onPress={openMark}>
-                <PenTool size={15} color={colors.primary} />
-                <Text allowFontScaling={false} style={[s.actionBtnText, { color: colors.primary }]}>Mark Attendance</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <View style={s.sheetHeader}>
-            <Text allowFontScaling={false} style={[s.sheetTitle, { color: colors.text }]}>Filter Attendance</Text>
-            {hasChanges && (
-              <TouchableOpacity onPress={resetFilter}>
-                <Text allowFontScaling={false} style={[s.resetText, { color: '#EF4444' }]}>Reset</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <ScrollView style={s.sheetScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            {/* Date range chips */}
-            <Text allowFontScaling={false} style={[s.fieldLabel, { color: colors.textSecondary }]}>Date Range</Text>
-            <View style={s.chipRow}>
-              {(['today', 'week', 'month', 'custom'] as DateRange[]).map(r => (
-                <TouchableOpacity
-                  key={r}
-                  style={[s.chip, { borderColor: colors.border }, pendingRange === r && { backgroundColor: colors.primary, borderColor: colors.primary }]}
-                  onPress={() => handlePendingRangeChange(r)}
-                >
-                  <Text allowFontScaling={false} style={[s.chipText, { color: pendingRange === r ? '#fff' : colors.text }]}>
-                    {r === 'today' ? 'Today' : r === 'week' ? 'Weekly' : r === 'month' ? 'Monthly' : 'Custom'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Custom date pickers */}
-            {pendingRange === 'custom' && (
-              <View style={[s.customDateBox, { borderColor: colors.border }]}>
-                <TouchableOpacity style={s.dateInputRow} onPress={() => setPickerTarget('start')}>
-                  <Text allowFontScaling={false} style={[s.dateInputLabel, { color: colors.textSecondary }]}>From</Text>
-                  <Text allowFontScaling={false} style={[s.dateInputValue, { color: colors.text }]}>{fmtDisplay(pendingStart)}</Text>
-                  <Calendar size={14} color={colors.textSecondary} />
-                </TouchableOpacity>
-                <View style={[s.dateInputDivider, { backgroundColor: colors.border }]} />
-                <TouchableOpacity style={s.dateInputRow} onPress={() => setPickerTarget('end')}>
-                  <Text allowFontScaling={false} style={[s.dateInputLabel, { color: colors.textSecondary }]}>To</Text>
-                  <Text allowFontScaling={false} style={[s.dateInputValue, { color: colors.text }]}>{fmtDisplay(pendingEnd)}</Text>
-                  <Calendar size={14} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Class accordion */}
-            {isTeacher && (
-              <>
-                <TouchableOpacity
-                  style={[s.accordion, { borderColor: colors.border }]}
-                  onPress={() => setExpandedSection(prev => prev === 'class' ? null : 'class')}
-                >
-                  <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Class</Text>
-                  <View style={s.accordionRight}>
-                    <Text allowFontScaling={false} style={[s.accordionValue, { color: colors.text }]}>{selectedClassName}</Text>
-                    <ChevronRight size={16} color={colors.textSecondary}
-                      style={{ marginLeft: 6, transform: [{ rotate: expandedSection === 'class' ? '270deg' : '90deg' }] }} />
-                  </View>
-                </TouchableOpacity>
-                {expandedSection === 'class' && (
-                  <View style={[s.accordionBody, { borderColor: colors.border }]}>
-                    <TouchableOpacity style={[s.option, { borderBottomColor: colors.border }]} onPress={() => handlePendingClassSelect(null)}>
-                      <Text allowFontScaling={false} style={[s.optionText, { color: colors.text }]}>All Classes</Text>
-                      {pendingClass === null && <Check size={16} color={colors.primary} />}
+                {/* Mark action button — teacher only */}
+                {isTeacher && (
+                  <View style={s.actionRow}>
+                    <TouchableOpacity style={[s.actionBtn, { borderColor: colors.primary }]} onPress={openMark}>
+                      <PenTool size={15} color={colors.primary} />
+                      <Text allowFontScaling={false} style={[s.actionBtnText, { color: colors.primary }]}>Mark Attendance</Text>
                     </TouchableOpacity>
-                    {classes.map(c => (
-                      <TouchableOpacity key={c.id} style={[s.option, { borderBottomColor: colors.border }]} onPress={() => handlePendingClassSelect(c.id)}>
-                        <Text allowFontScaling={false} style={[s.optionText, { color: colors.text }]}>{c.name}</Text>
-                        {pendingClass === c.id && <Check size={16} color={colors.primary} />}
+                  </View>
+                )}
+
+                <View style={s.sheetHeader}>
+                  <Text allowFontScaling={false} style={[s.sheetTitle, { color: colors.text }]}>Filter Attendance</Text>
+                  {hasChanges && (
+                    <TouchableOpacity onPress={resetFilter}>
+                      <Text allowFontScaling={false} style={[s.resetText, { color: '#EF4444' }]}>Reset</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                <ScrollView style={s.sheetScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                  {/* Date range chips */}
+                  <Text allowFontScaling={false} style={[s.fieldLabel, { color: colors.textSecondary }]}>Date Range</Text>
+                  <View style={s.chipRow}>
+                    {(['today', 'week', 'month', 'custom'] as DateRange[]).map(r => (
+                      <TouchableOpacity
+                        key={r}
+                        style={[s.chip, { borderColor: colors.border }, pendingRange === r && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                        onPress={() => handlePendingRangeChange(r)}
+                      >
+                        <Text allowFontScaling={false} style={[s.chipText, { color: pendingRange === r ? '#fff' : colors.text }]}>
+                          {r === 'today' ? 'Today' : r === 'week' ? 'Weekly' : r === 'month' ? 'Monthly' : 'Custom'}
+                        </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
-                )}
-              </>
-            )}
 
-          </ScrollView>
+                  {/* Custom date pickers */}
+                  {pendingRange === 'custom' && (
+                    <View style={[s.customDateBox, { borderColor: colors.border }]}>
+                      <TouchableOpacity style={s.dateInputRow} onPress={() => setPickerTarget('start')}>
+                        <Text allowFontScaling={false} style={[s.dateInputLabel, { color: colors.textSecondary }]}>From</Text>
+                        <Text allowFontScaling={false} style={[s.dateInputValue, { color: colors.text }]}>{fmtDisplay(pendingStart)}</Text>
+                        <Calendar size={14} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                      <View style={[s.dateInputDivider, { backgroundColor: colors.border }]} />
+                      <TouchableOpacity style={s.dateInputRow} onPress={() => setPickerTarget('end')}>
+                        <Text allowFontScaling={false} style={[s.dateInputLabel, { color: colors.textSecondary }]}>To</Text>
+                        <Text allowFontScaling={false} style={[s.dateInputValue, { color: colors.text }]}>{fmtDisplay(pendingEnd)}</Text>
+                        <Calendar size={14} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
 
-          <TouchableOpacity style={[s.applyBtn, { backgroundColor: colors.primary }]} onPress={applyFilter}>
-            <Text allowFontScaling={false} style={s.applyBtnText}>Apply Filter</Text>
-          </TouchableOpacity>
-        </View>
+                  {/* Class accordion */}
+                  {isTeacher && (
+                    <>
+                      <TouchableOpacity
+                        style={[s.accordion, { borderColor: colors.border }]}
+                        onPress={() => setExpandedSection(prev => prev === 'class' ? null : 'class')}
+                      >
+                        <Text allowFontScaling={false} style={[s.accordionLabel, { color: colors.textSecondary }]}>Class</Text>
+                        <View style={s.accordionRight}>
+                          <Text allowFontScaling={false} style={[s.accordionValue, { color: colors.text }]}>{selectedClassName}</Text>
+                          <ChevronRight size={16} color={colors.textSecondary}
+                            style={{ marginLeft: 6, transform: [{ rotate: expandedSection === 'class' ? '270deg' : '90deg' }] }} />
+                        </View>
+                      </TouchableOpacity>
+                      {expandedSection === 'class' && (
+                        <View style={[s.accordionBody, { borderColor: colors.border }]}>
+                          <TouchableOpacity style={[s.option, { borderBottomColor: colors.border }]} onPress={() => handlePendingClassSelect(null)}>
+                            <Text allowFontScaling={false} style={[s.optionText, { color: colors.text }]}>All Classes</Text>
+                            {pendingClass === null && <Check size={16} color={colors.primary} />}
+                          </TouchableOpacity>
+                          {classes.map(c => (
+                            <TouchableOpacity key={c.id} style={[s.option, { borderBottomColor: colors.border }]} onPress={() => handlePendingClassSelect(c.id)}>
+                              <Text allowFontScaling={false} style={[s.optionText, { color: colors.text }]}>{c.name}</Text>
+                              {pendingClass === c.id && <Check size={16} color={colors.primary} />}
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                    </>
+                  )}
+                </ScrollView>
+
+                <TouchableOpacity style={[s.applyBtn, { backgroundColor: colors.primary }]} onPress={applyFilter}>
+                  <Text allowFontScaling={false} style={s.applyBtnText}>Apply Filter</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
 
         {/* Date picker — iOS inline modal, Android native dialog */}
         {pickerTarget !== null && (
           Platform.OS === 'ios' ? (
             <Modal transparent animationType="fade" onRequestClose={() => setPickerTarget(null)}>
-              <TouchableWithoutFeedback onPress={() => setPickerTarget(null)}>
-                <View style={s.overlay} />
-              </TouchableWithoutFeedback>
-              <View style={[s.pickerSheet, { backgroundColor: colors.cardBackground }]}>
-                <View style={[s.pickerHeader, { borderBottomColor: colors.border }]}>
-                  <Text allowFontScaling={false} style={[s.pickerTitle, { color: colors.text }]}>
-                    {pickerTarget === 'start' ? 'From Date' : 'To Date'}
-                  </Text>
-                  <TouchableOpacity onPress={() => setPickerTarget(null)}>
-                    <Text allowFontScaling={false} style={[s.pickerDone, { color: colors.primary }]}>Done</Text>
-                  </TouchableOpacity>
+              <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+                <TouchableWithoutFeedback onPress={() => setPickerTarget(null)}>
+                  <View style={StyleSheet.absoluteFillObject} />
+                </TouchableWithoutFeedback>
+                <View style={[s.pickerSheet, { backgroundColor: colors.cardBackground }]}>
+                  <View style={[s.pickerHeader, { borderBottomColor: colors.border }]}>
+                    <Text allowFontScaling={false} style={[s.pickerTitle, { color: colors.text }]}>
+                      {pickerTarget === 'start' ? 'From Date' : 'To Date'}
+                    </Text>
+                    <TouchableOpacity onPress={() => setPickerTarget(null)}>
+                      <Text allowFontScaling={false} style={[s.pickerDone, { color: colors.primary }]}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={strToDate(pickerTarget === 'start' ? pendingStart : pendingEnd)}
+                    mode="date"
+                    display="spinner"
+                    onChange={handlePickerChange}
+                    maximumDate={new Date()}
+                    textColor={colors.text}
+                  />
                 </View>
-                <DateTimePicker
-                  value={strToDate(pickerTarget === 'start' ? pendingStart : pendingEnd)}
-                  mode="date"
-                  display="spinner"
-                  onChange={handlePickerChange}
-                  maximumDate={new Date()}
-                  textColor={colors.text}
-                />
               </View>
             </Modal>
           ) : (
@@ -506,12 +514,6 @@ const [editModalVisible, setEditModalVisible] = useState(false);
                   title="Select a Class"
                   subtitle="Choose a class above to load students"
                 />
-              ) : alreadyMarked ? (
-                <EmptyState
-                  icon={<Check size={40} color="#10B981" />}
-                  title="Already Marked Today"
-                  subtitle="Attendance for this class has already been recorded today"
-                />
               ) : markLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <View key={i} style={[s.skeletonCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -556,6 +558,7 @@ const [editModalVisible, setEditModalVisible] = useState(false);
                     totalCount={students.length}
                     posting={posting}
                     onPress={handlePostAttendance}
+                    alreadyPosted={alreadyMarked}
                   />
                 </>
               )}
@@ -580,11 +583,11 @@ const [editModalVisible, setEditModalVisible] = useState(false);
         <View style={s.statsRow}>
           {[0, 1, 2, 3].map(i => (
             <View key={i} style={s.statItem}>
-              <SkeletonBox width={32} height={18} borderRadius={6} style={{ marginBottom: 6 }} />
-              <SkeletonBox width={28} height={10} borderRadius={4} />
+              <SkeletonBox width={Platform.OS === 'android' ? 28 : 32} height={Platform.OS === 'android' ? 13 : 18} borderRadius={5} style={{ marginBottom: Platform.OS === 'android' ? 4 : 6 }} />
+              <SkeletonBox width={Platform.OS === 'android' ? 24 : 28} height={Platform.OS === 'android' ? 9 : 10} borderRadius={4} />
             </View>
           ))}
-          <SkeletonBox width={52} height={44} borderRadius={8} />
+          <SkeletonBox width={Platform.OS === 'android' ? 44 : 52} height={Platform.OS === 'android' ? 36 : 44} borderRadius={Platform.OS === 'android' ? 7 : 8} />
         </View>
       </View>
     ) : (
@@ -695,20 +698,23 @@ const s = StyleSheet.create({
   container: { flex: 1 },
 
   // stats
-  statsCard: { borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1 },
-  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statsCard: { borderRadius: Platform.OS === 'android' ? 10 : 12, padding: Platform.OS === 'android' ? 9 : 14, marginBottom: Platform.OS === 'android' ? 8 : 12, borderWidth: 1 },
+  statsRow: { flexDirection: 'row', alignItems: 'center', gap: Platform.OS === 'android' ? 2 : 4 },
   statItem: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: TextSizes.statValue, fontFamily: 'Inter-SemiBold', marginBottom: 2 },
-  statLabel: { fontSize: TextSizes.statLabel, fontFamily: 'Inter-Medium' },
-  rateBox: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center' },
-  rateValue: { color: '#fff', fontSize: TextSizes.large, fontFamily: 'Inter-SemiBold' },
+  statValue: { fontSize: Platform.OS === 'android' ? TextSizes.sectionTitle : TextSizes.statValue, fontFamily: 'Inter-SemiBold', marginBottom: Platform.OS === 'android' ? 1 : 2 },
+  statLabel: { fontSize: Platform.OS === 'android' ? TextSizes.tiny : TextSizes.statLabel, fontFamily: 'Inter-Medium' },
+  rateBox: { borderRadius: Platform.OS === 'android' ? 7 : 8, paddingHorizontal: Platform.OS === 'android' ? 8 : 10, paddingVertical: Platform.OS === 'android' ? 5 : 6, alignItems: 'center' },
+  rateValue: { color: '#fff', fontSize: Platform.OS === 'android' ? TextSizes.normal : TextSizes.large, fontFamily: 'Inter-SemiBold' },
   rateLabel: { color: '#fff', fontSize: TextSizes.tiny, fontFamily: 'Inter-Medium' },
 
   // filter sheet
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end',
+  },
   sheet: {
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    paddingTop: 12, paddingBottom: 32, maxHeight: height * 0.78,
+    paddingTop: 12, paddingBottom: 32, height: height * 0.45,
   },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
 
@@ -722,7 +728,7 @@ const s = StyleSheet.create({
   sheetHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 12 },
   sheetTitle: { flex: 1, fontSize: TextSizes.sectionTitle, fontFamily: 'Inter-SemiBold' },
   resetText: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium' },
-  sheetScroll: { flexGrow: 0, paddingHorizontal: 16 },
+  sheetScroll: { flex: 1, paddingHorizontal: 16 },
 
   fieldLabel: { fontSize: TextSizes.filterLabel, fontFamily: 'Inter-Medium', marginBottom: 8 },
   chipRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
@@ -763,7 +769,7 @@ const s = StyleSheet.create({
 
   // mark panel
   panelOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  panelSheet: { height: '90%', borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  panelSheet: { height: '75%', borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   panelHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, borderBottomWidth: 1,

@@ -7,7 +7,7 @@ import { X, CheckCircle, XCircle } from 'lucide-react-native';
 import { TextSizes } from '@/src/styles/TextSizes';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const SHEET_HEIGHT = Dimensions.get('window').height * 0.65;
+const SHEET_HEIGHT = Dimensions.get('window').height * 0.60;
 
 interface StudentMarkModalProps {
     visible: boolean;

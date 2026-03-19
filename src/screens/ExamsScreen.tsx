@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Modal, TouchableWithoutFeedback, Dimensions, RefreshControl, Alert, AppState,
+  Modal, TouchableWithoutFeedback, Dimensions, RefreshControl, AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Animated } from 'react-native';
@@ -13,6 +13,7 @@ import { useQuizzes } from '@/src/hooks/useQuizzes';
 import TopSections from '@/src/components/common/TopSections';
 import { SkeletonBox } from '@/src/components/common/Skeleton';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { useDialog } from '@/src/contexts/DialogContext';
 import CreateQuizModal from '../components/exams/modals/CreateQuizModal';
 import BulkMarkingModal from '../components/exams/modals/BulkMarkingModal';
 import BulkResultsModal from '../components/exams/modals/BulkResultsModal';
@@ -35,6 +36,7 @@ export default function ExamsScreen() {
   const screenStyle = useScreenAnimation();
   const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin';
   const isSuperAdmin = profile?.role === 'superadmin';
+  const { showConfirm } = useDialog();
 
   // ── Filter state ────────────────────────────────────────────────────────────
   const [filterVisible, setFilterVisible] = useState(false);
@@ -411,20 +413,16 @@ export default function ExamsScreen() {
   };
 
   const handleDeleteQuiz = (quiz: any) => {
-    Alert.alert(
-      'Delete Quiz',
-      `Delete "${quiz.title}"? This will also remove all student results.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete', style: 'destructive',
-          onPress: async () => {
-            const result = await deleteQuiz(quiz.id);
-            if (!result.success) showError(result.error);
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: 'Delete Quiz',
+      message: `Delete "${quiz.title}"? This will also remove all student results.`,
+      confirmText: 'Delete',
+      destructive: true,
+      onConfirm: async () => {
+        const result = await deleteQuiz(quiz.id);
+        if (!result.success) showError(result.error);
+      },
+    });
   };
 
   // ── Student: view marks for a quiz ──────────────────────────────────────────

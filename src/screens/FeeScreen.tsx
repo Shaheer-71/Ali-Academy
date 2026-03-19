@@ -6,10 +6,12 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    Alert,
     RefreshControl,
     Modal,
+    Dimensions,
 } from 'react-native';
+
+const { height: windowHeight } = Dimensions.get('window');
 import {
     Clock,
     Check,
@@ -21,6 +23,7 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useDialog } from '@/src/contexts/DialogContext';
 import TopSections from '@/src/components/common/TopSections';
 import { FeeDetailsModal } from '../components/fee/modals/FeeDetailsModal';
 import { feeService, StudentWithFeeStatus, FeePayment } from '@/src/services/feeService';
@@ -45,6 +48,7 @@ const YEARS = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
 export default function FeeScreen() {
     const { profile } = useAuth();
     const { colors } = useTheme();
+    const { showError, showSuccess, showInfo, showConfirm } = useDialog();
     const screenStyle = useScreenAnimation();
 
     // Filters
@@ -94,7 +98,7 @@ export default function FeeScreen() {
                 setSelectedClass((class10 ?? classesData[0]).id);
             }
         } catch {
-            Alert.alert('Error', 'Failed to load classes');
+            showError('Error', 'Failed to load classes');
         } finally {
             setLoading(false);
         }
@@ -106,7 +110,7 @@ export default function FeeScreen() {
             const data = await feeService.getStudentsWithFeeStatus(selectedClass, selectedMonth, selectedYear);
             setStudents(data);
         } catch {
-            Alert.alert('Error', 'Failed to load fee data');
+            showError('Error', 'Failed to load fee data');
         } finally {
             setLoading(false);
         }
@@ -124,7 +128,7 @@ export default function FeeScreen() {
             setFeeStructure(studentFs);
             setModalVisible(true);
         } catch {
-            Alert.alert('Error', 'Failed to fetch fee records');
+            showError('Error', 'Failed to fetch fee records');
         }
     };
 
@@ -135,10 +139,13 @@ export default function FeeScreen() {
     };
 
     const handleSendNotification = (studentId: string) => {
-        Alert.alert('Send Notification', 'Notify this student about their fee?', [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Send', onPress: () => sendFeeNotification([studentId], 'single') },
-        ]);
+        showConfirm({
+            title: 'Send Notification',
+            message: 'Notify this student about their fee?',
+            confirmText: 'Send',
+            cancelText: 'Cancel',
+            onConfirm: () => sendFeeNotification([studentId], 'single'),
+        });
     };
 
     const sendFeeNotification = async (studentIds: string[], type: 'single' | 'all') => {
@@ -156,12 +163,12 @@ export default function FeeScreen() {
                 const paidIds = new Set((paidStudents as any[] || []).map((p: any) => p.student_id));
                 recipientList = (allStudents as any[] || []).filter((s: any) => !paidIds.has(s.id));
             }
-            if (!recipientList.length) { Alert.alert('Info', 'No students to notify'); return; }
+            if (!recipientList.length) { showInfo('Info', 'No students to notify'); return; }
 
             const notif: any = await notificationService.createNotification({
                 type: 'fee_reminder',
-                title: `Fee Reminder — ${MONTHS[selectedMonth - 1]} ${selectedYear}`,
-                message: `Please submit your fee for ${MONTHS[selectedMonth - 1]} ${selectedYear}.`,
+                title: `Fee Due – ${MONTHS[selectedMonth - 1]} ${selectedYear}`,
+                message: `Your fee for ${MONTHS[selectedMonth - 1]} ${selectedYear} is due. Please clear your dues at the earliest.`,
                 entity_type: 'fee_payment',
                 created_by: profile!.id,
                 target_type: type === 'single' ? 'individual' : 'all',
@@ -177,17 +184,17 @@ export default function FeeScreen() {
                 try {
                     await sendPushNotification({
                         userId: s.id,
-                        title: `Fee Reminder — ${MONTHS[selectedMonth - 1]}`,
-                        body: `Please pay your fee for ${MONTHS[selectedMonth - 1]} ${selectedYear}.`,
+                        title: `Fee Due – ${MONTHS[selectedMonth - 1]} ${selectedYear}`,
+                        body: `Your fee for ${MONTHS[selectedMonth - 1]} ${selectedYear} is due. Please clear your dues at the earliest.`,
                         data: { type: 'fee_reminder', notificationId: notif.id },
                     });
                 } catch {}
             }
 
-            Alert.alert('Sent', `Fee reminder sent to ${recipientList.length} student(s)`);
+            showSuccess('Sent', `Fee reminder sent to ${recipientList.length} student(s)`);
             await loadStudentsAndFees();
         } catch (e: any) {
-            Alert.alert('Error', e.message || 'Failed to send notifications');
+            showError('Error', e.message || 'Failed to send notifications');
         }
     };
 
@@ -277,14 +284,13 @@ export default function FeeScreen() {
                     <View style={styles.fabContainer}>
                         <TouchableOpacity
                             style={[styles.fab, { backgroundColor: colors.primary }]}
-                            onPress={() => Alert.alert(
-                                'Notify All Unpaid',
-                                `Send fee reminders for ${MONTHS[selectedMonth - 1]} to all unpaid students?`,
-                                [
-                                    { text: 'Cancel', style: 'cancel' },
-                                    { text: 'Send', onPress: () => sendFeeNotification([], 'all') },
-                                ]
-                            )}
+                            onPress={() => showConfirm({
+                                title: 'Notify All Unpaid',
+                                message: `Send fee reminders for ${MONTHS[selectedMonth - 1]} to all unpaid students?`,
+                                confirmText: 'Send',
+                                cancelText: 'Cancel',
+                                onConfirm: () => sendFeeNotification([], 'all'),
+                            })}
                         >
                             <Bell size={18} color="#fff" />
                             <Text allowFontScaling={false} style={styles.fabText}>Notify Unpaid</Text>
@@ -754,7 +760,8 @@ const styles = StyleSheet.create({
     filterSheet: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '80%',
+        height: windowHeight * 0.45,
+        overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -2 },
         shadowOpacity: 0.2,

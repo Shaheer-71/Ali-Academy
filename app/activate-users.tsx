@@ -5,12 +5,12 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    Alert,
     ActivityIndicator,
     Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useDialog } from '@/src/contexts/DialogContext';
 import { supabase } from '@/src/lib/supabase';
 import { UserX, UserCheck, RefreshCw } from 'lucide-react-native';
 import TopSections from '@/src/components/common/TopSections';
@@ -20,6 +20,7 @@ import { RefreshControl } from 'react-native';
 
 export default function ActivateUsersScreen() {
     const { colors } = useTheme();
+    const { showError, showSuccess, showConfirm } = useDialog();
     const screenStyle = useScreenAnimation();
     const [inactiveStudents, setInactiveStudents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -52,36 +53,31 @@ export default function ActivateUsersScreen() {
     };
 
     const handleReactivate = (student: any) => {
-        Alert.alert(
-            'Reactivate Student',
-            `Reactivate ${student.full_name}?\n\nThey will be able to log in again using their original credentials.`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Reactivate',
-                    onPress: async () => {
-                        setReactivating(student.id);
-                        try {
-                            // 1. Re-enable student record
-                            const { error: stuErr } = await supabase
-                                .from('students')
-                                .update({ is_deleted: false, student_status: 'active' })
-                                .eq('id', student.id);
-                            if (stuErr) throw stuErr;
+        showConfirm({
+            title: 'Reactivate Student',
+            message: `Reactivate ${student.full_name}?\n\nThey will be able to log in again using their original credentials.`,
+            confirmText: 'Reactivate',
+            cancelText: 'Cancel',
+            onConfirm: async () => {
+                setReactivating(student.id);
+                try {
+                    // 1. Re-enable student record
+                    const { error: stuErr } = await supabase
+                        .from('students')
+                        .update({ is_deleted: false, student_status: 'active' })
+                        .eq('id', student.id);
+                    if (stuErr) throw stuErr;
 
-                            // trigger syncs profiles.is_active and enrollments automatically
+                    // trigger syncs profiles.is_active and enrollments automatically
 
-                            Alert.alert('Success', `${student.full_name} has been reactivated.`);
-                            fetchInactiveStudents();
-                        } catch (e: any) {
-                            Alert.alert('Error', e?.message || 'Failed to reactivate student.');
-                        } finally {
-                            setReactivating(null);
-                        }
-                    },
-                },
-            ]
-        );
+                    showSuccess('Success', `${student.full_name} has been reactivated.`, fetchInactiveStudents);
+                } catch (e: any) {
+                    showError('Error', e?.message || 'Failed to reactivate student.');
+                } finally {
+                    setReactivating(null);
+                }
+            },
+        });
     };
 
     return (

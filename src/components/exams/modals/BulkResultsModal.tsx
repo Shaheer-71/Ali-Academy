@@ -7,7 +7,7 @@ import { X, ChevronLeft, PenLine, BookOpen, Award } from 'lucide-react-native';
 import { TextSizes } from '@/src/styles/TextSizes';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const SHEET_HEIGHT = Dimensions.get('window').height * 0.75;
+const SHEET_HEIGHT = Dimensions.get('window').height * 0.60;
 
 interface BulkResultsModalProps {
     colors: any;

@@ -7,7 +7,6 @@ import {
     ScrollView,
     TouchableOpacity,
     TextInput,
-    Alert,
     ActivityIndicator,
     StyleSheet,
     Keyboard,
@@ -19,6 +18,7 @@ import { X, Save } from 'lucide-react-native';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
 import { handleMarkingError } from '@/src/utils/errorHandler/quizErrorHandler';
 import { handleError } from '@/src/utils/errorHandler/attendanceErrorHandler';
+import { useDialog } from '@/src/contexts/DialogContext';
 
 interface MarkingModalProps {
     colors: any;
@@ -37,6 +37,7 @@ const MarkingModal: React.FC<MarkingModalProps> = ({
     setSelectedResult,
     markQuizResult,
 }) => {
+    const { showSuccess } = useDialog();
     const [marking, setMarking] = useState(false);
     const [markingData, setMarkingData] = useState({
         marks: '',
@@ -94,7 +95,7 @@ const MarkingModal: React.FC<MarkingModalProps> = ({
             );
 
             if (result.success) {
-                Alert.alert('Success', 'Quiz marked successfully');
+                showSuccess('Success', 'Quiz marked successfully', () => setMarkingModalVisible(false));
                 setMarkingModalVisible(false);
                 setSelectedResult(null);
                 setMarkingData({ marks: '', remarks: '' });

@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+
+const { height: windowHeight } = Dimensions.get('window');
 import { X } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useDialog } from '@/src/contexts/DialogContext';
 
 interface CustomTimeModalProps {
     visible: boolean;
@@ -15,6 +18,7 @@ export const CustomTimeModal: React.FC<CustomTimeModalProps> = ({
     onConfirm,
 }) => {
     const { colors } = useTheme();
+    const { showError } = useDialog();
     const [customTime, setCustomTime] = useState('');
 
     const handleConfirm = () => {
@@ -22,7 +26,7 @@ export const CustomTimeModal: React.FC<CustomTimeModalProps> = ({
 
         const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
         if (!timeRegex.test(customTime)) {
-            Alert.alert('Error', 'Please enter time in HH:MM format');
+            showError('Error', 'Please enter time in HH:MM format');
             return;
         }
 
@@ -37,6 +41,7 @@ export const CustomTimeModal: React.FC<CustomTimeModalProps> = ({
             transparent={true}
             visible={visible}
             onRequestClose={onClose}
+            statusBarTranslucent={true}
         >
             <View style={styles.modalOverlay}>
                 <View style={[styles.timeModalContent, { backgroundColor: colors.background }]}>
@@ -86,7 +91,8 @@ const styles = StyleSheet.create({
     timeModalContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '40%',
+        height: windowHeight * 0.75,
+        overflow: 'hidden',
     },
     modalHeader: {
         flexDirection: 'row',

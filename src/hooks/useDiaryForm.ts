@@ -8,7 +8,7 @@ import {
     handleNotificationErrorForDiary,
 } from '@/src/utils/errorHandler/diaryErrorHandler';
 import { useCallback, useState } from 'react';
-import { Alert } from 'react-native';
+import { useDialog } from '@/src/contexts/DialogContext';
 import { supabase } from '@/src/lib/supabase';
 
 interface FormState {
@@ -41,6 +41,7 @@ export const useDiaryForm = (
     onSuccess: () => void,
     showError?: (error: any, handler?: (error: any) => any) => void
 ) => {
+    const { showError: dialogShowError } = useDialog();
     const [uploading, setUploading] = useState(false);
     const [editingAssignment, setEditingAssignment] = useState<DiaryAssignment | null>(null);
     const [newAssignment, setNewAssignment] = useState<FormState>({
@@ -77,7 +78,7 @@ export const useDiaryForm = (
             if (showError) {
                 showError({ message: 'Please fill in all required fields' });
             } else {
-                Alert.alert('Error', 'Please fill in all required fields');
+                dialogShowError('Error', 'Please fill in all required fields');
             }
             return false;
         }
@@ -86,7 +87,7 @@ export const useDiaryForm = (
             if (showError) {
                 showError({ message: 'Please select a class' });
             } else {
-                Alert.alert('Error', 'Please select a class');
+                dialogShowError('Error', 'Please select a class');
             }
             return false;
         }
@@ -95,7 +96,7 @@ export const useDiaryForm = (
             if (showError) {
                 showError({ message: 'Please select at least one student' });
             } else {
-                Alert.alert('Error', 'Please select at least one student');
+                dialogShowError('Error', 'Please select at least one student');
             }
             return false;
         }
@@ -116,7 +117,7 @@ export const useDiaryForm = (
                     if (showError) {
                         showError(uploadError, handleCloudinaryUploadErrorForDiary);
                     } else {
-                        Alert.alert('Upload Error', uploadError.message || 'Failed to upload file');
+                        dialogShowError('Upload Error', uploadError.message || 'Failed to upload file');
                     }
 
                     return false;
@@ -299,7 +300,7 @@ export const useDiaryForm = (
             if (showError) {
                 showError(error, handleAssignmentCreateError);
             } else {
-                Alert.alert('Error', error.message || 'Failed to create assignment');
+                dialogShowError('Error', error.message || 'Failed to create assignment');
             }
 
             return false;

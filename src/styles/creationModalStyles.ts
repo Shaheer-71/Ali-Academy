@@ -3,8 +3,10 @@
 // All creation modals (Lecture, Assignment, Timetable, …) MUST use these styles
 // for their common UI elements so they look identical.
 
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
 import { TextSizes } from './TextSizes';
+
+const { height: windowHeight } = Dimensions.get('window');
 
 // ─── Shell (overlay + sheet + header) ────────────────────────────────────────
 export const modalShell = StyleSheet.create({
@@ -20,7 +22,8 @@ export const modalShell = StyleSheet.create({
     sheet: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '75%',
+        height: windowHeight * 0.75,
+        overflow: 'hidden',
     },
     header: {
         flexDirection: 'row',

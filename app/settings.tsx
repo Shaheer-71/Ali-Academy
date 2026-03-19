@@ -5,13 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
-  Linking,
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useDialog } from '@/src/contexts/DialogContext';
 import {
   LogOut,
   HelpCircle,
@@ -34,6 +33,7 @@ import { useScreenAnimation } from '@/src/utils/animations';
 export default function SettingsScreen() {
   const { profile, signOut } = useAuth();
   const { colors } = useTheme();
+  const { showConfirm, showInfo } = useDialog();
   const router = useRouter();
   const screenStyle = useScreenAnimation();
 
@@ -62,32 +62,23 @@ export default function SettingsScreen() {
   };
 
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: () => {
-            signOut();
-            router.back();
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out?',
+      confirmText: 'Sign Out',
+      cancelText: 'Cancel',
+      destructive: true,
+      onConfirm: () => {
+        signOut();
+        router.back();
+      },
+    });
   };
 
   const handleSupport = () => {
-    Alert.alert(
+    showInfo(
       'Contact Support',
-      'How would you like to contact us?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Email', onPress: () => Linking.openURL('mailto:mohammadshaheer342@gmail.com') },
-        { text: 'WhatsApp', onPress: () => Linking.openURL('whatsapp://send?phone=+923178550707') },
-      ]
+      'You can reach us via email at mohammadshaheer342@gmail.com or on WhatsApp at +923178550707'
     );
   };
 
@@ -296,7 +287,7 @@ export default function SettingsScreen() {
               Ali Academy App v1.0.0
             </Text>
             <Text allowFontScaling={false} style={[styles.footerSubtext, { color: colors.textSecondary }]}>
-              Powered By QHASH TECH SOLUTIONS
+              Powered By kodeX Solutions
             </Text>
           </View>
         </ScrollView>

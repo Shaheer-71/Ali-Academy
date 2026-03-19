@@ -7,7 +7,6 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback,
     TextInput,
-    Alert,
     ActivityIndicator,
     StyleSheet,
     Dimensions,
@@ -20,6 +19,7 @@ import { X, ChevronRight, Check } from 'lucide-react-native';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { sendPushNotification } from '@/src/lib/notifications';
+import { useDialog } from '@/src/contexts/DialogContext';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
 import { handleQuizCreationError, handleSubjectFetchForClassError } from '@/src/utils/errorHandler/quizErrorHandler';
 import { TextSizes } from '@/src/styles/TextSizes';
@@ -80,6 +80,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
     const [creating, setCreating] = useState(false);
     const { profile } = useAuth();
     const { bottom: bottomInset } = useSafeAreaInsets();
+    const { showError, showSuccess, showWarning } = useDialog();
 
     const [newQuiz, setNewQuiz] = useState({
         title: '',
@@ -105,7 +106,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
         visible: false, title: '', message: '',
     });
 
-    const showError = (error: any, handler?: (error: any) => any) => {
+    const showErrorModal = (error: any, handler?: (error: any) => any) => {
         const errorInfo = handler ? handler(error) : { title: 'Error', message: error?.message || 'An error occurred' };
         setErrorModal({ visible: true, title: errorInfo.title, message: errorInfo.message });
     };
@@ -154,7 +155,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                     setAvailableSubjects(classSubjects);
                     setNewQuiz(prev => ({ ...prev, subject_id: '' }));
                 } catch (error) {
-                    showError(error, handleSubjectFetchForClassError);
+                    showErrorModal(error, handleSubjectFetchForClassError);
                     setAvailableSubjects([]);
                 } finally {
                     setLoadingSubjects(false);
@@ -175,7 +176,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
         if (!newQuiz.scheduled_date.trim()) missingFields.push('Scheduled Date');
 
         if (missingFields.length > 0) {
-            Alert.alert('Error', `Please fill in: ${missingFields.join(', ')}`);
+            showError('Error', `Please fill in: ${missingFields.join(', ')}`);
             return;
         }
 
@@ -184,15 +185,15 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
         const passingMarks = parseInt(newQuiz.passing_marks);
 
         if (isNaN(duration) || duration <= 0) {
-            Alert.alert('Error', 'Duration must be a valid number greater than 0');
+            showError('Error', 'Duration must be a valid number greater than 0');
             return;
         }
         if (isNaN(totalMarks) || totalMarks <= 0) {
-            Alert.alert('Error', 'Total marks must be a valid number greater than 0');
+            showError('Error', 'Total marks must be a valid number greater than 0');
             return;
         }
         if (isNaN(passingMarks) || passingMarks < 0 || passingMarks > totalMarks) {
-            Alert.alert('Error', 'Passing marks must be between 0 and total marks');
+            showError('Error', 'Passing marks must be between 0 and total marks');
             return;
         }
 
@@ -209,10 +210,9 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
             if (isEditing && updateQuiz) {
                 const result = await updateQuiz(editingQuiz.id, quizPayload);
                 if (result.success) {
-                    Alert.alert('Success', 'Quiz updated successfully');
-                    setModalVisible(false);
+                    showSuccess('Success', 'Quiz updated successfully', () => setModalVisible(false));
                 } else {
-                    Alert.alert('Error', 'Failed to update quiz. Please try again.');
+                    showError('Error', 'Failed to update quiz. Please try again.');
                 }
                 return;
             }
@@ -227,7 +227,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                 .maybeSingle();
 
             if (existing) {
-                Alert.alert(
+                showWarning(
                     'Already Scheduled',
                     'A quiz for this class and subject already exists on this date. You cannot add another.',
                 );
@@ -237,8 +237,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
             const result = await createQuiz(quizPayload);
 
             if (result.success && result.data) {
-                Alert.alert('Success', 'Quiz scheduled successfully');
-                setModalVisible(false);
+                showSuccess('Success', 'Quiz scheduled successfully', () => setModalVisible(false));
 
                 // Fetch only students enrolled in this class+subject
                 const { data: enrollments, error: studentError } = await supabase
@@ -255,8 +254,8 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                     .from('notifications')
                     .insert([{
                         type: 'quiz_added',
-                        title: `${newQuiz.title} Scheduled`,
-                        message: `A new quiz has been scheduled for ${newQuiz.scheduled_date}. Prepare well!`,
+                        title: `Exam Scheduled – ${newQuiz.title}`,
+                        message: `${newQuiz.title} is scheduled for ${newQuiz.scheduled_date}. Check the exams section for details.`,
                         entity_type: 'quiz',
                         entity_id: result.data.id,
                         created_by: profile?.id,
@@ -281,8 +280,8 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                     try {
                         await sendPushNotification({
                             userId: student.id,
-                            title: `📝 ${newQuiz.title}`,
-                            body: `A new quiz has been scheduled for ${newQuiz.scheduled_date}. Total marks: ${totalMarks}. Prepare well!`,
+                            title: `Exam Scheduled – ${newQuiz.title}`,
+                            body: `${newQuiz.title} is scheduled for ${newQuiz.scheduled_date}. Total marks: ${totalMarks}. Check the exams section for details.`,
                             data: {
                                 type: 'quiz_added',
                                 quizId: result.data.id,
@@ -296,10 +295,10 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({
                     } catch { /* continue */ }
                 }
             } else {
-                showError(result.error, handleQuizCreationError);
+                showErrorModal(result.error, handleQuizCreationError);
             }
         } catch (error: any) {
-            Alert.alert('Error', error?.message || 'An unexpected error occurred.');
+            showError('Error', error?.message || 'An unexpected error occurred.');
         } finally {
             setCreating(false);
         }

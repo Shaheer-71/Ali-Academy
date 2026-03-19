@@ -290,8 +290,8 @@ export const feeService = {
                 .insert([
                     {
                         type: "fee_paid",
-                        title: `Fee Payment Confirmed`,
-                        message: `Payment for ${months[month - 1]} ${year} has been marked as paid. Amount: Rs ${resolvedAmount}`,
+                        title: `Payment Confirmed – ${months[month - 1]} ${year}`,
+                        message: `Your fee payment of Rs ${resolvedAmount} for ${months[month - 1]} ${year} has been received. Thank you.`,
                         entity_type: "fee_payment",
                         entity_id: paymentResult?.id,
                         created_by: teacherId,
@@ -342,8 +342,8 @@ export const feeService = {
                 try {
                     await sendPushNotification({
                         userId: recipientProfileId,
-                        title: "Fee Payment Confirmed ✓",
-                        body: `Your fee for ${months[month - 1]} ${year} has been marked as paid. Amount: Rs ${resolvedAmount}`,
+                        title: `Payment Confirmed – ${months[month - 1]} ${year}`,
+                        body: `Fee payment of Rs ${resolvedAmount} for ${months[month - 1]} ${year} has been received. Thank you.`,
                         data: { type: "fee_paid", notificationId: notif.id },
                     });
                 } catch (pushErr) {

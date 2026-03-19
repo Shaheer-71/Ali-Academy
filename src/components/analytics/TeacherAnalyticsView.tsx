@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, ScrollView, TouchableOpacity, StyleSheet,
-    Dimensions, RefreshControl, Animated, Modal, TouchableWithoutFeedback,
+    Dimensions, RefreshControl, Animated, Modal,
 } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
@@ -143,11 +143,9 @@ export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterCha
         const selectedSubjectName = pendingSubject === 'all' ? 'All Subjects' : pendingSubjects.find(s => s.id === pendingSubject)?.name ?? subjects.find(s => s.id === pendingSubject)?.name ?? 'All Subjects';
 
         return (
-            <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={onFilterClose}>
-                <TouchableWithoutFeedback onPress={onFilterClose}>
-                    <View style={styles.modalOverlay} />
-                </TouchableWithoutFeedback>
-
+            <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={onFilterClose} statusBarTranslucent={true}>
+                <View style={styles.modalOverlay}>
+                    <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onFilterClose} />
                 <View style={[styles.bottomSheet, { backgroundColor: colors.cardBackground }]}>
                     <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
 
@@ -211,6 +209,7 @@ export const TeacherAnalyticsView = ({ filterVisible, onFilterClose, onFilterCha
                     <TouchableOpacity style={[styles.applyBtn, { backgroundColor: colors.primary }]} onPress={applyFilter}>
                         <Text allowFontScaling={false} style={styles.applyBtnText}>Apply Filter</Text>
                     </TouchableOpacity>
+                </View>
                 </View>
             </Modal>
         );
@@ -399,13 +398,15 @@ const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'flex-end',
     },
     bottomSheet: {
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         paddingTop: 12,
         paddingBottom: 32,
-        maxHeight: height * 0.6,
+        height: height * 0.45,
+        overflow: 'hidden',
     },
     sheetHandle: {
         width: 40,

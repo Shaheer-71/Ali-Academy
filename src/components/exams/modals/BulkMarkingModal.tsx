@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import {
     Modal, View, Text, FlatList, TouchableOpacity, TouchableWithoutFeedback,
-    TextInput, ActivityIndicator, Alert, StyleSheet, Dimensions, Platform,
+    TextInput, ActivityIndicator, StyleSheet, Dimensions, Platform,
     InteractionManager,
 } from 'react-native';
 import { X, ChevronLeft, Save, UserX, BookOpen, PenLine, Lock } from 'lucide-react-native';
@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/src/lib/supabase';
 import { sendPushNotification } from '@/src/lib/notifications';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { useDialog } from '@/src/contexts/DialogContext';
 
 const SHEET_HEIGHT = Dimensions.get('window').height * 0.75;
 
@@ -227,6 +228,7 @@ const BulkMarkingModal: React.FC<BulkMarkingModalProps> = ({
 }) => {
     const { bottom: bottomInset } = useSafeAreaInsets();
     const { profile } = useAuth();
+    const { showError, showSuccess, showWarning, showInfo } = useDialog();
     const isSuperAdmin = profile?.role === 'superadmin';
     const [selectedQuiz, setSelectedQuiz] = useState<any>(null);
     const [selectedTotalMarks, setSelectedTotalMarks] = useState<number>(100);
@@ -318,12 +320,12 @@ const BulkMarkingModal: React.FC<BulkMarkingModalProps> = ({
             const entry = markingData[r.id];
             if (!entry || entry.isAbsent) continue;
             if (!entry.marks.trim()) {
-                Alert.alert('Missing Marks', `Please enter marks for ${r.students?.full_name || 'a student'}, or mark them as absent.`);
+                showError('Missing Marks', `Please enter marks for ${r.students?.full_name || 'a student'}, or mark them as absent.`);
                 return;
             }
             const m = parseInt(entry.marks);
             if (isNaN(m) || m < 0 || m > totalMarks) {
-                Alert.alert('Invalid Marks', `Marks for ${r.students?.full_name} must be between 0 and ${totalMarks}.`);
+                showError('Invalid Marks', `Marks for ${r.students?.full_name} must be between 0 and ${totalMarks}.`);
                 return;
             }
         }
@@ -359,14 +361,14 @@ const BulkMarkingModal: React.FC<BulkMarkingModalProps> = ({
                 .filter(Boolean) as any[];
 
             if (entries.length === 0) {
-                Alert.alert('No Changes', 'No marks have been changed.');
+                showInfo('No Changes', 'No marks have been changed.');
                 return;
             }
 
             const result = await bulkMarkQuizResults(entries, selectedQuiz.id);
 
             if (result.failed === 0) {
-                Alert.alert('Success', 'All marks saved successfully!');
+                showSuccess('Success', 'All marks saved successfully!');
                 onClose();
                 onRefresh?.();
 
@@ -393,10 +395,10 @@ const BulkMarkingModal: React.FC<BulkMarkingModalProps> = ({
                                 .from('notifications')
                                 .insert([{
                                     type: 'quiz_marked',
-                                    title: `${selectedQuiz.title} Marked`,
+                                    title: `Results Published – ${selectedQuiz.title}`,
                                     message: isAbsent
-                                        ? `You were marked absent for ${selectedQuiz.title}.`
-                                        : `Your quiz has been marked. Tap to see your result!`,
+                                        ? `You were marked absent for the ${selectedQuiz.title} exam.`
+                                        : `Your ${selectedQuiz.title} result is now available. Check the exams section.`,
                                     entity_type: 'quiz_result',
                                     entity_id: savedRow.id,
                                     created_by: profile?.id,
@@ -415,10 +417,10 @@ const BulkMarkingModal: React.FC<BulkMarkingModalProps> = ({
                                 });
                                 await sendPushNotification({
                                     userId: savedRow.student_id,
-                                    title: `📝 ${selectedQuiz.title} Marked`,
+                                    title: `Results Published – ${selectedQuiz.title}`,
                                     body: isAbsent
-                                        ? `You were marked absent for ${selectedQuiz.title}.`
-                                        : `Your quiz has been marked. Tap to see your result!`,
+                                        ? `You were marked absent for the ${selectedQuiz.title} exam.`
+                                        : `Your ${selectedQuiz.title} result is now available. Check the exams section.`,
                                     data: {
                                         type: 'quiz_marked',
                                         quizId: selectedQuiz.id,
@@ -431,10 +433,10 @@ const BulkMarkingModal: React.FC<BulkMarkingModalProps> = ({
                     }
                 })();
             } else {
-                Alert.alert('Partial Save', `${result.failed} mark(s) failed to save. Please try again.`);
+                showWarning('Partial Save', `${result.failed} mark(s) failed to save. Please try again.`);
             }
         } catch {
-            Alert.alert('Error', 'Failed to save marks. Please try again.');
+            showError('Error', 'Failed to save marks. Please try again.');
         } finally {
             setSaving(false);
         }

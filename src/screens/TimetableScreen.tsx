@@ -1,7 +1,7 @@
 // TimetableScreen.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-    ScrollView, RefreshControl, StyleSheet, Alert,
+    ScrollView, RefreshControl, StyleSheet,
     View, TouchableOpacity, Text, Modal,
     TouchableWithoutFeedback, Dimensions, AppState,
 } from 'react-native';
@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Animated } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useDialog } from '@/src/contexts/DialogContext';
 import { useTimetable } from '@/src/hooks/useTimetable';
 import TopSection from '@/src/components/common/TopSections';
 import DayRow from '@/src/components/timetable/DayRow';
@@ -40,6 +41,7 @@ const WEEK_DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'F
 export default function TimetableScreen() {
     const { profile, student } = useAuth();
     const { colors } = useTheme() as { colors: ThemeColors };
+    const { showError: dialogShowError, showConfirm } = useDialog();
     const {
         timetable, loading, error, filters, setFilters,
         createEntry, updateEntry, deleteEntry, getEntriesForDay, refreshTimetable,
@@ -325,7 +327,7 @@ export default function TimetableScreen() {
 
     const handleAddEntry = async () => {
         try {
-            if (!validateEntry()) { Alert.alert('Error', 'Please fill in all fields'); return; }
+            if (!validateEntry()) { dialogShowError('Error', 'Please fill in all fields'); return; }
             const result = await createEntry({
                 day: newEntry.day!, start_time: formatTime(newEntry.start_time!),
                 end_time: formatTime(newEntry.end_time!), subject: newEntry.subject!,
@@ -357,21 +359,22 @@ export default function TimetableScreen() {
 
     const handleDeleteEntry = async (entry: TimetableEntryWithDetails) => {
         try {
-            Alert.alert('Delete Entry', `Delete ${entry.subject_name} class?`, [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete', style: 'destructive',
-                    onPress: async () => {
-                        const success = await deleteEntry(entry.id);
-                        if (success) {
-                            setModalVisible(false);
-                            setEditingEntry(null);
-                            resetForm();
-                            await refreshTimetable();
-                        }
-                    },
+            showConfirm({
+                title: 'Delete Entry',
+                message: `Delete ${entry.subject_name} class?`,
+                confirmText: 'Delete',
+                cancelText: 'Cancel',
+                destructive: true,
+                onConfirm: async () => {
+                    const success = await deleteEntry(entry.id);
+                    if (success) {
+                        setModalVisible(false);
+                        setEditingEntry(null);
+                        resetForm();
+                        await refreshTimetable();
+                    }
                 },
-            ]);
+            });
         } catch (err: any) { setErrorModal(handleTimetableDeleteError(err)); }
     };
 

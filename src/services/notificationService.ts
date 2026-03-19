@@ -113,8 +113,8 @@ export class NotificationService {
     ) {
         return this.createNotification({
             type: 'quiz_graded',
-            title: 'Quiz Graded',
-            message: `Your quiz "${quizTitle}" has been graded. Score: ${score}%`,
+            title: 'Results Published',
+            message: `Your ${quizTitle} result is available. Score: ${score}%. Check the exams section.`,
             targetType: 'individual',
             targetId: studentId,
             entityType: 'quiz',
@@ -127,7 +127,7 @@ export class NotificationService {
         return this.createNotification({
             type: 'lecture_added',
             title: 'New Lecture Available',
-            message: `"${lectureTitle}" has been uploaded to your class`,
+            message: `A new lecture has been uploaded. Check the lectures section to view and download the material.`,
             targetType: 'class',
             targetId: classId,
             entityType: 'lecture',

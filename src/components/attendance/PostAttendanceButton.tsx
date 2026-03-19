@@ -11,6 +11,7 @@ interface PostAttendanceButtonProps {
     totalCount: number;
     posting: boolean;
     onPress: () => void;
+    alreadyPosted?: boolean;
 }
 
 export const PostAttendanceButton: React.FC<PostAttendanceButtonProps> = ({
@@ -18,32 +19,40 @@ export const PostAttendanceButton: React.FC<PostAttendanceButtonProps> = ({
     totalCount,
     posting,
     onPress,
+    alreadyPosted = false,
 }) => {
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
 
-    if (markedCount === 0) return null;
+    const isDisabled = posting || alreadyPosted || markedCount < totalCount;
 
     return (
         <View style={[
             styles.container,
-            { 
+            {
                 backgroundColor: colors.background,
                 paddingBottom: Math.max(insets.bottom + 30, 50),
             }
         ]}>
             <TouchableOpacity
-                style={[styles.button, { backgroundColor: colors.primary }]}
+                style={[styles.button, { backgroundColor: colors.primary }, isDisabled && styles.buttonDisabled]}
                 onPress={onPress}
-                disabled={posting}
+                disabled={isDisabled}
                 activeOpacity={0.8}
             >
                 {posting ? (
                     <ActivityIndicator color="#ffffff" />
+                ) : alreadyPosted ? (
+                    <>
+                        <Send size={20} color="#9CA3AF" />
+                        <Text allowFontScaling={false} style={[styles.buttonText, styles.buttonTextDisabled]}>
+                            Attendance Already Posted
+                        </Text>
+                    </>
                 ) : (
                     <>
-                        <Send size={20} color="#ffffff" />
-                        <Text allowFontScaling={false} style={styles.buttonText}>
+                        <Send size={20} color={isDisabled ? '#9CA3AF' : '#ffffff'} />
+                        <Text allowFontScaling={false} style={[styles.buttonText, isDisabled && !alreadyPosted && styles.buttonTextDisabled]}>
                             Post Attendance ({markedCount}/{totalCount})
                         </Text>
                     </>
@@ -70,15 +79,19 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         gap: 8,
         minHeight: 56,
-        // Universal shadow that works on both platforms
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
         elevation: 8,
-        // Subtle border for better definition
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    buttonDisabled: {
+        backgroundColor: '#F3F4F6',
+        shadowOpacity: 0,
+        elevation: 0,
+        borderColor: '#E5E7EB',
     },
     buttonText: {
         color: '#ffffff',
@@ -86,5 +99,8 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-SemiBold',
         textAlign: 'center',
         flex: 1,
+    },
+    buttonTextDisabled: {
+        color: '#9CA3AF',
     },
 });

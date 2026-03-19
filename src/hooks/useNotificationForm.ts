@@ -1,7 +1,7 @@
 // hooks/useNotificationForm.ts
 import { useState, useCallback } from 'react';
 import { supabase } from '@/src/lib/supabase';
-import { Alert } from 'react-native';
+import { useDialog } from '@/src/contexts/DialogContext';
 
 interface NotificationFormData {
     title: string;
@@ -26,6 +26,7 @@ const INITIAL_FORM_STATE: NotificationFormData = {
 };
 
 export const useNotificationForm = (profile: any) => {
+    const { showError, showSuccess, showWarning } = useDialog();
     const [formData, setFormData] = useState<NotificationFormData>(INITIAL_FORM_STATE);
     const [sending, setSending] = useState(false);
 
@@ -35,7 +36,7 @@ export const useNotificationForm = (profile: any) => {
 
     const sendNotification = useCallback(async () => {
         if (!profile?.id) {
-            Alert.alert('Error', 'User not authenticated');
+            showError('Error', 'User not authenticated');
             return false;
         }
 
@@ -77,7 +78,7 @@ export const useNotificationForm = (profile: any) => {
             }
 
             if (recipients.length === 0) {
-                Alert.alert('Warning', 'No recipients found for this notification');
+                showWarning('Warning', 'No recipients found for this notification');
                 setSending(false);
                 return true;
             }
@@ -147,7 +148,7 @@ export const useNotificationForm = (profile: any) => {
                 sentCount = recipients.length;
             }
 
-            Alert.alert(
+            showSuccess(
                 'Success',
                 `Notification sent to ${sentCount} recipient(s)${failedCount > 0 ? ` (${failedCount} push notifications failed)` : ''}`
             );
@@ -156,7 +157,7 @@ export const useNotificationForm = (profile: any) => {
             return true;
         } catch (error: any) {
             console.warn('Error in sendNotification:', error);
-            Alert.alert('Error', error.message || 'Failed to send notification');
+            showError('Error', error.message || 'Failed to send notification');
             return false;
         } finally {
             setSending(false);
