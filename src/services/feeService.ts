@@ -161,28 +161,30 @@ export const feeService = {
         try {
             const currentYear = new Date().getFullYear();
 
-            // Fetch all active students in class
-            const { data: students, error: studentsError } = await supabase
-                .from('students')
-                .select('id, full_name, class_id, email, parent_contact')
-                .eq('class_id', classId)
-                .eq('is_deleted', false)
-                .order('full_name');
+            // Fetch students and fee payments in parallel (independent queries)
+            const [studentsRes, feePaymentsRes] = await Promise.all([
+                supabase
+                    .from('students')
+                    .select('id, full_name, class_id, email, parent_contact')
+                    .eq('class_id', classId)
+                    .eq('is_deleted', false)
+                    .order('full_name'),
+                supabase
+                    .from('fee_payments')
+                    .select('*')
+                    .eq('class_id', classId)
+                    .eq('month', month)
+                    .eq('year', year),
+            ]);
+
+            const { data: students, error: studentsError } = studentsRes;
+            const { data: feePayments, error: feesError } = feePaymentsRes;
 
             if (studentsError) throw studentsError;
             if (!students?.length) return [];
-
-            // Fetch fee payments for this specific month/year
-            const { data: feePayments, error: feesError } = await supabase
-                .from('fee_payments')
-                .select('*')
-                .eq('class_id', classId)
-                .eq('month', month)
-                .eq('year', year);
-
             if (feesError) throw feesError;
 
-            // Fetch per-student fee amounts from fee_structures
+            // Fetch per-student fee amounts (depends on student IDs)
             const studentIds = students.map(s => s.id);
             const { data: feeStructures } = await supabase
                 .from('fee_structures')
@@ -284,72 +286,65 @@ export const feeService = {
                 });
             }
 
-            // Create notification
-            const { data: notif, error: notifError } = await supabase
-                .from("notifications")
-                .insert([
-                    {
-                        type: "fee_paid",
-                        title: `Payment Confirmed – ${months[month - 1]} ${year}`,
-                        message: `Your fee payment of Rs ${resolvedAmount} for ${months[month - 1]} ${year} has been received. Thank you.`,
-                        entity_type: "fee_payment",
-                        entity_id: paymentResult?.id,
-                        created_by: teacherId,
-                        target_type: "individual",
-                        target_id: studentId,
-                        priority: "high",
-                    },
-                ])
-                .select("id")
-                .single();
+            // Fire notification in background — user gets response immediately
+            const paymentId = paymentResult?.id;
+            const notifTitle = `Payment Confirmed – ${months[month - 1]} ${year}`;
+            const notifBody = `Your fee payment of Rs ${resolvedAmount} for ${months[month - 1]} ${year} has been received. Thank you.`;
+            const pushAmount = feeStructure?.amount ?? resolvedAmount ?? "0";
+            ;(async () => {
+                try {
+                    const { data: notif } = await supabase
+                        .from("notifications")
+                        .insert([{
+                            type: "fee_paid",
+                            title: notifTitle,
+                            message: notifBody,
+                            entity_type: "fee_payment",
+                            entity_id: paymentId,
+                            created_by: teacherId,
+                            target_type: "individual",
+                            target_id: studentId,
+                            priority: "high",
+                        }])
+                        .select("id")
+                        .single();
 
-            if (notifError) {
-                console.warn("Error creating payment notification:", notifError);
-                throw notifError;
-            }
+                    if (!notif) return;
 
-            // Resolve the student's auth profile ID (may differ from students.id)
-            // Bridge via email: students.email → profiles.id (auth UUID)
-            const { data: studentRecord } = await supabase
-                .from("students")
-                .select("email")
-                .eq("id", studentId)
-                .single();
+                    // Resolve profile ID via email (bridge students → profiles)
+                    const { data: studentRecord } = await supabase
+                        .from("students")
+                        .select("email")
+                        .eq("id", studentId)
+                        .single();
 
-            let recipientProfileId = studentId; // fallback
-            if (studentRecord?.email) {
-                const { data: profileRecord } = await supabase
-                    .from("profiles")
-                    .select("id")
-                    .eq("email", studentRecord.email)
-                    .single();
-                if (profileRecord?.id) recipientProfileId = profileRecord.id;
-            }
+                    let recipientProfileId = studentId;
+                    if (studentRecord?.email) {
+                        const { data: profileRecord } = await supabase
+                            .from("profiles")
+                            .select("id")
+                            .eq("email", studentRecord.email)
+                            .single();
+                        if (profileRecord?.id) recipientProfileId = profileRecord.id;
+                    }
 
-            if (notif) {
-                const { error: recError } = await supabase.from("notification_recipients").insert([
-                    {
+                    await supabase.from("notification_recipients").insert([{
                         notification_id: notif.id,
                         user_id: recipientProfileId,
                         is_read: false,
                         is_deleted: false,
-                    },
-                ]);
-                if (recError) console.warn("Error adding notification recipient:", recError);
+                    }]);
 
-                // Send push notification to the student's device
-                const resolvedAmount = feeStructure?.amount ?? "0";
-                try {
                     await sendPushNotification({
                         userId: recipientProfileId,
-                        title: `Payment Confirmed – ${months[month - 1]} ${year}`,
-                        body: `Fee payment of Rs ${resolvedAmount} for ${months[month - 1]} ${year} has been received. Thank you.`,
+                        title: notifTitle,
+                        body: `Fee payment of Rs ${pushAmount} for ${months[month - 1]} ${year} has been received. Thank you.`,
                         data: { type: "fee_paid", notificationId: notif.id },
                     });
-                } catch (pushErr) {
-                    console.warn("Push notification failed (non-fatal):", pushErr);
+                } catch (e) {
+                    console.warn("Fee notification error (non-fatal):", e);
                 }
-            }
+            })();
 
             return paymentResult;
         } catch (error) {

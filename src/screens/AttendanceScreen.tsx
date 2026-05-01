@@ -3,17 +3,16 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Modal, TouchableOpacity,
   TouchableWithoutFeedback, RefreshControl,
-  Dimensions, Platform,
+  Dimensions, Platform, TextInput,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  Calendar, Users, ChevronRight, Check, X, PenTool,
+  Calendar, Users, ChevronRight, Check, X, PenTool, Search,
 } from 'lucide-react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
-import { useDialog } from '@/src/contexts/DialogContext';
 import { useAttendance } from '@/src/hooks/useAttendance';
 import { supabase } from '@/src/lib/supabase';
 import TopSections from '@/src/components/common/TopSections';
@@ -26,6 +25,7 @@ import { EditAttendanceModal } from '@/src/components/attendance/modals/EditAtte
 import { useFocusEffect } from '@react-navigation/native';
 import { useScreenAnimation } from '@/src/utils/animations';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
+import { AppDialog } from '@/src/components/common/AppDialog';
 import { TextSizes } from '@/src/styles/TextSizes';
 
 const { height } = Dimensions.get('window');
@@ -56,7 +56,6 @@ interface AttendanceRecord {
 export default function AttendanceScreen() {
   const { profile } = useAuth();
   const { colors } = useTheme();
-  const { showSuccess, showConfirm } = useDialog();
   const screenStyle = useScreenAnimation();
   const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'superadmin';
   const isSuperAdmin = profile?.role === 'superadmin';
@@ -68,6 +67,14 @@ export default function AttendanceScreen() {
   const [errorModal, setErrorModal] = useState({ visible: false, title: '', message: '' });
   const showError = (title: string, message: string) =>
     setErrorModal({ visible: true, title, message });
+
+  // ── Inline dialog (shown inside mark panel Modal to avoid z-index issues) ────
+  const [markDialog, setMarkDialog] = useState<{
+    visible: boolean; type: 'confirm' | 'success' | 'error';
+    title: string; message: string;
+    onConfirm?: () => void; onClose?: () => void;
+  }>({ visible: false, type: 'confirm', title: '', message: '' });
+  const hideMarkDialog = () => setMarkDialog(d => ({ ...d, visible: false }));
 
   // ── View state ───────────────────────────────────────────────────────────────
   const [filterClass, setFilterClass] = useState<string | null>(null);
@@ -95,7 +102,7 @@ export default function AttendanceScreen() {
   const [markVisible, setMarkVisible] = useState(false);
   const [markClass, setMarkClass] = useState('');
   const [markExpandSection, setMarkExpandSection] = useState<'class' | null>(null);
-
+  const [searchQuery, setSearchQuery] = useState('');
   // ── Mark modals ──────────────────────────────────────────────────────────────
 const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
@@ -242,25 +249,31 @@ const [editModalVisible, setEditModalVisible] = useState(false);
   const handleMarkClassSelect = (classId: string) => {
     setMarkClass(classId);
     setMarkExpandSection(null);
+    setSearchQuery('');
   };
 
-  const handlePostAttendance = async () => {
+  const handlePostAttendance = () => {
     const markedCount = Object.keys(currentAttendance).length;
-    if (markedCount === 0) { showError('No Students Marked', 'Please mark at least one student.'); return; }
-    showConfirm({
+    if (markedCount === 0) {
+      setMarkDialog({ visible: true, type: 'error', title: 'No Students Marked', message: 'Please mark at least one student.' });
+      return;
+    }
+    setMarkDialog({
+      visible: true,
+      type: 'confirm',
       title: 'Post Attendance',
       message: `Post attendance for ${markedCount} of ${students.length} students?`,
-      confirmText: 'Post',
-      cancelText: 'Cancel',
       onConfirm: async () => {
+        hideMarkDialog();
         const result = await postAttendance(getToday());
         if (result.success) {
-          showSuccess('Success', 'Attendance posted successfully', () => {
-            setMarkVisible(false);
-            fetchViewData(filterClass, startDate, endDate);
+          setMarkDialog({
+            visible: true, type: 'success',
+            title: 'Success', message: 'Attendance posted successfully',
+            onClose: () => { hideMarkDialog(); setMarkVisible(false); fetchViewData(filterClass, startDate, endDate); },
           });
         } else {
-          showError('Failed', result.error || 'Failed to post attendance');
+          setMarkDialog({ visible: true, type: 'error', title: 'Failed', message: result.error || 'Failed to post attendance' });
         }
       },
     });
@@ -501,6 +514,28 @@ const [editModalVisible, setEditModalVisible] = useState(false);
               </View>
             )}
 
+            {/* Search bar - show when class is selected and students exist */}
+            {markClass && students.length > 0 && (
+              <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                <View style={[s.searchBar, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <Search size={18} color={colors.textSecondary} style={{ marginRight: 10 }} />
+                  <TextInput
+                    style={[s.searchInput, { color: colors.text }]}
+                    placeholder="Search student by name..."
+                    placeholderTextColor={colors.textSecondary}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    allowFontScaling={false}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                      <X size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            )}
+
             {/* Student list */}
             <ScrollView
               style={{ flex: 1, paddingHorizontal: 16 }}
@@ -535,31 +570,47 @@ const [editModalVisible, setEditModalVisible] = useState(false);
                 />
               ) : (
                 <>
-                  {students.map(student => {
-                    const isMarkedDB = isStudentMarkedForDate(student.id, today);
-                    const dbRecord = getStudentRecordForDate(student.id, today);
-                    const isMarkedTemp = !!currentAttendance[student.id];
-                    return (
-                      <StudentCard
-                        key={student.id}
-                        student={student}
-                        record={currentAttendance[student.id]}
-                        dbRecord={dbRecord}
-                        isMarkedTemporarily={isMarkedTemp}
-                        isMarkedInDatabase={isMarkedDB}
-                        selectedDate={today}
-                        onMarkAttendance={(id, status, time) => markStudentAttendance(id, status, time)}
-                        onEdit={isSuperAdmin ? (record) => { setSelectedRecord(record as any); setEditModalVisible(true); } : undefined}
+                  {students.filter(student =>
+                    student.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).length === 0 ? (
+                    <EmptyState
+                      icon={<Users size={40} color={colors.textSecondary} />}
+                      title="No students found"
+                      subtitle={`No students match "${searchQuery}"`}
+                    />
+                  ) : (
+                    <>
+                      {students.filter(student =>
+                        student.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+                      ).map(student => {
+                        const isMarkedDB = isStudentMarkedForDate(student.id, today);
+                        const dbRecord = getStudentRecordForDate(student.id, today);
+                        const isMarkedTemp = !!currentAttendance[student.id];
+                        return (
+                          <StudentCard
+                            key={student.id}
+                            student={student}
+                            record={currentAttendance[student.id]}
+                            dbRecord={dbRecord}
+                            isMarkedTemporarily={isMarkedTemp}
+                            isMarkedInDatabase={isMarkedDB}
+                            selectedDate={today}
+                            onMarkAttendance={(id, status, time) => markStudentAttendance(id, status, time)}
+                            onEdit={isSuperAdmin ? (record) => { setSelectedRecord(record as any); setEditModalVisible(true); } : undefined}
+                          />
+                        );
+                      })}
+                      <PostAttendanceButton
+                        markedCount={Object.keys(currentAttendance).length}
+                        totalCount={students.filter(student =>
+                          student.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+                        ).length}
+                        posting={posting}
+                        onPress={handlePostAttendance}
+                        alreadyPosted={alreadyMarked}
                       />
-                    );
-                  })}
-                  <PostAttendanceButton
-                    markedCount={Object.keys(currentAttendance).length}
-                    totalCount={students.length}
-                    posting={posting}
-                    onPress={handlePostAttendance}
-                    alreadyPosted={alreadyMarked}
-                  />
+                    </>
+                  )}
                 </>
               )}
             </ScrollView>
@@ -572,7 +623,43 @@ const [editModalVisible, setEditModalVisible] = useState(false);
           onClose={() => { setEditModalVisible(false); setSelectedRecord(null); }}
           onSave={updateAttendance}
         />
+
+        <AppDialog
+          inline
+          visible={markDialog.visible}
+          type={markDialog.type}
+          title={markDialog.title}
+          message={markDialog.message}
+          confirmText={markDialog.type === 'confirm' ? 'Post' : 'OK'}
+          cancelText="Cancel"
+          onConfirm={markDialog.onConfirm ?? hideMarkDialog}
+          onClose={markDialog.onClose ?? hideMarkDialog}
+          onCancel={hideMarkDialog}
+        />
       </Modal>
+    );
+  };
+
+  // ── Filter display render ─────────────────────────────────────────────────────
+  const renderFilterDisplay = () => {
+    if (!isFiltered) return null;
+
+    const selectedClassName = filterClass ? classes.find(c => c.id === filterClass)?.name : 'All Classes';
+    const dateRangeLabel = dateRange === 'today' ? 'Today' : dateRange === 'week' ? 'Weekly' : dateRange === 'month' ? 'Monthly' : `${fmtDisplay(startDate)} to ${fmtDisplay(endDate)}`;
+
+    return (
+      <View style={[s.filterDisplay, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={s.filterDisplayRow}>
+          <View style={s.filterTag}>
+            <Text allowFontScaling={false} style={[s.filterTagLabel, { color: colors.textSecondary }]}>Class:</Text>
+            <Text allowFontScaling={false} style={[s.filterTagValue, { color: colors.text }]} numberOfLines={1}>{selectedClassName}</Text>
+          </View>
+          <View style={s.filterTag}>
+            <Text allowFontScaling={false} style={[s.filterTagLabel, { color: colors.textSecondary }]}>Period:</Text>
+            <Text allowFontScaling={false} style={[s.filterTagValue, { color: colors.text }]} numberOfLines={1}>{dateRangeLabel}</Text>
+          </View>
+        </View>
+      </View>
     );
   };
 
@@ -583,35 +670,43 @@ const [editModalVisible, setEditModalVisible] = useState(false);
         <View style={s.statsRow}>
           {[0, 1, 2, 3].map(i => (
             <View key={i} style={s.statItem}>
-              <SkeletonBox width={Platform.OS === 'android' ? 28 : 32} height={Platform.OS === 'android' ? 13 : 18} borderRadius={5} style={{ marginBottom: Platform.OS === 'android' ? 4 : 6 }} />
-              <SkeletonBox width={Platform.OS === 'android' ? 24 : 28} height={Platform.OS === 'android' ? 9 : 10} borderRadius={4} />
+              <SkeletonBox width={32} height={18} borderRadius={5} style={{ marginBottom: 6 }} />
+              <SkeletonBox width={28} height={10} borderRadius={4} />
             </View>
           ))}
-          <SkeletonBox width={Platform.OS === 'android' ? 44 : 52} height={Platform.OS === 'android' ? 36 : 44} borderRadius={Platform.OS === 'android' ? 7 : 8} />
+          <SkeletonBox width={52} height={44} borderRadius={8} />
         </View>
       </View>
     ) : (
       <View style={[s.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
         <View style={s.statsRow}>
           <View style={s.statItem}>
-            <Text allowFontScaling={false} style={[s.statValue, { color: colors.textSecondary }]}>{stats.total}</Text>
+            <View style={[s.statBadge, { backgroundColor: `${colors.textSecondary}15` }]}>
+              <Text allowFontScaling={false} style={[s.statValue, { color: colors.text }]}>{stats.total}</Text>
+            </View>
             <Text allowFontScaling={false} style={[s.statLabel, { color: colors.textSecondary }]}>Total</Text>
           </View>
           <View style={s.statItem}>
-            <Text allowFontScaling={false} style={[s.statValue, { color: '#10B981' }]}>{stats.present}</Text>
+            <View style={[s.statBadge, { backgroundColor: 'rgba(16,185,129,0.12)' }]}>
+              <Text allowFontScaling={false} style={[s.statValue, { color: '#10B981' }]}>{stats.present}</Text>
+            </View>
             <Text allowFontScaling={false} style={[s.statLabel, { color: colors.textSecondary }]}>Present</Text>
           </View>
           <View style={s.statItem}>
-            <Text allowFontScaling={false} style={[s.statValue, { color: '#F59E0B' }]}>{stats.late}</Text>
+            <View style={[s.statBadge, { backgroundColor: 'rgba(245,158,11,0.12)' }]}>
+              <Text allowFontScaling={false} style={[s.statValue, { color: '#F59E0B' }]}>{stats.late}</Text>
+            </View>
             <Text allowFontScaling={false} style={[s.statLabel, { color: colors.textSecondary }]}>Late</Text>
           </View>
           <View style={s.statItem}>
-            <Text allowFontScaling={false} style={[s.statValue, { color: '#EF4444' }]}>{stats.absent}</Text>
+            <View style={[s.statBadge, { backgroundColor: 'rgba(239,68,68,0.12)' }]}>
+              <Text allowFontScaling={false} style={[s.statValue, { color: '#EF4444' }]}>{stats.absent}</Text>
+            </View>
             <Text allowFontScaling={false} style={[s.statLabel, { color: colors.textSecondary }]}>Absent</Text>
           </View>
-          <View style={[s.rateBox, { backgroundColor: colors.primary }]}>
+          <View style={[s.rateBox, { backgroundColor: '#1F3F4A' }]}>
             <Text allowFontScaling={false} style={s.rateValue}>{stats.rate}%</Text>
-            <Text allowFontScaling={false} style={s.rateLabel}>Rate</Text>
+            <Text allowFontScaling={false} style={[s.rateLabel, { color: '#A4C400' }]}>Rate</Text>
           </View>
         </View>
       </View>
@@ -647,6 +742,8 @@ const [editModalVisible, setEditModalVisible] = useState(false);
           }
         >
           {renderStats()}
+
+          {renderFilterDisplay()}
 
           {viewLoading ? (
             Array.from({ length: 6 }).map((_, i) => (
@@ -790,4 +887,49 @@ const s = StyleSheet.create({
   // skeleton
   skeletonCard: { borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1 },
   skeletonRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+
+  // search bar
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: TextSizes.medium,
+    fontFamily: 'Inter-Regular',
+    paddingVertical: 6,
+  },
+
+  // filter display
+  filterDisplay: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 12,
+  },
+  filterDisplayRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  filterTag: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  filterTagLabel: {
+    fontSize: TextSizes.tiny,
+    fontFamily: 'Inter-Medium',
+    marginBottom: 2,
+  },
+  filterTagValue: {
+    fontSize: TextSizes.small,
+    fontFamily: 'Inter-SemiBold',
+  },
 });

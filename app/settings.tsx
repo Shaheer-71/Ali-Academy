@@ -146,17 +146,6 @@ export default function SettingsScreen() {
           : []),
       ],
     },
-    // {
-    //   title: 'Support',
-    //   items: [
-    //     {
-    //       title: 'Help Center',
-    //       subtitle: 'Get help and find answers',
-    //       icon: HelpCircle,
-    //       onPress: handleSupport,
-    //     },
-    //   ],
-    // },
   ];
 
 
@@ -205,43 +194,6 @@ export default function SettingsScreen() {
               </View>
             </View>
           </View>
-
-          {/* Create Notification Button - Visible only to superadmins */}
-          {/* {(profile?.role === 'teacher' && profile?.email === 'rafeh@aliacademy.edu') && (
-            <View style={styles.section}>
-              <TouchableOpacity
-                style={[styles.settingButton, { backgroundColor: colors.cardBackground }]}
-                onPress={handleNavigateToStudents}
-              >
-                <User size={20} color={colors.primary} />
-                <View style={styles.buttonContent}>
-                  <Text allowFontScaling={false} style={[styles.buttonTitle, { color: colors.text }]}>
-                    Manage Students
-                  </Text>
-                  <Text allowFontScaling={false} style={[styles.buttonSubtitle, { color: colors.textSecondary }]}>
-                    Manage your students here
-                  </Text>
-                </View>
-                <ChevronRight size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.settingButton, { backgroundColor: colors.cardBackground }]}
-                onPress={handleNavigateToNotifications}
-              >
-                <Send size={20} color={colors.primary} />
-                <View style={styles.buttonContent}>
-                  <Text allowFontScaling={false} style={[styles.buttonTitle, { color: colors.text }]}>
-                    Create Notification
-                  </Text>
-                  <Text allowFontScaling={false} style={[styles.buttonSubtitle, { color: colors.textSecondary }]}>
-                    Send notifications to users
-                  </Text>
-                </View>
-                <ChevronRight size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-          )} */}
 
           {/* Settings Sections */}
           {settingsOptions.map((section, sectionIndex) => (

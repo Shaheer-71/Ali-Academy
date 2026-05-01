@@ -23,6 +23,8 @@ interface AppDialogProps {
     onClose: () => void;
     onConfirm: () => void;
     onCancel: () => void;
+    /** Render as absolute overlay inside an existing Modal instead of its own Modal */
+    inline?: boolean;
 }
 
 const { width } = Dimensions.get('window');
@@ -46,21 +48,15 @@ export const AppDialog: React.FC<AppDialogProps> = ({
     onClose,
     onConfirm,
     onCancel,
+    inline = false,
 }) => {
     const { colors } = useTheme();
     const cfg = TYPE_CONFIG[type];
     const Icon = cfg.icon;
     const isConfirm = type === 'confirm';
 
-    return (
-        <Modal
-            visible={visible}
-            transparent
-            animationType="fade"
-            statusBarTranslucent
-            onRequestClose={isConfirm ? onCancel : onClose}
-        >
-            <View style={styles.overlay}>
+    const content = (
+        <View style={styles.overlay}>
                 <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
 
                     {/* Icon */}
@@ -116,6 +112,26 @@ export const AppDialog: React.FC<AppDialogProps> = ({
                     )}
                 </View>
             </View>
+    );
+
+    if (inline) {
+        if (!visible) return null;
+        return (
+            <View style={[StyleSheet.absoluteFillObject, { zIndex: 999 }]}>
+                {content}
+            </View>
+        );
+    }
+
+    return (
+        <Modal
+            visible={visible}
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            onRequestClose={isConfirm ? onCancel : onClose}
+        >
+            {content}
         </Modal>
     );
 };

@@ -415,9 +415,8 @@ export const useAttendance = (classId?: string) => {
       // Clear current attendance after successful post
       setCurrentAttendance({});
 
-      // Refresh data
-      await fetchTodaysAttendance(date);
-      await fetchAttendanceData();
+      // Refresh data in parallel
+      await Promise.all([fetchTodaysAttendance(date), fetchAttendanceData()]);
 
       // Send notifications (non-blocking) — snapshot students before any re-renders
       const studentSnapshot = [...students];
@@ -436,59 +435,64 @@ export const useAttendance = (classId?: string) => {
 
   const sendNotificationsAsync = async (affectedStudents: any[], date: string, studentList: Student[]) => {
     try {
-      for (const record of affectedStudents) {
-        const studentName = studentList.find(s => s.id === record.student_id)?.full_name ?? 'Student';
+      // Process all students in parallel
+      await Promise.all(affectedStudents.map(async (record) => {
+        try {
+          const studentName = studentList.find(s => s.id === record.student_id)?.full_name ?? 'Student';
 
-        let title: string;
-        let message: string;
-        let priority: string;
+          let title: string;
+          let message: string;
+          let priority: string;
 
-        if (record.status === 'present') {
-          title = 'Attendance Marked';
-          message = `${studentName}, your attendance has been marked as Present on ${date}.`;
-          priority = 'low';
-        } else if (record.status === 'late') {
-          title = 'Late Attendance';
-          message = `${studentName}, you were marked Late on ${date}. Please be punctual.`;
-          priority = 'medium';
-        } else {
-          title = 'Absent';
-          message = `${studentName}, you were marked Absent on ${date}.`;
-          priority = 'high';
+          if (record.status === 'present') {
+            title = 'Attendance Marked';
+            message = `${studentName}, your attendance has been marked as Present on ${date}.`;
+            priority = 'low';
+          } else if (record.status === 'late') {
+            title = 'Late Attendance';
+            message = `${studentName}, you were marked Late on ${date}. Please be punctual.`;
+            priority = 'medium';
+          } else {
+            title = 'Absent';
+            message = `${studentName}, you were marked Absent on ${date}.`;
+            priority = 'high';
+          }
+
+          const { data: notification } = await supabase
+            .from('notifications')
+            .insert([{
+              type: 'attendance_alert',
+              title,
+              message,
+              entity_type: 'attendance',
+              entity_id: record.class_id,
+              created_by: profile!.id,
+              target_type: 'individual',
+              target_id: record.student_id,
+              priority,
+            }])
+            .select('id')
+            .single();
+
+          if (notification) {
+            await supabase.from('notification_recipients').insert([{
+              notification_id: notification.id,
+              user_id: record.student_id,
+              is_read: false,
+              is_deleted: false,
+            }]);
+
+            await sendPushNotification({
+              userId: record.student_id,
+              title,
+              body: message,
+              data: { status: record.status, date, notificationId: notification.id },
+            });
+          }
+        } catch (e) {
+          console.warn('Error sending notification for student:', record.student_id, e);
         }
-
-        const { data: notification } = await supabase
-          .from('notifications')
-          .insert([{
-            type: 'attendance_alert',
-            title,
-            message,
-            entity_type: 'attendance',
-            entity_id: record.class_id,
-            created_by: profile!.id,
-            target_type: 'individual',
-            target_id: record.student_id,
-            priority,
-          }])
-          .select('id')
-          .single();
-
-        if (notification) {
-          await supabase.from('notification_recipients').insert([{
-            notification_id: notification.id,
-            user_id: record.student_id,
-            is_read: false,
-            is_deleted: false,
-          }]);
-
-          await sendPushNotification({
-            userId: record.student_id,
-            title,
-            body: message,
-            data: { status: record.status, date, notificationId: notification.id },
-          });
-        }
-      }
+      }));
     } catch (e) {
       console.warn('Error sending notifications:', e);
     }

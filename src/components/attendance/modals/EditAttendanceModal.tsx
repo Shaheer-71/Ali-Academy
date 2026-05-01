@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { X, Check, AlertCircle, XCircle } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
-import { useDialog } from '@/src/contexts/DialogContext';
+import { AppDialog } from '@/src/components/common/AppDialog';
 import { AttendanceRecord } from '@/src/types/attendance';
 import { TextSizes } from '@/src/styles/TextSizes';
 
@@ -37,8 +37,12 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
     visible, record, onClose, onSave,
 }) => {
     const { colors } = useTheme();
-    const { showSuccess, showError } = useDialog();
     const [editedRecord, setEditedRecord] = useState<AttendanceRecord | null>(null);
+    const [localDialog, setLocalDialog] = useState<{
+        visible: boolean; type: 'success' | 'error';
+        title: string; message: string; onClose?: () => void;
+    }>({ visible: false, type: 'success', title: '', message: '' });
+    const hideLocalDialog = () => setLocalDialog(d => ({ ...d, visible: false }));
 
     useEffect(() => {
         if (record) setEditedRecord({ ...record });
@@ -53,12 +57,12 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
                 late_minutes: editedRecord.late_minutes,
             });
             if (result.success) {
-                showSuccess('Success', 'Attendance updated successfully', onClose);
+                setLocalDialog({ visible: true, type: 'success', title: 'Success', message: 'Attendance updated successfully', onClose });
             } else {
-                showError('Error', 'Failed to update attendance');
+                setLocalDialog({ visible: true, type: 'error', title: 'Error', message: 'Failed to update attendance' });
             }
         } catch (e: any) {
-            showError('Error', e.message);
+            setLocalDialog({ visible: true, type: 'error', title: 'Error', message: e.message });
         }
     };
 
@@ -152,6 +156,17 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
                     </TouchableOpacity>
                 </View>
             </View>
+
+            <AppDialog
+                inline
+                visible={localDialog.visible}
+                type={localDialog.type}
+                title={localDialog.title}
+                message={localDialog.message}
+                onConfirm={localDialog.onClose ?? hideLocalDialog}
+                onClose={localDialog.onClose ?? hideLocalDialog}
+                onCancel={hideLocalDialog}
+            />
         </Modal>
     );
 };

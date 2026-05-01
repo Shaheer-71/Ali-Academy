@@ -41,8 +41,9 @@ GoogleService-Info.plist
 supabase/.temp/
 supabase/backup/
 
-# Database scripts
-scripts/
+# Database scripts (allow build scripts)
+scripts/*.sql
+scripts/*.sh
 
 # Claude Code local settings (may contain credentials)
 .claude/

@@ -143,71 +143,58 @@ export const useDiaryForm = (
 
             if (error) throw error;
 
-            // ─── NOTIFICATIONS (non-blocking) ───────────────────────────
-            try {
-                let recipientIds: string[] = [];
-                let targetType: string;
-                let targetId: string | null = null;
-                let pushTitle: string;
-                let pushBody: string;
+            // Tell user we're done — fire notifications in background
+            resetForm();
+            onSuccess();
 
-                // ── CASE 1: Whole class ──────────────────────────────────
-                if (newAssignment.assignTo === 'class' && newAssignment.class_id) {
-                    console.log('[DIARY NOTIF] Case 1 — whole class');
-                    console.log('[DIARY NOTIF] class_id:', newAssignment.class_id, '| subject_id:', newAssignment.subject_id);
+            // ─── NOTIFICATIONS (background, non-blocking) ───────────────
+            const assignmentId = assignment.id;
+            const assignTitle = newAssignment.title;
+            const assignDueDate = newAssignment.due_date;
+            const assignTo = newAssignment.assignTo;
+            const classId = newAssignment.class_id;
+            const subjectId = newAssignment.subject_id;
+            const studentIds = newAssignment.student_ids;
+            const creatorId = profile!.id;
 
-                    // Get only students taking THIS subject in THIS class
-                    const query = supabase
-                        .from('student_subject_enrollments')
-                        .select('student_id')
-                        .eq('class_id', newAssignment.class_id)
-                        .eq('is_active', true);
+            ;(async () => {
+                try {
+                    let recipientIds: string[] = [];
+                    let targetType: string;
+                    let targetId: string | null = null;
+                    const pushTitle = `New Diary: ${assignTitle}`;
+                    let pushBody: string;
 
-                    // Filter by subject if one was selected
-                    if (newAssignment.subject_id) {
-                        query.eq('subject_id', newAssignment.subject_id);
-                    }
-
-                    const { data: enrollments, error: enrollErr } = await query;
-
-                    if (enrollErr) {
-                        console.warn('[DIARY NOTIF] Failed to fetch enrollments:', enrollErr.message);
-                    } else {
+                    if (assignTo === 'class' && classId) {
+                        const query = supabase
+                            .from('student_subject_enrollments')
+                            .select('student_id')
+                            .eq('class_id', classId)
+                            .eq('is_active', true);
+                        if (subjectId) query.eq('subject_id', subjectId);
+                        const { data: enrollments } = await query;
                         recipientIds = [...new Set((enrollments ?? []).map((e) => e.student_id))];
-                        console.log('[DIARY NOTIF] Students to notify:', recipientIds.length, recipientIds);
+                        targetType = 'class';
+                        targetId = classId;
+                        pushBody = `New diary assignment for your class. Due: ${assignDueDate}.`;
+                    } else {
+                        recipientIds = studentIds;
+                        targetType = 'individual';
+                        targetId = studentIds[0] ?? null;
+                        pushBody = `You have a new diary assignment due on ${assignDueDate}.`;
                     }
 
-                    targetType = 'class';
-                    targetId = newAssignment.class_id;
-                    pushTitle = `📝 New Diary: ${newAssignment.title}`;
-                    pushBody = `New diary assignment for your class. Due: ${newAssignment.due_date}.`;
+                    if (recipientIds.length === 0) return;
 
-                // ── CASE 2: Individual student(s) ────────────────────────
-                } else {
-                    console.log('[DIARY NOTIF] Case 2 — individual students');
-                    console.log('[DIARY NOTIF] student_ids:', newAssignment.student_ids);
-
-                    recipientIds = newAssignment.student_ids;
-                    targetType = 'individual';
-                    targetId = newAssignment.student_ids[0] ?? null;
-                    pushTitle = `📝 New Diary: ${newAssignment.title}`;
-                    pushBody = `You have a new diary assignment due on ${newAssignment.due_date}.`;
-                }
-
-                if (recipientIds.length === 0) {
-                    console.log('[DIARY NOTIF] No recipients found — skipping notifications');
-                } else {
-                    // STEP 1: Insert notification record
-                    console.log('[DIARY NOTIF] Step 1 — inserting notification record...');
-                    const { data: notif, error: notifError } = await supabase
+                    const { data: notif } = await supabase
                         .from('notifications')
                         .insert([{
                             type: 'assignment_added',
-                            title: `New Diary: ${newAssignment.title}`,
+                            title: pushTitle,
                             message: pushBody,
                             entity_type: 'diary_assignment',
-                            entity_id: assignment.id,
-                            created_by: profile!.id,
+                            entity_id: assignmentId,
+                            created_by: creatorId,
                             target_type: targetType,
                             target_id: targetId,
                             priority: 'medium',
@@ -215,84 +202,44 @@ export const useDiaryForm = (
                         .select('id')
                         .single();
 
-                    if (notifError) {
-                        console.warn('[DIARY NOTIF] Step 1 failed:', notifError.message);
-                    } else {
-                        console.log('[DIARY NOTIF] Step 1 done — notification id:', notif.id);
+                    if (!notif) return;
 
-                        // STEP 2: Bulk insert notification_recipients
-                        console.log('[DIARY NOTIF] Step 2 — inserting', recipientIds.length, 'recipient(s)...');
-                        const { error: recipientError } = await supabase
-                            .from('notification_recipients')
-                            .insert(
-                                recipientIds.map((uid) => ({
-                                    notification_id: notif.id,
-                                    user_id: uid,
-                                    is_read: false,
-                                    is_deleted: false,
+                    await supabase.from('notification_recipients').insert(
+                        recipientIds.map((uid) => ({
+                            notification_id: notif.id,
+                            user_id: uid,
+                            is_read: false,
+                            is_deleted: false,
+                        }))
+                    );
+
+                    const { data: devices } = await supabase
+                        .from('devices')
+                        .select('token')
+                        .in('user_id', recipientIds);
+
+                    if (devices && devices.length > 0) {
+                        await fetch('https://exp.host/--/api/v2/push/send', {
+                            method: 'POST',
+                            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+                            body: JSON.stringify(
+                                devices.map((d) => ({
+                                    to: d.token,
+                                    title: pushTitle,
+                                    body: pushBody,
+                                    data: { type: 'assignment_added', notificationId: notif.id, assignmentId },
+                                    sound: 'default',
+                                    channelId: 'default',
                                 }))
-                            );
-
-                        if (recipientError) {
-                            console.warn('[DIARY NOTIF] Step 2 failed:', recipientError.message);
-                        } else {
-                            console.log('[DIARY NOTIF] Step 2 done — recipients saved');
-                        }
-
-                        // STEP 3: Fetch device tokens for all recipients
-                        console.log('[DIARY NOTIF] Step 3 — fetching device tokens...');
-                        const { data: devices, error: deviceError } = await supabase
-                            .from('devices')
-                            .select('token')
-                            .in('user_id', recipientIds);
-
-                        if (deviceError) {
-                            console.warn('[DIARY NOTIF] Step 3 failed:', deviceError.message);
-                        } else {
-                            console.log('[DIARY NOTIF] Step 3 done — devices found:', devices?.length ?? 0);
-                        }
-
-                        if (devices && devices.length > 0) {
-                            // STEP 4: Send batch push to Expo
-                            console.log('[DIARY NOTIF] Step 4 — sending batch push to', devices.length, 'device(s)...');
-                            const expoResponse = await fetch('https://exp.host/--/api/v2/push/send', {
-                                method: 'POST',
-                                headers: {
-                                    Accept: 'application/json',
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify(
-                                    devices.map((d) => ({
-                                        to: d.token,
-                                        title: pushTitle,
-                                        body: pushBody,
-                                        data: {
-                                            type: 'assignment_added',
-                                            notificationId: notif.id,
-                                            assignmentId: assignment.id,
-                                        },
-                                        sound: 'default',
-                                        channelId: 'default',
-                                    }))
-                                ),
-                            });
-                            const expoResult = await expoResponse.json();
-                            console.log('[DIARY NOTIF] Step 4 done — Expo response:', JSON.stringify(expoResult));
-                        } else {
-                            console.log('[DIARY NOTIF] Step 4 skipped — no registered devices');
-                        }
+                            ),
+                        });
                     }
+                } catch (e) {
+                    console.warn('[DIARY NOTIF] Background error (non-fatal):', e);
                 }
-            } catch (notificationError: any) {
-                console.warn('[DIARY NOTIF] Unexpected error (non-blocking):', notificationError);
-                if (showError) {
-                    showError(notificationError, handleNotificationErrorForDiary);
-                }
-            }
-            // ────────────────────────────────────────────────────────────
+            })();
+            // ─────────────────────────────────────────────────────────────
 
-            resetForm();
-            onSuccess();
             return true;
         } catch (error: any) {
             console.warn('🔥 Fatal Error in createAssignment:', error);
