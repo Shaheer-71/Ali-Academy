@@ -29,7 +29,7 @@
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/icons/logo.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#1F3F4A"
       }
     },
     "web": {

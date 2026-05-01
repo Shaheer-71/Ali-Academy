@@ -293,7 +293,7 @@ export default function RootLayout() {
         NavigationBar.setBehaviorAsync('overlay-swipe');
       }
       // Keep custom splash visible for at least 1.5s after fonts load
-      const t = setTimeout(() => setSplashVisible(false), 1500);
+      const t = setTimeout(() => setSplashVisible(false), 3000);
       return () => clearTimeout(t);
     }
   }, [fontsLoaded, fontError]);

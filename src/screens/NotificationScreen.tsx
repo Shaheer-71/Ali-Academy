@@ -162,7 +162,6 @@ export default function NotificationScreen() {
         switch (role) {
             case 'student':    return 'Student';
             case 'teacher':    return 'Teacher';
-            case 'admin':      return 'Admin';
             case 'superadmin': return 'Super Admin';
             default:           return role;
         }
@@ -193,14 +192,14 @@ export default function NotificationScreen() {
     };
 
 
-    if (profile?.role !== 'teacher' && profile?.role !== 'admin' && profile?.role !== 'superadmin') {
+    if (profile?.role !== 'teacher' && profile?.role !== 'superadmin') {
         return (
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
                 <TopSections />
                 <View style={styles.restrictedContainer}>
                     <AlertCircle size={48} color={colors.textSecondary} />
                     <Text allowFontScaling={false} style={[styles.restrictedText, { color: colors.text }]}>
-                        Only teachers and admins can create notifications
+                        Only teachers can create notifications
                     </Text>
                 </View>
             </SafeAreaView>

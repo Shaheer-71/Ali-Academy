@@ -1,0 +1,52 @@
+module.exports = {
+  expo: {
+    name: "Ali Academy",
+    slug: "aliacademy",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./src/assets/icons/logo.png",
+    scheme: "myapp",
+    userInterfaceStyle: "automatic",
+    splash: {
+      image: "./src/assets/icons/splashscreen.png",
+      resizeMode: "cover",
+      backgroundColor: "#ffffff",
+    },
+    newArchEnabled: true,
+    ios: {
+      bundleIdentifier: "com.kodex.aliacademy",
+      supportsTablet: true,
+      infoPlist: {
+        UIAppFonts: [
+          "Inter-Regular.ttf",
+          "Inter-Medium.ttf",
+          "Inter-SemiBold.ttf",
+        ],
+      },
+    },
+    android: {
+      package: "com.kodex.aliacademy",
+      googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
+      adaptiveIcon: {
+        foregroundImage: "./src/assets/icons/logo.png",
+        backgroundColor: "#ffffff",
+      },
+    },
+    web: {
+      bundler: "metro",
+      output: "single",
+      favicon: "./src/assets/icons/logo.png",
+    },
+    plugins: ["expo-router", "expo-font", "expo-web-browser"],
+    experiments: {
+      typedRoutes: true,
+    },
+    extra: {
+      router: {},
+      eas: {
+        projectId: "5a795fd2-272d-4166-8ae4-ab63ec233b19",
+      },
+    },
+    owner: "devshaheer",
+  },
+};

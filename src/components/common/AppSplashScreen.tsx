@@ -1,7 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Dimensions } from 'react-native';
-
-const { width, height } = Dimensions.get('screen');
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, StyleSheet, Modal, Image } from 'react-native';
 
 interface Props {
     visible: boolean;
@@ -9,16 +7,7 @@ interface Props {
 
 export const AppSplashScreen = ({ visible }: Props) => {
     const opacity = useRef(new Animated.Value(1)).current;
-    const logoScale = useRef(new Animated.Value(0.82)).current;
-
-    useEffect(() => {
-        Animated.spring(logoScale, {
-            toValue: 1,
-            useNativeDriver: true,
-            bounciness: 10,
-            speed: 8,
-        }).start();
-    }, []);
+    const [modalVisible, setModalVisible] = useState(true);
 
     useEffect(() => {
         if (!visible) {
@@ -26,32 +15,35 @@ export const AppSplashScreen = ({ visible }: Props) => {
                 toValue: 0,
                 duration: 400,
                 useNativeDriver: true,
-            }).start();
+            }).start(() => setModalVisible(false));
         }
     }, [visible]);
 
     return (
-        <Animated.View style={[styles.container, { opacity }]} pointerEvents="none">
-            <Animated.Image
-                source={require('../../assets/icons/splashscreen.png')}
-                style={styles.splash}
-                resizeMode="cover"
-            />
-        </Animated.View>
+        <Modal
+            visible={modalVisible}
+            transparent
+            animationType="none"
+            statusBarTranslucent
+        >
+            <Animated.View style={[styles.container, { opacity }]}>
+                <Image
+                    source={require('../../assets/icons/splashscreen.png')}
+                    style={styles.splash}
+                    resizeMode="stretch"
+                />
+            </Animated.View>
+        </Modal>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width,
-        height,
-        zIndex: 9999,
+        flex: 1,
     },
     splash: {
-        width,
-        height,
+        flex: 1,
+        width: '100%',
+        height: '100%',
     },
 });

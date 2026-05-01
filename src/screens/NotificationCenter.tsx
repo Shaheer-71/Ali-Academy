@@ -10,12 +10,12 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bell, CheckCheck, Filter, Search } from 'lucide-react-native';
+import { Bell, CheckCheck } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useNotifications } from '@/src/contexts/NotificationContext';
 import { NotificationCard } from '@/src/components/common/NotificationCard';
 import { Animated } from 'react-native';
-import { useScreenAnimation, useButtonAnimation } from '@/src/utils/animations';
+import { useScreenAnimation } from '@/src/utils/animations';
 
 
 export default function NotificationCenter() {
@@ -33,7 +33,6 @@ export default function NotificationCenter() {
     const [refreshing, setRefreshing] = useState(false);
 
     const screenStyle = useScreenAnimation();
-    const ButtonAnimation = useButtonAnimation();
 
     // Notifications from the backend use `is_read` (snake_case).
     // Using `read` here was a bug (undefined), causing the unread filter
@@ -229,84 +228,9 @@ const styles = StyleSheet.create({
     },
 
     emptyMessage: {
-        fontSize: TextSizes.normal, // was 14
+        fontSize: TextSizes.normal,
         fontFamily: 'Inter-Regular',
         marginTop: 6,
         textAlign: 'center',
     },
 });
-
-
-// const styles = StyleSheet.create({
-//     container: {
-//         flex: 1,
-//     },
-//     header: {
-//         flexDirection: 'row',
-//         justifyContent: 'space-between',
-//         alignItems: 'center',
-//         paddingHorizontal: 20,
-//         paddingVertical: 16,
-//         borderBottomWidth: 1,
-//     },
-//     headerTitle: {
-//         fontSize: 24,
-//         fontFamily: 'Inter-Bold',
-//     },
-//     markAllButton: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         paddingHorizontal: 12,
-//         paddingVertical: 8,
-//         borderRadius: 20,
-//     },
-//     markAllText: {
-//         color: '#fff',
-//         fontSize: 14,
-//         fontFamily: 'Inter-Medium',
-//         marginLeft: 6,
-//     },
-//     filterContainer: {
-//         flexDirection: 'row',
-//         padding: 8,
-//         marginHorizontal: 20,
-//         marginVertical: 12,
-//         borderRadius: 12,
-//     },
-//     filterTab: {
-//         flex: 1,
-//         paddingVertical: 10,
-//         alignItems: 'center',
-//         borderRadius: 8,
-//     },
-//     filterText: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-SemiBold',
-//     },
-//     listContent: {
-//         paddingHorizontal: 20,
-//         paddingBottom: 20,
-//     },
-//     loadingContainer: {
-//         flex: 1,
-//         justifyContent: 'center',
-//         alignItems: 'center',
-//     },
-//     emptyContainer: {
-//         flex: 1,
-//         justifyContent: 'center',
-//         alignItems: 'center',
-//         paddingVertical: 60,
-//     },
-//     emptyTitle: {
-//         fontSize: 20,
-//         fontFamily: 'Inter-SemiBold',
-//         marginTop: 16,
-//     },
-//     emptyMessage: {
-//         fontSize: 14,
-//         fontFamily: 'Inter-Regular',
-//         marginTop: 8,
-//         textAlign: 'center',
-//     },
-// });

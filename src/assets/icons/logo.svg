@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#263f4d"/>
+      <stop offset="100%" stop-color="#1F3F4A"/>
+    </linearGradient>
+    <linearGradient id="flame" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%"   stop-color="#A4C400"/>
+      <stop offset="55%"  stop-color="#d8f020"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="pgL" x1="100%" y1="0%" x2="0%" y2="0%">
+      <stop offset="0%"   stop-color="#f9fcf9"/>
+      <stop offset="100%" stop-color="#e4ede6"/>
+    </linearGradient>
+    <linearGradient id="pgR" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#f9fcf9"/>
+      <stop offset="100%" stop-color="#e4ede6"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="6" stdDeviation="14" flood-color="#000" flood-opacity="0.22"/>
+    </filter>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- ── RINGS ── -->
+  <circle cx="250" cy="254" r="226" fill="#142e38" opacity="0.18" filter="url(#shadow)"/>
+  <circle cx="250" cy="250" r="226" fill="#A4C400"/>
+  <circle cx="250" cy="250" r="216" fill="white"/>
+  <circle cx="250" cy="250" r="207" fill="url(#bg)"/>
+  <circle cx="250" cy="250" r="207" fill="none" stroke="rgba(255,255,255,0.13)" stroke-width="1.5"/>
+  <!-- Inner lime ring r=184 -->
+  <circle cx="250" cy="250" r="184" fill="none" stroke="#A4C400" stroke-width="2.5" opacity="0.6"/>
+
+  <!-- ── BOTTOM CURVED TAGLINE at r=168 ── -->
+  <text x="163.4" y="394.0" transform="rotate(31.0,163.4,394.0)"  font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">L</text>
+  <text x="170.8" y="398.1" transform="rotate(28.1,170.8,398.1)"  font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">E</text>
+  <text x="178.4" y="402.0" transform="rotate(25.2,178.4,402.0)"  font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">A</text>
+  <text x="186.1" y="405.4" transform="rotate(22.3,186.1,405.4)"  font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">R</text>
+  <text x="194.1" y="408.4" transform="rotate(19.4,194.1,408.4)"  font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">N</text>
+  <text x="209.2" y="413.0" transform="rotate(14.1,209.2,413.0)"  font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">·</text>
+  <text x="224.6" y="416.1" transform="rotate(8.7,224.6,416.1)"   font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">D</text>
+  <text x="233.0" y="417.1" transform="rotate(5.8,233.0,417.1)"   font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">I</text>
+  <text x="241.5" y="417.8" transform="rotate(2.9,241.5,417.8)"   font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">S</text>
+  <text x="250.0" y="418.0" transform="rotate(0.0,250.0,418.0)"   font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">C</text>
+  <text x="258.5" y="417.8" transform="rotate(-2.9,258.5,417.8)"  font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">O</text>
+  <text x="267.0" y="417.1" transform="rotate(-5.8,267.0,417.1)"  font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">V</text>
+  <text x="275.4" y="416.1" transform="rotate(-8.7,275.4,416.1)"  font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">E</text>
+  <text x="283.8" y="414.6" transform="rotate(-11.6,283.8,414.6)" font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">R</text>
+  <text x="299.0" y="410.7" transform="rotate(-17.0,299.0,410.7)" font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">·</text>
+  <text x="313.9" y="405.4" transform="rotate(-22.3,313.9,405.4)" font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">L</text>
+  <text x="321.6" y="402.0" transform="rotate(-25.2,321.6,402.0)" font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">E</text>
+  <text x="329.2" y="398.1" transform="rotate(-28.1,329.2,398.1)" font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">A</text>
+  <text x="336.6" y="394.0" transform="rotate(-31.0,336.6,394.0)" font-family="'Trebuchet MS',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#A4C400" text-anchor="middle">D</text>
+
+  <!-- Separator dots -->
+  <circle cx="66"  cy="250" r="4" fill="#A4C400"/>
+  <circle cx="434" cy="250" r="4" fill="#A4C400"/>
+  <circle cx="66"  cy="250" r="2" fill="white" opacity="0.6"/>
+  <circle cx="434" cy="250" r="2" fill="white" opacity="0.6"/>
+
+  <!-- ══════════════════════════════════════════════
+       ICON — single open book + torch
+       translate(250,190) scale(0.75)
+       Book half-width at scale: 83*0.75 = 62px  ✓ inside r=184
+  ══════════════════════════════════════════════ -->
+  <g transform="translate(250,190) scale(0.75)">
+
+    <!-- TORCH -->
+    <ellipse cx="0" cy="-102" rx="13" ry="18" fill="rgba(164,196,0,0.2)" filter="url(#glow)"/>
+    <path d="M 0,-76  C -13,-86 -15,-104 -5,-118 C -2,-124 0,-127 0,-76 Z" fill="url(#flame)"/>
+    <path d="M 0,-76  C  13,-86  15,-104  5,-118 C  2,-124 0,-127 0,-76 Z" fill="url(#flame)"/>
+    <path d="M 0,-79  C -6,-90 -6,-107 0,-120 C 6,-107 6,-90 0,-79 Z" fill="white" opacity="0.7"/>
+    <rect x="-5" y="-76" width="10" height="36" rx="4" fill="#A4C400"/>
+    <rect x="-5" y="-66" width="10" height="2.5" rx="1" fill="rgba(255,255,255,0.4)"/>
+    <rect x="-5" y="-58" width="10" height="2.5" rx="1" fill="rgba(255,255,255,0.4)"/>
+    <path d="M -10,-76 L -12,-62 L 12,-62 L 10,-76 Z" fill="#7a9200"/>
+    <ellipse cx="0" cy="-62" rx="12" ry="4" fill="#A4C400"/>
+
+    <!-- OPEN BOOK -->
+    <!-- Shadow -->
+    <ellipse cx="0" cy="67" rx="82" ry="7" fill="rgba(0,0,0,0.18)"/>
+    <!-- Left page -->
+    <path d="M 0,-44 C -28,-50 -70,-46 -80,-42 L -80,56 C -70,60 -28,62 0,58 Z" fill="url(#pgL)"/>
+    <rect x="-7" y="-44" width="7" height="102" fill="rgba(0,0,0,0.06)"/>
+    <line x1="-70" y1="-28" x2="-10" y2="-30" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <line x1="-70" y1="-17" x2="-10" y2="-19" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <line x1="-70" y1=" -6" x2="-10" y2=" -8" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <line x1="-70" y1="  5" x2="-10" y2="  3" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <line x1="-70" y1=" 16" x2="-10" y2=" 14" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <line x1="-70" y1=" 27" x2="-10" y2=" 25" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <line x1="-70" y1=" 38" x2="-34" y2=" 37" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <rect x="-70" y="-41" width="56" height="5" rx="2.5" fill="#A4C400" opacity="0.8"/>
+    <!-- Right page -->
+    <path d="M 0,-44 C  28,-50  70,-46  80,-42 L  80,56 C  70,60  28,62 0,58 Z" fill="url(#pgR)"/>
+    <rect x="0" y="-44" width="7" height="102" fill="rgba(0,0,0,0.06)"/>
+    <line x1=" 10" y1="-30" x2=" 70" y2="-28" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <line x1=" 10" y1="-19" x2=" 70" y2="-17" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <line x1=" 10" y1=" -8" x2=" 70" y2=" -6" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <line x1=" 10" y1="  3" x2=" 70" y2="  5" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <line x1=" 10" y1=" 14" x2=" 70" y2=" 16" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <line x1=" 10" y1=" 25" x2=" 70" y2=" 27" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <line x1=" 34" y1=" 37" x2=" 70" y2=" 38" stroke="#1F3F4A" stroke-width="1.6" opacity="0.11"/>
+    <rect x="14" y="-41" width="56" height="5" rx="2.5" fill="#A4C400" opacity="0.8"/>
+    <!-- Spine -->
+    <path d="M -5,-46 Q 0,-50 5,-46 L 5,60 Q 0,64 -5,60 Z" fill="#A4C400"/>
+    <line x1="0" y1="-50" x2="0" y2="64" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+    <!-- Left cover -->
+    <rect x="-88" y="-46" width="11" height="108" rx="3" fill="#A4C400"/>
+    <line x1="-83" y1="-46" x2="-83" y2="62" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
+    <!-- Right cover -->
+    <rect x="77"  y="-46" width="11" height="108" rx="3" fill="#A4C400"/>
+    <line x1="82" y1="-46" x2="82"  y2="62" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
+    <!-- Bottom page arc -->
+    <path d="M -80,56 Q 0,70 80,56" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="2"/>
+
+  </g>
+
+  <!-- ── WORDMARK — equal 12px padding ── -->
+  <rect x="148" y="286" width="204" height="2.5" rx="1.25" fill="#A4C400" opacity="0.8"/>
+  <text x="250" y="318"
+        font-family="'Trebuchet MS',Arial,sans-serif"
+        font-size="26" font-weight="800"
+        fill="white" text-anchor="middle" letter-spacing="5">ALI SCIENCE</text>
+  <rect x="185" y="327" width="130" height="1.5" rx="0.75" fill="rgba(255,255,255,0.2)"/>
+  <text x="250" y="346"
+        font-family="'Trebuchet MS',Arial,sans-serif"
+        font-size="17" font-weight="700"
+        fill="#A4C400" text-anchor="middle" letter-spacing="9">ACADEMY</text>
+  <rect x="148" y="361" width="204" height="2.5" rx="1.25" fill="#A4C400" opacity="0.8"/>
+
+  <!-- Apex stud -->
+  <circle cx="250" cy="44" r="7"   fill="#A4C400"/>
+  <circle cx="250" cy="44" r="3.5" fill="white"/>
+
+</svg>

@@ -165,7 +165,7 @@ export const useQuizzes = () => {
                 return;
             }
 
-            const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin';
+            const isTeacher = profile?.role === 'teacher';
             const table = isTeacher ? 'teacher_subject_enrollments' : 'student_subject_enrollments';
             const filterCol = isTeacher ? 'teacher_id' : 'student_id';
             const filterVal = isTeacher ? profile?.id : student?.id;
@@ -214,7 +214,7 @@ export const useQuizzes = () => {
 
             let enrollmentsData, enrollmentsError;
 
-            if (profile.role === "teacher" || profile.role === "admin") {
+            if (profile.role === "teacher") {
                 ({ data: enrollmentsData, error: enrollmentsError } = await supabase
                     .from('teacher_subject_enrollments')
                     .select('class_id, subject_id')
