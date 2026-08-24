@@ -146,7 +146,7 @@ export default function StudentFeeScreen() {
                 isFiltered={isFiltered}
             />
 
-            <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'bottom']}>
+            <SafeAreaView style={{ flex: 1, marginTop: -24, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden', backgroundColor: colors.background }} edges={['left', 'right', 'bottom']}>
                 {/* Summary Card */}
                 {studentFeeInfo.amount_due != null && (
                     <View 

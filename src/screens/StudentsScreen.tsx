@@ -745,7 +745,7 @@ export default function StudentsScreen() {
             </Modal>
 
             <Animated.View style={[{ flex: 1 }, screenStyle]}>
-                <View style={[styles.container, { backgroundColor: colors.background }]}>
+                <View style={[styles.container, styles.curvedBody, { backgroundColor: colors.background }]}>
                     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
 
 
@@ -1308,6 +1308,12 @@ import { TextSizes } from '@/src/styles/TextSizes';
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    curvedBody: {
+        marginTop: -24,
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        overflow: 'hidden',
     },
 
     // Error

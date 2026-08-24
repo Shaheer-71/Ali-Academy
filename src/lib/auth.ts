@@ -7,6 +7,8 @@ export interface UserProfile {
   full_name: string;
   role: 'teacher' | 'student' | 'admin' | 'superadmin';
   contact_number?: string;
+  is_active?: boolean | null;
+  created_at?: string | null;
 }
 
 export interface StudentProfile {
@@ -20,6 +22,10 @@ export interface StudentProfile {
   admission_date?: string | null;
   date_of_birth?: string | null;
   is_active?: boolean | null;
+  address?: string | null;
+  parent_name?: string | null;
+  parent_contact?: string | null;
+  emergency_contact?: string | null;
 }
 
 

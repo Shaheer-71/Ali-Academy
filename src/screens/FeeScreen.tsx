@@ -222,7 +222,7 @@ export default function FeeScreen() {
             <TopSections
                 onFilterPress={() => setFilterVisible(true)}
             />
-            <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'bottom']}>
+            <SafeAreaView style={{ flex: 1, marginTop: -24, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden', backgroundColor: colors.background }} edges={['left', 'right', 'bottom']}>
 
                 {/* Stats Row */}
                 <View style={[styles.statsRow, { paddingHorizontal: 24 }]}>

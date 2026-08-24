@@ -44,7 +44,7 @@ export const CustomTimeModal: React.FC<CustomTimeModalProps> = ({
             statusBarTranslucent={true}
         >
             <View style={styles.modalOverlay}>
-                <View style={[styles.timeModalContent, { backgroundColor: colors.background }]}>
+                <View style={[styles.timeModalContent, { backgroundColor: colors.cardBackground }]}>
                     <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
                         <Text allowFontScaling={false} style={[styles.modalTitle, { color: colors.text }]}>Enter Arrival Time</Text>
                         <TouchableOpacity onPress={onClose}>

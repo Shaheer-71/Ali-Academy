@@ -1,10 +1,7 @@
 import { Tabs, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { useTheme } from '@/src/contexts/ThemeContext';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as NavigationBar from 'expo-navigation-bar';
 import {
     House as Home,
@@ -15,12 +12,12 @@ import {
     GraduationCap,
     NotepadText,
 } from 'lucide-react-native';
+import FloatingBottomNav from '@/src/components/common/FloatingBottomNav';
+import { tabSlideTransition } from '@/src/utils/tabTransitions';
 
 export default function TeacherLayout() {
     const { user, profile, loading } = useAuth();
-    const { colors } = useTheme();
     const router = useRouter();
-    const { bottom: bottomInset } = useSafeAreaInsets();
 
     const isAllowed = profile?.role === 'teacher' || profile?.role === 'superadmin';
 
@@ -44,25 +41,11 @@ export default function TeacherLayout() {
 
     return (
         <>
-            <StatusBar style="dark" />
             <Tabs
+                tabBar={(props) => <FloatingBottomNav {...props} />}
                 screenOptions={{
                     headerShown: false,
-                    tabBarActiveTintColor: colors.primary,
-                    tabBarInactiveTintColor: colors.textSecondary,
-                    tabBarStyle: {
-                        backgroundColor: colors.background,
-                        borderTopWidth: 1,
-                        borderTopColor: colors.border,
-                        paddingTop: 8,
-                        paddingBottom: Platform.OS === 'android' ? Math.max(bottomInset, 10) : bottomInset,
-                        height: Platform.OS === 'android' ? 60 + Math.max(bottomInset, 10) : 60 + bottomInset,
-                        position: 'absolute',
-                    },
-                    tabBarLabelStyle: {
-                        fontSize: 8,
-                        fontFamily: 'Inter-Medium',
-                    },
+                    ...tabSlideTransition,
                 }}>
 
                 <Tabs.Screen
@@ -148,6 +131,9 @@ export default function TeacherLayout() {
                     name="students"
                     options={{ href: null }}
                 />
+
+                <Tabs.Screen name="profile" options={{ href: null }} />
+                <Tabs.Screen name="settings" options={{ href: null }} />
             </Tabs>
         </>
     );

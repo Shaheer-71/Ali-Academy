@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'; // useState kept for splashVisible
+import { useEffect, useRef, useState } from 'react';
 import { LogBox, AppState, Platform } from 'react-native';
 import * as NavigationBar from 'expo-navigation-bar';
 
@@ -14,20 +14,27 @@ import { ThemeProvider } from '@/src/contexts/ThemeContext';
 import { NotificationProvider } from '@/src/contexts/NotificationContext';
 import { DialogProvider } from '@/src/contexts/DialogContext';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
-import * as SplashScreen from 'expo-splash-screen';
 import '@/src/constants/TextScaling';
 import { registerDeviceForNotifications, setupNotificationHandlers, pendingNavigation } from '@/src/lib/notifications';
 import * as Notifications from 'expo-notifications';
 import { useLastNotificationResponse } from 'expo-notifications';
 import { AppSplashScreen } from '@/src/components/common/AppSplashScreen';
 
-
-SplashScreen.preventAutoHideAsync();
+const SPLASH_MIN_MS = 3000;
 
 function RootLayoutNav() {
   const { user, profile, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  // Splash shows for a fixed 3s, then hands off to whatever RootLayoutNav's
+  // routing effect below has already decided (Sign-in or the role's home).
+  const [splashVisible, setSplashVisible] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSplashVisible(false), SPLASH_MIN_MS);
+    return () => clearTimeout(t);
+  }, []);
 
   // useLastNotificationResponse — fires when user taps a notification while app is in foreground
   const lastNotificationResponse = useLastNotificationResponse();
@@ -260,17 +267,21 @@ function RootLayoutNav() {
 
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" options={{ headerShown: false}} />
-      <Stack.Screen name="(teacher)" options={{ headerShown: false }} />
-      <Stack.Screen name="(student)" options={{ headerShown: false }} />
-      <Stack.Screen name="settings" options={{ headerShown: false }} />
-      <Stack.Screen name="fee" options={{ headerShown: false }} />
-      <Stack.Screen name="notifications" options={{ headerShown: false }} />
-      <Stack.Screen name="students" options={{ headerShown: false }} />
-      <Stack.Screen name="fee-status" options={{ headerShown: false }} />
-      <Stack.Screen name="+not-found" />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false}} />
+        <Stack.Screen name="(teacher)" options={{ headerShown: false }} />
+        <Stack.Screen name="(student)" options={{ headerShown: false }} />
+        <Stack.Screen name="settings" options={{ headerShown: false }} />
+        <Stack.Screen name="fee" options={{ headerShown: false }} />
+        <Stack.Screen name="notifications" options={{ headerShown: false }} />
+        <Stack.Screen name="students" options={{ headerShown: false }} />
+        <Stack.Screen name="fee-status" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+
+      <AppSplashScreen visible={splashVisible} />
+    </>
   );
 }
 
@@ -283,18 +294,12 @@ export default function RootLayout() {
     'Inter-SemiBold': Inter_600SemiBold,
   });
 
-  const [splashVisible, setSplashVisible] = useState(true);
-
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
       if (Platform.OS === 'android') {
         NavigationBar.setVisibilityAsync('hidden');
         NavigationBar.setBehaviorAsync('overlay-swipe');
       }
-      // Keep custom splash visible for at least 1.5s after fonts load
-      const t = setTimeout(() => setSplashVisible(false), 3000);
-      return () => clearTimeout(t);
     }
   }, [fontsLoaded, fontError]);
 
@@ -308,7 +313,6 @@ export default function RootLayout() {
         <NotificationProvider>
           <DialogProvider>
             <RootLayoutNav />
-            <AppSplashScreen visible={splashVisible} />
             <StatusBar style="auto" />
           </DialogProvider>
         </NotificationProvider>

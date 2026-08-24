@@ -82,7 +82,7 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
                     <View style={StyleSheet.absoluteFillObject} />
                 </TouchableWithoutFeedback>
 
-                <View style={[s.sheet, { backgroundColor: colors.background }]}>
+                <View style={[s.sheet, { backgroundColor: colors.cardBackground }]}>
                     {/* Handle */}
                     <View style={[s.handle, { backgroundColor: colors.border }]} />
 

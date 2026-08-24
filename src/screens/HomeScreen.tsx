@@ -7,19 +7,26 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useNotifications } from '@/src/contexts/NotificationContext';
 import { supabase } from '@/src/lib/supabase';
-import { Users, ClipboardCheck, BookOpen, NotebookPen, ChartBar as BarChart3, Calendar, Sparkles, TrendingUp, GraduationCap, LayoutGrid } from 'lucide-react-native';
+import { Users, ClipboardCheck, BookOpen, NotebookPen, ChartBar as BarChart3, Calendar, Sparkles, TrendingUp, GraduationCap, CheckCircle2, Info, AlertTriangle } from 'lucide-react-native';
 import TopSections from '@/src/components/common/TopSections';
 import { Animated } from 'react-native';
 import { useScreenAnimation, useButtonAnimation, useCardAnimation } from '@/src/utils/animations';
 import { ErrorModal } from '@/src/components/common/ErrorModal';
 import { handleError, handleDataFetchError } from '@/src/utils/errorHandler/homeErrorHandler';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const SECTION_PADDING = 24;
+const ACTION_GAP = 12;
+const ACTION_CARD_WIDTH = (SCREEN_WIDTH - SECTION_PADDING * 2 - ACTION_GAP * 2) / 3;
 
 interface HomeStats {
   students: number;
@@ -40,13 +47,12 @@ interface RecentActivity {
 interface QuickAction {
   title: string;
   icon: React.ComponentType<{ size: number; color: string }>;
-  color: string;
   onPress: () => void;
 }
 
 export default function HomeScreen() {
   const { profile, student } = useAuth();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const router = useRouter();
   const { fetchNotifications } = useNotifications();
   const [refreshing, setRefreshing] = useState(false);
@@ -79,13 +85,6 @@ export default function HomeScreen() {
       title: '',
       message: '',
     });
-  };
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
   };
 
   const fetchTeacherStats = async () => {
@@ -501,26 +500,37 @@ export default function HomeScreen() {
         {
           title: 'Mark Attendance',
           icon: ClipboardCheck,
-          color: '#A4C400',
           onPress: () => router.push('/attendance')
         },
         {
           title: 'Upload Lecture',
           icon: BookOpen,
-          color: '#1F3F4A',
           onPress: () => router.push('/lectures')
         },
         {
           title: 'Assign Diary',
           icon: NotebookPen,
-          color: '#2A7C6F',
           onPress: () => router.push('/dairy')
         },
         {
           title: 'Manage Students',
           icon: Users,
-          color: '#5B8A00',
           onPress: () => router.push('/students')
+        },
+        {
+          title: 'Exams',
+          icon: GraduationCap,
+          onPress: () => router.push('/exams')
+        },
+        {
+          title: 'Timetable',
+          icon: Calendar,
+          onPress: () => router.push('/timetable')
+        },
+        {
+          title: 'Analytics',
+          icon: BarChart3,
+          onPress: () => router.push('/analytics')
         },
       ];
     }
@@ -529,26 +539,32 @@ export default function HomeScreen() {
       {
         title: 'View Attendance',
         icon: Calendar,
-        color: '#A4C400',
         onPress: () => router.push('/attendance')
       },
       {
         title: 'Latest Lectures',
         icon: BookOpen,
-        color: '#1F3F4A',
         onPress: () => router.push('/lectures')
       },
       {
         title: 'Homework',
         icon: NotebookPen,
-        color: '#2A7C6F',
         onPress: () => router.push('/dairy')
       },
       {
         title: 'Progress',
         icon: BarChart3,
-        color: '#5B8A00',
         onPress: () => router.push('/exams')
+      },
+      {
+        title: 'Timetable',
+        icon: Calendar,
+        onPress: () => router.push('/timetable')
+      },
+      {
+        title: 'Analytics',
+        icon: TrendingUp,
+        onPress: () => router.push('/analytics')
       },
     ];
   };
@@ -573,141 +589,153 @@ export default function HomeScreen() {
     }
   };
 
-  const getActivityDotStyle = (type: string): { backgroundColor: string } => {
+  const getActivityMeta = (type: string): { icon: React.ComponentType<{ size: number; color: string }>; color: string } => {
     switch (type) {
-      case 'success': return { backgroundColor: '#10B981' };
-      case 'info':    return { backgroundColor: '#3B82F6' };
-      case 'warning': return { backgroundColor: '#F59E0B' };
-      default:        return { backgroundColor: '#10B981' };
+      case 'success': return { icon: CheckCircle2, color: '#10B981' };
+      case 'info':    return { icon: Info, color: '#3B82F6' };
+      case 'warning': return { icon: AlertTriangle, color: '#F59E0B' };
+      default:        return { icon: CheckCircle2, color: '#10B981' };
     }
   };
 
   const quickActions = getRoleBasedQuickActions();
   const statsLabels = getStatsLabels();
   const statsValues = getStatsValues();
+  const badgeGradient: [string, string] = [colors.primary, '#173239'];
 
   return (
     <Animated.View style={[styles.container, screenStyle, { backgroundColor: colors.background }]}>
       <TopSections showNotifications={true} />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right', "bottom"]}>
         <View style={{ flex: 1 }}>
-          <ScrollView
-            contentContainerStyle={{
-              paddingBottom: 50,
-              gap: 24,
-            }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={[colors.primary]}
-                tintColor={colors.primary}
-                title="Pull to refresh"
-                titleColor={colors.textSecondary}
-              />
-            }
-          >
-            <View style={[styles.headerContainer, { backgroundColor: colors.cardBackground }]}>
-              {/* Accent strip */}
-              <View style={styles.headerAccent} />
-
-              {/* Header */}
-              <View style={[styles.header, { backgroundColor: colors.cardBackground }]}>
-                <View style={styles.headerLeft}>
-                  <Text allowFontScaling={false} style={[styles.greeting, { color: colors.textSecondary }]}>{getGreeting()} 👋</Text>
-                  <Text allowFontScaling={false} style={[styles.username, { color: colors.text }]}>{profile?.full_name || 'Guest'}</Text>
-                  <Text allowFontScaling={false} style={styles.role}>{profile?.role?.toUpperCase() || 'USER'}</Text>
-                </View>
-                <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-                  <Text allowFontScaling={false} style={styles.avatarText}>
-                    {profile?.full_name?.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() || 'U'}
-                  </Text>
-                </View>
-              </View>
-
+          <View style={[styles.sheet, { backgroundColor: colors.background }]}>
+            <ScrollView
+              contentContainerStyle={styles.sheetContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={[colors.primary]}
+                  tintColor={colors.primary}
+                  title="Pull to refresh"
+                  titleColor={colors.textSecondary}
+                />
+              }
+            >
               {/* Dynamic Quick Stats */}
-              <View style={[styles.statsContainer, { backgroundColor: colors.cardBackground }]}>
-                {statsValues.map((value, index) => {
-                  const icons = profile?.role === 'student'
-                    ? [Calendar, BookOpen, GraduationCap]
-                    : [Users, LayoutGrid, BookOpen];
-                  const Icon = icons[index];
-                  return (
-                    <View key={index} style={[styles.statsCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                      <View style={styles.statsIconWrap}>
-                        <Icon size={14} color="#A4C400" />
-                      </View>
-                      <Text allowFontScaling={false} style={[styles.statsNumber, { color: colors.text }]}>{value}</Text>
-                      <Text allowFontScaling={false} style={[styles.statsLabel, { color: colors.textSecondary }]}>
-                        {statsLabels[index]}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Quick Actions */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
-                <View style={[styles.sectionIcon, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                  <Sparkles size={16} color={colors.secondary} />
-                </View>
-              </View>
-
-              <View style={styles.actionsGrid}>
-                {quickActions.map((action, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[styles.actionCard, { backgroundColor: colors.cardBackground, borderColor: colors.border, borderLeftColor: action.color }]}
-                    onPress={action.onPress}
-                    activeOpacity={0.75}
-                  >
-                    <View style={[styles.actionIcon, { backgroundColor: `${action.color}18` }]}>
-                      <action.icon size={26} color={action.color} />
-                    </View>
-                    <Text allowFontScaling={false} style={[styles.actionTitle, { color: colors.text }]}>{action.title}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Dynamic Recent Activity */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Recent Activity</Text>
-                <View style={[styles.sectionIcon, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                  <TrendingUp size={16} color={colors.primary} />
-                </View>
-              </View>
-              <View style={[styles.activityCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                {recentActivities.length > 0 ? (
-                  recentActivities.map((activity, index) => (
-                    <View key={activity.id} style={[
-                      styles.activityItem,
-                      { borderLeftColor: getActivityDotStyle(activity.type).backgroundColor },
-                      index === recentActivities.length - 1 && { marginBottom: 0 }
-                    ]}>
-                      <View style={styles.activityContent}>
-                        <Text allowFontScaling={false} style={[styles.activityTitle, { color: colors.text }]}>{activity.title}</Text>
-                        <Text allowFontScaling={false} style={[styles.activityTime, { color: colors.textSecondary }]}>{activity.description} • {activity.time}</Text>
-                      </View>
-                    </View>
-                  ))
-                ) : (
-                  <View style={[styles.activityItem, { borderLeftColor: '#3B82F6' }]}>
-                    <View style={styles.activityContent}>
-                      <Text allowFontScaling={false} style={[styles.activityTitle, { color: colors.text }]}>Welcome!</Text>
-                      <Text allowFontScaling={false} style={[styles.activityTime, { color: colors.textSecondary }]}>Start using the app to see your recent activity</Text>
-                    </View>
+              <View style={styles.statsSection}>
+                <View style={[styles.overviewCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <LinearGradient
+                    colors={[colors.secondary, colors.primary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.overviewAccent}
+                  />
+                  <View style={styles.overviewRow}>
+                    {statsValues.map((value, index) => (
+                      <React.Fragment key={index}>
+                        {index > 0 && <View style={[styles.overviewDivider, { backgroundColor: colors.border }]} />}
+                        <View style={styles.overviewItem}>
+                          <Text allowFontScaling={false} style={[styles.overviewValue, { color: colors.text }]}>{value}</Text>
+                          <Text allowFontScaling={false} style={[styles.overviewLabel, { color: colors.textSecondary }]}>
+                            {statsLabels[index].toUpperCase()}
+                          </Text>
+                        </View>
+                      </React.Fragment>
+                    ))}
                   </View>
-                )}
+                </View>
               </View>
-            </View>
-          </ScrollView>
+
+              {/* Quick Actions */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <View>
+                    <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
+                    <Text allowFontScaling={false} style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+                      Jump straight into your daily tasks
+                    </Text>
+                  </View>
+                  {isDark ? (
+                    <LinearGradient
+                      colors={badgeGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.sectionIcon}
+                    >
+                      <Sparkles size={16} color="#FFFFFF" />
+                    </LinearGradient>
+                  ) : (
+                    <View style={[styles.sectionIcon, { backgroundColor: `${colors.primary}14` }]}>
+                      <Sparkles size={16} color={colors.primary} />
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.actionsGrid}>
+                  {quickActions.map((action, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[styles.actionCard, { backgroundColor: colors.cardBackground, borderColor: colors.border, width: ACTION_CARD_WIDTH }]}
+                      onPress={action.onPress}
+                      activeOpacity={0.7}
+                    >
+                      <LinearGradient
+                        colors={isDark ? badgeGradient : [`${colors.primary}1F`, `${colors.secondary}26`]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.actionIcon}
+                      >
+                        <action.icon size={20} color={isDark ? '#FFFFFF' : colors.primary} />
+                      </LinearGradient>
+                      <Text allowFontScaling={false} numberOfLines={2} style={[styles.actionTitle, { color: colors.text }]}>{action.title}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Dynamic Recent Activity — commented out for now
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>Recent Activity</Text>
+                  <View style={[styles.sectionIcon, { backgroundColor: `${colors.primary}14` }]}>
+                    <TrendingUp size={16} color={colors.primary} />
+                  </View>
+                </View>
+                <View style={styles.activityList}>
+                  {recentActivities.length > 0 ? (
+                    recentActivities.map((activity) => {
+                      const meta = getActivityMeta(activity.type);
+                      return (
+                        <View key={activity.id} style={[styles.activityCard, { backgroundColor: colors.cardBackground }]}>
+                          <View style={[styles.activityIconWrap, { backgroundColor: `${meta.color}18` }]}>
+                            <meta.icon size={18} color={meta.color} />
+                          </View>
+                          <View style={styles.activityContent}>
+                            <Text allowFontScaling={false} style={[styles.activityTitle, { color: colors.text }]}>{activity.title}</Text>
+                            <Text allowFontScaling={false} numberOfLines={1} style={[styles.activityTime, { color: colors.textSecondary }]}>{activity.description} • {activity.time}</Text>
+                          </View>
+                        </View>
+                      );
+                    })
+                  ) : (
+                    <View style={[styles.activityCard, { backgroundColor: colors.cardBackground }]}>
+                      <View style={[styles.activityIconWrap, { backgroundColor: `${colors.primary}18` }]}>
+                        <Sparkles size={18} color={colors.primary} />
+                      </View>
+                      <View style={styles.activityContent}>
+                        <Text allowFontScaling={false} style={[styles.activityTitle, { color: colors.text }]}>Welcome!</Text>
+                        <Text allowFontScaling={false} style={[styles.activityTime, { color: colors.textSecondary }]}>Start using the app to see your recent activity</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </View>
+              */}
+            </ScrollView>
+          </View>
         </View>
       </SafeAreaView>
 
@@ -727,107 +755,60 @@ import { TextSizes } from '@/src/styles/TextSizes';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: -10,
-    paddingBottom: 10,
   },
-  headerContainer: {
-    marginHorizontal: 20,
-    marginBottom: 4,
+  sheet: {
+    flex: 1,
+    marginTop: -24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: 'hidden',
+  },
+  sheetContent: {
+    paddingTop: 20,
+    paddingBottom: 130,
+    gap: 28,
+  },
+  statsSection: {
+    paddingHorizontal: 20,
+  },
+  overviewCard: {
     borderRadius: 20,
+    borderWidth: 1,
     overflow: 'hidden',
     shadowColor: '#1F3F4A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 5,
   },
-  headerAccent: {
-    height: 4,
-    backgroundColor: '#A4C400',
+  overviewAccent: {
+    height: 3,
+    width: '100%',
   },
-  header: {
-    paddingTop: 16,
-    paddingBottom: 4,
-    paddingHorizontal: 20,
+  overviewRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 22,
   },
-  headerLeft: {
+  overviewItem: {
     flex: 1,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 12,
-    borderWidth: 2,
-    borderColor: '#A4C400',
   },
-  avatarText: {
-    fontSize: 15,
+  overviewDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: '70%',
+    alignSelf: 'center',
+  },
+  overviewValue: {
+    fontSize: TextSizes.statValue + 4,
     fontFamily: 'Inter-SemiBold',
-    color: '#ffffff',
-    letterSpacing: 0.5,
-  },
-  greeting: {
-    fontSize: TextSizes.small,
-    fontFamily: 'Inter-Regular',
-  },
-  username: {
-    fontSize: TextSizes.xlarge,
-    fontFamily: 'Inter-SemiBold',
-    marginTop: 2,
-  },
-  role: {
-    fontSize: TextSizes.tiny,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1F3F4A',
-    backgroundColor: '#A4C400',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginTop: 8,
-    alignSelf: 'flex-start',
-    letterSpacing: 0.8,
-  },
-  statsContainer: {
-    flexDirection: 'row',
+    letterSpacing: -0.3,
     marginBottom: 4,
-    gap: 10,
-    padding: 16,
   },
-  statsCard: {
-    flex: 1,
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderTopWidth: 3,
-    borderTopColor: '#A4C400',
-  },
-  statsIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: 'rgba(164,196,0,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  statsNumber: {
-    fontSize: TextSizes.xlarge,
-    fontFamily: 'Inter-SemiBold',
-    marginBottom: 2,
-    color: '#1F3F4A',
-  },
-  statsLabel: {
+  overviewLabel: {
     fontSize: TextSizes.tiny,
-    fontFamily: 'Inter-Regular',
-    textAlign: 'center',
+    fontFamily: 'Inter-SemiBold',
+    letterSpacing: 0.6,
   },
   section: {
     paddingHorizontal: 24,
@@ -836,70 +817,79 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   sectionTitle: {
     fontSize: TextSizes.sectionTitle,
     fontFamily: 'Inter-SemiBold',
+    marginBottom: 3,
+  },
+  sectionSubtitle: {
+    fontSize: TextSizes.small,
+    fontFamily: 'Inter-Regular',
   },
   sectionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
   },
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: ACTION_GAP,
   },
   actionCard: {
-    width: '47%',
-    borderRadius: 16,
-    padding: 18,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 8,
+    borderRadius: 22,
     borderWidth: 1,
-    borderLeftWidth: 4,
     shadowColor: '#1F3F4A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    elevation: 3,
   },
   actionIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
   },
   actionTitle: {
-    fontSize: TextSizes.filterLabel,
+    fontSize: TextSizes.small,
     fontFamily: 'Inter-SemiBold',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 15,
+    letterSpacing: -0.1,
+  },
+  activityList: {
+    gap: 10,
   },
   activityCard: {
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 12,
     shadowColor: '#1F3F4A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
-    gap: 4,
   },
-  activityItem: {
-    paddingVertical: 10,
-    paddingLeft: 14,
-    borderLeftWidth: 3,
-    marginBottom: 8,
-    borderRadius: 2,
+  activityIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   activityContent: {
     flex: 1,

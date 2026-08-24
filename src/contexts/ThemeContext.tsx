@@ -39,13 +39,13 @@ const darkColors: ThemeColors = {
     primary: '#3E6D73',        // Muted teal accent (professional + matches logo)
     secondary: '#2A5055',      // Darker teal for depth
 
-    background: '#0D0D0F',     // Ultra-clean professional dark
-    cardBackground: '#161618', // Slightly raised card surface
+    background: '#04090B',     // Deep teal-tinted black, clearly separates from cards
+    cardBackground: '#0E1A1D', // Darker teal-tinted card surface
 
-    text: '#E6E6E6',           // Soft white (not harsh)
-    textSecondary: '#9AA1A4',  // Elegant gray for secondary text
+    text: '#E9EDEE',           // Soft white (not harsh)
+    textSecondary: '#8FA6AB',  // Teal-tinted gray for secondary text
 
-    border: '#242628',         // Subtle, premium border
+    border: '#1C2E31',         // Teal-tinted, subtle premium border
 
     success: '#3E6D73',        // Keep teal tone for consistency
     warning: '#3E6D73',

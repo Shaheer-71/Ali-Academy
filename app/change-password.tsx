@@ -89,7 +89,7 @@ export default function ChangePasswordScreen() {
   return (
     <Animated.View style={[{ flex: 1 }, screenStyle, { backgroundColor: colors.background }]}>
       <TopSections showNotifications={false} />
-      <SafeAreaView style={[{ flex: 1, backgroundColor: colors.background }]} edges={['left', 'right']}>
+      <SafeAreaView style={[{ flex: 1, backgroundColor: colors.background, marginTop: -24, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' }]} edges={['left', 'right']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}

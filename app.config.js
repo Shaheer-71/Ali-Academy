@@ -7,11 +7,6 @@ module.exports = {
     icon: "./src/assets/icons/logo.png",
     scheme: "myapp",
     userInterfaceStyle: "automatic",
-    splash: {
-      image: "./src/assets/icons/splashscreen.png",
-      resizeMode: "cover",
-      backgroundColor: "#ffffff",
-    },
     newArchEnabled: true,
     ios: {
       bundleIdentifier: "com.kodex.aliacademy",
@@ -37,7 +32,27 @@ module.exports = {
       output: "single",
       favicon: "./src/assets/icons/logo.png",
     },
-    plugins: ["expo-router", "expo-font", "expo-web-browser"],
+    plugins: [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          image: "./src/assets/icons/logo.png",
+          imageWidth: 200,
+          resizeMode: "contain",
+          backgroundColor: "#ffffff",
+        },
+      ],
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          faceIDPermission: "Allow Ali Academy to use Face ID to securely sign you in.",
+        },
+      ],
+    ],
     experiments: {
       typedRoutes: true,
     },

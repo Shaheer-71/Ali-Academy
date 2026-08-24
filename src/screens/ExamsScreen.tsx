@@ -435,7 +435,7 @@ export default function ExamsScreen() {
   return (
     <Animated.View style={[s.container, { backgroundColor: colors.background }, screenStyle]}>
       <TopSections onFilterPress={() => setFilterVisible(true)} isFiltered={isFiltered} />
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
+      <SafeAreaView style={[s.screenBody, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
 
         <ErrorModal
           visible={errorModal.visible}
@@ -578,6 +578,7 @@ export default function ExamsScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1 },
+  screenBody: { flex: 1, marginTop: -24, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
 
   // empty state
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },

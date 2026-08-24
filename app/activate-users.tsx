@@ -83,7 +83,7 @@ export default function ActivateUsersScreen() {
     return (
         <Animated.View style={[{ flex: 1 }, screenStyle, { backgroundColor: colors.background }]}>
             <TopSections />
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
+            <SafeAreaView style={[styles.container, styles.curvedBody, { backgroundColor: colors.background }]} edges={['left', 'right']}>
                 <ScrollView
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
@@ -163,6 +163,12 @@ export default function ActivateUsersScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    curvedBody: {
+        marginTop: -24,
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        overflow: 'hidden',
     },
     scrollContent: {
         flexGrow: 1,

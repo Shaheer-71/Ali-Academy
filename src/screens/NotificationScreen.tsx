@@ -196,7 +196,7 @@ export default function NotificationScreen() {
         return (
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
                 <TopSections />
-                <View style={styles.restrictedContainer}>
+                <View style={[styles.restrictedContainer, styles.curvedBody, { backgroundColor: colors.background }]}>
                     <AlertCircle size={48} color={colors.textSecondary} />
                     <Text allowFontScaling={false} style={[styles.restrictedText, { color: colors.text }]}>
                         Only teachers can create notifications
@@ -241,7 +241,7 @@ export default function NotificationScreen() {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']}>
             <TopSections onFilterPress={() => setFilterVisible(true)} />
 
-            <Animated.View style={[{ flex: 1 }, screenStyle]}>
+            <Animated.View style={[{ flex: 1 }, styles.curvedBody, { backgroundColor: colors.background }, screenStyle]}>
 
                 {/* Notifications List */}
                 <ScrollView
@@ -1036,6 +1036,12 @@ const detailStyles = StyleSheet.create({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    curvedBody: {
+        marginTop: -24,
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        overflow: 'hidden',
     },
     restrictedContainer: {
         flex: 1,

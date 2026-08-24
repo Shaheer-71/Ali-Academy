@@ -617,7 +617,7 @@ export default function TimetableScreen() {
                 onFilterPress={() => setFilterVisible(true)}
                 isFiltered={isFiltered}
             />
-            <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
+            <SafeAreaView style={[s.screenBody, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
                 <Animated.View style={[{ flex: 1 }, screenStyle]}>
                     <ErrorModal
                         visible={!!errorModal}
@@ -718,6 +718,7 @@ export default function TimetableScreen() {
 
 const s = StyleSheet.create({
     container: { flex: 1 },
+    screenBody: { flex: 1, marginTop: -24, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
     scrollView: { flex: 1, paddingHorizontal: 16 },
 
     emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },

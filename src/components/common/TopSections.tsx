@@ -12,11 +12,13 @@ import {
     Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 
 const { height: WINDOW_HEIGHT } = Dimensions.get('window');
 import { useRoute } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { Settings, Moon, Sun, Bell, X, CheckCheck, Trash2, SlidersHorizontal } from 'lucide-react-native';
+import { Bell, X, CheckCheck, Trash2, SlidersHorizontal, Briefcase, ChevronLeft } from 'lucide-react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useNotifications } from '@/src/contexts/NotificationContext';
@@ -32,7 +34,7 @@ interface TopSectionProps {
 export default function TopSection({ showNotifications = true, onFilterPress, isFiltered = false }: TopSectionProps) {
     const route = useRoute();
     const router = useRouter();
-    const { isDark, toggleTheme, colors } = useTheme();
+    const { colors } = useTheme();
     const { profile } = useAuth();
     const {
         notifications,
@@ -54,6 +56,35 @@ export default function TopSection({ showNotifications = true, onFilterPress, is
 
     const inSettings = route.name === 'settings';
     const inFee = route.name === 'fee';
+    const isHome = route.name === 'index';
+    const isProfile = route.name === 'profile';
+    const isPrimaryHeader = isHome || isProfile || inSettings;
+
+    const primaryTitle = isProfile ? 'Profile' : 'Settings';
+    const primarySubtitle = isProfile ? 'Your personal information' : 'Manage your account and preferences';
+    const commonTitle = screenName === 'Index' ? 'Home' : screenName === 'Dairy' ? 'Diary' : screenName === 'Fee-status' ? 'Fee Status' : screenName === 'Change-password' ? 'Change Password' : screenName === 'Activate-users' ? 'Activate Users' : screenName || 'Untitled';
+    const commonSubtitles: Record<string, string> = {
+        attendance: 'Track and manage attendance',
+        exams: 'View exams and results',
+        lectures: 'Browse uploaded lectures',
+        dairy: 'Homework and assignments',
+        analytics: 'Performance insights and trends',
+        timetable: 'Class schedule overview',
+        students: 'Manage student records',
+        fee: 'Track fee payments',
+        'fee-status': 'Your fee payment history',
+        notifications: 'Manage notifications',
+        'change-password': 'Update your account password',
+        'activate-users': 'Reactivate deactivated accounts',
+    };
+    const commonSubtitle = commonSubtitles[route.name] || 'Overview and details';
+
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good Morning';
+        if (hour < 17) return 'Good Afternoon';
+        return 'Good Evening';
+    };
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -73,71 +104,105 @@ export default function TopSection({ showNotifications = true, onFilterPress, is
         ? notifications.filter(n => !n.is_read)
         : notifications;
 
+    const actionButtons = (
+        <View style={styles.rightSection}>
+            {onFilterPress && (
+                <TouchableOpacity
+                    style={[
+                        styles.iconButton,
+                        isFiltered && { borderWidth: 1, borderColor: '#ffffff' },
+                    ]}
+                    onPress={onFilterPress}
+                >
+                    <SlidersHorizontal color="#ffffff" size={20} />
+                    {isFiltered && <View style={styles.filterDot} />}
+                </TouchableOpacity>
+            )}
+
+            {showNotifications && (
+                <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={() => setNotificationsVisible(true)}
+                >
+                    <Bell color="#ffffff" size={20} />
+                    {unreadCount > 0 && (
+                        <View style={styles.notificationBadge}>
+                            <Text allowFontScaling={false} style={styles.badgeText}>
+                                {unreadCount > 99 ? '99+' : unreadCount}
+                            </Text>
+                        </View>
+                    )}
+                </TouchableOpacity>
+            )}
+
+        </View>
+    );
+
     return (
         <SafeAreaView
-            style={[styles.container, { backgroundColor: colors.background }]}
+            style={[styles.container, { backgroundColor: colors.primary }]}
             edges={['top', 'left', 'right']}
         >
-            <View style={[styles.content, { backgroundColor: colors.background }]}>
-                <Text allowFontScaling={false} style={[styles.title, { color: colors.text }]}>
-                    {screenName === 'Index' ? 'Home' : screenName === 'Dairy' ? 'Diary' : screenName === 'Fee-status' ? 'Fee Status' : screenName === 'Change-password' ? 'Change Password' : screenName === 'Activate-users' ? 'Activate Users' : screenName || 'Untitled'}
-                </Text>
-
-                <View style={styles.rightSection}>
-                    {onFilterPress && (
-                        <TouchableOpacity
-                            style={[
-                                styles.iconButton,
-                                { backgroundColor: colors.cardBackground },
-                                isFiltered && { borderWidth: 1, borderColor: colors.primary },
-                            ]}
-                            onPress={onFilterPress}
-                        >
-                            <SlidersHorizontal color={isFiltered ? colors.primary : colors.primary} size={20} />
-                            {isFiltered && <View style={styles.filterDot} />}
-                        </TouchableOpacity>
-                    )}
-
-                    {showNotifications && (
-                        <TouchableOpacity
-                            style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
-                            onPress={() => setNotificationsVisible(true)}
-                        >
-                            <Bell color={colors.primary} size={20} />
-                            {unreadCount > 0 && (
-                                <View style={styles.notificationBadge}>
-                                    <Text allowFontScaling={false} style={styles.badgeText}>
-                                        {unreadCount > 99 ? '99+' : unreadCount}
+            <StatusBar style="light" backgroundColor={colors.primary} />
+            <LinearGradient
+                colors={[colors.primary, '#173239']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={styles.heroContent}
+            >
+                <View style={styles.heroTopRow}>
+                    <View style={styles.heroTextCol}>
+                        {isHome ? (
+                            <>
+                                <Text allowFontScaling={false} style={styles.heroGreeting}>
+                                    {getGreeting().toUpperCase()}
+                                </Text>
+                                <Text allowFontScaling={false} numberOfLines={1} style={styles.heroName}>
+                                    {profile?.full_name || 'Guest'}
+                                </Text>
+                                {!!profile?.role && (
+                                    <View style={styles.chipsRow}>
+                                        <View style={styles.chip}>
+                                            <Briefcase size={11} color="rgba(255,255,255,0.85)" />
+                                            <Text allowFontScaling={false} style={styles.chipText}>
+                                                {profile.role.toUpperCase()}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                )}
+                            </>
+                        ) : isPrimaryHeader ? (
+                            <>
+                                <Text allowFontScaling={false} style={styles.heroTitle}>
+                                    {primaryTitle}
+                                </Text>
+                                <Text allowFontScaling={false} numberOfLines={2} style={styles.heroSubtitle}>
+                                    {primarySubtitle}
+                                </Text>
+                            </>
+                        ) : (
+                            <View style={styles.commonHeaderRow}>
+                                <TouchableOpacity
+                                    style={styles.backIconButton}
+                                    onPress={() => router.back()}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                    <ChevronLeft color="#ffffff" size={22} />
+                                </TouchableOpacity>
+                                <View style={styles.commonHeaderTextCol}>
+                                    <Text allowFontScaling={false} numberOfLines={1} style={styles.heroTitle}>
+                                        {commonTitle}
+                                    </Text>
+                                    <Text allowFontScaling={false} numberOfLines={1} style={styles.heroSubtitle}>
+                                        {commonSubtitle}
                                     </Text>
                                 </View>
-                            )}
-                        </TouchableOpacity>
-                    )}
-
-
-                    {inSettings && (
-                        <TouchableOpacity
-                            style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
-                            onPress={toggleTheme}
-                        >
-                            {isDark ? (
-                                <Sun color={colors.primary} size={20} />
-                            ) : (
-                                <Moon color={colors.primary} size={20} />
-                            )}
-                        </TouchableOpacity>
-                    )}
-
-                    {!inSettings && (
-                        <TouchableOpacity
-                            style={[styles.iconButton, { backgroundColor: colors.cardBackground }]}
-                            onPress={() => router.push('/settings')}
-                        >
-                            <Settings color={colors.primary} size={20} />
-                        </TouchableOpacity>
-                    )}
+                            </View>
+                        )}
+                    </View>
+                    {actionButtons}
                 </View>
-            </View>
+            </LinearGradient>
 
             {/* Notifications Modal - 50% BOTTOM SHEET */}
             <Modal
@@ -298,21 +363,88 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
 
     },
-    content: {
-        paddingHorizontal: 12,
-        marginHorizontal: 12,
-        justifyContent: 'space-between',
+    commonHeaderRow: {
         flexDirection: 'row',
-        paddingVertical: 5,
-        marginVertical: 5,
-        marginRight: '5%',
-
+        alignItems: 'center',
+        gap: 12,
     },
-    title: {
-        fontWeight: 'bold',
-        fontSize: TextSizes.header + 10,
+    commonHeaderTextCol: {
+        flex: 1,
+    },
+    backIconButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255,255,255,0.12)',
+    },
+    heroContent: {
+        paddingHorizontal: 20,
+        paddingTop: 8,
+        paddingBottom: 36,
+    },
+    heroTopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    heroTextCol: {
+        flex: 1,
+        marginRight: 12,
+        minHeight: 64,
+        justifyContent: 'center',
+    },
+    heroGreeting: {
+        fontSize: TextSizes.tiny,
         fontFamily: 'Inter-SemiBold',
-        alignSelf: 'center',
+        color: 'rgba(255,255,255,0.7)',
+        textTransform: 'uppercase',
+        letterSpacing: 0.6,
+    },
+    heroName: {
+        fontSize: TextSizes.xlarge + 6,
+        fontFamily: 'Inter-SemiBold',
+        color: '#FFFFFF',
+        marginTop: 4,
+        letterSpacing: -0.3,
+    },
+    heroTitle: {
+        fontSize: TextSizes.xlarge + 6,
+        fontFamily: 'Inter-SemiBold',
+        color: '#FFFFFF',
+        marginTop: 4,
+        letterSpacing: -0.3,
+    },
+    heroSubtitle: {
+        fontSize: TextSizes.small,
+        fontFamily: 'Inter-Regular',
+        color: 'rgba(255,255,255,0.65)',
+        marginTop: 4,
+    },
+    chipsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+        marginTop: 8,
+    },
+    chip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        backgroundColor: 'rgba(255,255,255,0.12)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.18)',
+        borderRadius: 20,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        alignSelf: 'flex-start',
+    },
+    chipText: {
+        fontSize: TextSizes.tiny,
+        fontFamily: 'Inter-SemiBold',
+        color: 'rgba(255,255,255,0.85)',
+        letterSpacing: 0.4,
     },
     rightSection: {
         flexDirection: 'row',
@@ -326,6 +458,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
+        backgroundColor: 'rgba(255,255,255,0.16)',
     },
     filterDot: {
         position: 'absolute',

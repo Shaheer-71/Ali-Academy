@@ -51,7 +51,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             >
                 <TouchableOpacity
                     activeOpacity={1}
-                    style={[styles.filterModalContent, { backgroundColor: colors.background }]}
+                    style={[styles.filterModalContent, { backgroundColor: colors.cardBackground }]}
                     onPress={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
@@ -111,7 +111,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                     </ScrollView>
 
                     {/* Fixed Bottom Button */}
-                    <View style={[styles.bottomActions, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+                    <View style={[styles.bottomActions, { backgroundColor: colors.cardBackground, borderTopColor: colors.border }]}>
                         <TouchableOpacity
                             style={[styles.applyFilterButton, { backgroundColor: colors.primary }]}
                             onPress={onApply}

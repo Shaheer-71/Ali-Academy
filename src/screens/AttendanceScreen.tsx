@@ -716,7 +716,7 @@ const [editModalVisible, setEditModalVisible] = useState(false);
   return (
     <Animated.View style={[s.container, { backgroundColor: colors.background }, screenStyle]}>
       <TopSections onFilterPress={() => setFilterVisible(true)} isFiltered={isFiltered} />
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
+      <SafeAreaView style={[s.screenBody, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
 
         <ErrorModal
           visible={errorModal.visible}
@@ -793,6 +793,7 @@ const [editModalVisible, setEditModalVisible] = useState(false);
 
 const s = StyleSheet.create({
   container: { flex: 1 },
+  screenBody: { flex: 1, marginTop: -24, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
 
   // stats
   statsCard: { borderRadius: Platform.OS === 'android' ? 10 : 12, padding: Platform.OS === 'android' ? 9 : 14, marginBottom: Platform.OS === 'android' ? 8 : 12, borderWidth: 1 },

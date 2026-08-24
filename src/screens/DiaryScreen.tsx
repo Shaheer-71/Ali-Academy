@@ -552,7 +552,7 @@ export default function DiaryScreen() {
         onFilterPress={() => setFilterVisible(true)}
         isFiltered={isFiltered}
       />
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
+      <SafeAreaView style={[styles.container, localStyles.screenBody, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
         <ErrorModal
           visible={errorModal.visible}
           title={errorModal.title}
@@ -694,6 +694,7 @@ export default function DiaryScreen() {
 }
 
 const localStyles = StyleSheet.create({
+  screenBody: { flex: 1, marginTop: -24, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
   // ── Bottom sheet ──────────────────────────────────────────────────────
   modalContainer: {
     flex: 1,

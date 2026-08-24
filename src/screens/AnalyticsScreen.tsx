@@ -23,16 +23,18 @@ export default function AnalyticsScreen() {
                 onFilterPress={isTeacher ? () => setFilterVisible(true) : undefined}
                 isFiltered={isTeacher ? isFiltered : false}
             />
-            {profile?.role === 'student' ? (
-                <StudentAnalyticsView />
-            ) : (
-                <TeacherAnalyticsView
-                    filterVisible={filterVisible}
-                    onFilterClose={() => setFilterVisible(false)}
-                    onFilterChange={setIsFiltered}
-                    isSuperAdmin={isSuperAdmin}
-                />
-            )}
+            <View style={{ flex: 1, marginTop: -24, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden', backgroundColor: colors.background }}>
+                {profile?.role === 'student' ? (
+                    <StudentAnalyticsView />
+                ) : (
+                    <TeacherAnalyticsView
+                        filterVisible={filterVisible}
+                        onFilterClose={() => setFilterVisible(false)}
+                        onFilterChange={setIsFiltered}
+                        isSuperAdmin={isSuperAdmin}
+                    />
+                )}
+            </View>
         </View>
     );
 }
